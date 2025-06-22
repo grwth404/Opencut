@@ -16,11 +16,6 @@ export function Header() {
 
   const rightContent = (
     <nav className="flex items-center">
-      <Link href="/editor">
-        <Button variant="ghost" className="text-sm">
-          Open editor
-        </Button>
-      </Link>
       <Link href="https://github.com/mazeincoding/AppCut" target="_blank">
         <Button variant="ghost" className="text-sm">
           GitHub
