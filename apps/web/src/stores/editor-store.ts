@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-interface AppState {
+interface EditorState {
   // Loading states
   isInitializing: boolean;
   isPanelsReady: boolean;
@@ -11,7 +11,7 @@ interface AppState {
   initializeApp: () => Promise<void>;
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
+export const useEditorStore = create<EditorState>((set, get) => ({
   // Initial states
   isInitializing: true,
   isPanelsReady: false,

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { useAppStore } from "@/stores/editor-store";
+import { useEditorStore } from "@/stores/editor-store";
 import { usePanelStore } from "@/stores/panel-store";
 
 interface EditorProviderProps {
@@ -10,7 +10,7 @@ interface EditorProviderProps {
 }
 
 export function EditorProvider({ children }: EditorProviderProps) {
-  const { isInitializing, isPanelsReady, initializeApp } = useAppStore();
+  const { isInitializing, isPanelsReady, initializeApp } = useEditorStore();
   const { setInitialized } = usePanelStore();
 
   useEffect(() => {
