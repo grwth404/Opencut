@@ -149,7 +149,7 @@ export function Hero({ signupCount }: HeroProps) {
       >
         Currently in beta • Open source on{" "}
         <Link
-          href="https://github.com/mazeincoding/AppCut"
+          href="https://github.com/mazeincoding/OpenCut"
           className="text-foreground underline"
         >
           GitHub

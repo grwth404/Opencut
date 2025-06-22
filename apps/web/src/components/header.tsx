@@ -9,14 +9,14 @@ import { HeaderBase } from "./header-base";
 export function Header() {
   const leftContent = (
     <Link href="/" className="flex items-center gap-3">
-      <Image src="/logo.png" alt="AppCut Logo" width={24} height={24} />
-      <span className="font-medium tracking-tight">AppCut</span>
+      <Image src="/logo.png" alt="OpenCut Logo" width={24} height={24} />
+      <span className="font-medium tracking-tight">OpenCut</span>
     </Link>
   );
 
   const rightContent = (
     <nav className="flex items-center">
-      <Link href="https://github.com/mazeincoding/AppCut" target="_blank">
+      <Link href="https://github.com/mazeincoding/OpenCut" target="_blank">
         <Button variant="ghost" className="text-sm">
           GitHub
         </Button>

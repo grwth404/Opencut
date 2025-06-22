@@ -1,4 +1,4 @@
-# AppCut
+# OpenCut (prev AppCut)
 
 A free, open-source video editor for web, desktop, and mobile.
 
