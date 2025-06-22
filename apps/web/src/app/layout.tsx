@@ -32,7 +32,7 @@ export default function RootLayout({
             <Analytics />
             <Toaster />
             <Script
-              src="http://app.databuddy.cc/databuddy.js"
+              src="https://app.databuddy.cc/databuddy.js"
               strategy="afterInteractive"
               async
               data-client-id="UP-Wcoy5arxFeK7oyjMMZ"
