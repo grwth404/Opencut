@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/react";
+import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "../components/ui/sonner";
 import { TooltipProvider } from "../components/ui/tooltip";
@@ -30,6 +31,16 @@ export default function RootLayout({
             {children}
             <Analytics />
             <Toaster />
+            <Script 
+              src="https://databuddy.cc/databuddy.js" 
+              strategy="afterInteractive" 
+              async
+              data-client-id="UP-Wcoy5arxFeK7oyjMMZ"
+              data-track-attributes={true}
+              data-track-errors={true}
+              data-track-outgoing-links={true}
+              data-track-web-vitals={true}
+            />
           </TooltipProvider>
         </ThemeProvider>
       </body>
