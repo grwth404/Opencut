@@ -5,8 +5,53 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export function Hero() {
+  const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!email.trim()) {
+      toast.error("Email required", {
+        description: "Please enter your email address.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Welcome to the waitlist! 🎉");
+        setEmail("");
+      } else {
+        toast.error("Oops!", {
+          description: data.error || "Something went wrong. Please try again.",
+        });
+      }
+    } catch (error) {
+      toast.error("Network error", {
+        description: "Please check your connection and try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center text-center px-4">
       <motion.div
@@ -45,15 +90,25 @@ export function Hero() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.8 }}
         >
-          <form className="flex gap-3 w-full max-w-lg">
+          <form onSubmit={handleSubmit} className="flex gap-3 w-full max-w-lg">
             <Input
               type="email"
               placeholder="Enter your email"
               className="h-11 text-base flex-1"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isSubmitting}
               required
             />
-            <Button type="submit" size="lg" className="px-6 h-11 text-base">
-              <span className="relative z-10">Join waitlist</span>
+            <Button
+              type="submit"
+              size="lg"
+              className="px-6 h-11 text-base"
+              disabled={isSubmitting}
+            >
+              <span className="relative z-10">
+                {isSubmitting ? "Joining..." : "Join waitlist"}
+              </span>
               <ArrowRight className="relative z-10 ml-0.5 h-4 w-4 inline-block" />
             </Button>
           </form>
