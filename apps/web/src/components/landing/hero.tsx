@@ -6,18 +6,25 @@ import { Input } from "../ui/input";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
-export function Hero() {
+interface HeroProps {
+  signupCount: number;
+}
+
+export function Hero({ signupCount }: HeroProps) {
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email.trim()) {
-      toast.error("Email required", {
+      toast({
+        title: "Email required",
         description: "Please enter your email address.",
+        variant: "destructive",
       });
       return;
     }
@@ -36,16 +43,23 @@ export function Hero() {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success("Welcome to the waitlist! 🎉");
+        toast({
+          title: "Welcome to the waitlist! 🎉",
+          description: "You'll be notified when we launch.",
+        });
         setEmail("");
       } else {
-        toast.error("Oops!", {
+        toast({
+          title: "Oops!",
           description: data.error || "Something went wrong. Please try again.",
+          variant: "destructive",
         });
       }
     } catch (error) {
-      toast.error("Network error", {
+      toast({
+        title: "Network error",
         description: "Please check your connection and try again.",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -113,6 +127,18 @@ export function Hero() {
             </Button>
           </form>
         </motion.div>
+
+        {signupCount > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.6 }}
+            className="mt-6 inline-flex items-center gap-2 bg-muted/30 px-4 py-2 rounded-full text-sm text-muted-foreground"
+          >
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span>{signupCount.toLocaleString()} people already joined</span>
+          </motion.div>
+        )}
       </motion.div>
 
       <motion.div
