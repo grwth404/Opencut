@@ -16,7 +16,7 @@ export function Header() {
 
   const rightContent = (
     <nav className="flex items-center">
-      <Link href="https://github.com/mazeincoding/OpenCut" target="_blank">
+      <Link href="https://github.com/OpenCut.app/OpenCut" target="_blank">
         <Button variant="ghost" className="text-sm">
           GitHub
         </Button>
