@@ -1,10 +1,10 @@
 "use client";
 
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Slider } from "./ui/slider";
-import { ScrollArea } from "./ui/scroll-area";
-import { Separator } from "./ui/separator";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Slider } from "../ui/slider";
+import { ScrollArea } from "../ui/scroll-area";
+import { Separator } from "../ui/separator";
 
 export function PropertiesPanel() {
   return (
