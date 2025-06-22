@@ -33,9 +33,12 @@ interface TimelineStore {
     clipId: string,
     newIndex: number
   ) => void;
+
+  // Computed values
+  getTotalDuration: () => number;
 }
 
-export const useTimelineStore = create<TimelineStore>((set) => ({
+export const useTimelineStore = create<TimelineStore>((set, get) => ({
   tracks: [],
 
   addTrack: (type) => {
@@ -133,5 +136,18 @@ export const useTimelineStore = create<TimelineStore>((set) => ({
         return { ...track, clips: newClips };
       }),
     }));
+  },
+
+  getTotalDuration: () => {
+    const { tracks } = get();
+    if (tracks.length === 0) return 0;
+
+    // Calculate the duration of each track (sum of all clips in that track)
+    const trackDurations = tracks.map((track) =>
+      track.clips.reduce((total, clip) => total + clip.duration, 0)
+    );
+
+    // Return the maximum track duration (longest track determines project duration)
+    return Math.max(...trackDurations, 0);
   },
 }));

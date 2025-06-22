@@ -472,19 +472,12 @@ function TimelineTrackComponent({ track }: { track: TimelineTrack }) {
 
     if (mediaItem.type === "image") {
       return (
-        <div className="w-full h-full flex items-center gap-2">
-          <div className="w-16 h-12 flex-shrink-0">
-            <ImageTimelineTreatment
-              src={mediaItem.url}
-              alt={mediaItem.name}
-              targetAspectRatio={16 / 9}
-              className="rounded-sm"
-              backgroundType="mirror"
-            />
-          </div>
-          <span className="text-xs text-foreground/80 truncate flex-1">
-            {clip.name}
-          </span>
+        <div className="w-full h-full flex items-center justify-center">
+          <img
+            src={mediaItem.url}
+            alt={mediaItem.name}
+            className="w-full h-full object-cover"
+          />
         </div>
       );
     }
@@ -536,9 +529,9 @@ function TimelineTrackComponent({ track }: { track: TimelineTrack }) {
             track.clips.map((clip, index) => (
               <div
                 key={clip.id}
-                className={`timeline-clip h-full rounded-sm border cursor-grab active:cursor-grabbing transition-colors ${getTrackColor(track.type)} flex items-center px-2 min-w-[80px] overflow-hidden`}
+                className={`timeline-clip h-full rounded-sm border cursor-grab active:cursor-grabbing transition-colors ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden`}
                 style={{
-                  width: `${Math.max(80, (clip.duration / 30) * 400)}px`,
+                  width: `${Math.max(80, clip.duration * 50)}px`,
                 }}
                 draggable={true}
                 onDragStart={(e) => handleClipDragStart(e, clip)}

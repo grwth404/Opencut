@@ -18,6 +18,9 @@ export function PreviewPanel() {
     ? mediaItems.find((item) => item.id === firstClip.mediaId)
     : null;
 
+  // Calculate dynamic aspect ratio - default to 16:9 if no media
+  const aspectRatio = firstMediaItem?.aspectRatio || 16 / 9;
+
   const renderPreviewContent = () => {
     if (!firstMediaItem) {
       return (
@@ -32,7 +35,7 @@ export function PreviewPanel() {
         <ImageTimelineTreatment
           src={firstMediaItem.url}
           alt={firstMediaItem.name}
-          targetAspectRatio={16 / 9}
+          targetAspectRatio={aspectRatio}
           className="w-full h-full rounded-lg"
           backgroundType="blur"
         />
@@ -68,8 +71,17 @@ export function PreviewPanel() {
   };
 
   return (
-    <div className="h-full flex flex-col items-center justify-center p-4">
-      <div className="aspect-video bg-black/90 w-full max-w-4xl rounded-lg shadow-lg relative group overflow-hidden">
+    <div className="h-full flex flex-col items-center justify-center p-4 overflow-hidden">
+      <div
+        className="bg-black/90 rounded-lg shadow-lg relative group overflow-hidden flex-shrink"
+        style={{
+          aspectRatio: aspectRatio.toString(),
+          width: aspectRatio > 1 ? "100%" : "auto",
+          height: aspectRatio <= 1 ? "100%" : "auto",
+          maxWidth: "100%",
+          maxHeight: "100%",
+        }}
+      >
         {renderPreviewContent()}
 
         {/* Playback Controls Overlay */}
@@ -103,6 +115,16 @@ export function PreviewPanel() {
             Preview: {firstMediaItem.name}
             {firstMediaItem.type === "image" &&
               " (with CapCut-style treatment)"}
+            <br />
+            <span className="text-xs text-muted-foreground/70">
+              Aspect Ratio: {aspectRatio.toFixed(2)} (
+              {aspectRatio > 1
+                ? "Landscape"
+                : aspectRatio < 1
+                  ? "Portrait"
+                  : "Square"}
+              )
+            </span>
           </p>
         </div>
       )}
