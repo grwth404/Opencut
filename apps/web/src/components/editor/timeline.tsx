@@ -17,13 +17,33 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "../ui/tooltip";
+import { DragOverlay } from "../ui/drag-overlay";
 import { useTimelineStore, type TimelineTrack } from "@/stores/timeline-store";
+import { useDragDrop } from "@/hooks/use-drag-drop";
 
 export function Timeline() {
   const { tracks, addTrack } = useTimelineStore();
 
+  const { isDragOver, dragProps } = useDragDrop({
+    onDrop: (files) => {
+      // TODO: Handle file drop functionality for timeline
+      console.log("Files dropped on timeline:", files);
+    },
+  });
+
   return (
-    <div className="h-full flex flex-col">
+    <div
+      className={`h-full flex flex-col transition-colors duration-200 relative ${
+        isDragOver ? "bg-accent/30 border-accent" : ""
+      }`}
+      {...dragProps}
+    >
+      <DragOverlay
+        isVisible={isDragOver}
+        title="Drop files here"
+        description="Add media to timeline tracks"
+      />
+
       {/* Toolbar */}
       <div className="border-b flex items-center px-2 py-1 gap-1">
         <TooltipProvider delayDuration={500}>

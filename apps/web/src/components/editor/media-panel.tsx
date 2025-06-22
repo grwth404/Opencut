@@ -2,14 +2,20 @@
 
 import { Button } from "../ui/button";
 import { AspectRatio } from "../ui/aspect-ratio";
+import { DragOverlay } from "../ui/drag-overlay";
 import { useMediaStore } from "@/stores/media-store";
-import { Plus, Image, Video, Music, Upload } from "lucide-react";
-import { useState, useRef } from "react";
+import { Plus, Image, Video, Music } from "lucide-react";
+import { useDragDrop } from "@/hooks/use-drag-drop";
 
 export function MediaPanel() {
   const { mediaItems, addMediaItem } = useMediaStore();
-  const [isDragOver, setIsDragOver] = useState(false);
-  const dragCounterRef = useRef(0);
+
+  const { isDragOver, dragProps } = useDragDrop({
+    onDrop: (files) => {
+      // TODO: Handle file drop functionality
+      console.log("Files dropped on media panel:", files);
+    },
+  });
 
   const handleAddSampleMedia = () => {
     // Just for testing - add a sample media item
@@ -30,55 +36,14 @@ export function MediaPanel() {
     }
   };
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    dragCounterRef.current += 1;
-    if (!isDragOver) {
-      setIsDragOver(true);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    dragCounterRef.current -= 1;
-    if (dragCounterRef.current === 0) {
-      setIsDragOver(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    dragCounterRef.current = 0;
-    // TODO: Handle file drop functionality
-  };
-
   return (
     <div
       className={`h-full overflow-y-auto transition-colors duration-200 relative ${
         isDragOver ? "bg-accent/30 border-accent" : ""
       }`}
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
+      {...dragProps}
     >
-      {/* Drag Overlay */}
-      {isDragOver && (
-        <div className="absolute inset-0 bg-accent/20 backdrop-blur-lg border-2 border-dashed border-accent rounded-lg flex items-center justify-center z-10 pointer-events-none">
-          <div className="text-center">
-            <Upload className="h-8 w-8 text-accent mx-auto mb-2" />
-            <p className="text-sm font-medium text-accent">Drop files here</p>
-            <p className="text-xs text-muted-foreground">
-              Images, videos, and audio files
-            </p>
-          </div>
-        </div>
-      )}
+      <DragOverlay isVisible={isDragOver} />
 
       <div className="space-y-4 p-2 h-full">
         {/* Media Grid */}
