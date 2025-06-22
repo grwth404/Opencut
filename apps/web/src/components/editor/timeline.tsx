@@ -435,7 +435,6 @@ function TimelineTrackComponent({ track }: { track: TimelineTrack }) {
             insertIndex > currentIndex ? insertIndex - 1 : insertIndex;
 
           reorderClipInTrack(track.id, clipId, adjustedIndex);
-          toast.success("Clip reordered");
         }
       } else {
         // Moving between different tracks
