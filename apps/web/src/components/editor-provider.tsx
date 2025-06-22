@@ -2,14 +2,14 @@
 
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { useAppStore } from "@/stores/app-store";
+import { useAppStore } from "@/stores/editor-store";
 import { usePanelStore } from "@/stores/panel-store";
 
-interface AppProviderProps {
+interface EditorProviderProps {
   children: React.ReactNode;
 }
 
-export function AppProvider({ children }: AppProviderProps) {
+export function EditorProvider({ children }: EditorProviderProps) {
   const { isInitializing, isPanelsReady, initializeApp } = useAppStore();
   const { setInitialized } = usePanelStore();
 

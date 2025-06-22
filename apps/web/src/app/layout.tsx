@@ -5,7 +5,6 @@ import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { Toaster } from "../components/ui/sonner";
 import { TooltipProvider } from "../components/ui/tooltip";
-import { AppProvider } from "@/components/app-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -26,13 +25,11 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" forcedTheme="dark" enableSystem>
-          <AppProvider>
-            <TooltipProvider>
-              {children}
-              <Analytics />
-              <Toaster />
-            </TooltipProvider>
-          </AppProvider>
+          <TooltipProvider>
+            {children}
+            <Analytics />
+            <Toaster />
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>
