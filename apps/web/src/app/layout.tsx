@@ -31,9 +31,9 @@ export default function RootLayout({
             {children}
             <Analytics />
             <Toaster />
-            <Script 
-              src="https://databuddy.cc/databuddy.js" 
-              strategy="afterInteractive" 
+            <Script
+              src="http://app.databuddy.cc/databuddy.js"
+              strategy="afterInteractive"
               async
               data-client-id="UP-Wcoy5arxFeK7oyjMMZ"
               data-track-attributes={true}
