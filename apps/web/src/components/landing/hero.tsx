@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
@@ -44,12 +45,18 @@ export function Hero() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.8 }}
         >
-          <Link href="/editor">
-            <Button size="lg" className="px-6 h-11 text-base">
-              <span className="relative z-10">Start editing</span>
+          <form className="flex gap-3 w-full max-w-lg">
+            <Input
+              type="email"
+              placeholder="Enter your email"
+              className="h-11 text-base flex-1"
+              required
+            />
+            <Button type="submit" size="lg" className="px-6 h-11 text-base">
+              <span className="relative z-10">Join waitlist</span>
               <ArrowRight className="relative z-10 ml-0.5 h-4 w-4 inline-block" />
             </Button>
-          </Link>
+          </form>
         </motion.div>
       </motion.div>
 
