@@ -290,18 +290,20 @@ export function Timeline() {
     }
   };
 
-  // Deselect all clips when clicking empty timeline area and seek to clicked position
+  const handleSeekToPosition = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickedTime = clickX / (50 * zoomLevel);
+    const clampedTime = Math.max(0, Math.min(duration, clickedTime));
+    seek(clampedTime);
+  };
+
   const handleTimelineAreaClick = (e: React.MouseEvent) => {
-    // Only clear selection if the click target is the timeline background (not a child/clip)
     if (e.target === e.currentTarget) {
       clearSelectedClips();
       
       // Calculate the clicked time position and seek to it
-      const rect = e.currentTarget.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickedTime = clickX / (50 * zoomLevel);
-      const clampedTime = Math.max(0, Math.min(duration, clickedTime));
-      seek(clampedTime);
+      handleSeekToPosition(e);
     }
   };
 
@@ -500,11 +502,7 @@ export function Timeline() {
                 }}
                 onClick={(e) => {
                   // Calculate the clicked time position and seek to it
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const clickX = e.clientX - rect.left;
-                  const clickedTime = clickX / (50 * zoomLevel);
-                  const clampedTime = Math.max(0, Math.min(duration, clickedTime));
-                  seek(clampedTime);
+                  handleSeekToPosition(e);
                 }}
               >
                 {/* Time markers */}
