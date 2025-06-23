@@ -3,9 +3,9 @@ services:
     image: postgres:17
     restart: unless-stopped
     environment:
-      POSTGRES_USER: appcut
-      POSTGRES_PASSWORD: appcutthegoat
-      POSTGRES_DB: appcut
+      POSTGRES_USER: opencut
+      POSTGRES_PASSWORD: opencutthegoat
+      POSTGRES_DB: opencut
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
