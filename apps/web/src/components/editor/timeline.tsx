@@ -557,8 +557,26 @@ export function Timeline() {
 
                 {/* Playhead in ruler */}
                 <div
-                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-10"
+                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 cursor-ew-resize z-1000"
                   style={{ left: `${currentTime * 50 * zoomLevel}px` }}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const handleMouseMove = (e: MouseEvent) => {
+                      const timeline = timelineRef.current;
+                      if (!timeline) return;
+                      const rect = timeline.getBoundingClientRect();
+                      const mouseX = Math.max(0, e.clientX - rect.left);
+                      const newTime = mouseX / (50 * zoomLevel);
+                      seek(newTime);
+                    };
+                    const handleMouseUp = () => {
+                      window.removeEventListener("mousemove", handleMouseMove);
+                      window.removeEventListener("mouseup", handleMouseUp);
+                    };
+                    window.addEventListener("mousemove", handleMouseMove);
+                    window.addEventListener("mouseup", handleMouseUp);
+                  }}
                 >
                   <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm" />
                 </div>
@@ -670,7 +688,7 @@ export function Timeline() {
 
                     {/* Playhead for tracks area */}
                     <div
-                      className="absolute top-0 w-0.5 bg-red-500 pointer-events-none z-20"
+                      className="absolute top-0 w-0.5 bg-red-500 cursor-ew-resize z-20"
                       style={{
                         left: `${currentTime * 50 * zoomLevel}px`,
                         height: `${tracks.length * 60}px`,
