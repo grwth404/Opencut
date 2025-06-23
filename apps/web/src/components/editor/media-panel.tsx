@@ -23,7 +23,6 @@ export function MediaPanel() {
       const items = await processMediaFiles(files);
       items.forEach(item => {
         addMediaItem(item);
-        toast.success(`Added ${item.name}`);
       });
     } catch (error) {
       console.error("File processing failed:", error);
@@ -47,7 +46,6 @@ export function MediaPanel() {
   const handleRemove = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     removeMediaItem(id);
-    toast.success("Media removed");
   };
 
   const formatDuration = (duration: number) => {

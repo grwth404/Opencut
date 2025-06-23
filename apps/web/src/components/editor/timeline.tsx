@@ -113,7 +113,7 @@ export function Timeline() {
           duration: mediaItem.duration || 5, // Default 5 seconds for images
         });
 
-        toast.success(`Added ${name} to ${trackType} track`);
+
       } catch (error) {
         console.error("Error parsing media item data:", error);
         toast.error("Failed to add media to timeline");
@@ -159,7 +159,7 @@ export function Timeline() {
               duration: addedItem.duration || 5, // Default 5 seconds for images
             });
 
-            toast.success(`Added ${processedItem.name} to timeline`);
+
           }
         }
       } catch (error) {
@@ -180,9 +180,8 @@ export function Timeline() {
 
   return (
     <div
-      className={`h-full flex flex-col transition-colors duration-200 relative ${
-        isDragOver ? "bg-accent/30 border-accent" : ""
-      }`}
+      className={`h-full flex flex-col transition-colors duration-200 relative ${isDragOver ? "bg-accent/30 border-accent" : ""
+        }`}
       {...dragProps}
     >
       <DragOverlay
@@ -439,7 +438,7 @@ function TimelineTrackComponent({ track }: { track: TimelineTrack }) {
       } else {
         // Moving between different tracks
         moveClipToTrack(fromTrackId, track.id, clipId, insertIndex);
-        toast.success("Clip moved to different track");
+
       }
     } catch (error) {
       console.error("Error moving clip:", error);
@@ -511,9 +510,8 @@ function TimelineTrackComponent({ track }: { track: TimelineTrack }) {
       </div>
 
       <div
-        className={`flex-1 h-[60px] transition-colors ${
-          isDropping ? "bg-accent/50 border-2 border-dashed border-accent" : ""
-        }`}
+        className={`flex-1 h-[60px] transition-colors ${isDropping ? "bg-accent/50 border-2 border-dashed border-accent" : ""
+          }`}
         onDragOver={handleTrackDragOver}
         onDragEnter={handleTrackDragEnter}
         onDragLeave={handleTrackDragLeave}
