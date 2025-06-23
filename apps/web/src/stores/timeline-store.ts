@@ -5,6 +5,7 @@ export interface TimelineClip {
   mediaId: string;
   name: string;
   duration: number;
+  startTime: number;
   trimStart: number;
   trimEnd: number;
 }
@@ -27,19 +28,18 @@ interface TimelineStore {
   moveClipToTrack: (
     fromTrackId: string,
     toTrackId: string,
-    clipId: string,
-    insertIndex?: number
-  ) => void;
-  reorderClipInTrack: (
-    trackId: string,
-    clipId: string,
-    newIndex: number
+    clipId: string
   ) => void;
   updateClipTrim: (
     trackId: string,
     clipId: string,
     trimStart: number,
     trimEnd: number
+  ) => void;
+  updateClipStartTime: (
+    trackId: string,
+    clipId: string,
+    startTime: number
   ) => void;
 
   // Computed values
@@ -72,6 +72,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     const newClip: TimelineClip = {
       ...clipData,
       id: crypto.randomUUID(),
+      startTime: clipData.startTime || 0,
       trimStart: 0,
       trimEnd: 0,
     };
@@ -98,9 +99,8 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     }));
   },
 
-  moveClipToTrack: (fromTrackId, toTrackId, clipId, insertIndex) => {
+  moveClipToTrack: (fromTrackId, toTrackId, clipId) => {
     set((state) => {
-      // Find the clip to move
       const fromTrack = state.tracks.find((track) => track.id === fromTrackId);
       const clipToMove = fromTrack?.clips.find((clip) => clip.id === clipId);
 
@@ -109,20 +109,14 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
       return {
         tracks: state.tracks.map((track) => {
           if (track.id === fromTrackId) {
-            // Remove clip from source track
             return {
               ...track,
               clips: track.clips.filter((clip) => clip.id !== clipId),
             };
           } else if (track.id === toTrackId) {
-            // Add clip to destination track
-            const newClips = [...track.clips];
-            const index =
-              insertIndex !== undefined ? insertIndex : newClips.length;
-            newClips.splice(index, 0, clipToMove);
             return {
               ...track,
-              clips: newClips,
+              clips: [...track.clips, clipToMove],
             };
           }
           return track;
@@ -131,22 +125,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     });
   },
 
-  reorderClipInTrack: (trackId, clipId, newIndex) => {
-    set((state) => ({
-      tracks: state.tracks.map((track) => {
-        if (track.id !== trackId) return track;
 
-        const clipIndex = track.clips.findIndex((clip) => clip.id === clipId);
-        if (clipIndex === -1) return track;
-
-        const newClips = [...track.clips];
-        const [movedClip] = newClips.splice(clipIndex, 1);
-        newClips.splice(newIndex, 0, movedClip);
-
-        return { ...track, clips: newClips };
-      }),
-    }));
-  },
 
   updateClipTrim: (trackId, clipId, trimStart, trimEnd) => {
     set((state) => ({
@@ -165,16 +144,34 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     }));
   },
 
+  updateClipStartTime: (trackId, clipId, startTime) => {
+    set((state) => ({
+      tracks: state.tracks.map((track) =>
+        track.id === trackId
+          ? {
+              ...track,
+              clips: track.clips.map((clip) =>
+                clip.id === clipId
+                  ? { ...clip, startTime }
+                  : clip
+              ),
+            }
+          : track
+      ),
+    }));
+  },
+
   getTotalDuration: () => {
     const { tracks } = get();
     if (tracks.length === 0) return 0;
 
-    // Calculate the duration of each track (sum of all clips in that track)
-    const trackDurations = tracks.map((track) =>
-      track.clips.reduce((total, clip) => total + clip.duration, 0)
+    const trackEndTimes = tracks.map((track) =>
+      track.clips.reduce((maxEnd, clip) => {
+        const clipEnd = clip.startTime + clip.duration - clip.trimStart - clip.trimEnd;
+        return Math.max(maxEnd, clipEnd);
+      }, 0)
     );
 
-    // Return the maximum track duration (longest track determines project duration)
-    return Math.max(...trackDurations, 0);
+    return Math.max(...trackEndTimes, 0);
   },
 }));

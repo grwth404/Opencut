@@ -73,101 +73,61 @@ export function Timeline() {
     setIsDragOver(false);
     dragCounterRef.current = 0;
 
-    // Check if this is a timeline clip drop - now we'll handle it!
-    const timelineClipData = e.dataTransfer.getData(
-      "application/x-timeline-clip"
-    );
-    if (timelineClipData) {
-      // Timeline clips dropped on the main timeline area (not on a specific track)
-      // For now, we'll just ignore these - clips should be dropped on specific tracks
-      return;
-    }
+    const timelineClipData = e.dataTransfer.getData("application/x-timeline-clip");
+    if (timelineClipData) return;
 
-    // Check if this is an internal media item drop
     const mediaItemData = e.dataTransfer.getData("application/x-media-item");
     if (mediaItemData) {
       try {
-        const { id, type, name } = JSON.parse(mediaItemData);
-
-        // Find the full media item from the store
+        const { id, type } = JSON.parse(mediaItemData);
         const mediaItem = mediaItems.find((item) => item.id === id);
+
         if (!mediaItem) {
           toast.error("Media item not found");
           return;
         }
 
-        // Determine track type based on media type
-        let trackType: "video" | "audio" | "effects";
-        if (type === "video") {
-          trackType = "video";
-        } else if (type === "audio") {
-          trackType = "audio";
-        } else {
-          // For images, we'll put them on video tracks
-          trackType = "video";
-        }
-
-        // Create a new track and get its ID
+        const trackType = type === "audio" ? "audio" : "video";
         const newTrackId = addTrack(trackType);
 
-        // Add the clip to the new track
         addClipToTrack(newTrackId, {
           mediaId: mediaItem.id,
           name: mediaItem.name,
           duration: mediaItem.duration || 5,
+          startTime: 0,
           trimStart: 0,
           trimEnd: 0,
         });
-
-
       } catch (error) {
         console.error("Error parsing media item data:", error);
         toast.error("Failed to add media to timeline");
       }
-    } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      // Handle external file drops
+    } else if (e.dataTransfer.files?.length > 0) {
       setIsProcessing(true);
 
       try {
         const processedItems = await processMediaFiles(e.dataTransfer.files);
 
         for (const processedItem of processedItems) {
-          // Add to media store first
           addMediaItem(processedItem);
 
-          // The media item now has an ID, let's get it from the latest state
-          // Since addMediaItem is synchronous, we can get the latest item
           const currentMediaItems = useMediaStore.getState().mediaItems;
           const addedItem = currentMediaItems.find(
-            (item) =>
-              item.name === processedItem.name && item.url === processedItem.url
+            (item) => item.name === processedItem.name && item.url === processedItem.url
           );
 
           if (addedItem) {
-            // Determine track type based on media type
-            let trackType: "video" | "audio" | "effects";
-            if (processedItem.type === "video") {
-              trackType = "video";
-            } else if (processedItem.type === "audio") {
-              trackType = "audio";
-            } else {
-              // For images, we'll put them on video tracks
-              trackType = "video";
-            }
-
-            // Create a new track and get its ID
+            const trackType = processedItem.type === "audio" ? "audio" : "video";
             const newTrackId = addTrack(trackType);
 
-            // Add the clip to the new track
             addClipToTrack(newTrackId, {
               mediaId: addedItem.id,
               name: addedItem.name,
               duration: addedItem.duration || 5,
+              startTime: 0,
               trimStart: 0,
               trimEnd: 0,
             });
-
-
           }
         }
       } catch (error) {
@@ -359,7 +319,7 @@ export function Timeline() {
 
 function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zoomLevel: number }) {
   const { mediaItems } = useMediaStore();
-  const { moveClipToTrack, reorderClipInTrack, updateClipTrim } = useTimelineStore();
+  const { moveClipToTrack, updateClipTrim, updateClipStartTime } = useTimelineStore();
   const [isDropping, setIsDropping] = useState(false);
   const [resizing, setResizing] = useState<{
     clipId: string;
@@ -417,7 +377,6 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
     setResizing(null);
   };
 
-  // Global mouse events for better resize experience
   useEffect(() => {
     if (!resizing) return;
 
@@ -439,67 +398,35 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
   }, [resizing, track.id, zoomLevel, updateClipTrim]);
 
   const handleClipDragStart = (e: React.DragEvent, clip: any) => {
-    // Mark this as an timeline clip drag to differentiate from media items
-    const dragData = {
-      clipId: clip.id,
-      trackId: track.id,
-      name: clip.name,
-    };
+    const dragData = { clipId: clip.id, trackId: track.id, name: clip.name };
 
-    e.dataTransfer.setData(
-      "application/x-timeline-clip",
-      JSON.stringify(dragData)
-    );
+    e.dataTransfer.setData("application/x-timeline-clip", JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = "move";
 
-    // Use the entire clip container as the drag image instead of just the content
     const target = e.currentTarget as HTMLElement;
-    e.dataTransfer.setDragImage(
-      target,
-      target.offsetWidth / 2,
-      target.offsetHeight / 2
-    );
+    e.dataTransfer.setDragImage(target, target.offsetWidth / 2, target.offsetHeight / 2);
   };
 
   const handleTrackDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-
-    // Only handle timeline clip drags
-    if (!e.dataTransfer.types.includes("application/x-timeline-clip")) {
-      return;
-    }
-
+    if (!e.dataTransfer.types.includes("application/x-timeline-clip")) return;
     e.dataTransfer.dropEffect = "move";
   };
 
   const handleTrackDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
-
-    // Only handle timeline clip drags
-    if (!e.dataTransfer.types.includes("application/x-timeline-clip")) {
-      return;
-    }
-
+    if (!e.dataTransfer.types.includes("application/x-timeline-clip")) return;
     setIsDropping(true);
   };
 
   const handleTrackDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
+    if (!e.dataTransfer.types.includes("application/x-timeline-clip")) return;
 
-    // Only handle timeline clip drags
-    if (!e.dataTransfer.types.includes("application/x-timeline-clip")) {
-      return;
-    }
-
-    // Check if we're actually leaving the track area
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX;
-    const y = e.clientY;
+    const { clientX: x, clientY: y } = e;
 
-    const isActuallyLeaving =
-      x < rect.left || x > rect.right || y < rect.top || y > rect.bottom;
-
-    if (isActuallyLeaving) {
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
       setIsDropping(false);
     }
   };
@@ -508,67 +435,25 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
     e.preventDefault();
     setIsDropping(false);
 
-    // Only handle timeline clip drags
-    if (!e.dataTransfer.types.includes("application/x-timeline-clip")) {
-      return;
-    }
+    if (!e.dataTransfer.types.includes("application/x-timeline-clip")) return;
 
-    const timelineClipData = e.dataTransfer.getData(
-      "application/x-timeline-clip"
-    );
-
-    if (!timelineClipData) {
-      return;
-    }
+    const timelineClipData = e.dataTransfer.getData("application/x-timeline-clip");
+    if (!timelineClipData) return;
 
     try {
-      const parsedData = JSON.parse(timelineClipData);
-      const { clipId, trackId: fromTrackId } = parsedData;
+      const { clipId, trackId: fromTrackId } = JSON.parse(timelineClipData);
+      const trackContainer = e.currentTarget.querySelector(".track-clips-container") as HTMLElement;
 
-      // Calculate where to insert the clip based on mouse position
-      const trackContainer = e.currentTarget.querySelector(
-        ".track-clips-container"
-      ) as HTMLElement;
-
-      if (!trackContainer) {
-        return;
-      }
+      if (!trackContainer) return;
 
       const rect = trackContainer.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-
-      // Calculate insertion index based on position
-      let insertIndex = 0;
-      const clipElements = trackContainer.querySelectorAll(".timeline-clip");
-
-      for (let i = 0; i < clipElements.length; i++) {
-        const clipRect = clipElements[i].getBoundingClientRect();
-        const clipCenterX = clipRect.left + clipRect.width / 2 - rect.left;
-
-        if (mouseX > clipCenterX) {
-          insertIndex = i + 1;
-        } else {
-          break;
-        }
-      }
+      const newStartTime = Math.max(0, (e.clientX - rect.left) / (50 * zoomLevel));
 
       if (fromTrackId === track.id) {
-        // Moving within the same track - reorder
-        const currentIndex = track.clips.findIndex(
-          (clip) => clip.id === clipId
-        );
-
-        if (currentIndex !== -1 && currentIndex !== insertIndex) {
-          // Adjust index if we're moving to a position after the current one
-          const adjustedIndex =
-            insertIndex > currentIndex ? insertIndex - 1 : insertIndex;
-
-          reorderClipInTrack(track.id, clipId, adjustedIndex);
-        }
+        updateClipStartTime(track.id, clipId, newStartTime);
       } else {
-        // Moving between different tracks
-        moveClipToTrack(fromTrackId, track.id, clipId, insertIndex);
-
+        moveClipToTrack(fromTrackId, track.id, clipId);
+        setTimeout(() => updateClipStartTime(track.id, clipId, newStartTime), 0);
       }
     } catch (error) {
       console.error("Error moving clip:", error);
@@ -650,29 +535,28 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
         onMouseUp={handleResizeEnd}
         onMouseLeave={handleResizeEnd}
       >
-        <div className="h-full flex gap-1 track-clips-container">
+        <div className="h-full relative track-clips-container min-w-full">
           {track.clips.length === 0 ? (
             <div className="h-full w-full rounded-sm border-2 border-dashed border-muted/30 flex items-center justify-center text-xs text-muted-foreground">
               Drop media here
             </div>
           ) : (
-            track.clips.map((clip, index) => {
+            track.clips.map((clip) => {
               const effectiveDuration = clip.duration - clip.trimStart - clip.trimEnd;
               const clipWidth = Math.max(80, effectiveDuration * 50 * zoomLevel);
+              const clipLeft = clip.startTime * 50 * zoomLevel;
 
               return (
                 <div
                   key={clip.id}
-                  className={`timeline-clip h-full rounded-sm border transition-colors ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden relative group`}
-                  style={{ width: `${clipWidth}px` }}
+                  className={`timeline-clip absolute h-full rounded-sm border transition-colors ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group`}
+                  style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
                 >
-                  {/* Left resize handle */}
                   <div
                     className="absolute left-0 top-0 bottom-0 w-2 cursor-w-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
                     onMouseDown={(e) => handleResizeStart(e, clip.id, 'left')}
                   />
 
-                  {/* Clip content */}
                   <div
                     className="flex-1 cursor-grab active:cursor-grabbing"
                     draggable={true}
@@ -681,7 +565,6 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
                     {renderClipContent(clip)}
                   </div>
 
-                  {/* Right resize handle */}
                   <div
                     className="absolute right-0 top-0 bottom-0 w-2 cursor-e-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
                     onMouseDown={(e) => handleResizeStart(e, clip.id, 'right')}
