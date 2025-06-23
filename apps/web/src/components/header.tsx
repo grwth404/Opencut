@@ -6,8 +6,11 @@ import { Button } from "./ui/button";
 import { ArrowRight } from "lucide-react";
 import { HeaderBase } from "./header-base";
 import { useSession } from "@/lib/auth-client";
+import { ghStars } from "@/lib/fetchGhStars";
+import { Star } from "lucide-react";
 
 export function Header() {
+  const stars = ghStars();
   const { data: session } = useSession();
   const leftContent = (
     <Link href="/" className="flex items-center gap-3">
@@ -19,8 +22,15 @@ export function Header() {
   const rightContent = (
     <nav className="flex items-center">
       <Link href="https://github.com/OpenCut-app/OpenCut" target="_blank">
-        <Button variant="ghost" className="text-sm">
-          GitHub
+        <Button
+          variant="ghost"
+          className="flex items-center text-sm text-muted-foreground hover:text-foreground"
+        >
+          <span className="hidden sm:inline">GitHub</span>
+          <span className="text-foreground flex items-center">
+            {stars}+
+            <Star className="w-4 h-4 ml-1" />
+          </span>
         </Button>
       </Link>
       <Link href={session ? "/editor" : "/auth/login"}>
