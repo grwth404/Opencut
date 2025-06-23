@@ -47,6 +47,20 @@ A free, open-source video editor for web, desktop, and mobile.
 4. **Open in browser:**
    Visit [http://localhost:3000](http://localhost:3000)
 
+## Run with Docker
+1. **Prepare environment variables:**
+   Edit [docker-compose.yaml](https://github.com/OpenCut-app/OpenCut/blob/main/docker-compose.yaml#L57-L64)
+2. **Build and run:**
+   ```bash
+   docker-compose up -d --build
+   ```
+3. *(Optional)* **Migrate database:**
+   ```bash
+   docker-compose exec web bun run db:migrate
+   ```
+4. **Open in browser:**
+   Visit [http://localhost:3000](http://localhost:3000)
+
 ## Contributing
 
 ## License
