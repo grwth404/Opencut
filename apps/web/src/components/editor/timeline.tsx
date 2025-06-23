@@ -557,25 +557,25 @@ export function Timeline() {
 
                 {/* Playhead in ruler */}
                 <div
-                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 cursor-ew-resize z-1000"
+                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 cursor-ew-resize z-1000" // Remove pointer-events-none to allow dragging
                   style={{ left: `${currentTime * 50 * zoomLevel}px` }}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     const handleMouseMove = (e: MouseEvent) => {
-                      const timeline = timelineRef.current;
-                      if (!timeline) return;
-                      const rect = timeline.getBoundingClientRect();
-                      const mouseX = Math.max(0, e.clientX - rect.left);
-                      const newTime = mouseX / (50 * zoomLevel);
-                      seek(newTime);
+                      const timeline = timelineRef.current; // Get timeline element ref to track the position
+                      if (!timeline) return; // If no timeline element, exit
+                      const rect = timeline.getBoundingClientRect(); // Get the bounding rect of the timeline element
+                      const mouseX = Math.max(0, e.clientX - rect.left); // Calculate the mouse position relative to the timeline element 
+                      const newTime = mouseX / (50 * zoomLevel); // Calculate the time based on the mouse position
+                      seek(newTime); // Set the current time 
                     };
                     const handleMouseUp = () => {
-                      window.removeEventListener("mousemove", handleMouseMove);
-                      window.removeEventListener("mouseup", handleMouseUp);
+                      window.removeEventListener("mousemove", handleMouseMove); // Remove the mousemove event listener
+                      window.removeEventListener("mouseup", handleMouseUp); // Remove the mouseup event listener
                     };
-                    window.addEventListener("mousemove", handleMouseMove);
-                    window.addEventListener("mouseup", handleMouseUp);
+                    window.addEventListener("mousemove", handleMouseMove); // Add the mousemove event listener
+                    window.addEventListener("mouseup", handleMouseUp); // Add the mouseup event listener
                   }}
                 >
                   <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm" />
