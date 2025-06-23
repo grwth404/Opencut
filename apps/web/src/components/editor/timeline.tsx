@@ -28,6 +28,13 @@ import { usePlaybackStore } from "@/stores/playback-store";
 import { processMediaFiles } from "@/lib/media-processing";
 import { toast } from "sonner";
 import { useState, useRef, useEffect } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their clips.
@@ -36,7 +43,7 @@ export function Timeline() {
   const { tracks, addTrack, addClipToTrack, removeTrack, toggleTrackMute, removeClipFromTrack, moveClipToTrack, getTotalDuration, selectedClips, selectClip, deselectClip, clearSelectedClips } =
     useTimelineStore();
   const { mediaItems, addMediaItem } = useMediaStore();
-  const { currentTime, duration, seek, setDuration, isPlaying, play, pause, toggle } = usePlaybackStore();
+  const { currentTime, duration, seek, setDuration, isPlaying, play, pause, toggle, setSpeed, speed } = usePlaybackStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -429,6 +436,29 @@ export function Timeline() {
               </Button>
             </TooltipTrigger>
             <TooltipContent>Delete clip (Delete)</TooltipContent>
+          </Tooltip>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          {/* Speed Control */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Select
+                value={speed.toFixed(1)}
+                onValueChange={(value) => setSpeed(parseFloat(value))}
+              >
+                <SelectTrigger className="w-[90px] h-8">
+                  <SelectValue placeholder="1.0x" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0.5">0.5x</SelectItem>
+                  <SelectItem value="1.0">1.0x</SelectItem>
+                  <SelectItem value="1.5">1.5x</SelectItem>
+                  <SelectItem value="2.0">2.0x</SelectItem>
+                </SelectContent>
+              </Select>
+            </TooltipTrigger>
+            <TooltipContent>Playback Speed</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>

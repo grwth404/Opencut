@@ -16,6 +16,7 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { ImageTimelineTreatment } from "@/components/ui/image-timeline-treatment";
 import { useState } from "react";
+import { SpeedControl } from "./speed-control";
 
 export function PropertiesPanel() {
   const { tracks } = useTimelineStore();
@@ -24,6 +25,18 @@ export function PropertiesPanel() {
     "blur" | "mirror" | "color"
   >("blur");
   const [backgroundColor, setBackgroundColor] = useState("#000000");
+
+  // Get the first video clip for preview (simplified)
+  const firstVideoClip = tracks
+    .flatMap((track) => track.clips)
+    .find((clip) => {
+      const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
+      return mediaItem?.type === "video";
+    });
+
+  const firstVideoItem = firstVideoClip
+    ? mediaItems.find((item) => item.id === firstVideoClip.mediaId)
+    : null;
 
   // Get the first image clip for preview (simplified)
   const firstImageClip = tracks
@@ -40,7 +53,80 @@ export function PropertiesPanel() {
   return (
     <ScrollArea className="h-full">
       <div className="space-y-6 p-5">
+        {/* Image Treatment - only show if an image is selected */}
+        {firstImageItem && (
+          <>
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium">Image Treatment</h3>
+              <div className="space-y-4">
+                {/* Preview */}
+                <div className="space-y-2">
+                  <Label>Preview</Label>
+                  <div className="w-full aspect-video max-w-48">
+                    <ImageTimelineTreatment
+                      src={firstImageItem.url}
+                      alt={firstImageItem.name}
+                      targetAspectRatio={16 / 9}
+                      className="rounded-sm border"
+                      backgroundType={backgroundType}
+                      backgroundColor={backgroundColor}
+                    />
+                  </div>
+                </div>
 
+                {/* Background Type */}
+                <div className="space-y-2">
+                  <Label htmlFor="bg-type">Background Type</Label>
+                  <Select
+                    value={backgroundType}
+                    onValueChange={(value: any) => setBackgroundType(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select background type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="blur">Blur</SelectItem>
+                      <SelectItem value="mirror">Mirror</SelectItem>
+                      <SelectItem value="color">Solid Color</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Background Color - only show for color type */}
+                {backgroundType === "color" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="bg-color">Background Color</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="bg-color"
+                        type="color"
+                        value={backgroundColor}
+                        onChange={(e) => setBackgroundColor(e.target.value)}
+                        className="w-16 h-10 p-1"
+                      />
+                      <Input
+                        value={backgroundColor}
+                        onChange={(e) => setBackgroundColor(e.target.value)}
+                        placeholder="#000000"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+          </>
+        )}
+
+        {/* Video Controls - only show if a video is selected */}
+        {firstVideoItem && (
+          <>
+            <SpeedControl />
+            <Separator />
+          </>
+        )}
 
         {/* Transform */}
         <div className="space-y-4">
