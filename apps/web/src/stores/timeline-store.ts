@@ -5,6 +5,8 @@ export interface TimelineClip {
   mediaId: string;
   name: string;
   duration: number;
+  trimStart: number;
+  trimEnd: number;
 }
 
 export interface TimelineTrack {
@@ -32,6 +34,12 @@ interface TimelineStore {
     trackId: string,
     clipId: string,
     newIndex: number
+  ) => void;
+  updateClipTrim: (
+    trackId: string,
+    clipId: string,
+    trimStart: number,
+    trimEnd: number
   ) => void;
 
   // Computed values
@@ -64,6 +72,8 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     const newClip: TimelineClip = {
       ...clipData,
       id: crypto.randomUUID(),
+      trimStart: 0,
+      trimEnd: 0,
     };
 
     set((state) => ({
@@ -135,6 +145,23 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
 
         return { ...track, clips: newClips };
       }),
+    }));
+  },
+
+  updateClipTrim: (trackId, clipId, trimStart, trimEnd) => {
+    set((state) => ({
+      tracks: state.tracks.map((track) =>
+        track.id === trackId
+          ? {
+              ...track,
+              clips: track.clips.map((clip) =>
+                clip.id === clipId
+                  ? { ...clip, trimStart, trimEnd }
+                  : clip
+              ),
+            }
+          : track
+      ),
     }));
   },
 

@@ -24,7 +24,7 @@ import { usePlaybackStore } from "@/stores/playback-store";
 import { processMediaFiles } from "@/lib/media-processing";
 import { ImageTimelineTreatment } from "@/components/ui/image-timeline-treatment";
 import { toast } from "sonner";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export function Timeline() {
   const { tracks, addTrack, addClipToTrack } = useTimelineStore();
@@ -114,7 +114,9 @@ export function Timeline() {
         addClipToTrack(newTrackId, {
           mediaId: mediaItem.id,
           name: mediaItem.name,
-          duration: mediaItem.duration || 5, // Default 5 seconds for images
+          duration: mediaItem.duration || 5,
+          trimStart: 0,
+          trimEnd: 0,
         });
 
 
@@ -160,7 +162,9 @@ export function Timeline() {
             addClipToTrack(newTrackId, {
               mediaId: addedItem.id,
               name: addedItem.name,
-              duration: addedItem.duration || 5, // Default 5 seconds for images
+              duration: addedItem.duration || 5,
+              trimStart: 0,
+              trimEnd: 0,
             });
 
 
@@ -355,8 +359,84 @@ export function Timeline() {
 
 function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zoomLevel: number }) {
   const { mediaItems } = useMediaStore();
-  const { moveClipToTrack, reorderClipInTrack } = useTimelineStore();
+  const { moveClipToTrack, reorderClipInTrack, updateClipTrim } = useTimelineStore();
   const [isDropping, setIsDropping] = useState(false);
+  const [resizing, setResizing] = useState<{
+    clipId: string;
+    side: 'left' | 'right';
+    startX: number;
+    initialTrimStart: number;
+    initialTrimEnd: number;
+  } | null>(null);
+
+  const handleResizeStart = (e: React.MouseEvent, clipId: string, side: 'left' | 'right') => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    const clip = track.clips.find(c => c.id === clipId);
+    if (!clip) return;
+
+    setResizing({
+      clipId,
+      side,
+      startX: e.clientX,
+      initialTrimStart: clip.trimStart,
+      initialTrimEnd: clip.trimEnd
+    });
+  };
+
+  const updateTrimFromMouseMove = (e: { clientX: number }) => {
+    if (!resizing) return;
+
+    const clip = track.clips.find(c => c.id === resizing.clipId);
+    if (!clip) return;
+
+    const deltaX = e.clientX - resizing.startX;
+    const deltaTime = deltaX / (50 * zoomLevel);
+
+    if (resizing.side === 'left') {
+      const newTrimStart = Math.max(0, Math.min(
+        clip.duration - clip.trimEnd - 0.1,
+        resizing.initialTrimStart + deltaTime
+      ));
+      updateClipTrim(track.id, clip.id, newTrimStart, clip.trimEnd);
+    } else {
+      const newTrimEnd = Math.max(0, Math.min(
+        clip.duration - clip.trimStart - 0.1,
+        resizing.initialTrimEnd - deltaTime
+      ));
+      updateClipTrim(track.id, clip.id, clip.trimStart, newTrimEnd);
+    }
+  };
+
+  const handleResizeMove = (e: React.MouseEvent) => {
+    updateTrimFromMouseMove(e);
+  };
+
+  const handleResizeEnd = () => {
+    setResizing(null);
+  };
+
+  // Global mouse events for better resize experience
+  useEffect(() => {
+    if (!resizing) return;
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      updateTrimFromMouseMove(e);
+    };
+
+    const handleGlobalMouseUp = () => {
+      setResizing(null);
+    };
+
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [resizing, track.id, zoomLevel, updateClipTrim]);
 
   const handleClipDragStart = (e: React.DragEvent, clip: any) => {
     // Mark this as an timeline clip drag to differentiate from media items
@@ -566,6 +646,9 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
         onDragEnter={handleTrackDragEnter}
         onDragLeave={handleTrackDragLeave}
         onDrop={handleTrackDrop}
+        onMouseMove={handleResizeMove}
+        onMouseUp={handleResizeEnd}
+        onMouseLeave={handleResizeEnd}
       >
         <div className="h-full flex gap-1 track-clips-container">
           {track.clips.length === 0 ? (
@@ -573,19 +656,39 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
               Drop media here
             </div>
           ) : (
-            track.clips.map((clip, index) => (
-              <div
-                key={clip.id}
-                className={`timeline-clip h-full rounded-sm border cursor-grab active:cursor-grabbing transition-colors ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden`}
-                style={{
-                  width: `${Math.max(80, clip.duration * 50 * zoomLevel)}px`,
-                }}
-                draggable={true}
-                onDragStart={(e) => handleClipDragStart(e, clip)}
-              >
-                {renderClipContent(clip)}
-              </div>
-            ))
+            track.clips.map((clip, index) => {
+              const effectiveDuration = clip.duration - clip.trimStart - clip.trimEnd;
+              const clipWidth = Math.max(80, effectiveDuration * 50 * zoomLevel);
+
+              return (
+                <div
+                  key={clip.id}
+                  className={`timeline-clip h-full rounded-sm border transition-colors ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden relative group`}
+                  style={{ width: `${clipWidth}px` }}
+                >
+                  {/* Left resize handle */}
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-2 cursor-w-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
+                    onMouseDown={(e) => handleResizeStart(e, clip.id, 'left')}
+                  />
+
+                  {/* Clip content */}
+                  <div
+                    className="flex-1 cursor-grab active:cursor-grabbing"
+                    draggable={true}
+                    onDragStart={(e) => handleClipDragStart(e, clip)}
+                  >
+                    {renderClipContent(clip)}
+                  </div>
+
+                  {/* Right resize handle */}
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-2 cursor-e-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
+                    onMouseDown={(e) => handleResizeStart(e, clip.id, 'right')}
+                  />
+                </div>
+              );
+            })
           )}
         </div>
       </div>
