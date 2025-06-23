@@ -295,6 +295,7 @@ export function Timeline() {
     const clickX = e.clientX - rect.left;
     const clickedTime = clickX / (50 * zoomLevel);
     const clampedTime = Math.max(0, Math.min(duration, clickedTime));
+    
     seek(clampedTime);
   };
 
