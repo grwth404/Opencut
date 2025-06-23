@@ -1409,9 +1409,18 @@ function TimelineTrackContent({
                   style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
                   onClick={(e) => {
                     e.stopPropagation();
+                    const isSelected = selectedClips.some(
+                      (c) => c.trackId === track.id && c.clipId === clip.id
+                    );
+                    
                     if (e.metaKey || e.ctrlKey || e.shiftKey) {
+                      // Multi-selection mode: toggle the clip
                       selectClip(track.id, clip.id, true);
+                    } else if (isSelected) {
+                      // If clip is already selected, deselect it
+                      deselectClip(track.id, clip.id);
                     } else {
+                      // If clip is not selected, select it (replacing other selections)
                       selectClip(track.id, clip.id, false);
                     }
                   }}
