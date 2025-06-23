@@ -6,6 +6,7 @@ import {
   getImageAspectRatio,
   type MediaItem,
 } from "@/stores/media-store";
+// import { generateThumbnail, getVideoInfo } from "./ffmpeg-utils"; // Temporarily disabled
 
 export interface ProcessedMediaItem extends Omit<MediaItem, "id"> {}
 
@@ -33,7 +34,7 @@ export async function processMediaFiles(
         // Get image aspect ratio
         aspectRatio = await getImageAspectRatio(file);
       } else if (fileType === "video") {
-        // Generate thumbnail and get aspect ratio for videos
+        // Use basic thumbnail generation for now
         const videoResult = await generateVideoThumbnail(file);
         thumbnailUrl = videoResult.thumbnailUrl;
         aspectRatio = videoResult.aspectRatio;
@@ -42,8 +43,8 @@ export async function processMediaFiles(
         aspectRatio = 1;
       }
 
-      // Get duration for videos and audio
-      if (fileType === "video" || fileType === "audio") {
+      // Get duration for videos and audio (if not already set by FFmpeg)
+      if ((fileType === "video" || fileType === "audio") && !duration) {
         duration = await getMediaDuration(file);
       }
 
