@@ -14,7 +14,7 @@ export const auth = betterAuth({
     },
   },
   emailAndPassword: {
-    enabled: false,
+    enabled: true,
   },
   appName: "OpenCut",
   trustedOrigins: ["http://localhost:3000"],
