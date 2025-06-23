@@ -21,6 +21,11 @@ export interface TimelineTrack {
 interface TimelineStore {
   tracks: TimelineTrack[];
 
+  // Selection
+  selectedClip: { trackId: string; clipId: string } | null;
+  selectClip: (trackId: string, clipId: string) => void;
+  clearSelectedClip: () => void;
+
   // Actions
   addTrack: (type: "video" | "audio" | "effects") => string;
   removeTrack: (trackId: string) => void;
@@ -50,6 +55,14 @@ interface TimelineStore {
 
 export const useTimelineStore = create<TimelineStore>((set, get) => ({
   tracks: [],
+  selectedClip: null,
+
+  selectClip: (trackId, clipId) => {
+    set({ selectedClip: { trackId, clipId } });
+  },
+  clearSelectedClip: () => {
+    set({ selectedClip: null });
+  },
 
   addTrack: (type) => {
     const newTrack: TimelineTrack = {

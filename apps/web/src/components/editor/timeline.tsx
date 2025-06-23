@@ -33,7 +33,7 @@ export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their clips.
   // You can drag media here to add it to your project.
   // Clips can be trimmed, deleted, and moved.
-  const { tracks, addTrack, addClipToTrack, removeTrack, toggleTrackMute, removeClipFromTrack, moveClipToTrack, getTotalDuration } =
+  const { tracks, addTrack, addClipToTrack, removeTrack, toggleTrackMute, removeClipFromTrack, moveClipToTrack, getTotalDuration, selectedClip, clearSelectedClip } =
     useTimelineStore();
   const { mediaItems, addMediaItem } = useMediaStore();
   const { currentTime, duration, seek, setDuration, isPlaying, play, pause, toggle } = usePlaybackStore();
@@ -66,6 +66,18 @@ export function Timeline() {
       return () => window.removeEventListener("click", handleClick);
     }
   }, [contextMenu]);
+
+  // Keyboard event for deleting selected clip
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedClip) {
+        removeClipFromTrack(selectedClip.trackId, selectedClip.clipId);
+        clearSelectedClip();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedClip, removeClipFromTrack, clearSelectedClip]);
 
   const handleDragEnter = (e: React.DragEvent) => {
     // When something is dragged over the timeline, show overlay
@@ -699,6 +711,8 @@ function TimelineTrackContent({
     addClipToTrack,
     removeClipFromTrack,
     toggleTrackMute,
+    selectedClip,
+    selectClip,
   } = useTimelineStore();
   const { currentTime } = usePlaybackStore();
   const [isDropping, setIsDropping] = useState(false);
@@ -1261,11 +1275,19 @@ function TimelineTrackContent({
               );
               const clipLeft = clip.startTime * 50 * zoomLevel;
 
+              // Correctly declare isSelected inside the map
+              const isSelected = selectedClip && selectedClip.trackId === track.id && selectedClip.clipId === clip.id;
+
               return (
                 <div
                   key={clip.id}
-                  className={`timeline-clip absolute h-full rounded-sm border transition-all duration-200 ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg`}
+                  className={`timeline-clip absolute h-full rounded-sm border transition-all duration-200 ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg ${isSelected ? "ring-2 ring-blue-500 z-10" : ""}`}
                   style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    selectClip(track.id, clip.id);
+                  }}
+                  tabIndex={0}
                   onContextMenu={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -1342,16 +1364,13 @@ function TimelineTrackContent({
                 }}
               >
                 <div
-                  className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${wouldOverlap ? "bg-red-500" : "bg-blue-500"
-                    }`}
+                  className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${wouldOverlap ? "bg-red-500" : "bg-blue-500"}`}
                 />
                 <div
-                  className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${wouldOverlap ? "bg-red-500" : "bg-blue-500"
-                    }`}
+                  className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${wouldOverlap ? "bg-red-500" : "bg-blue-500"}`}
                 />
                 <div
-                  className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-white px-1 py-0.5 rounded whitespace-nowrap ${wouldOverlap ? "bg-red-500" : "bg-blue-500"
-                    }`}
+                  className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-white px-1 py-0.5 rounded whitespace-nowrap ${wouldOverlap ? "bg-red-500" : "bg-blue-500"}`}
                 >
                   {wouldOverlap ? "⚠️" : ""}
                   {dropPosition.toFixed(1)}s
