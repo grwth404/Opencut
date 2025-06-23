@@ -108,18 +108,26 @@ export const getVideoInfo = async (videoFile: File): Promise<{
   // Write input file
   await ffmpeg.writeFile(inputName, new Uint8Array(await videoFile.arrayBuffer()));
 
-  // Capture FFmpeg stderr output
+  // Capture FFmpeg stderr output with a one-time listener pattern
   let ffmpegOutput = '';
+  let listening = true;
   const listener = (data: string) => {
-    ffmpegOutput += data;
+    if (listening) ffmpegOutput += data;
   };
   ffmpeg.on('log', ({ message }) => listener(message));
 
   // Run ffmpeg to get info (stderr will contain the info)
-  await ffmpeg.exec(['-i', inputName, '-f', 'null', '-']);
+  try {
+    await ffmpeg.exec(['-i', inputName, '-f', 'null', '-']);
+  } catch (error) {
+    listening = false;
+    await ffmpeg.deleteFile(inputName);
+    console.error('FFmpeg execution failed:', error);
+    throw new Error('Failed to extract video info. The file may be corrupted or in an unsupported format.');
+  }
 
-  // Remove listener
-  // (No off() method in ffmpeg.wasm, so this is a no-op, but included for clarity)
+  // Disable listener after exec completes
+  listening = false;
 
   // Cleanup
   await ffmpeg.deleteFile(inputName);
@@ -220,4 +228,4 @@ export const extractAudio = async (
   await ffmpeg.deleteFile(outputName);
   
   return blob;
-}; 
+};
