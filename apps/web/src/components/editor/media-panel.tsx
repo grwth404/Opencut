@@ -10,21 +10,28 @@ import { useDragDrop } from "@/hooks/use-drag-drop";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
+// MediaPanel lets users add, view, and drag media (images, videos, audio) into the project.
+// You can upload files or drag them from your computer. Dragging from here to the timeline adds them to your video project.
+
 export function MediaPanel() {
   const { mediaItems, addMediaItem, removeMediaItem } = useMediaStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const processFiles = async (files: FileList | File[]) => {
+    // If no files, do nothing
     if (!files?.length) return;
 
     setIsProcessing(true);
     try {
+      // Process files (extract metadata, generate thumbnails, etc.)
       const items = await processMediaFiles(files);
-      items.forEach(item => {
+      // Add each processed media item to the store
+      items.forEach((item) => {
         addMediaItem(item);
       });
     } catch (error) {
+      // Show error if processing fails
       console.error("File processing failed:", error);
       toast.error("Failed to process files");
     } finally {
@@ -33,37 +40,47 @@ export function MediaPanel() {
   };
 
   const { isDragOver, dragProps } = useDragDrop({
+    // When files are dropped, process them
     onDrop: processFiles,
   });
 
-  const handleFileSelect = () => fileInputRef.current?.click();
+  const handleFileSelect = () => fileInputRef.current?.click(); // Open file picker
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // When files are selected via file picker, process them
     if (e.target.files) processFiles(e.target.files);
-    e.target.value = "";
+    e.target.value = ""; // Reset input
   };
 
   const handleRemove = (e: React.MouseEvent, id: string) => {
+    // Remove a media item from the store
     e.stopPropagation();
     removeMediaItem(id);
   };
 
   const formatDuration = (duration: number) => {
+    // Format seconds as mm:ss
     const min = Math.floor(duration / 60);
     const sec = Math.floor(duration % 60);
     return `${min}:${sec.toString().padStart(2, "0")}`;
   };
 
   const startDrag = (e: React.DragEvent, item: any) => {
-    e.dataTransfer.setData("application/x-media-item", JSON.stringify({
-      id: item.id,
-      type: item.type,
-      name: item.name,
-    }));
+    // When dragging a media item, set drag data for timeline to read
+    e.dataTransfer.setData(
+      "application/x-media-item",
+      JSON.stringify({
+        id: item.id,
+        type: item.type,
+        name: item.name,
+      })
+    );
     e.dataTransfer.effectAllowed = "copy";
   };
 
   const renderPreview = (item: any) => {
+    // Render a preview for each media type (image, video, audio, unknown)
+    // Each preview is draggable to the timeline
     const baseDragProps = {
       draggable: true,
       onDragStart: (e: React.DragEvent) => startDrag(e, item),
@@ -84,7 +101,10 @@ export function MediaPanel() {
     if (item.type === "video") {
       if (item.thumbnailUrl) {
         return (
-          <div className="relative w-full h-full cursor-grab active:cursor-grabbing" {...baseDragProps}>
+          <div
+            className="relative w-full h-full cursor-grab active:cursor-grabbing"
+            {...baseDragProps}
+          >
             <img
               src={item.thumbnailUrl}
               alt={item.name}
@@ -103,11 +123,16 @@ export function MediaPanel() {
         );
       }
       return (
-        <div className="w-full h-full bg-muted/30 flex flex-col items-center justify-center text-muted-foreground rounded cursor-grab active:cursor-grabbing" {...baseDragProps}>
+        <div
+          className="w-full h-full bg-muted/30 flex flex-col items-center justify-center text-muted-foreground rounded cursor-grab active:cursor-grabbing"
+          {...baseDragProps}
+        >
           <Video className="h-6 w-6 mb-1" />
           <span className="text-xs">Video</span>
           {item.duration && (
-            <span className="text-xs opacity-70">{formatDuration(item.duration)}</span>
+            <span className="text-xs opacity-70">
+              {formatDuration(item.duration)}
+            </span>
           )}
         </div>
       );
@@ -115,18 +140,26 @@ export function MediaPanel() {
 
     if (item.type === "audio") {
       return (
-        <div className="w-full h-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex flex-col items-center justify-center text-muted-foreground rounded border border-green-500/20 cursor-grab active:cursor-grabbing" {...baseDragProps}>
+        <div
+          className="w-full h-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex flex-col items-center justify-center text-muted-foreground rounded border border-green-500/20 cursor-grab active:cursor-grabbing"
+          {...baseDragProps}
+        >
           <Music className="h-6 w-6 mb-1" />
           <span className="text-xs">Audio</span>
           {item.duration && (
-            <span className="text-xs opacity-70">{formatDuration(item.duration)}</span>
+            <span className="text-xs opacity-70">
+              {formatDuration(item.duration)}
+            </span>
           )}
         </div>
       );
     }
 
     return (
-      <div className="w-full h-full bg-muted/30 flex flex-col items-center justify-center text-muted-foreground rounded cursor-grab active:cursor-grabbing" {...baseDragProps}>
+      <div
+        className="w-full h-full bg-muted/30 flex flex-col items-center justify-center text-muted-foreground rounded cursor-grab active:cursor-grabbing"
+        {...baseDragProps}
+      >
         <Image className="h-6 w-6" />
         <span className="text-xs mt-1">Unknown</span>
       </div>
@@ -135,6 +168,7 @@ export function MediaPanel() {
 
   return (
     <>
+      {/* Hidden file input for uploading media */}
       <input
         ref={fileInputRef}
         type="file"
@@ -145,13 +179,14 @@ export function MediaPanel() {
       />
 
       <div
-        className={`h-full flex flex-col transition-colors relative ${isDragOver ? "bg-accent/30" : ""
-          }`}
+        className={`h-full flex flex-col transition-colors relative ${isDragOver ? "bg-accent/30" : ""}`}
         {...dragProps}
       >
+        {/* Show overlay when dragging files over the panel */}
         <DragOverlay isVisible={isDragOver} />
 
         <div className="p-2 border-b">
+          {/* Button to add/upload media */}
           <Button
             variant="outline"
             size="sm"
@@ -174,18 +209,22 @@ export function MediaPanel() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
+          {/* Show message if no media, otherwise show media grid */}
           {mediaItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center h-full">
               <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
                 <Image className="h-8 w-8 text-muted-foreground" />
               </div>
-              <p className="text-sm text-muted-foreground">No media in project</p>
+              <p className="text-sm text-muted-foreground">
+                No media in project
+              </p>
               <p className="text-xs text-muted-foreground/70 mt-1">
                 Drag files here or use the button above
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2">
+              {/* Render each media item as a draggable button */}
               {mediaItems.map((item) => (
                 <div key={item.id} className="relative group">
                   <Button
@@ -195,11 +234,10 @@ export function MediaPanel() {
                     <AspectRatio ratio={item.aspectRatio}>
                       {renderPreview(item)}
                     </AspectRatio>
-                    <span className="text-xs truncate px-1">
-                      {item.name}
-                    </span>
+                    <span className="text-xs truncate px-1">{item.name}</span>
                   </Button>
 
+                  {/* Show remove button on hover */}
                   <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
                       variant="destructive"
