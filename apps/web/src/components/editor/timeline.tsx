@@ -64,7 +64,7 @@ export function Timeline() {
   const handleDragEnter = (e: React.DragEvent) => {
     // When something is dragged over the timeline, show overlay
     e.preventDefault();
-    // Don't show overlay for timeline clips or other internal drags
+    // Don't show overlay for timeline clips - they're handled by tracks
     if (e.dataTransfer.types.includes("application/x-timeline-clip")) {
       return;
     }
@@ -81,7 +81,7 @@ export function Timeline() {
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
 
-    // Don't update state for timeline clips
+    // Don't update state for timeline clips - they're handled by tracks
     if (e.dataTransfer.types.includes("application/x-timeline-clip")) {
       return;
     }
@@ -97,6 +97,12 @@ export function Timeline() {
     e.preventDefault();
     setIsDragOver(false);
     dragCounterRef.current = 0;
+
+    // Ignore timeline clip drags - they're handled by track-specific handlers
+    const hasTimelineClip = e.dataTransfer.types.includes("application/x-timeline-clip");
+    if (hasTimelineClip) {
+      return;
+    }
 
     const mediaItemData = e.dataTransfer.getData("application/x-media-item");
     if (mediaItemData) {
