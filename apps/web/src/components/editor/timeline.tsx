@@ -33,7 +33,7 @@ export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their clips.
   // You can drag media here to add it to your project.
   // Clips can be trimmed, deleted, and moved.
-  const { tracks, addTrack, addClipToTrack, removeTrack, toggleTrackMute, removeClipFromTrack, moveClipToTrack, getTotalDuration, selectedClips, selectClip, deselectClip, clearSelectedClips } =
+  const { tracks, addTrack, addClipToTrack, removeTrack, toggleTrackMute, removeClipFromTrack, moveClipToTrack, getTotalDuration, selectedClips, selectClip, deselectClip, clearSelectedClips, setSelectedClips } =
     useTimelineStore();
   const { mediaItems, addMediaItem } = useMediaStore();
   const { currentTime, duration, seek, setDuration, isPlaying, play, pause, toggle } = usePlaybackStore();
@@ -156,20 +156,18 @@ export function Timeline() {
     });
     if (newSelection.length > 0) {
       if (marquee.additive) {
-        // Add to current selection
         const current = new Set(selectedClips.map((c) => c.trackId + ":" + c.clipId));
         newSelection = [
           ...selectedClips,
           ...newSelection.filter((c) => !current.has(c.trackId + ":" + c.clipId)),
         ];
       }
-      clearSelectedClips();
-      newSelection.forEach((c) => selectClip(c.trackId, c.clipId, true));
+      setSelectedClips(newSelection);
     } else if (!marquee.additive) {
       clearSelectedClips();
     }
     setMarquee(null);
-  }, [marquee, tracks, zoomLevel, selectedClips, selectClip, clearSelectedClips]);
+  }, [marquee, tracks, zoomLevel, selectedClips, selectClip, clearSelectedClips, setSelectedClips]);
 
   const handleDragEnter = (e: React.DragEvent) => {
     // When something is dragged over the timeline, show overlay
@@ -1398,8 +1396,6 @@ function TimelineTrackContent({
                     e.stopPropagation();
                     if (e.metaKey || e.ctrlKey || e.shiftKey) {
                       selectClip(track.id, clip.id, true);
-                    } else if (isSelected) {
-                      deselectClip(track.id, clip.id);
                     } else {
                       selectClip(track.id, clip.id, false);
                     }

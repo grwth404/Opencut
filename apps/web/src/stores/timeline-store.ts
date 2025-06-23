@@ -26,6 +26,7 @@ interface TimelineStore {
   selectClip: (trackId: string, clipId: string, multi?: boolean) => void;
   deselectClip: (trackId: string, clipId: string) => void;
   clearSelectedClips: () => void;
+  setSelectedClips: (clips: { trackId: string; clipId: string }[]) => void;
 
   // Actions
   addTrack: (type: "video" | "audio" | "effects") => string;
@@ -81,6 +82,8 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
   clearSelectedClips: () => {
     set({ selectedClips: [] });
   },
+
+  setSelectedClips: (clips) => set({ selectedClips: clips }),
 
   addTrack: (type) => {
     const newTrack: TimelineTrack = {
