@@ -84,7 +84,7 @@ export function Hero({ signupCount }: HeroProps) {
             The open source
           </h1>
           <h1 className="text-5xl sm:text-7xl font-bold tracking-tighter mt-2">
-            CapCut alternative.
+            video editor
           </h1>
         </motion.div>
 
