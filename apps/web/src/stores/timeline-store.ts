@@ -15,6 +15,7 @@ export interface TimelineTrack {
   name: string;
   type: "video" | "audio" | "effects";
   clips: TimelineClip[];
+  muted?: boolean;
 }
 
 interface TimelineStore {
@@ -41,6 +42,7 @@ interface TimelineStore {
     clipId: string,
     startTime: number
   ) => void;
+  toggleTrackMute: (trackId: string) => void;
 
   // Computed values
   getTotalDuration: () => number;
@@ -55,6 +57,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
       name: `${type.charAt(0).toUpperCase() + type.slice(1)} Track`,
       type,
       clips: [],
+      muted: false,
     };
     set((state) => ({
       tracks: [...state.tracks, newTrack],
@@ -125,8 +128,6 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     });
   },
 
-
-
   updateClipTrim: (trackId, clipId, trimStart, trimEnd) => {
     set((state) => ({
       tracks: state.tracks.map((track) =>
@@ -134,9 +135,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
           ? {
               ...track,
               clips: track.clips.map((clip) =>
-                clip.id === clipId
-                  ? { ...clip, trimStart, trimEnd }
-                  : clip
+                clip.id === clipId ? { ...clip, trimStart, trimEnd } : clip
               ),
             }
           : track
@@ -151,12 +150,18 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
           ? {
               ...track,
               clips: track.clips.map((clip) =>
-                clip.id === clipId
-                  ? { ...clip, startTime }
-                  : clip
+                clip.id === clipId ? { ...clip, startTime } : clip
               ),
             }
           : track
+      ),
+    }));
+  },
+
+  toggleTrackMute: (trackId) => {
+    set((state) => ({
+      tracks: state.tracks.map((track) =>
+        track.id === trackId ? { ...track, muted: !track.muted } : track
       ),
     }));
   },
@@ -167,7 +172,8 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
 
     const trackEndTimes = tracks.map((track) =>
       track.clips.reduce((maxEnd, clip) => {
-        const clipEnd = clip.startTime + clip.duration - clip.trimStart - clip.trimEnd;
+        const clipEnd =
+          clip.startTime + clip.duration - clip.trimStart - clip.trimEnd;
         return Math.max(maxEnd, clipEnd);
       }, 0)
     );
