@@ -5,19 +5,32 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { ghStars } from "@/lib/fetchGhStars";
+import { getStars } from "@/lib/fetchGhStars";
 
 interface HeroProps {
   signupCount: number;
 }
 
 export function Hero({ signupCount }: HeroProps) {
+  const [star, setStar] = useState<string>();
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const stars = ghStars();
+
+  useEffect(() => {
+    const fetchStars = async () => {
+      try {
+        const data = await getStars();
+        setStar(data);
+      } catch (err) {
+        console.error("Failed to fetch GitHub stars", err);
+      }
+    };
+
+    fetchStars();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,7 +167,7 @@ export function Hero({ signupCount }: HeroProps) {
           href="https://github.com/OpenCut-app/OpenCut"
           className="text-foreground underline"
         >
-          GitHub {stars}+
+          GitHub {star}+
         </Link>
       </motion.div>
     </div>

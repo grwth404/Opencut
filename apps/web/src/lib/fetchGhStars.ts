@@ -1,20 +1,29 @@
-async function getStars(): Promise<string> {
-  const res = await fetch("https://api.github.com/repos/OpenCut-app/OpenCut", {
-    // Cache for 1 hour (3600 seconds)
-    next: { revalidate: 3600 },
-  });
+export async function getStars(): Promise<string> {
+  try {
+    const res = await fetch(
+      "https://api.github.com/repos/OpenCut-app/OpenCut",
+      {
+        next: { revalidate: 3600 },
+      }
+    );
 
-  const data = await res.json();
-  const count = data.stargazers_count;
+    if (!res.ok) {
+      throw new Error(`GitHub API error: ${res.status} ${res.statusText}`);
+    }
+    const data = await res.json();
+    const count = data.stargazers_count;
 
-  if (count >= 1_000_000)
-    return (count / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
-  if (count >= 1_000)
-    return (count / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
-  return count.toString();
-}
+    if (typeof count !== "number") {
+      throw new Error("Invalid stargazers_count from GitHub API");
+    }
 
-export async function ghStars() {
-  const stars = await getStars();
-  return stars;
+    if (count >= 1_000_000)
+      return (count / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+    if (count >= 1_000)
+      return (count / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
+    return count.toString();
+  } catch (error) {
+    console.error("Failed to fetch GitHub stars:", error);
+    return "1.5k";
+  }
 }
