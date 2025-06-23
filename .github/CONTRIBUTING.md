@@ -6,8 +6,9 @@ Thank you for your interest in contributing to OpenCut! This document provides g
 
 1. Fork the repository
 2. Clone your fork locally
-3. Install dependencies: `bun install`
-4. Start the development server: `bun run dev`
+3. Navigate to the web app directory: `cd apps/web`
+4. Install dependencies: `bun install`
+5. Start the development server: `bun run dev`
 
 ## Development Setup
 
@@ -18,9 +19,10 @@ Thank you for your interest in contributing to OpenCut! This document provides g
 
 ### Local Development
 1. Copy `.env.example` to `.env.local` and configure your environment variables
-2. Start the database: `docker-compose up -d`
-3. Run database migrations: `bun run db:migrate`
-4. Start the development server: `bun run dev`
+2. Start the database: `docker-compose up -d` (run from project root)
+3. Navigate to the web app: `cd apps/web`
+4. Run database migrations: `bun run db:migrate`
+5. Start the development server: `bun run dev`
 
 ## How to Contribute
 
@@ -37,16 +39,17 @@ Thank you for your interest in contributing to OpenCut! This document provides g
 ### Code Contributions
 1. Create a new branch: `git checkout -b feature/your-feature-name`
 2. Make your changes
-3. Write tests for new functionality
-4. Ensure all tests pass: `bun test`
-5. Run the linter: `bun run lint`
+3. Navigate to the web app directory: `cd apps/web` 
+4. Run the linter: `bun run lint`
+5. Format your code: `bunx biome format --write .`
 6. Commit your changes with a descriptive message
 7. Push to your fork and create a pull request
 
 ## Code Style
 
 - We use Biome for code formatting and linting
-- Run `bun run format` before committing
+- Run `bunx biome format --write .` from the `apps/web` directory to format code
+- Run `bun run lint` from the `apps/web` directory to check for linting issues
 - Follow the existing code patterns
 
 ## Pull Request Process
