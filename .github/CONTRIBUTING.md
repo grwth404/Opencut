@@ -13,6 +13,7 @@ Thank you for your interest in contributing to OpenCut! This document provides g
 
 ### Prerequisites
 - Node.js 18+ 
+- Bun (latest version)
 - Docker (for local database)
 
 ### Local Development
@@ -37,15 +38,15 @@ Thank you for your interest in contributing to OpenCut! This document provides g
 1. Create a new branch: `git checkout -b feature/your-feature-name`
 2. Make your changes
 3. Write tests for new functionality
-4. Ensure all tests pass: `npm test`
-5. Run the linter: `npm run lint`
+4. Ensure all tests pass: `bun test`
+5. Run the linter: `bun run lint`
 6. Commit your changes with a descriptive message
 7. Push to your fork and create a pull request
 
 ## Code Style
 
 - We use Biome for code formatting and linting
-- Run `npm run format` before committing
+- Run `bun run format` before committing
 - Follow the existing code patterns
 
 ## Pull Request Process
