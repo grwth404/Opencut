@@ -33,7 +33,7 @@ export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their clips.
   // You can drag media here to add it to your project.
   // Clips can be trimmed, deleted, and moved.
-  const { tracks, addTrack, addClipToTrack, removeTrack, toggleTrackMute, removeClipFromTrack, moveClipToTrack, getTotalDuration, selectedClip, clearSelectedClip } =
+  const { tracks, addTrack, addClipToTrack, removeTrack, toggleTrackMute, removeClipFromTrack, moveClipToTrack, getTotalDuration, selectedClips, selectClip, deselectClip, clearSelectedClips } =
     useTimelineStore();
   const { mediaItems, addMediaItem } = useMediaStore();
   const { currentTime, duration, seek, setDuration, isPlaying, play, pause, toggle } = usePlaybackStore();
@@ -52,6 +52,16 @@ export function Timeline() {
     y: number;
   } | null>(null);
 
+  // Marquee selection state
+  const [marquee, setMarquee] = useState<{
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+    active: boolean;
+    additive: boolean;
+  } | null>(null);
+
   // Update timeline duration when tracks change
   useEffect(() => {
     const totalDuration = getTotalDuration();
@@ -67,17 +77,99 @@ export function Timeline() {
     }
   }, [contextMenu]);
 
-  // Keyboard event for deleting selected clip
+  // Keyboard event for deleting selected clips
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedClip) {
-        removeClipFromTrack(selectedClip.trackId, selectedClip.clipId);
-        clearSelectedClip();
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedClips.length > 0) {
+        selectedClips.forEach(({ trackId, clipId }) => {
+          removeClipFromTrack(trackId, clipId);
+        });
+        clearSelectedClips();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedClip, removeClipFromTrack, clearSelectedClip]);
+  }, [selectedClips, removeClipFromTrack, clearSelectedClips]);
+
+  // Mouse down on timeline background to start marquee
+  const handleTimelineMouseDown = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && e.button === 0) {
+      setMarquee({
+        startX: e.clientX,
+        startY: e.clientY,
+        endX: e.clientX,
+        endY: e.clientY,
+        active: true,
+        additive: e.metaKey || e.ctrlKey || e.shiftKey,
+      });
+    }
+  };
+
+  // Mouse move to update marquee
+  useEffect(() => {
+    if (!marquee || !marquee.active) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      setMarquee((prev) => prev && { ...prev, endX: e.clientX, endY: e.clientY });
+    };
+    const handleMouseUp = (e: MouseEvent) => {
+      setMarquee((prev) => prev && { ...prev, endX: e.clientX, endY: e.clientY, active: false });
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [marquee]);
+
+  // On marquee end, select clips in box
+  useEffect(() => {
+    if (!marquee || marquee.active) return;
+    // Calculate selection box in timeline coordinates
+    const timeline = timelineRef.current;
+    if (!timeline) return;
+    const rect = timeline.getBoundingClientRect();
+    const x1 = Math.min(marquee.startX, marquee.endX) - rect.left;
+    const x2 = Math.max(marquee.startX, marquee.endX) - rect.left;
+    const y1 = Math.min(marquee.startY, marquee.endY) - rect.top;
+    const y2 = Math.max(marquee.startY, marquee.endY) - rect.top;
+    // Find all clips that intersect the box
+    let newSelection: { trackId: string; clipId: string }[] = [];
+    tracks.forEach((track, trackIdx) => {
+      track.clips.forEach((clip) => {
+        const effectiveDuration = clip.duration - clip.trimStart - clip.trimEnd;
+        const clipWidth = Math.max(80, effectiveDuration * 50 * zoomLevel);
+        const clipLeft = clip.startTime * 50 * zoomLevel;
+        const clipTop = trackIdx * 60;
+        const clipBottom = clipTop + 60;
+        const clipRight = clipLeft + clipWidth;
+        // Check intersection
+        if (
+          x1 < clipRight &&
+          x2 > clipLeft &&
+          y1 < clipBottom &&
+          y2 > clipTop
+        ) {
+          newSelection.push({ trackId: track.id, clipId: clip.id });
+        }
+      });
+    });
+    if (newSelection.length > 0) {
+      if (marquee.additive) {
+        // Add to current selection
+        const current = new Set(selectedClips.map((c) => c.trackId + ":" + c.clipId));
+        newSelection = [
+          ...selectedClips,
+          ...newSelection.filter((c) => !current.has(c.trackId + ":" + c.clipId)),
+        ];
+      }
+      clearSelectedClips();
+      newSelection.forEach((c) => selectClip(c.trackId, c.clipId, true));
+    } else if (!marquee.additive) {
+      clearSelectedClips();
+    }
+    setMarquee(null);
+  }, [marquee, tracks, zoomLevel, selectedClips, selectClip, clearSelectedClips]);
 
   const handleDragEnter = (e: React.DragEvent) => {
     // When something is dragged over the timeline, show overlay
@@ -185,17 +277,12 @@ export function Timeline() {
     }
   };
 
-  const handleTimelineClick = (e: React.MouseEvent) => {
-    const timeline = timelineRef.current;
-    if (!timeline || duration === 0) return;
-
-    const rect = timeline.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const timelineWidth = rect.width;
-    const visibleDuration = duration / zoomLevel;
-    const clickedTime = (x / timelineWidth) * visibleDuration;
-
-    seek(Math.max(0, Math.min(duration, clickedTime)));
+  // Deselect all clips when clicking empty timeline area
+  const handleTimelineAreaClick = (e: React.MouseEvent) => {
+    // Only clear selection if the click target is the timeline background (not a child/clip)
+    if (e.target === e.currentTarget) {
+      clearSelectedClips();
+    }
   };
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -500,9 +587,33 @@ export function Timeline() {
                   minHeight:
                     tracks.length > 0 ? `${tracks.length * 60}px` : "200px",
                 }}
-                onClick={handleTimelineClick}
+                onClick={handleTimelineAreaClick}
+                onMouseDown={handleTimelineMouseDown}
                 onWheel={handleWheel}
               >
+                {/* Overlay for deselect/marquee */}
+                <div
+                  className="absolute inset-0 z-0"
+                  style={{ pointerEvents: 'auto', background: 'transparent' }}
+                  onClick={handleTimelineAreaClick}
+                  onMouseDown={handleTimelineMouseDown}
+                />
+                {/* Marquee selection rectangle */}
+                {marquee && marquee.active && timelineRef.current && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: Math.min(marquee.startX, marquee.endX) - timelineRef.current.getBoundingClientRect().left,
+                      top: Math.min(marquee.startY, marquee.endY) - timelineRef.current.getBoundingClientRect().top,
+                      width: Math.abs(marquee.endX - marquee.startX),
+                      height: Math.abs(marquee.endY - marquee.startY),
+                      background: "rgba(59, 130, 246, 0.15)",
+                      border: "2px solid #3b82f6",
+                      zIndex: 50,
+                      pointerEvents: "none",
+                    }}
+                  />
+                )}
                 {tracks.length === 0 ? (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
@@ -711,8 +822,9 @@ function TimelineTrackContent({
     addClipToTrack,
     removeClipFromTrack,
     toggleTrackMute,
-    selectedClip,
+    selectedClips,
     selectClip,
+    deselectClip,
   } = useTimelineStore();
   const { currentTime } = usePlaybackStore();
   const [isDropping, setIsDropping] = useState(false);
@@ -1274,10 +1386,9 @@ function TimelineTrackContent({
                 effectiveDuration * 50 * zoomLevel
               );
               const clipLeft = clip.startTime * 50 * zoomLevel;
-
-              // Correctly declare isSelected inside the map
-              const isSelected = selectedClip && selectedClip.trackId === track.id && selectedClip.clipId === clip.id;
-
+              const isSelected = selectedClips.some(
+                (c) => c.trackId === track.id && c.clipId === clip.id
+              );
               return (
                 <div
                   key={clip.id}
@@ -1285,7 +1396,13 @@ function TimelineTrackContent({
                   style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    selectClip(track.id, clip.id);
+                    if (e.metaKey || e.ctrlKey || e.shiftKey) {
+                      selectClip(track.id, clip.id, true);
+                    } else if (isSelected) {
+                      deselectClip(track.id, clip.id);
+                    } else {
+                      selectClip(track.id, clip.id, false);
+                    }
                   }}
                   tabIndex={0}
                   onContextMenu={(e) => {
