@@ -73,11 +73,9 @@ export function Timeline() {
     setIsDragOver(false);
     dragCounterRef.current = 0;
 
-    const timelineClipData = e.dataTransfer.getData("application/x-timeline-clip");
-    if (timelineClipData) return;
-
     const mediaItemData = e.dataTransfer.getData("application/x-media-item");
     if (mediaItemData) {
+      // Handle media item drops by creating new tracks
       try {
         const { id, type } = JSON.parse(mediaItemData);
         const mediaItem = mediaItems.find((item) => item.id === id);
@@ -98,11 +96,14 @@ export function Timeline() {
           trimStart: 0,
           trimEnd: 0,
         });
+
+        toast.success(`Added ${mediaItem.name} to new ${trackType} track`);
       } catch (error) {
         console.error("Error parsing media item data:", error);
         toast.error("Failed to add media to timeline");
       }
     } else if (e.dataTransfer.files?.length > 0) {
+      // Handle file drops by creating new tracks
       setIsProcessing(true);
 
       try {
@@ -171,15 +172,6 @@ export function Timeline() {
         }`}
       {...dragProps}
     >
-      <DragOverlay
-        isVisible={isDragOver}
-        title={isProcessing ? "Processing files..." : "Drop media here"}
-        description={
-          isProcessing
-            ? "Please wait while files are being processed"
-            : "Add media to timeline tracks"
-        }
-      />
 
       {/* Toolbar */}
       <div className="border-b flex items-center px-2 py-1 gap-1">
@@ -431,10 +423,11 @@ export function Timeline() {
 
 function TimelineTrackContent({ track, zoomLevel }: { track: TimelineTrack, zoomLevel: number }) {
   const { mediaItems } = useMediaStore();
-  const { moveClipToTrack, updateClipTrim, updateClipStartTime } = useTimelineStore();
+  const { tracks, moveClipToTrack, updateClipTrim, updateClipStartTime, addClipToTrack } = useTimelineStore();
   const [isDropping, setIsDropping] = useState(false);
   const [dropPosition, setDropPosition] = useState<number | null>(null);
   const [isDraggedOver, setIsDraggedOver] = useState(false);
+  const [wouldOverlap, setWouldOverlap] = useState(false);
   const [resizing, setResizing] = useState<{
     clipId: string;
     side: 'left' | 'right';
@@ -533,24 +526,112 @@ function TimelineTrackContent({ track, zoomLevel }: { track: TimelineTrack, zoom
 
   const handleTrackDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    if (!e.dataTransfer.types.includes("application/x-timeline-clip")) return;
-    e.dataTransfer.dropEffect = "move";
 
-    setIsDraggedOver(true);
+    // Handle both timeline clips and media items
+    const hasTimelineClip = e.dataTransfer.types.includes("application/x-timeline-clip");
+    const hasMediaItem = e.dataTransfer.types.includes("application/x-media-item");
 
-    // Calculate and show drop position with better precision
+    if (!hasTimelineClip && !hasMediaItem) return;
+
+    if (hasMediaItem) {
+      try {
+        const mediaItemData = e.dataTransfer.getData("application/x-media-item");
+        if (mediaItemData) {
+          const { type } = JSON.parse(mediaItemData);
+          const isCompatible =
+            (track.type === "video" && (type === "video" || type === "image")) ||
+            (track.type === "audio" && type === "audio");
+
+          if (!isCompatible) {
+            e.dataTransfer.dropEffect = "none";
+            return;
+          }
+        }
+      } catch (error) {
+      }
+    }
+
+    // Calculate drop position for overlap checking
     const trackContainer = e.currentTarget.querySelector(".track-clips-container") as HTMLElement;
+    let dropTime = 0;
     if (trackContainer) {
       const rect = trackContainer.getBoundingClientRect();
       const mouseX = Math.max(0, e.clientX - rect.left);
-      const dropTime = mouseX / (50 * zoomLevel);
-      setDropPosition(dropTime);
+      dropTime = mouseX / (50 * zoomLevel);
     }
+
+    // Check for potential overlaps and show appropriate feedback
+    let wouldOverlap = false;
+
+    if (hasMediaItem) {
+      try {
+        const mediaItemData = e.dataTransfer.getData("application/x-media-item");
+        if (mediaItemData) {
+          const { id } = JSON.parse(mediaItemData);
+          const mediaItem = mediaItems.find((item) => item.id === id);
+          if (mediaItem) {
+            const newClipDuration = mediaItem.duration || 5;
+            const snappedTime = Math.round(dropTime * 10) / 10;
+            const newClipEnd = snappedTime + newClipDuration;
+
+            wouldOverlap = track.clips.some(existingClip => {
+              const existingStart = existingClip.startTime;
+              const existingEnd = existingClip.startTime + (existingClip.duration - existingClip.trimStart - existingClip.trimEnd);
+              return (snappedTime < existingEnd && newClipEnd > existingStart);
+            });
+          }
+        }
+      } catch (error) {
+        // Continue with default behavior
+      }
+    } else if (hasTimelineClip) {
+      try {
+        const timelineClipData = e.dataTransfer.getData("application/x-timeline-clip");
+        if (timelineClipData) {
+          const { clipId, trackId: fromTrackId } = JSON.parse(timelineClipData);
+          const sourceTrack = tracks.find((t: TimelineTrack) => t.id === fromTrackId);
+          const movingClip = sourceTrack?.clips.find((c: any) => c.id === clipId);
+
+          if (movingClip) {
+            const movingClipDuration = movingClip.duration - movingClip.trimStart - movingClip.trimEnd;
+            const snappedTime = Math.round(dropTime * 10) / 10;
+            const movingClipEnd = snappedTime + movingClipDuration;
+
+            wouldOverlap = track.clips.some(existingClip => {
+              if (fromTrackId === track.id && existingClip.id === clipId) return false;
+
+              const existingStart = existingClip.startTime;
+              const existingEnd = existingClip.startTime + (existingClip.duration - existingClip.trimStart - existingClip.trimEnd);
+              return (snappedTime < existingEnd && movingClipEnd > existingStart);
+            });
+          }
+        }
+      } catch (error) {
+        // Continue with default behavior
+      }
+    }
+
+    if (wouldOverlap) {
+      e.dataTransfer.dropEffect = "none";
+      setIsDraggedOver(true);
+      setWouldOverlap(true);
+      setDropPosition(Math.round(dropTime * 10) / 10);
+      return;
+    }
+
+    e.dataTransfer.dropEffect = hasTimelineClip ? "move" : "copy";
+    setIsDraggedOver(true);
+    setWouldOverlap(false);
+    setDropPosition(Math.round(dropTime * 10) / 10);
   };
 
   const handleTrackDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
-    if (!e.dataTransfer.types.includes("application/x-timeline-clip")) return;
+
+    const hasTimelineClip = e.dataTransfer.types.includes("application/x-timeline-clip");
+    const hasMediaItem = e.dataTransfer.types.includes("application/x-media-item");
+
+    if (!hasTimelineClip && !hasMediaItem) return;
 
     dragCounterRef.current++;
     setIsDropping(true);
@@ -559,13 +640,18 @@ function TimelineTrackContent({ track, zoomLevel }: { track: TimelineTrack, zoom
 
   const handleTrackDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
-    if (!e.dataTransfer.types.includes("application/x-timeline-clip")) return;
+
+    const hasTimelineClip = e.dataTransfer.types.includes("application/x-timeline-clip");
+    const hasMediaItem = e.dataTransfer.types.includes("application/x-media-item");
+
+    if (!hasTimelineClip && !hasMediaItem) return;
 
     dragCounterRef.current--;
 
     if (dragCounterRef.current === 0) {
       setIsDropping(false);
       setIsDraggedOver(false);
+      setWouldOverlap(false);
       setDropPosition(null);
     }
   };
@@ -577,38 +663,122 @@ function TimelineTrackContent({ track, zoomLevel }: { track: TimelineTrack, zoom
     dragCounterRef.current = 0;
     setIsDropping(false);
     setIsDraggedOver(false);
+    setWouldOverlap(false);
+    const currentDropPosition = dropPosition;
     setDropPosition(null);
 
-    if (!e.dataTransfer.types.includes("application/x-timeline-clip")) return;
+    const hasTimelineClip = e.dataTransfer.types.includes("application/x-timeline-clip");
+    const hasMediaItem = e.dataTransfer.types.includes("application/x-media-item");
 
-    const timelineClipData = e.dataTransfer.getData("application/x-timeline-clip");
-    if (!timelineClipData) return;
+    if (!hasTimelineClip && !hasMediaItem) return;
+
+    const trackContainer = e.currentTarget.querySelector(".track-clips-container") as HTMLElement;
+    if (!trackContainer) return;
+
+    const rect = trackContainer.getBoundingClientRect();
+    const mouseX = Math.max(0, e.clientX - rect.left);
+    const newStartTime = mouseX / (50 * zoomLevel);
+    const snappedTime = Math.round(newStartTime * 10) / 10;
 
     try {
-      const { clipId, trackId: fromTrackId } = JSON.parse(timelineClipData);
-      const trackContainer = e.currentTarget.querySelector(".track-clips-container") as HTMLElement;
+      if (hasTimelineClip) {
+        // Handle timeline clip movement
+        const timelineClipData = e.dataTransfer.getData("application/x-timeline-clip");
+        if (!timelineClipData) return;
 
-      if (!trackContainer) return;
+        const { clipId, trackId: fromTrackId } = JSON.parse(timelineClipData);
 
-      const rect = trackContainer.getBoundingClientRect();
-      const mouseX = Math.max(0, e.clientX - rect.left);
-      const newStartTime = mouseX / (50 * zoomLevel);
+        // Find the clip being moved
+        const sourceTrack = tracks.find((t: TimelineTrack) => t.id === fromTrackId);
+        const movingClip = sourceTrack?.clips.find((c: any) => c.id === clipId);
 
-      // Snap to grid (optional - every 0.1 seconds)
-      const snappedTime = Math.round(newStartTime * 10) / 10;
+        if (!movingClip) {
+          toast.error("Clip not found");
+          return;
+        }
 
-      if (fromTrackId === track.id) {
-        updateClipStartTime(track.id, clipId, snappedTime);
-      } else {
-        moveClipToTrack(fromTrackId, track.id, clipId);
-        // Use a small delay to ensure the clip is moved before updating position
-        requestAnimationFrame(() => {
-          updateClipStartTime(track.id, clipId, snappedTime);
+        // Check for overlaps with existing clips (excluding the moving clip itself)
+        const movingClipDuration = movingClip.duration - movingClip.trimStart - movingClip.trimEnd;
+        const movingClipEnd = snappedTime + movingClipDuration;
+
+        const hasOverlap = track.clips.some(existingClip => {
+          // Skip the clip being moved if it's on the same track
+          if (fromTrackId === track.id && existingClip.id === clipId) return false;
+
+          const existingStart = existingClip.startTime;
+          const existingEnd = existingClip.startTime + (existingClip.duration - existingClip.trimStart - existingClip.trimEnd);
+
+          // Check if clips overlap
+          return (snappedTime < existingEnd && movingClipEnd > existingStart);
         });
+
+        if (hasOverlap) {
+          toast.error("Cannot move clip here - it would overlap with existing clips");
+          return;
+        }
+
+        if (fromTrackId === track.id) {
+          updateClipStartTime(track.id, clipId, snappedTime);
+        } else {
+          moveClipToTrack(fromTrackId, track.id, clipId);
+          requestAnimationFrame(() => {
+            updateClipStartTime(track.id, clipId, snappedTime);
+          });
+        }
+      } else if (hasMediaItem) {
+        // Handle media item drop
+        const mediaItemData = e.dataTransfer.getData("application/x-media-item");
+        if (!mediaItemData) return;
+
+        const { id, type } = JSON.parse(mediaItemData);
+        const mediaItem = mediaItems.find((item) => item.id === id);
+
+        if (!mediaItem) {
+          toast.error("Media item not found");
+          return;
+        }
+
+        // Check if track type is compatible
+        const isCompatible =
+          (track.type === "video" && (type === "video" || type === "image")) ||
+          (track.type === "audio" && type === "audio");
+
+        if (!isCompatible) {
+          toast.error(`Cannot add ${type} to ${track.type} track`);
+          return;
+        }
+
+        // Check for overlaps with existing clips
+        const newClipDuration = mediaItem.duration || 5;
+        const newClipEnd = snappedTime + newClipDuration;
+
+        const hasOverlap = track.clips.some(existingClip => {
+          const existingStart = existingClip.startTime;
+          const existingEnd = existingClip.startTime + (existingClip.duration - existingClip.trimStart - existingClip.trimEnd);
+
+          // Check if clips overlap
+          return (snappedTime < existingEnd && newClipEnd > existingStart);
+        });
+
+        if (hasOverlap) {
+          toast.error("Cannot place clip here - it would overlap with existing clips");
+          return;
+        }
+
+        addClipToTrack(track.id, {
+          mediaId: mediaItem.id,
+          name: mediaItem.name,
+          duration: mediaItem.duration || 5,
+          startTime: snappedTime,
+          trimStart: 0,
+          trimEnd: 0,
+        });
+
+        toast.success(`Added ${mediaItem.name} to ${track.name}`);
       }
     } catch (error) {
-      console.error("Error moving clip:", error);
-      toast.error("Failed to move clip");
+      console.error("Error handling drop:", error);
+      toast.error("Failed to add media to track");
     }
   };
 
@@ -672,7 +842,9 @@ function TimelineTrackContent({ track, zoomLevel }: { track: TimelineTrack, zoom
   return (
     <div
       className={`w-full h-full transition-all duration-150 ease-out ${isDraggedOver
-        ? "bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg"
+        ? wouldOverlap
+          ? "bg-red-500/15 border-2 border-dashed border-red-400 shadow-lg"
+          : "bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg"
         : "hover:bg-muted/20"
         }`}
       onDragOver={handleTrackDragOver}
@@ -685,9 +857,17 @@ function TimelineTrackContent({ track, zoomLevel }: { track: TimelineTrack, zoom
     >
       <div className="h-full relative track-clips-container min-w-full">
         {track.clips.length === 0 ? (
-          <div className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${isDropping ? "border-blue-500 bg-blue-500/10 text-blue-600" : "border-muted/30"
+          <div className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${isDropping
+            ? wouldOverlap
+              ? "border-red-500 bg-red-500/10 text-red-600"
+              : "border-blue-500 bg-blue-500/10 text-blue-600"
+            : "border-muted/30"
             }`}>
-            {isDropping ? "Drop clip here" : "Drop media here"}
+            {isDropping
+              ? wouldOverlap
+                ? "Cannot drop - would overlap"
+                : "Drop clip here"
+              : "Drop media here"}
           </div>
         ) : (
           <>
@@ -727,13 +907,17 @@ function TimelineTrackContent({ track, zoomLevel }: { track: TimelineTrack, zoom
             {/* Drop position indicator */}
             {isDraggedOver && dropPosition !== null && (
               <div
-                className="absolute top-0 bottom-0 w-1 bg-blue-500 pointer-events-none z-30 transition-all duration-75 ease-out"
+                className={`absolute top-0 bottom-0 w-1 pointer-events-none z-30 transition-all duration-75 ease-out ${wouldOverlap ? "bg-red-500" : "bg-blue-500"
+                  }`}
                 style={{ left: `${dropPosition * 50 * zoomLevel}px`, transform: 'translateX(-50%)' }}
               >
-                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-md" />
-                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-md" />
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-white bg-blue-500 px-1 py-0.5 rounded whitespace-nowrap">
-                  {dropPosition.toFixed(1)}s
+                <div className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${wouldOverlap ? "bg-red-500" : "bg-blue-500"
+                  }`} />
+                <div className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${wouldOverlap ? "bg-red-500" : "bg-blue-500"
+                  }`} />
+                <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-white px-1 py-0.5 rounded whitespace-nowrap ${wouldOverlap ? "bg-red-500" : "bg-blue-500"
+                  }`}>
+                  {wouldOverlap ? "⚠️" : ""}{dropPosition.toFixed(1)}s
                 </div>
               </div>
             )}
