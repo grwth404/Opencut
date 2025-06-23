@@ -259,19 +259,6 @@ export function Timeline() {
         >
           {/* Timeline Header */}
           <div className="py-3 relative bg-muted/30 border-b">
-            {/* Playhead */}
-            {duration > 0 && (
-              <div
-                className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-10"
-                style={{
-                  left: `${(currentTime / (duration / zoomLevel)) * 100}%`,
-                  transform: 'translateX(-50%)'
-                }}
-              >
-                <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm" />
-              </div>
-            )}
-
             {/* Zoom indicator */}
             <div className="absolute top-1 right-2 text-xs text-muted-foreground">
               {zoomLevel.toFixed(1)}x
@@ -301,14 +288,15 @@ export function Timeline() {
             )}
 
             {/* Playhead for tracks area */}
-            {tracks.length > 0 && duration > 0 && (
+            {tracks.length > 0 && (
               <div
-                className="absolute top-0 bottom-0 w-0.5 bg-red-500/80 pointer-events-none z-10"
+                className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-20"
                 style={{
-                  left: `${(currentTime / (duration / zoomLevel)) * 100}%`,
-                  transform: 'translateX(-50%)'
+                  left: `${currentTime * 50 * zoomLevel + 128}px`,
                 }}
-              />
+              >
+                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm" />
+              </div>
             )}
           </div>
         </div>
@@ -321,6 +309,7 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
   const { mediaItems } = useMediaStore();
   const { moveClipToTrack, updateClipTrim, updateClipStartTime } = useTimelineStore();
   const [isDropping, setIsDropping] = useState(false);
+  const [dropPosition, setDropPosition] = useState<number | null>(null);
   const [resizing, setResizing] = useState<{
     clipId: string;
     side: 'left' | 'right';

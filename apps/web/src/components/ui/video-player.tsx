@@ -9,9 +9,10 @@ interface VideoPlayerProps {
     src: string;
     poster?: string;
     className?: string;
+    startTime?: number;
 }
 
-export function VideoPlayer({ src, poster, className = "" }: VideoPlayerProps) {
+export function VideoPlayer({ src, poster, className = "", startTime = 0 }: VideoPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const { isPlaying, currentTime, volume, play, pause, setVolume, setDuration, setCurrentTime } = usePlaybackStore();
 
@@ -25,6 +26,9 @@ export function VideoPlayer({ src, poster, className = "" }: VideoPlayerProps) {
 
         const handleLoadedMetadata = () => {
             setDuration(video.duration);
+            if (startTime > 0) {
+                video.currentTime = startTime;
+            }
         };
 
         const handleSeekEvent = (e: CustomEvent) => {

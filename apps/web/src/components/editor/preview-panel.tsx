@@ -11,39 +11,59 @@ import { Play, Pause } from "lucide-react";
 export function PreviewPanel() {
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
-  const { isPlaying, toggle } = usePlaybackStore();
+  const { isPlaying, toggle, currentTime } = usePlaybackStore();
 
-  const firstClip = tracks[0]?.clips[0];
-  const firstMediaItem = firstClip
-    ? mediaItems.find((item) => item.id === firstClip.mediaId)
+  // Find the active clip at the current playback time
+  const getActiveClip = () => {
+    for (const track of tracks) {
+      for (const clip of track.clips) {
+        const clipStart = clip.startTime;
+        const clipEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+
+        if (currentTime >= clipStart && currentTime < clipEnd) {
+          return clip;
+        }
+      }
+    }
+    return null;
+  };
+
+  const activeClip = getActiveClip();
+  const activeMediaItem = activeClip
+    ? mediaItems.find((item) => item.id === activeClip.mediaId)
     : null;
 
-  const aspectRatio = firstMediaItem?.aspectRatio || 16 / 9;
+  const aspectRatio = activeMediaItem?.aspectRatio || 16 / 9;
 
   const renderContent = () => {
-    if (!firstMediaItem) {
+    if (!activeMediaItem || !activeClip) {
       return (
         <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/50">
-          Drop media to start editing
+          {tracks.length === 0 ? "Drop media to start editing" : "No clip at current time"}
         </div>
       );
     }
 
-    if (firstMediaItem.type === "video") {
+    // Calculate the relative time within the clip (accounting for trim)
+    const relativeTime = Math.max(0, currentTime - activeClip.startTime + activeClip.trimStart);
+
+    if (activeMediaItem.type === "video") {
       return (
         <VideoPlayer
-          src={firstMediaItem.url}
-          poster={firstMediaItem.thumbnailUrl}
+          src={activeMediaItem.url}
+          poster={activeMediaItem.thumbnailUrl}
           className="w-full h-full"
+          startTime={relativeTime}
+          key={`${activeClip.id}-${activeClip.trimStart}-${activeClip.trimEnd}`}
         />
       );
     }
 
-    if (firstMediaItem.type === "image") {
+    if (activeMediaItem.type === "image") {
       return (
         <ImageTimelineTreatment
-          src={firstMediaItem.url}
-          alt={firstMediaItem.name}
+          src={activeMediaItem.url}
+          alt={activeMediaItem.name}
           targetAspectRatio={aspectRatio}
           className="w-full h-full"
           backgroundType="blur"
@@ -51,12 +71,12 @@ export function PreviewPanel() {
       );
     }
 
-    if (firstMediaItem.type === "audio") {
+    if (activeMediaItem.type === "audio") {
       return (
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-green-500/20 to-emerald-500/20">
           <div className="text-center">
             <div className="text-6xl mb-4">🎵</div>
-            <p className="text-muted-foreground">{firstMediaItem.name}</p>
+            <p className="text-muted-foreground">{activeMediaItem.name}</p>
             <Button
               variant="outline"
               className="mt-4"
@@ -88,10 +108,10 @@ export function PreviewPanel() {
         {renderContent()}
       </div>
 
-      {firstMediaItem && (
+      {activeMediaItem && (
         <div className="mt-4 text-center">
           <p className="text-sm text-muted-foreground">
-            {firstMediaItem.name}
+            {activeMediaItem.name}
           </p>
           <p className="text-xs text-muted-foreground/70">
             {aspectRatio.toFixed(2)} • {aspectRatio > 1 ? "Landscape" : aspectRatio < 1 ? "Portrait" : "Square"}
