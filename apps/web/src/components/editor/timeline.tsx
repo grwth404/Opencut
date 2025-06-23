@@ -703,14 +703,14 @@ export function Timeline() {
           </div>
 
           {/* Timeline Tracks Content */}
-          <div className="flex-1 relative">
-            <ScrollArea className="h-full w-full">
+          <div className="flex-1 relative overflow-hidden">
+            <div className="w-full h-[600px] overflow-hidden flex" ref={timelineRef} style={{ position: 'relative' }}>
+              {/* Timeline grid and clips area (with left margin for sidebar) */}
               <div
-                ref={timelineRef}
-                className="relative cursor-pointer select-none"
+                className="relative flex-1"
                 style={{
+                  height: `${tracks.length * 60}px`,
                   width: `${Math.max(1000, duration * 50 * zoomLevel)}px`,
-                  minHeight: '600px', // Always at least 600px tall for easy empty area clicking
                 }}
                 onClick={handleTimelineAreaClick}
                 onMouseDown={handleTimelineMouseDown}
@@ -753,7 +753,6 @@ export function Timeline() {
                           zoomLevel={zoomLevel}
                           setContextMenu={setContextMenu}
                         />
-
                       </div>
                     ))}
 
@@ -768,7 +767,7 @@ export function Timeline() {
                   </>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         </div>
       </div>
