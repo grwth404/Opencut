@@ -14,7 +14,7 @@
 
 # env files (can opt-in for committing if needed)
 /apps/web/.env*
-/apps/web/.env.example
+!/apps/web/.env.example
 
 # typescript
 /apps/web/next-env.d.ts
