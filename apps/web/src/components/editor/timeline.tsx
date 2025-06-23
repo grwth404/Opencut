@@ -132,7 +132,6 @@ export function Timeline() {
   // On marquee end, select clips in box
   useEffect(() => {
     if (!marquee || marquee.active) return;
-    // Calculate selection box in timeline coordinates
     const timeline = timelineRef.current;
     if (!timeline) return;
     const rect = timeline.getBoundingClientRect();
@@ -140,7 +139,17 @@ export function Timeline() {
     const x2 = Math.max(marquee.startX, marquee.endX) - rect.left;
     const y1 = Math.min(marquee.startY, marquee.endY) - rect.top;
     const y2 = Math.max(marquee.startY, marquee.endY) - rect.top;
-    // Find all clips that intersect the box
+    // Validation: skip if too small
+    if (Math.abs(x2 - x1) < 5 || Math.abs(y2 - y1) < 5) {
+      setMarquee(null);
+      return;
+    }
+    // Clamp to timeline bounds
+    const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
+    const bx1 = clamp(x1, 0, rect.width);
+    const bx2 = clamp(x2, 0, rect.width);
+    const by1 = clamp(y1, 0, rect.height);
+    const by2 = clamp(y2, 0, rect.height);
     let newSelection: { trackId: string; clipId: string }[] = [];
     tracks.forEach((track, trackIdx) => {
       track.clips.forEach((clip) => {
@@ -150,12 +159,11 @@ export function Timeline() {
         const clipTop = trackIdx * 60;
         const clipBottom = clipTop + 60;
         const clipRight = clipLeft + clipWidth;
-        // Check intersection
         if (
-          x1 < clipRight &&
-          x2 > clipLeft &&
-          y1 < clipBottom &&
-          y2 > clipTop
+          bx1 < clipRight &&
+          bx2 > clipLeft &&
+          by1 < clipBottom &&
+          by2 > clipTop
         ) {
           newSelection.push({ trackId: track.id, clipId: clip.id });
         }
@@ -163,10 +171,10 @@ export function Timeline() {
     });
     if (newSelection.length > 0) {
       if (marquee.additive) {
-        const current = new Set(selectedClips.map((c) => c.trackId + ":" + c.clipId));
+        const selectedSet = new Set(selectedClips.map((c) => c.trackId + ':' + c.clipId));
         newSelection = [
           ...selectedClips,
-          ...newSelection.filter((c) => !current.has(c.trackId + ":" + c.clipId)),
+          ...newSelection.filter((c) => !selectedSet.has(c.trackId + ':' + c.clipId)),
         ];
       }
       setSelectedClips(newSelection);
@@ -174,7 +182,7 @@ export function Timeline() {
       clearSelectedClips();
     }
     setMarquee(null);
-  }, [marquee, tracks, zoomLevel, selectedClips, selectClip, clearSelectedClips, setSelectedClips]);
+  }, [marquee, tracks, zoomLevel, selectedClips, setSelectedClips, clearSelectedClips]);
 
   const handleDragEnter = (e: React.DragEvent) => {
     // When something is dragged over the timeline, show overlay
@@ -619,29 +627,6 @@ export function Timeline() {
                 onMouseDown={handleTimelineMouseDown}
                 onWheel={handleWheel}
               >
-                {/* Overlay for deselect/marquee */}
-                <div
-                  className="absolute inset-0 z-0"
-                  style={{ pointerEvents: 'auto', background: 'transparent' }}
-                  onClick={handleTimelineAreaClick}
-                  onMouseDown={handleTimelineMouseDown}
-                />
-                {/* Marquee selection rectangle */}
-                {marquee && marquee.active && timelineRef.current && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: Math.min(marquee.startX, marquee.endX) - timelineRef.current.getBoundingClientRect().left,
-                      top: Math.min(marquee.startY, marquee.endY) - timelineRef.current.getBoundingClientRect().top,
-                      width: Math.abs(marquee.endX - marquee.startX),
-                      height: Math.abs(marquee.endY - marquee.startY),
-                      background: "rgba(59, 130, 246, 0.15)",
-                      border: "2px solid #3b82f6",
-                      zIndex: 50,
-                      pointerEvents: "none",
-                    }}
-                  />
-                )}
                 {tracks.length === 0 ? (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
