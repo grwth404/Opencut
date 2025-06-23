@@ -299,9 +299,13 @@ export function Timeline() {
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.05 : 0.05;
-    setZoomLevel((prev) => Math.max(0.1, Math.min(10, prev + delta)));
+    // Only zoom if user is using pinch gesture (ctrlKey or metaKey is true)
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.05 : 0.05;
+      setZoomLevel((prev) => Math.max(0.1, Math.min(10, prev + delta)));
+    }
+    // Otherwise, allow normal scrolling
   };
 
   const dragProps = {
@@ -620,8 +624,7 @@ export function Timeline() {
                 className="relative cursor-pointer select-none"
                 style={{
                   width: `${Math.max(1000, duration * 50 * zoomLevel)}px`,
-                  minHeight:
-                    tracks.length > 0 ? `${tracks.length * 60}px` : "200px",
+                  minHeight: '600px', // Always at least 600px tall for easy empty area clicking
                 }}
                 onClick={handleTimelineAreaClick}
                 onMouseDown={handleTimelineMouseDown}
