@@ -310,6 +310,7 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
   const { moveClipToTrack, updateClipTrim, updateClipStartTime } = useTimelineStore();
   const [isDropping, setIsDropping] = useState(false);
   const [dropPosition, setDropPosition] = useState<number | null>(null);
+  const [isDraggedOver, setIsDraggedOver] = useState(false);
   const [resizing, setResizing] = useState<{
     clipId: string;
     side: 'left' | 'right';
@@ -317,6 +318,7 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
     initialTrimStart: number;
     initialTrimEnd: number;
   } | null>(null);
+  const dragCounterRef = useRef(0);
 
   const handleResizeStart = (e: React.MouseEvent, clipId: string, side: 'left' | 'right') => {
     e.stopPropagation();
@@ -392,37 +394,66 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
     e.dataTransfer.setData("application/x-timeline-clip", JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = "move";
 
-    const target = e.currentTarget as HTMLElement;
-    e.dataTransfer.setDragImage(target, target.offsetWidth / 2, target.offsetHeight / 2);
+    // Add visual feedback to the dragged element
+    const target = e.currentTarget.parentElement as HTMLElement;
+    target.style.opacity = "0.5";
+    target.style.transform = "scale(0.95)";
+  };
+
+  const handleClipDragEnd = (e: React.DragEvent) => {
+    // Reset visual feedback
+    const target = e.currentTarget.parentElement as HTMLElement;
+    target.style.opacity = "";
+    target.style.transform = "";
   };
 
   const handleTrackDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     if (!e.dataTransfer.types.includes("application/x-timeline-clip")) return;
     e.dataTransfer.dropEffect = "move";
+
+    setIsDraggedOver(true);
+
+    // Calculate and show drop position with better precision
+    const trackContainer = e.currentTarget.querySelector(".track-clips-container") as HTMLElement;
+    if (trackContainer) {
+      const rect = trackContainer.getBoundingClientRect();
+      const mouseX = Math.max(0, e.clientX - rect.left);
+      const dropTime = mouseX / (50 * zoomLevel);
+      setDropPosition(dropTime);
+    }
   };
 
   const handleTrackDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     if (!e.dataTransfer.types.includes("application/x-timeline-clip")) return;
+
+    dragCounterRef.current++;
     setIsDropping(true);
+    setIsDraggedOver(true);
   };
 
   const handleTrackDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     if (!e.dataTransfer.types.includes("application/x-timeline-clip")) return;
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const { clientX: x, clientY: y } = e;
+    dragCounterRef.current--;
 
-    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+    if (dragCounterRef.current === 0) {
       setIsDropping(false);
+      setIsDraggedOver(false);
+      setDropPosition(null);
     }
   };
 
   const handleTrackDrop = (e: React.DragEvent) => {
     e.preventDefault();
+
+    // Reset all drag states
+    dragCounterRef.current = 0;
     setIsDropping(false);
+    setIsDraggedOver(false);
+    setDropPosition(null);
 
     if (!e.dataTransfer.types.includes("application/x-timeline-clip")) return;
 
@@ -436,13 +467,20 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
       if (!trackContainer) return;
 
       const rect = trackContainer.getBoundingClientRect();
-      const newStartTime = Math.max(0, (e.clientX - rect.left) / (50 * zoomLevel));
+      const mouseX = Math.max(0, e.clientX - rect.left);
+      const newStartTime = mouseX / (50 * zoomLevel);
+
+      // Snap to grid (optional - every 0.1 seconds)
+      const snappedTime = Math.round(newStartTime * 10) / 10;
 
       if (fromTrackId === track.id) {
-        updateClipStartTime(track.id, clipId, newStartTime);
+        updateClipStartTime(track.id, clipId, snappedTime);
       } else {
         moveClipToTrack(fromTrackId, track.id, clipId);
-        setTimeout(() => updateClipStartTime(track.id, clipId, newStartTime), 0);
+        // Use a small delay to ensure the clip is moved before updating position
+        requestAnimationFrame(() => {
+          updateClipStartTime(track.id, clipId, snappedTime);
+        });
       }
     } catch (error) {
       console.error("Error moving clip:", error);
@@ -514,7 +552,9 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
       </div>
 
       <div
-        className={`flex-1 h-[60px] transition-colors ${isDropping ? "bg-accent/50 border-2 border-dashed border-accent" : ""
+        className={`flex-1 h-[60px] transition-all duration-150 ease-out ${isDraggedOver
+          ? "bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg transform scale-[1.02]"
+          : "border border-transparent hover:bg-muted/30"
           }`}
         onDragOver={handleTrackDragOver}
         onDragEnter={handleTrackDragEnter}
@@ -526,41 +566,59 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
       >
         <div className="h-full relative track-clips-container min-w-full">
           {track.clips.length === 0 ? (
-            <div className="h-full w-full rounded-sm border-2 border-dashed border-muted/30 flex items-center justify-center text-xs text-muted-foreground">
-              Drop media here
+            <div className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${isDropping ? "border-blue-500 bg-blue-500/10 text-blue-600" : "border-muted/30"
+              }`}>
+              {isDropping ? "Drop clip here" : "Drop media here"}
             </div>
           ) : (
-            track.clips.map((clip) => {
-              const effectiveDuration = clip.duration - clip.trimStart - clip.trimEnd;
-              const clipWidth = Math.max(80, effectiveDuration * 50 * zoomLevel);
-              const clipLeft = clip.startTime * 50 * zoomLevel;
+            <>
+              {track.clips.map((clip) => {
+                const effectiveDuration = clip.duration - clip.trimStart - clip.trimEnd;
+                const clipWidth = Math.max(80, effectiveDuration * 50 * zoomLevel);
+                const clipLeft = clip.startTime * 50 * zoomLevel;
 
-              return (
-                <div
-                  key={clip.id}
-                  className={`timeline-clip absolute h-full rounded-sm border transition-colors ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group`}
-                  style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
-                >
+                return (
                   <div
-                    className="absolute left-0 top-0 bottom-0 w-2 cursor-w-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
-                    onMouseDown={(e) => handleResizeStart(e, clip.id, 'left')}
-                  />
-
-                  <div
-                    className="flex-1 cursor-grab active:cursor-grabbing"
-                    draggable={true}
-                    onDragStart={(e) => handleClipDragStart(e, clip)}
+                    key={clip.id}
+                    className={`timeline-clip absolute h-full rounded-sm border transition-all duration-200 ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg`}
+                    style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
                   >
-                    {renderClipContent(clip)}
-                  </div>
+                    <div
+                      className="absolute left-0 top-0 bottom-0 w-2 cursor-w-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
+                      onMouseDown={(e) => handleResizeStart(e, clip.id, 'left')}
+                    />
 
-                  <div
-                    className="absolute right-0 top-0 bottom-0 w-2 cursor-e-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
-                    onMouseDown={(e) => handleResizeStart(e, clip.id, 'right')}
-                  />
+                    <div
+                      className="flex-1 cursor-grab active:cursor-grabbing"
+                      draggable={true}
+                      onDragStart={(e) => handleClipDragStart(e, clip)}
+                      onDragEnd={handleClipDragEnd}
+                    >
+                      {renderClipContent(clip)}
+                    </div>
+
+                    <div
+                      className="absolute right-0 top-0 bottom-0 w-2 cursor-e-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
+                      onMouseDown={(e) => handleResizeStart(e, clip.id, 'right')}
+                    />
+                  </div>
+                );
+              })}
+
+              {/* Drop position indicator */}
+              {isDraggedOver && dropPosition !== null && (
+                <div
+                  className="absolute top-0 bottom-0 w-1 bg-blue-500 pointer-events-none z-30 transition-all duration-75 ease-out"
+                  style={{ left: `${dropPosition * 50 * zoomLevel}px`, transform: 'translateX(-50%)' }}
+                >
+                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-md" />
+                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-md" />
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-white bg-blue-500 px-1 py-0.5 rounded whitespace-nowrap">
+                    {dropPosition.toFixed(1)}s
+                  </div>
                 </div>
-              );
-            })
+              )}
+            </>
           )}
         </div>
       </div>
