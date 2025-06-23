@@ -2,31 +2,40 @@
 
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
+import { usePlaybackStore } from "@/stores/playback-store";
 import { ImageTimelineTreatment } from "@/components/ui/image-timeline-treatment";
+import { VideoPlayer } from "@/components/ui/video-player";
 import { Button } from "@/components/ui/button";
 import { Play, Pause } from "lucide-react";
-import { useState } from "react";
 
 export function PreviewPanel() {
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
-  const [isPlaying, setIsPlaying] = useState(false);
+  const { isPlaying, toggle } = usePlaybackStore();
 
-  // Get the first clip from the first track for preview (simplified for now)
   const firstClip = tracks[0]?.clips[0];
   const firstMediaItem = firstClip
     ? mediaItems.find((item) => item.id === firstClip.mediaId)
     : null;
 
-  // Calculate dynamic aspect ratio - default to 16:9 if no media
   const aspectRatio = firstMediaItem?.aspectRatio || 16 / 9;
 
-  const renderPreviewContent = () => {
+  const renderContent = () => {
     if (!firstMediaItem) {
       return (
-        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/50 group-hover:text-muted-foreground/80 transition-colors">
-          Drop media here or click to import
+        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/50">
+          Drop media to start editing
         </div>
+      );
+    }
+
+    if (firstMediaItem.type === "video") {
+      return (
+        <VideoPlayer
+          src={firstMediaItem.url}
+          poster={firstMediaItem.thumbnailUrl}
+          className="w-full h-full"
+        />
       );
     }
 
@@ -36,23 +45,9 @@ export function PreviewPanel() {
           src={firstMediaItem.url}
           alt={firstMediaItem.name}
           targetAspectRatio={aspectRatio}
-          className="w-full h-full rounded-lg"
+          className="w-full h-full"
           backgroundType="blur"
         />
-      );
-    }
-
-    if (firstMediaItem.type === "video") {
-      return firstMediaItem.thumbnailUrl ? (
-        <img
-          src={firstMediaItem.thumbnailUrl}
-          alt={firstMediaItem.name}
-          className="w-full h-full object-cover rounded-lg"
-        />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/50">
-          Video Preview
-        </div>
       );
     }
 
@@ -62,6 +57,14 @@ export function PreviewPanel() {
           <div className="text-center">
             <div className="text-6xl mb-4">🎵</div>
             <p className="text-muted-foreground">{firstMediaItem.name}</p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={toggle}
+            >
+              {isPlaying ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+              {isPlaying ? "Pause" : "Play"}
+            </Button>
           </div>
         </div>
       );
@@ -73,7 +76,7 @@ export function PreviewPanel() {
   return (
     <div className="h-full flex flex-col items-center justify-center p-4 overflow-hidden">
       <div
-        className="bg-black/90 rounded-lg shadow-lg relative group overflow-hidden flex-shrink"
+        className="bg-black rounded-lg shadow-lg relative overflow-hidden flex-shrink-0"
         style={{
           aspectRatio: aspectRatio.toString(),
           width: aspectRatio > 1 ? "100%" : "auto",
@@ -82,49 +85,16 @@ export function PreviewPanel() {
           maxHeight: "100%",
         }}
       >
-        {renderPreviewContent()}
-
-        {/* Playback Controls Overlay */}
-        {firstMediaItem && (
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="flex items-center gap-2 bg-black/80 rounded-lg px-4 py-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-white hover:bg-white/20"
-                onClick={() => setIsPlaying(!isPlaying)}
-              >
-                {isPlaying ? (
-                  <Pause className="h-5 w-5" />
-                ) : (
-                  <Play className="h-5 w-5" />
-                )}
-              </Button>
-              <span className="text-white text-sm">
-                {firstClip?.name || "No clip selected"}
-              </span>
-            </div>
-          </div>
-        )}
+        {renderContent()}
       </div>
 
-      {/* Preview Info */}
       {firstMediaItem && (
         <div className="mt-4 text-center">
           <p className="text-sm text-muted-foreground">
-            Preview: {firstMediaItem.name}
-            {firstMediaItem.type === "image" &&
-              " (with CapCut-style treatment)"}
-            <br />
-            <span className="text-xs text-muted-foreground/70">
-              Aspect Ratio: {aspectRatio.toFixed(2)} (
-              {aspectRatio > 1
-                ? "Landscape"
-                : aspectRatio < 1
-                  ? "Portrait"
-                  : "Square"}
-              )
-            </span>
+            {firstMediaItem.name}
+          </p>
+          <p className="text-xs text-muted-foreground/70">
+            {aspectRatio.toFixed(2)} • {aspectRatio > 1 ? "Landscape" : aspectRatio < 1 ? "Portrait" : "Square"}
           </p>
         </div>
       )}

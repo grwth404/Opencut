@@ -20,6 +20,7 @@ import {
 import { DragOverlay } from "../ui/drag-overlay";
 import { useTimelineStore, type TimelineTrack } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
+import { usePlaybackStore } from "@/stores/playback-store";
 import { processMediaFiles } from "@/lib/media-processing";
 import { ImageTimelineTreatment } from "@/components/ui/image-timeline-treatment";
 import { toast } from "sonner";
@@ -28,9 +29,12 @@ import { useState, useRef } from "react";
 export function Timeline() {
   const { tracks, addTrack, addClipToTrack } = useTimelineStore();
   const { mediaItems, addMediaItem } = useMediaStore();
+  const { currentTime, duration, seek } = usePlaybackStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const dragCounterRef = useRef(0);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -171,6 +175,25 @@ export function Timeline() {
     }
   };
 
+  const handleTimelineClick = (e: React.MouseEvent) => {
+    const timeline = timelineRef.current;
+    if (!timeline || duration === 0) return;
+
+    const rect = timeline.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const timelineWidth = rect.width;
+    const visibleDuration = duration / zoomLevel;
+    const clickedTime = (x / timelineWidth) * visibleDuration;
+
+    seek(Math.max(0, Math.min(duration, clickedTime)));
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.05 : 0.05;
+    setZoomLevel(prev => Math.max(0.1, Math.min(10, prev + delta)));
+  };
+
   const dragProps = {
     onDragEnter: handleDragEnter,
     onDragOver: handleDragOver,
@@ -264,46 +287,73 @@ export function Timeline() {
 
       {/* Tracks Area */}
       <ScrollArea className="flex-1">
-        <div className="min-w-[800px]">
-          {/* Time Markers */}
-          <div className="py-2 pt-1 flex items-center">
-            {Array.from({ length: 16 }).map((_, i) => (
+        <div
+          ref={timelineRef}
+          className="min-w-[800px] relative cursor-pointer select-none"
+          onClick={handleTimelineClick}
+          onWheel={handleWheel}
+        >
+          {/* Timeline Header */}
+          <div className="py-3 relative bg-muted/30 border-b">
+            {/* Playhead */}
+            {duration > 0 && (
               <div
-                key={i}
-                className="w-[50px] flex items-end justify-center text-xs text-muted-foreground"
+                className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-10"
+                style={{
+                  left: `${(currentTime / (duration / zoomLevel)) * 100}%`,
+                  transform: 'translateX(-50%)'
+                }}
               >
-                {i}s
+                <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm" />
               </div>
-            ))}
+            )}
+
+            {/* Zoom indicator */}
+            <div className="absolute top-1 right-2 text-xs text-muted-foreground">
+              {zoomLevel.toFixed(1)}x
+            </div>
           </div>
 
           {/* Timeline Tracks */}
-          {tracks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
-                <SplitSquareHorizontal className="h-8 w-8 text-muted-foreground" />
+          <div className="relative">
+            {tracks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
+                  <SplitSquareHorizontal className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  No tracks in timeline
+                </p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  Add a video or audio track to get started
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                No tracks in timeline
-              </p>
-              <p className="text-xs text-muted-foreground/70 mt-1">
-                Add a video or audio track to get started
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2.5">
-              {tracks.map((track) => (
-                <TimelineTrackComponent key={track.id} track={track} />
-              ))}
-            </div>
-          )}
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {tracks.map((track) => (
+                  <TimelineTrackComponent key={track.id} track={track} zoomLevel={zoomLevel} />
+                ))}
+              </div>
+            )}
+
+            {/* Playhead for tracks area */}
+            {tracks.length > 0 && duration > 0 && (
+              <div
+                className="absolute top-0 bottom-0 w-0.5 bg-red-500/80 pointer-events-none z-10"
+                style={{
+                  left: `${(currentTime / (duration / zoomLevel)) * 100}%`,
+                  transform: 'translateX(-50%)'
+                }}
+              />
+            )}
+          </div>
         </div>
       </ScrollArea>
     </div>
   );
 }
 
-function TimelineTrackComponent({ track }: { track: TimelineTrack }) {
+function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zoomLevel: number }) {
   const { mediaItems } = useMediaStore();
   const { moveClipToTrack, reorderClipInTrack } = useTimelineStore();
   const [isDropping, setIsDropping] = useState(false);
@@ -528,7 +578,7 @@ function TimelineTrackComponent({ track }: { track: TimelineTrack }) {
                 key={clip.id}
                 className={`timeline-clip h-full rounded-sm border cursor-grab active:cursor-grabbing transition-colors ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden`}
                 style={{
-                  width: `${Math.max(80, clip.duration * 50)}px`,
+                  width: `${Math.max(80, clip.duration * 50 * zoomLevel)}px`,
                 }}
                 draggable={true}
                 onDragStart={(e) => handleClipDragStart(e, clip)}

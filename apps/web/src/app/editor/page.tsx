@@ -14,6 +14,7 @@ import { EditorHeader } from "@/components/editor-header";
 import { usePanelStore } from "@/stores/panel-store";
 import { useProjectStore } from "@/stores/project-store";
 import { EditorProvider } from "@/components/editor-provider";
+import { usePlaybackControls } from "@/hooks/use-playback-controls";
 
 export default function Editor() {
   const {
@@ -31,7 +32,8 @@ export default function Editor() {
 
   const { activeProject, createNewProject } = useProjectStore();
 
-  // Initialize a new project if none exists
+  usePlaybackControls();
+
   useEffect(() => {
     if (!activeProject) {
       createNewProject("Untitled Project");
