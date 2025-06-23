@@ -40,7 +40,7 @@ export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their clips.
   // You can drag media here to add it to your project.
   // Clips can be trimmed, deleted, and moved.
-  const { tracks, addTrack, addClipToTrack, removeTrack, toggleTrackMute, removeClipFromTrack, moveClipToTrack, getTotalDuration, selectedClips, selectClip, deselectClip, clearSelectedClips, setSelectedClips } =
+  const { tracks, addTrack, addClipToTrack, removeTrack, toggleTrackMute, removeClipFromTrack, moveClipToTrack, getTotalDuration, selectedClips, selectClip, deselectClip, clearSelectedClips, setSelectedClips, updateClipTrim } =
     useTimelineStore();
   const { mediaItems, addMediaItem } = useMediaStore();
   const { currentTime, duration, seek, setDuration, isPlaying, play, pause, toggle, setSpeed, speed } = usePlaybackStore();
@@ -315,6 +315,92 @@ export function Timeline() {
     onDrop: handleDrop,
   };
 
+  // Action handlers for toolbar
+  const handleSplitSelected = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+    selectedClips.forEach(({ trackId, clipId }) => {
+      const track = tracks.find(t => t.id === trackId);
+      const clip = track?.clips.find(c => c.id === clipId);
+      if (clip && track) {
+        const splitTime = currentTime;
+        const effectiveStart = clip.startTime;
+        const effectiveEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+        if (splitTime > effectiveStart && splitTime < effectiveEnd) {
+          updateClipTrim(track.id, clip.id, clip.trimStart, clip.trimEnd + (effectiveEnd - splitTime));
+          addClipToTrack(track.id, {
+            mediaId: clip.mediaId,
+            name: clip.name + " (split)",
+            duration: clip.duration,
+            startTime: splitTime,
+            trimStart: clip.trimStart + (splitTime - effectiveStart),
+            trimEnd: clip.trimEnd,
+          });
+        }
+      }
+    });
+    toast.success("Split selected clip(s)");
+  };
+
+  const handleDuplicateSelected = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+    selectedClips.forEach(({ trackId, clipId }) => {
+      const track = tracks.find(t => t.id === trackId);
+      const clip = track?.clips.find(c => c.id === clipId);
+      if (clip && track) {
+        addClipToTrack(track.id, {
+          mediaId: clip.mediaId,
+          name: clip.name + " (copy)",
+          duration: clip.duration,
+          startTime: clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd) + 0.1,
+          trimStart: clip.trimStart,
+          trimEnd: clip.trimEnd,
+        });
+      }
+    });
+    toast.success("Duplicated selected clip(s)");
+  };
+
+  const handleFreezeSelected = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+    selectedClips.forEach(({ trackId, clipId }) => {
+      const track = tracks.find(t => t.id === trackId);
+      const clip = track?.clips.find(c => c.id === clipId);
+      if (clip && track) {
+        // Add a new freeze frame clip at the playhead
+        addClipToTrack(track.id, {
+          mediaId: clip.mediaId,
+          name: clip.name + " (freeze)",
+          duration: 1, // 1 second freeze frame
+          startTime: currentTime,
+          trimStart: 0,
+          trimEnd: clip.duration - 1,
+        });
+      }
+    });
+    toast.success("Freeze frame added for selected clip(s)");
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+    selectedClips.forEach(({ trackId, clipId }) => {
+      removeClipFromTrack(trackId, clipId);
+    });
+    clearSelectedClips();
+    toast.success("Deleted selected clip(s)");
+  };
+
   return (
     <div
       className={`h-full flex flex-col transition-colors duration-200 relative ${isDragOver ? "bg-accent/30 border-accent" : ""}`}
@@ -387,7 +473,7 @@ export function Timeline() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={handleSplitSelected}>
                 <Scissors className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -423,7 +509,7 @@ export function Timeline() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={handleDuplicateSelected}>
                 <Copy className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -432,7 +518,7 @@ export function Timeline() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={handleFreezeSelected}>
                 <Snowflake className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -441,7 +527,7 @@ export function Timeline() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={handleDeleteSelected}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -748,7 +834,7 @@ export function Timeline() {
                       const effectiveEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
 
                       if (splitTime > effectiveStart && splitTime < effectiveEnd) {
-                        useTimelineStore.getState().updateClipTrim(
+                        updateClipTrim(
                           track.id,
                           clip.id,
                           clip.trimStart,
@@ -1496,8 +1582,7 @@ function TimelineTrackContent({
             {/* Drop position indicator */}
             {isDraggedOver && dropPosition !== null && (
               <div
-                className={`absolute top-0 bottom-0 w-1 pointer-events-none z-30 transition-all duration-75 ease-out ${wouldOverlap ? "bg-red-500" : "bg-blue-500"
-                  }`}
+                className={`absolute top-0 bottom-0 w-1 pointer-events-none z-30 transition-all duration-75 ease-out ${wouldOverlap ? "bg-red-500" : "bg-blue-500"}`}
                 style={{
                   left: `${dropPosition * 50 * zoomLevel}px`,
                   transform: "translateX(-50%)",
