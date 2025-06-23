@@ -20,12 +20,10 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "../ui/tooltip";
-import { DragOverlay } from "../ui/drag-overlay";
 import { useTimelineStore, type TimelineTrack } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { processMediaFiles } from "@/lib/media-processing";
-import { ImageTimelineTreatment } from "@/components/ui/image-timeline-treatment";
 import { toast } from "sonner";
 import { useState, useRef, useEffect } from "react";
 
@@ -1301,87 +1299,7 @@ function TimelineTrackContent({
             )}
           </>
         )}
-
-
       </div>
     </div>
   );
 }
-
-// Custom context menu for track actions
-function TrackContextMenu({
-  x,
-  y,
-  track,
-  onClose,
-  onSplit,
-  onMute,
-  onDelete,
-}: {
-  x: number;
-  y: number;
-  track: any;
-  onClose: () => void;
-  onSplit: () => void;
-  onMute: () => void;
-  onDelete: () => void;
-}) {
-  // Small, modern, visually appealing popup
-  return (
-    <div
-      className="fixed z-50 min-w-[140px] bg-white border border-muted rounded-lg shadow-lg py-1 text-sm animate-fade-in text-black"
-      style={{ left: x + 4, top: y + 4 }}
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      {/* Split option */}
-      <button
-        className="flex items-center w-full px-3 py-2 hover:bg-muted/20 transition-colors"
-        onClick={onSplit}
-      >
-        <span className="mr-2">
-          <MoreVertical className="h-4 w-4" />
-        </span>
-        Split at Playhead
-      </button>
-      {/* Mute/Unmute option */}
-      <button
-        className="flex items-center w-full px-3 py-2 hover:bg-muted/20 transition-colors"
-        onClick={onMute}
-      >
-        <span className="mr-2">
-          {track.muted ? (
-            <VolumeX className="h-4 w-4" />
-          ) : (
-            <Volume2 className="h-4 w-4" />
-          )}
-        </span>
-        {track.muted ? "Unmute Track" : "Mute Track"}
-      </button>
-      {/* Delete option */}
-      <button
-        className="flex items-center w-full px-3 py-2 text-red-600 hover:bg-red-50 transition-colors"
-        onClick={onDelete}
-      >
-        <span className="mr-2">
-          <Trash2 className="h-4 w-4" />
-        </span>
-        Delete Track
-      </button>
-    </div>
-  );
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
