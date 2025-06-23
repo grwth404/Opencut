@@ -47,7 +47,6 @@ export async function processMediaFiles(
       if ((fileType === "video" || fileType === "audio") && !duration) {
         duration = await getMediaDuration(file);
       }
-      console.log(file)
 
       processedItems.push({
         name: file.name,
