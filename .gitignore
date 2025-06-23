@@ -19,3 +19,6 @@
 # typescript
 /apps/web/next-env.d.ts
 /apps/web/yarn.lock
+
+# asdf version management
+.tool-versions
