@@ -249,63 +249,187 @@ export function Timeline() {
         </TooltipProvider>
       </div>
 
-      {/* Tracks Area */}
-      <ScrollArea className="flex-1">
-        <div
-          ref={timelineRef}
-          className="min-w-[800px] relative cursor-pointer select-none"
-          onClick={handleTimelineClick}
-          onWheel={handleWheel}
-        >
-          {/* Timeline Header */}
-          <div className="py-3 relative bg-muted/30 border-b">
-            {/* Zoom indicator */}
-            <div className="absolute top-1 right-2 text-xs text-muted-foreground">
+      {/* Timeline Container */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Timeline Header with Ruler */}
+        <div className="flex border-b bg-background sticky top-0 z-10">
+          {/* Track Labels Header */}
+          <div className="w-48 flex-shrink-0 bg-muted/30 border-r flex items-center justify-between px-3 py-2">
+            <span className="text-sm font-medium text-muted-foreground">Tracks</span>
+            <div className="text-xs text-muted-foreground">
               {zoomLevel.toFixed(1)}x
             </div>
           </div>
 
-          {/* Timeline Tracks */}
-          <div className="relative">
-            {tracks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
-                  <SplitSquareHorizontal className="h-8 w-8 text-muted-foreground" />
+          {/* Timeline Ruler */}
+          <div className="flex-1 relative overflow-hidden">
+            <ScrollArea className="w-full">
+              <div
+                className="relative h-12 bg-muted/30"
+                style={{ width: `${Math.max(1000, duration * 50 * zoomLevel)}px` }}
+              >
+                {/* Time markers */}
+                {(() => {
+                  // Calculate appropriate time interval based on zoom level
+                  const getTimeInterval = (zoom: number) => {
+                    const pixelsPerSecond = 50 * zoom;
+                    if (pixelsPerSecond >= 200) return 0.1; // Every 0.1s when very zoomed in
+                    if (pixelsPerSecond >= 100) return 0.5; // Every 0.5s when zoomed in
+                    if (pixelsPerSecond >= 50) return 1;    // Every 1s at normal zoom
+                    if (pixelsPerSecond >= 25) return 2;    // Every 2s when zoomed out
+                    if (pixelsPerSecond >= 12) return 5;    // Every 5s when more zoomed out
+                    if (pixelsPerSecond >= 6) return 10;    // Every 10s when very zoomed out
+                    return 30;                              // Every 30s when extremely zoomed out
+                  };
+
+                  const interval = getTimeInterval(zoomLevel);
+                  const markerCount = Math.ceil(duration / interval) + 1;
+
+                  return Array.from({ length: markerCount }, (_, i) => {
+                    const time = i * interval;
+                    if (time > duration) return null;
+
+                    const isMainMarker = time % (interval >= 1 ? Math.max(1, interval) : 1) === 0;
+
+                    return (
+                      <div
+                        key={i}
+                        className={`absolute top-0 bottom-0 ${isMainMarker
+                          ? 'border-l border-muted-foreground/40'
+                          : 'border-l border-muted-foreground/20'
+                          }`}
+                        style={{ left: `${time * 50 * zoomLevel}px` }}
+                      >
+                        <span className={`absolute top-1 left-1 text-xs ${isMainMarker
+                          ? 'text-muted-foreground font-medium'
+                          : 'text-muted-foreground/70'
+                          }`}>
+                          {(() => {
+                            const formatTime = (seconds: number) => {
+                              const hours = Math.floor(seconds / 3600);
+                              const minutes = Math.floor((seconds % 3600) / 60);
+                              const secs = seconds % 60;
+
+                              if (hours > 0) {
+                                return `${hours}:${minutes.toString().padStart(2, '0')}:${Math.floor(secs).toString().padStart(2, '0')}`;
+                              } else if (minutes > 0) {
+                                return `${minutes}:${Math.floor(secs).toString().padStart(2, '0')}`;
+                              } else if (interval >= 1) {
+                                return `${Math.floor(secs)}s`;
+                              } else {
+                                return `${secs.toFixed(1)}s`;
+                              }
+                            };
+                            return formatTime(time);
+                          })()}
+                        </span>
+                      </div>
+                    );
+                  }).filter(Boolean);
+                })()}
+
+                {/* Playhead in ruler */}
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-10"
+                  style={{ left: `${currentTime * 50 * zoomLevel}px` }}
+                >
+                  <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm" />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  No tracks in timeline
-                </p>
+              </div>
+            </ScrollArea>
+          </div>
+        </div>
+
+        {/* Tracks Area */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Track Labels */}
+          <div className="w-48 flex-shrink-0 border-r bg-background overflow-y-auto">
+            {tracks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full py-8 text-center px-4">
+                <div className="w-12 h-12 rounded-full bg-muted/30 flex items-center justify-center mb-3">
+                  <SplitSquareHorizontal className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">No tracks</p>
                 <p className="text-xs text-muted-foreground/70 mt-1">
-                  Add a video or audio track to get started
+                  Drop media to create tracks
                 </p>
               </div>
             ) : (
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col">
                 {tracks.map((track) => (
-                  <TimelineTrackComponent key={track.id} track={track} zoomLevel={zoomLevel} />
+                  <div
+                    key={track.id}
+                    className="h-[60px] flex items-center px-3 border-b border-muted/30 bg-background"
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className={`w-3 h-3 rounded-full flex-shrink-0 ${track.type === 'video' ? 'bg-blue-500' :
+                        track.type === 'audio' ? 'bg-green-500' : 'bg-purple-500'
+                        }`} />
+                      <span className="text-sm font-medium truncate">{track.name}</span>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
+          </div>
 
-            {/* Playhead for tracks area */}
-            {tracks.length > 0 && (
+          {/* Timeline Tracks Content */}
+          <div className="flex-1 relative">
+            <ScrollArea className="h-full w-full">
               <div
-                className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-20"
+                ref={timelineRef}
+                className="relative cursor-pointer select-none"
                 style={{
-                  left: `${currentTime * 50 * zoomLevel + 128}px`,
+                  width: `${Math.max(1000, duration * 50 * zoomLevel)}px`,
+                  minHeight: tracks.length > 0 ? `${tracks.length * 60}px` : '200px'
                 }}
+                onClick={handleTimelineClick}
+                onWheel={handleWheel}
               >
-                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm" />
+                {tracks.length === 0 ? (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4 mx-auto">
+                        <SplitSquareHorizontal className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">Drop media here to start</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {tracks.map((track, index) => (
+                      <div
+                        key={track.id}
+                        className="absolute left-0 right-0 border-b border-muted/30"
+                        style={{
+                          top: `${index * 60}px`,
+                          height: '60px'
+                        }}
+                      >
+                        <TimelineTrackContent track={track} zoomLevel={zoomLevel} />
+                      </div>
+                    ))}
+
+                    {/* Playhead for tracks area */}
+                    <div
+                      className="absolute top-0 w-0.5 bg-red-500 pointer-events-none z-20"
+                      style={{
+                        left: `${currentTime * 50 * zoomLevel}px`,
+                        height: `${tracks.length * 60}px`
+                      }}
+                    />
+                  </>
+                )}
               </div>
-            )}
+            </ScrollArea>
           </div>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
 
-function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zoomLevel: number }) {
+function TimelineTrackContent({ track, zoomLevel }: { track: TimelineTrack, zoomLevel: number }) {
   const { mediaItems } = useMediaStore();
   const { moveClipToTrack, updateClipTrim, updateClipStartTime } = useTimelineStore();
   const [isDropping, setIsDropping] = useState(false);
@@ -546,81 +670,75 @@ function TimelineTrackComponent({ track, zoomLevel }: { track: TimelineTrack, zo
   };
 
   return (
-    <div className="flex items-center px-2">
-      <div className="w-24 text-xs text-muted-foreground flex-shrink-0 mr-2">
-        {track.name}
-      </div>
+    <div
+      className={`w-full h-full transition-all duration-150 ease-out ${isDraggedOver
+        ? "bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg"
+        : "hover:bg-muted/20"
+        }`}
+      onDragOver={handleTrackDragOver}
+      onDragEnter={handleTrackDragEnter}
+      onDragLeave={handleTrackDragLeave}
+      onDrop={handleTrackDrop}
+      onMouseMove={handleResizeMove}
+      onMouseUp={handleResizeEnd}
+      onMouseLeave={handleResizeEnd}
+    >
+      <div className="h-full relative track-clips-container min-w-full">
+        {track.clips.length === 0 ? (
+          <div className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${isDropping ? "border-blue-500 bg-blue-500/10 text-blue-600" : "border-muted/30"
+            }`}>
+            {isDropping ? "Drop clip here" : "Drop media here"}
+          </div>
+        ) : (
+          <>
+            {track.clips.map((clip) => {
+              const effectiveDuration = clip.duration - clip.trimStart - clip.trimEnd;
+              const clipWidth = Math.max(80, effectiveDuration * 50 * zoomLevel);
+              const clipLeft = clip.startTime * 50 * zoomLevel;
 
-      <div
-        className={`flex-1 h-[60px] transition-all duration-150 ease-out ${isDraggedOver
-          ? "bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg transform scale-[1.02]"
-          : "border border-transparent hover:bg-muted/30"
-          }`}
-        onDragOver={handleTrackDragOver}
-        onDragEnter={handleTrackDragEnter}
-        onDragLeave={handleTrackDragLeave}
-        onDrop={handleTrackDrop}
-        onMouseMove={handleResizeMove}
-        onMouseUp={handleResizeEnd}
-        onMouseLeave={handleResizeEnd}
-      >
-        <div className="h-full relative track-clips-container min-w-full">
-          {track.clips.length === 0 ? (
-            <div className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${isDropping ? "border-blue-500 bg-blue-500/10 text-blue-600" : "border-muted/30"
-              }`}>
-              {isDropping ? "Drop clip here" : "Drop media here"}
-            </div>
-          ) : (
-            <>
-              {track.clips.map((clip) => {
-                const effectiveDuration = clip.duration - clip.trimStart - clip.trimEnd;
-                const clipWidth = Math.max(80, effectiveDuration * 50 * zoomLevel);
-                const clipLeft = clip.startTime * 50 * zoomLevel;
-
-                return (
-                  <div
-                    key={clip.id}
-                    className={`timeline-clip absolute h-full rounded-sm border transition-all duration-200 ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg`}
-                    style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
-                  >
-                    <div
-                      className="absolute left-0 top-0 bottom-0 w-2 cursor-w-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
-                      onMouseDown={(e) => handleResizeStart(e, clip.id, 'left')}
-                    />
-
-                    <div
-                      className="flex-1 cursor-grab active:cursor-grabbing"
-                      draggable={true}
-                      onDragStart={(e) => handleClipDragStart(e, clip)}
-                      onDragEnd={handleClipDragEnd}
-                    >
-                      {renderClipContent(clip)}
-                    </div>
-
-                    <div
-                      className="absolute right-0 top-0 bottom-0 w-2 cursor-e-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
-                      onMouseDown={(e) => handleResizeStart(e, clip.id, 'right')}
-                    />
-                  </div>
-                );
-              })}
-
-              {/* Drop position indicator */}
-              {isDraggedOver && dropPosition !== null && (
+              return (
                 <div
-                  className="absolute top-0 bottom-0 w-1 bg-blue-500 pointer-events-none z-30 transition-all duration-75 ease-out"
-                  style={{ left: `${dropPosition * 50 * zoomLevel}px`, transform: 'translateX(-50%)' }}
+                  key={clip.id}
+                  className={`timeline-clip absolute h-full rounded-sm border transition-all duration-200 ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg`}
+                  style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
                 >
-                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-md" />
-                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-md" />
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-white bg-blue-500 px-1 py-0.5 rounded whitespace-nowrap">
-                    {dropPosition.toFixed(1)}s
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-2 cursor-w-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
+                    onMouseDown={(e) => handleResizeStart(e, clip.id, 'left')}
+                  />
+
+                  <div
+                    className="flex-1 cursor-grab active:cursor-grabbing"
+                    draggable={true}
+                    onDragStart={(e) => handleClipDragStart(e, clip)}
+                    onDragEnd={handleClipDragEnd}
+                  >
+                    {renderClipContent(clip)}
                   </div>
+
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-2 cursor-e-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
+                    onMouseDown={(e) => handleResizeStart(e, clip.id, 'right')}
+                  />
                 </div>
-              )}
-            </>
-          )}
-        </div>
+              );
+            })}
+
+            {/* Drop position indicator */}
+            {isDraggedOver && dropPosition !== null && (
+              <div
+                className="absolute top-0 bottom-0 w-1 bg-blue-500 pointer-events-none z-30 transition-all duration-75 ease-out"
+                style={{ left: `${dropPosition * 50 * zoomLevel}px`, transform: 'translateX(-50%)' }}
+              >
+                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-md" />
+                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-md" />
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-white bg-blue-500 px-1 py-0.5 rounded whitespace-nowrap">
+                  {dropPosition.toFixed(1)}s
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
