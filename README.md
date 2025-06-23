@@ -15,13 +15,37 @@ A free, open-source video editor for web, desktop, and mobile.
 - Real-time preview
 - No watermarks or subscriptions
 
-## Development
+## Project Structure
 
-```bash
-cd apps/web
-npm install
-npm run dev
-```
+- `apps/web/` – Main Next.js web application
+- `src/components/` – UI and editor components
+- `src/hooks/` – Custom React hooks
+- `src/lib/` – Utility and API logic
+- `src/stores/` – State management (Zustand, etc.)
+- `src/types/` – TypeScript types
+
+## Getting Started
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repo-url>
+   cd OpenCut
+   ```
+2. **Install dependencies:**
+   ```bash
+   cd apps/web
+   npm install
+   # or, with Bun
+   bun install
+   ```
+3. **Run the development server:**
+   ```bash
+   npm run dev
+   # or, with Bun
+   bun run dev
+   ```
+4. **Open in browser:**
+   Visit [http://localhost:3000](http://localhost:3000)
 
 ## Contributing
 
