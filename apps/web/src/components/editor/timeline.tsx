@@ -903,6 +903,7 @@ function TimelineTrackContent({
 
   const handleTrackDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
 
     // Reset all drag states
     dragCounterRef.current = 0;
@@ -985,7 +986,6 @@ function TimelineTrackContent({
           updateClipStartTime(track.id, clipId, snappedTime);
         } else {
           // Moving to different track
-          console.log('Moving clip from', fromTrackId, 'to', track.id);
           moveClipToTrack(fromTrackId, track.id, clipId);
           requestAnimationFrame(() => {
             updateClipStartTime(track.id, clipId, snappedTime);
