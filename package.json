@@ -13,5 +13,8 @@
     "check-types": "turbo run check-types",
     "lint": "turbo run lint",
     "format": "turbo run format"
+  },
+  "dependencies": {
+    "next": "^15.3.4"
   }
 }
