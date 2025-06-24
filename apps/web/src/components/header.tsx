@@ -42,7 +42,7 @@ export function Header() {
         </Button>
       </Link>
       {process.env.NODE_ENV === "development" ? (
-        <Link href="/editor" target="_blank">
+        <Link href="/editor">
           <Button size="sm" className="text-sm ml-4">
             Editor
             <ArrowRight className="h-4 w-4" />
