@@ -568,8 +568,8 @@ export function Timeline() {
     >
       {/* Show overlay when dragging media over the timeline */}
       {isDragOver && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-          <div className="bg-accent/80 text-accent-foreground px-8 py-4 rounded-lg shadow-lg text-lg font-semibold border border-accent">
+        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none backdrop-blur-lg">
+          <div>
             Drop media here to add to timeline
           </div>
         </div>
