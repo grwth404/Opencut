@@ -16,6 +16,7 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { ImageTimelineTreatment } from "@/components/ui/image-timeline-treatment";
 import { useState } from "react";
+import { SpeedControl } from "./speed-control";
 
 export function PropertiesPanel() {
   const { tracks } = useTimelineStore();
@@ -25,7 +26,18 @@ export function PropertiesPanel() {
   >("blur");
   const [backgroundColor, setBackgroundColor] = useState("#000000");
 
-  // Get the first image clip for preview (simplified)
+  // Get the first video clip for preview (simplified)
+  const firstVideoClip = tracks
+    .flatMap((track) => track.clips)
+    .find((clip) => {
+      const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
+      return mediaItem?.type === "video";
+    });
+
+  const firstVideoItem = firstVideoClip
+    ? mediaItems.find((item) => item.id === firstVideoClip.mediaId)
+    : null;
+
   const firstImageClip = tracks
     .flatMap((track) => track.clips)
     .find((clip) => {
@@ -103,6 +115,14 @@ export function PropertiesPanel() {
               </div>
             </div>
 
+            <Separator />
+          </>
+        )}
+
+        {/* Video Controls - only show if a video is selected */}
+        {firstVideoItem && (
+          <>
+            <SpeedControl />
             <Separator />
           </>
         )}
