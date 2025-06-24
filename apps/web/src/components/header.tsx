@@ -36,19 +36,17 @@ export function Header() {
 
   const rightContent = (
     <nav className="flex items-center">
-      <Link href="https://github.com/OpenCut-app/OpenCut" target="_blank">
-        <Button
-          variant="text"
-          className="flex items-center text-sm text-muted-foreground hover:text-foreground"
-        >
-          <span className="hidden sm:inline">GitHub</span>
-          <span className="text-foreground flex items-center">
-            {star}+
-            <Star className="w-4 h-4 ml-1" />
-          </span>
+      <Link href="/contributors">
+        <Button variant="text" className="text-sm">
+          Contributors
         </Button>
       </Link>
-      <Link href={session ? "/editor" : "/login"}>
+      <Link href="https://github.com/OpenCut-app/OpenCut" target="_blank">
+        <Button variant="text" className="text-sm">
+          GitHub
+        </Button>
+      </Link>
+      <Link href={session ? "/editor" : "/auth/login"}>
         <Button size="sm" className="text-sm ml-4">
           Start editing
           <ArrowRight className="h-4 w-4" />
