@@ -8,11 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Play, Pause } from "lucide-react";
 import { useState, useRef } from "react";
 
+// Debug flag - set to false to hide active clips info
+const SHOW_DEBUG_INFO = process.env.NODE_ENV === 'development';
+
 export function PreviewPanel() {
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
   const { isPlaying, toggle, currentTime } = usePlaybackStore();
   const [canvasSize, setCanvasSize] = useState({ width: 1920, height: 1080 });
+  const [showDebug, setShowDebug] = useState(SHOW_DEBUG_INFO);
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Get active clips at current time
@@ -142,6 +146,18 @@ export function PreviewPanel() {
           ))}
         </select>
 
+        {/* Debug Toggle - Only show in development */}
+        {SHOW_DEBUG_INFO && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDebug(!showDebug)}
+            className="text-xs"
+          >
+            Debug {showDebug ? 'ON' : 'OFF'}
+          </Button>
+        )}
+
         <Button variant="outline" size="sm" onClick={toggle} className="ml-auto">
           {isPlaying ? <Pause className="h-3 w-3 mr-1" /> : <Play className="h-3 w-3 mr-1" />}
           {isPlaying ? "Pause" : "Play"}
@@ -169,23 +185,29 @@ export function PreviewPanel() {
         </div>
       </div>
 
-      {/* Info Panel */}
-      <div className="border-t bg-background p-2 flex-shrink-0">
-        <div className="text-xs font-medium mb-1">Active Clips ({activeClips.length})</div>
-        <div className="flex gap-2 overflow-x-auto">
-          {activeClips.map((clipData, index) => (
-            <div
-              key={clipData.clip.id}
-              className="flex items-center gap-1 px-2 py-1 bg-muted rounded text-xs whitespace-nowrap"
-            >
-              <span className="w-4 h-4 bg-primary/20 rounded text-center text-xs leading-4">
-                {index + 1}
-              </span>
-              <span>{clipData.clip.name}</span>
-            </div>
-          ))}
+      {/* Debug Info Panel - Conditionally rendered */}
+      {showDebug && (
+        <div className="border-t bg-background p-2 flex-shrink-0">
+          <div className="text-xs font-medium mb-1">Debug: Active Clips ({activeClips.length})</div>
+          <div className="flex gap-2 overflow-x-auto">
+            {activeClips.map((clipData, index) => (
+              <div
+                key={clipData.clip.id}
+                className="flex items-center gap-1 px-2 py-1 bg-muted rounded text-xs whitespace-nowrap"
+              >
+                <span className="w-4 h-4 bg-primary/20 rounded text-center text-xs leading-4">
+                  {index + 1}
+                </span>
+                <span>{clipData.clip.name}</span>
+                <span className="text-muted-foreground">({clipData.mediaItem?.type || 'test'})</span>
+              </div>
+            ))}
+            {activeClips.length === 0 && (
+              <span className="text-muted-foreground">No active clips</span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
