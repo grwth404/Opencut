@@ -149,7 +149,7 @@ export function PreviewPanel() {
         {/* Debug Toggle - Only show in development */}
         {SHOW_DEBUG_INFO && (
           <Button
-            variant="ghost"
+            variant="text"
             size="sm"
             onClick={() => setShowDebug(!showDebug)}
             className="text-xs"

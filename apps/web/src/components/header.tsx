@@ -38,7 +38,7 @@ export function Header() {
     <nav className="flex items-center">
       <Link href="https://github.com/OpenCut-app/OpenCut" target="_blank">
         <Button
-          variant="ghost"
+          variant="text"
           className="flex items-center text-sm text-muted-foreground hover:text-foreground"
         >
           <span className="hidden sm:inline">GitHub</span>
