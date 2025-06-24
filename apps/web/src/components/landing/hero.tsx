@@ -82,12 +82,12 @@ export function Hero({ signupCount }: HeroProps) {
   };
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center text-center px-4">
+    <div className="min-h-[calc(100vh-4rem)] flex flex-col justify-between items-center text-center px-4">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1 }}
-        className="max-w-3xl mx-auto"
+        className="max-w-3xl mx-auto w-full flex-1 flex flex-col justify-center"
       >
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -148,7 +148,7 @@ export function Hero({ signupCount }: HeroProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8, duration: 0.6 }}
-            className="mt-6 inline-flex items-center gap-2 bg-muted/30 px-4 py-2 rounded-full text-sm text-muted-foreground"
+            className="mt-8 inline-flex items-center gap-2 bg-muted/30 px-4 py-2 rounded-full text-sm text-muted-foreground justify-center"
           >
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
             <span>{signupCount.toLocaleString()} people already joined</span>
@@ -157,7 +157,7 @@ export function Hero({ signupCount }: HeroProps) {
       </motion.div>
 
       <motion.div
-        className="absolute bottom-12 left-0 right-0 text-center text-sm text-muted-foreground/60"
+        className="mb-8 text-center text-sm text-muted-foreground/60"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8, duration: 0.8 }}
