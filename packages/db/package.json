@@ -16,12 +16,12 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "drizzle-orm": "^0.36.4",
+    "drizzle-orm": "^0.44.2",
     "postgres": "^3.4.5"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.30.0",
+    "drizzle-kit": "^0.31.1",
     "dotenv": "^16.4.7",
     "@types/pg": "^8.11.10"
   }
-} 
+}
