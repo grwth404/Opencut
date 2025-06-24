@@ -482,7 +482,8 @@ export function Timeline() {
   // Prevent explorer zooming in/out when in timeline
   useEffect(() => {
     const preventZoom = (e: WheelEvent) => {
-      if (isInTimeline && (e.ctrlKey || e.metaKey)) {
+      // if (isInTimeline && (e.ctrlKey || e.metaKey)) {
+      if (isInTimeline && (e.ctrlKey || e.metaKey) && timelineRef.current?.contains(e.target as Node)) {
         e.preventDefault();
       }
     };
@@ -825,7 +826,6 @@ export function Timeline() {
                 }}
                 onClick={handleTimelineAreaClick}
                 onMouseDown={handleTimelineMouseDown}
-                onWheel={handleWheel}
               >
                 {tracks.length === 0 ? (
                   <div className="absolute inset-0 flex items-center justify-center">
