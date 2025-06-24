@@ -1,6 +1,5 @@
 import { Metadata } from "next";
 import { Header } from "@/components/header";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,7 @@ async function getContributors(): Promise<Contributor[]> {
           Accept: "application/vnd.github.v3+json",
           "User-Agent": "OpenCut-Web-App",
         },
-        next: { revalidate: 600 }, // Cache for 10 minutes
+        next: { revalidate: 600 }, // 10 minutes
       }
     );
 
@@ -49,7 +48,6 @@ async function getContributors(): Promise<Contributor[]> {
 
     const contributors = await response.json();
 
-    // Filter out bots and add additional contributor info if needed
     const filteredContributors = contributors.filter(
       (contributor: any) => contributor.type === "User"
     );
@@ -71,7 +69,6 @@ export default async function ContributorsPage() {
       <Header />
 
       <main className="relative">
-        {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-muted/20 to-transparent rounded-full blur-3xl" />
           <div className="absolute top-1/2 -left-40 w-80 h-80 bg-gradient-to-tr from-muted/10 to-transparent rounded-full blur-3xl" />
@@ -79,7 +76,6 @@ export default async function ContributorsPage() {
 
         <div className="relative container mx-auto px-4 py-16">
           <div className="max-w-6xl mx-auto">
-            {/* Hero Section */}
             <div className="text-center mb-20">
               <div className="inline-flex items-center gap-2 bg-muted/50 text-muted-foreground px-3 py-1 rounded-full text-sm mb-6">
                 <GithubIcon className="h-3 w-3" />
@@ -93,7 +89,6 @@ export default async function ContributorsPage() {
                 editing
               </p>
 
-              {/* Quick stats */}
               <div className="flex items-center justify-center gap-8 text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-foreground rounded-full" />
@@ -110,7 +105,6 @@ export default async function ContributorsPage() {
               </div>
             </div>
 
-            {/* Top Contributor Spotlight */}
             {topContributor && (
               <div className="mb-20">
                 <div className="text-center mb-12">
@@ -162,7 +156,6 @@ export default async function ContributorsPage() {
               </div>
             )}
 
-            {/* Other Contributors */}
             {otherContributors.length > 0 && (
               <div>
                 <div className="text-center mb-12">
@@ -235,7 +228,6 @@ export default async function ContributorsPage() {
               </div>
             )}
 
-            {/* CTA Section */}
             <div className="mt-32 text-center">
               <div className="max-w-2xl mx-auto">
                 <h2 className="text-3xl font-bold mb-4">Join the community</h2>
