@@ -54,7 +54,7 @@ const authConfig = {
     description: "Sign in to your account to continue",
     buttonText: "Sign in",
     linkText: "Don't have an account?",
-    linkHref: "/auth/signup",
+    linkHref: "/signup",
     linkLabel: "Sign up",
     successRedirect: "/editor",
   },
@@ -63,9 +63,9 @@ const authConfig = {
     description: "Get started with your free account today",
     buttonText: "Create account",
     linkText: "Already have an account?",
-    linkHref: "/auth/login",
+    linkHref: "/login",
     linkLabel: "Sign in",
-    successRedirect: "/auth/login",
+    successRedirect: "/login",
   },
 } as const;
 
