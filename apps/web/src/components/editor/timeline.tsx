@@ -933,6 +933,7 @@ export function Timeline() {
                           track={track}
                           zoomLevel={zoomLevel}
                           setContextMenu={setContextMenu}
+                          contextMenu={contextMenu}
                         />
                       </div>
                     ))}
@@ -1117,6 +1118,7 @@ function TimelineTrackContent({
   track,
   zoomLevel,
   setContextMenu,
+  contextMenu,
 }: {
   track: TimelineTrack;
   zoomLevel: number;
@@ -1129,6 +1131,13 @@ function TimelineTrackContent({
       y: number;
     } | null
   ) => void;
+  contextMenu: {
+    type: "track" | "clip";
+    trackId: string;
+    clipId?: string;
+    x: number;
+    y: number;
+  } | null;
 }) {
   const { mediaItems } = useMediaStore();
   const {
@@ -1715,6 +1724,13 @@ function TimelineTrackContent({
                   style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
                   onClick={(e) => {
                     e.stopPropagation();
+
+                    // Close context menu if it's open
+                    if (contextMenu) {
+                      setContextMenu(null);
+                      return; // Don't handle selection when closing context menu
+                    }
+
                     const isSelected = selectedClips.some(
                       (c) => c.trackId === track.id && c.clipId === clip.id
                     );
