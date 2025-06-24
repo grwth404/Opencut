@@ -16,14 +16,15 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  socialProviders: {  
+  socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      redirectURI: process.env.GOOGLE_REDIRECT_URI as string,
     },
   },
   appName: "OpenCut",
   trustedOrigins: ["http://localhost:3000"],
 });
 
-export type Auth = typeof auth; 
+export type Auth = typeof auth;

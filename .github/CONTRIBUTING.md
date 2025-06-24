@@ -87,6 +87,7 @@ Thank you for your interest in contributing to OpenCut! This document provides g
    # Only needed if you want to test Google login
    GOOGLE_CLIENT_ID="your-google-client-id"
    GOOGLE_CLIENT_SECRET="your-google-client-secret"
+   GOOGLE_REDIRECT_URI="http://localhost:3000/api/auth/callback/google"
    ```
 
 5. Run database migrations: `bun run db:migrate`
