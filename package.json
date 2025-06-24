@@ -1,4 +1,5 @@
 {
+  "name": "opencut",
   "packageManager": "bun@1.2.17",
   "devDependencies": {
     "turbo": "^2.5.4"
