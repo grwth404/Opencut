@@ -38,7 +38,6 @@ export function PropertiesPanel() {
     ? mediaItems.find((item) => item.id === firstVideoClip.mediaId)
     : null;
 
-  // Get the first image clip for preview (simplified)
   const firstImageClip = tracks
     .flatMap((track) => track.clips)
     .find((clip) => {
