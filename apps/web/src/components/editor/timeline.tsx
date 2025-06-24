@@ -524,17 +524,24 @@ export function Timeline() {
                 onClick={toggle}
                 className="mr-2"
               >
-                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                {isPlaying ? (
+                  <Pause className="h-4 w-4" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{isPlaying ? "Pause (Space)" : "Play (Space)"}</TooltipContent>
+            <TooltipContent>
+              {isPlaying ? "Pause (Space)" : "Play (Space)"}
+            </TooltipContent>
           </Tooltip>
 
           <div className="w-px h-6 bg-border mx-1" />
 
           {/* Time Display */}
           <div className="text-xs text-muted-foreground font-mono px-2">
-            {Math.floor(currentTime * 10) / 10}s / {Math.floor(duration * 10) / 10}s
+            {Math.floor(currentTime * 10) / 10}s /{" "}
+            {Math.floor(duration * 10) / 10}s
           </div>
 
           <div className="w-px h-6 bg-border mx-1" />
@@ -606,7 +613,11 @@ export function Timeline() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="text" size="icon" onClick={handleDuplicateSelected}>
+              <Button
+                variant="text"
+                size="icon"
+                onClick={handleDuplicateSelected}
+              >
                 <Copy className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -710,17 +721,19 @@ export function Timeline() {
                     return (
                       <div
                         key={i}
-                        className={`absolute top-0 bottom-0 ${isMainMarker
-                          ? "border-l border-muted-foreground/40"
-                          : "border-l border-muted-foreground/20"
-                          }`}
+                        className={`absolute top-0 bottom-0 ${
+                          isMainMarker
+                            ? "border-l border-muted-foreground/40"
+                            : "border-l border-muted-foreground/20"
+                        }`}
                         style={{ left: `${time * 50 * zoomLevel}px` }}
                       >
                         <span
-                          className={`absolute top-1 left-1 text-xs ${isMainMarker
-                            ? "text-muted-foreground font-medium"
-                            : "text-muted-foreground/70"
-                            }`}
+                          className={`absolute top-1 left-1 text-xs ${
+                            isMainMarker
+                              ? "text-muted-foreground font-medium"
+                              : "text-muted-foreground/70"
+                          }`}
                         >
                           {(() => {
                             const formatTime = (seconds: number) => {
@@ -762,18 +775,8 @@ export function Timeline() {
         {/* Tracks Area */}
         <div className="flex-1 flex overflow-hidden">
           {/* Track Labels */}
-          <div className="w-48 flex-shrink-0 border-r bg-background overflow-y-auto">
-            {tracks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full py-8 text-center px-4">
-                <div className="w-12 h-12 rounded-full bg-muted/30 flex items-center justify-center mb-3">
-                  <SplitSquareHorizontal className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <p className="text-sm text-muted-foreground">No tracks</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">
-                  Drop media to create tracks
-                </p>
-              </div>
-            ) : (
+          {tracks.length > 0 && (
+            <div className="w-48 flex-shrink-0 border-r bg-background overflow-y-auto">
               <div className="flex flex-col">
                 {tracks.map((track) => (
                   <div
@@ -782,7 +785,7 @@ export function Timeline() {
                     onContextMenu={(e) => {
                       e.preventDefault();
                       setContextMenu({
-                        type: 'track',
+                        type: "track",
                         trackId: track.id,
                         x: e.clientX,
                         y: e.clientY,
@@ -795,8 +798,8 @@ export function Timeline() {
                           track.type === "video"
                             ? "bg-blue-500"
                             : track.type === "audio"
-                            ? "bg-green-500"
-                            : "bg-purple-500"
+                              ? "bg-green-500"
+                              : "bg-purple-500"
                         }`}
                       />
                       <span className="ml-2 text-sm font-medium truncate">
@@ -811,12 +814,16 @@ export function Timeline() {
                   </div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Timeline Tracks Content */}
           <div className="flex-1 relative overflow-hidden">
-            <div className="w-full h-[600px] overflow-hidden flex" ref={timelineRef} style={{ position: 'relative' }}>
+            <div
+              className="w-full h-[600px] overflow-hidden flex"
+              ref={timelineRef}
+              style={{ position: "relative" }}
+            >
               {/* Timeline grid and clips area (with left margin for sidebar) */}
               <div
                 className="relative flex-1"
@@ -852,7 +859,7 @@ export function Timeline() {
                         onContextMenu={(e) => {
                           e.preventDefault();
                           setContextMenu({
-                            type: 'track',
+                            type: "track",
                             trackId: track.id,
                             x: e.clientX,
                             y: e.clientY,
@@ -893,19 +900,23 @@ export function Timeline() {
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onContextMenu={(e) => e.preventDefault()}
         >
-          {contextMenu.type === 'track' ? (
+          {contextMenu.type === "track" ? (
             // Track context menu
             <>
               <button
                 className="flex items-center w-full px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors text-left"
                 onClick={() => {
-                  const track = tracks.find(t => t.id === contextMenu.trackId);
+                  const track = tracks.find(
+                    (t) => t.id === contextMenu.trackId
+                  );
                   if (track) toggleTrackMute(track.id);
                   setContextMenu(null);
                 }}
               >
                 {(() => {
-                  const track = tracks.find(t => t.id === contextMenu.trackId);
+                  const track = tracks.find(
+                    (t) => t.id === contextMenu.trackId
+                  );
                   return track?.muted ? (
                     <>
                       <Volume2 className="h-4 w-4 mr-2" />
@@ -939,14 +950,23 @@ export function Timeline() {
                 className="flex items-center w-full px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors text-left"
                 onClick={() => {
                   if (contextMenu.clipId) {
-                    const track = tracks.find(t => t.id === contextMenu.trackId);
-                    const clip = track?.clips.find(c => c.id === contextMenu.clipId);
+                    const track = tracks.find(
+                      (t) => t.id === contextMenu.trackId
+                    );
+                    const clip = track?.clips.find(
+                      (c) => c.id === contextMenu.clipId
+                    );
                     if (clip && track) {
                       const splitTime = currentTime;
                       const effectiveStart = clip.startTime;
-                      const effectiveEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+                      const effectiveEnd =
+                        clip.startTime +
+                        (clip.duration - clip.trimStart - clip.trimEnd);
 
-                      if (splitTime > effectiveStart && splitTime < effectiveEnd) {
+                      if (
+                        splitTime > effectiveStart &&
+                        splitTime < effectiveEnd
+                      ) {
                         updateClipTrim(
                           track.id,
                           clip.id,
@@ -958,7 +978,8 @@ export function Timeline() {
                           name: clip.name + " (split)",
                           duration: clip.duration,
                           startTime: splitTime,
-                          trimStart: clip.trimStart + (splitTime - effectiveStart),
+                          trimStart:
+                            clip.trimStart + (splitTime - effectiveStart),
                           trimEnd: clip.trimEnd,
                         });
                         toast.success("Clip split successfully");
@@ -977,14 +998,21 @@ export function Timeline() {
                 className="flex items-center w-full px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors text-left"
                 onClick={() => {
                   if (contextMenu.clipId) {
-                    const track = tracks.find(t => t.id === contextMenu.trackId);
-                    const clip = track?.clips.find(c => c.id === contextMenu.clipId);
+                    const track = tracks.find(
+                      (t) => t.id === contextMenu.trackId
+                    );
+                    const clip = track?.clips.find(
+                      (c) => c.id === contextMenu.clipId
+                    );
                     if (clip && track) {
                       useTimelineStore.getState().addClipToTrack(track.id, {
                         mediaId: clip.mediaId,
                         name: clip.name + " (copy)",
                         duration: clip.duration,
-                        startTime: clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd) + 0.1,
+                        startTime:
+                          clip.startTime +
+                          (clip.duration - clip.trimStart - clip.trimEnd) +
+                          0.1,
                         trimStart: clip.trimStart,
                         trimEnd: clip.trimEnd,
                       });
@@ -1002,7 +1030,10 @@ export function Timeline() {
                 className="flex items-center w-full px-3 py-2 text-destructive hover:bg-destructive/10 transition-colors text-left"
                 onClick={() => {
                   if (contextMenu.clipId) {
-                    removeClipFromTrack(contextMenu.trackId, contextMenu.clipId);
+                    removeClipFromTrack(
+                      contextMenu.trackId,
+                      contextMenu.clipId
+                    );
                     toast.success("Clip deleted");
                   }
                   setContextMenu(null);
