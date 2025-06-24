@@ -21,6 +21,7 @@ export interface TimelineTrack {
 interface TimelineStore {
   tracks: TimelineTrack[];
   history: TimelineTrack[][];
+  redoStack: TimelineTrack[][];
 
   // Multi-selection
   selectedClips: { trackId: string; clipId: string }[];
@@ -57,25 +58,34 @@ interface TimelineStore {
 
   // New actions
   undo: () => void;
+  redo: () => void;
   pushHistory: () => void;
 }
 
 export const useTimelineStore = create<TimelineStore>((set, get) => ({
   tracks: [],
   history: [],
+  redoStack: [],
   selectedClips: [],
 
   pushHistory: () => {
-    const { tracks, history } = get();
+    const { tracks, history, redoStack } = get();
     // Deep copy tracks
-    set({ history: [...history, JSON.parse(JSON.stringify(tracks))] });
+    set({ 
+      history: [...history, JSON.parse(JSON.stringify(tracks))],
+      redoStack: [] // Clear redo stack when new action is performed
+    });
   },
 
   undo: () => {
-    const { history } = get();
+    const { history, redoStack, tracks } = get();
     if (history.length === 0) return;
     const prev = history[history.length - 1];
-    set({ tracks: prev, history: history.slice(0, -1) });
+    set({ 
+      tracks: prev, 
+      history: history.slice(0, -1),
+      redoStack: [...redoStack, JSON.parse(JSON.stringify(tracks))] // Add current state to redo stack
+    });
   },
 
   selectClip: (trackId, clipId, multi = false) => {
@@ -243,5 +253,12 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     );
 
     return Math.max(...trackEndTimes, 0);
+  },
+
+  redo: () => {
+    const { redoStack } = get();
+    if (redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    set({ tracks: next, redoStack: redoStack.slice(0, -1) });
   },
 }));
