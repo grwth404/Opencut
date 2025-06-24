@@ -38,6 +38,8 @@ jobs:
 
       - name: Install dependencies
         working-directory: apps/web
+        env:
+          DATABASE_URL: "postgresql://opencut:opencutthegoat@localhost:5432/opencut"
         run: bun install
 
       - name: Build
