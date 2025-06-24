@@ -82,7 +82,7 @@ export function Hero({ signupCount }: HeroProps) {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center text-center px-4">
+    <div className="relative min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center text-center px-4">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import "./editor.css";
 import {
   ResizablePanelGroup,
   ResizablePanel,
