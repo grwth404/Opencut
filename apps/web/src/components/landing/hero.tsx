@@ -89,7 +89,7 @@ export function Hero({ signupCount }: HeroProps) {
         </motion.div>
 
         <motion.p
-          className="mt-12 text-lg sm:text-xl text-muted-foreground font-light tracking-wide max-w-xl mx-auto"
+          className="mt-10 text-lg sm:text-xl text-muted-foreground font-light tracking-wide max-w-xl mx-auto"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.8 }}
