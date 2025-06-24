@@ -85,7 +85,7 @@ export default async function ContributorsPage() {
                 <GithubIcon className="h-3 w-3" />
                 Open Source
               </div>
-              <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6 bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
+              <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
                 Contributors
               </h1>
               <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
