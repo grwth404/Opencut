@@ -27,7 +27,7 @@ import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { processMediaFiles } from "@/lib/media-processing";
 import { toast } from "sonner";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Select,
   SelectContent,
@@ -68,6 +68,10 @@ export function Timeline() {
     active: boolean;
     additive: boolean;
   } | null>(null);
+
+  // Playhead scrubbing state
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [scrubTime, setScrubTime] = useState<number | null>(null);
 
   // Update timeline duration when tracks change
   useEffect(() => {
@@ -344,6 +348,41 @@ export function Timeline() {
     }
     // Otherwise, allow normal scrolling
   };
+
+  // --- Playhead Scrubbing Handlers ---
+  const handlePlayheadMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsScrubbing(true);
+    handleScrub(e);
+  }, [duration, zoomLevel]);
+
+  const handleScrub = useCallback((e: MouseEvent | React.MouseEvent) => {
+    const timeline = timelineRef.current;
+    if (!timeline) return;
+    const rect = timeline.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const time = Math.max(0, Math.min(duration, x / (50 * zoomLevel)));
+    setScrubTime(time);
+    seek(time); // update video preview in real time
+  }, [duration, zoomLevel, seek]);
+
+  useEffect(() => {
+    if (!isScrubbing) return;
+    const onMouseMove = (e: MouseEvent) => handleScrub(e);
+    const onMouseUp = (e: MouseEvent) => {
+      setIsScrubbing(false);
+      if (scrubTime !== null) seek(scrubTime); // finalize seek
+      setScrubTime(null);
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [isScrubbing, scrubTime, seek, handleScrub]);
+
+  const playheadPosition = isScrubbing && scrubTime !== null ? scrubTime : currentTime;
 
   const dragProps = {
     onDragEnter: handleDragEnter,
@@ -686,28 +725,11 @@ export function Timeline() {
                   }).filter(Boolean);
                 })()}
 
-                {/* Playhead in ruler */}
+                {/* Playhead in ruler (scrubbable) */}
                 <div
-                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 cursor-ew-resize z-1000" // Remove pointer-events-none to allow dragging
-                  style={{ left: `${currentTime * 50 * zoomLevel}px` }}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const handleMouseMove = (e: MouseEvent) => {
-                      const timeline = timelineRef.current; // Get timeline element ref to track the position
-                      if (!timeline) return; // If no timeline element, exit
-                      const rect = timeline.getBoundingClientRect(); // Get the bounding rect of the timeline element
-                      const mouseX = Math.max(0, e.clientX - rect.left); // Calculate the mouse position relative to the timeline element 
-                      const newTime = mouseX / (50 * zoomLevel); // Calculate the time based on the mouse position
-                      seek(newTime); // Set the current time 
-                    };
-                    const handleMouseUp = () => {
-                      window.removeEventListener("mousemove", handleMouseMove); // Remove the mousemove event listener
-                      window.removeEventListener("mouseup", handleMouseUp); // Remove the mouseup event listener
-                    };
-                    window.addEventListener("mousemove", handleMouseMove); // Add the mousemove event listener
-                    window.addEventListener("mouseup", handleMouseUp); // Add the mouseup event listener
-                  }}
+                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-auto z-10 cursor-ew-resize"
+                  style={{ left: `${playheadPosition * 50 * zoomLevel}px` }}
+                  onMouseDown={handlePlayheadMouseDown}
                 >
                   <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm" />
                 </div>
@@ -815,14 +837,17 @@ export function Timeline() {
                       </div>
                     ))}
 
-                    {/* Playhead for tracks area */}
-                    <div
-                      className="absolute top-0 w-0.5 bg-red-500 cursor-ew-resize z-20"
-                      style={{
-                        left: `${currentTime * 50 * zoomLevel}px`,
-                        height: `${tracks.length * 60}px`,
-                      }}
-                    />
+                    {/* Playhead for tracks area (scrubbable) */}
+                    {tracks.length > 0 && (
+                      <div
+                        className="absolute top-0 w-0.5 bg-red-500 pointer-events-auto z-20 cursor-ew-resize"
+                        style={{
+                          left: `${playheadPosition * 50 * zoomLevel}px`,
+                          height: `${tracks.length * 60}px`,
+                        }}
+                        onMouseDown={handlePlayheadMouseDown}
+                      />
+                    )}
                   </>
                 )}
               </div>
