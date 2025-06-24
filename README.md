@@ -49,6 +49,14 @@ A free, open-source video editor for web, desktop, and mobile.
 
 ## Contributing
 
+We welcome contributions! Please see our [Contributing Guide](.github/CONTRIBUTING.md) for detailed setup instructions and development guidelines.
+
+Quick start for contributors:
+
+- Fork the repo and clone locally
+- Follow the setup instructions in CONTRIBUTING.md
+- Create a feature branch and submit a PR
+
 ## License
 
 MIT [Details](LICENSE)
