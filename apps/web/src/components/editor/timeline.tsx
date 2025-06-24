@@ -49,6 +49,7 @@ export function Timeline() {
   const [zoomLevel, setZoomLevel] = useState(1);
   const dragCounterRef = useRef(0);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const [isInTimeline, setIsInTimeline] = useState(false);
 
   // Unified context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -477,10 +478,30 @@ export function Timeline() {
     toast.success("Deleted selected clip(s)");
   };
 
+
+  // Prevent explorer zooming in/out when in timeline
+  useEffect(() => {
+    const preventZoom = (e: WheelEvent) => {
+      // if (isInTimeline && (e.ctrlKey || e.metaKey)) {
+      if (isInTimeline && (e.ctrlKey || e.metaKey) && timelineRef.current?.contains(e.target as Node)) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('wheel', preventZoom, { passive: false });
+    
+    return () => {
+      document.removeEventListener('wheel', preventZoom);
+    };
+  }, [isInTimeline]);
+
   return (
     <div
       className={`h-full flex flex-col transition-colors duration-200 relative ${isDragOver ? "bg-accent/30 border-accent" : ""}`}
       {...dragProps}
+      onMouseEnter={() => setIsInTimeline(true)}
+      onMouseLeave={() => setIsInTimeline(false)}
+      onWheel={handleWheel}
     >
       {/* Show overlay when dragging media over the timeline */}
       {isDragOver && (
@@ -758,25 +779,35 @@ export function Timeline() {
                   <div
                     key={track.id}
                     className="h-[60px] flex items-center px-3 border-b border-muted/30 bg-background group"
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setContextMenu({
+                        type: 'track',
+                        trackId: track.id,
+                        x: e.clientX,
+                        y: e.clientY,
+                      });
+                    }}
                   >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="flex items-center flex-1 min-w-0">
                       <div
-                        className={`w-3 h-3 rounded-full flex-shrink-0 ${track.type === "video"
-                          ? "bg-blue-500"
-                          : track.type === "audio"
+                        className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                          track.type === "video"
+                            ? "bg-blue-500"
+                            : track.type === "audio"
                             ? "bg-green-500"
                             : "bg-purple-500"
-                          }`}
+                        }`}
                       />
-                      <span className="text-sm font-medium truncate">
+                      <span className="ml-2 text-sm font-medium truncate">
                         {track.name}
                       </span>
-                      {track.muted && (
-                        <span className="ml-2 text-xs text-red-500 font-semibold">
-                          Muted
-                        </span>
-                      )}
                     </div>
+                    {track.muted && (
+                      <span className="ml-2 text-xs text-red-500 font-semibold flex-shrink-0">
+                        Muted
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -795,7 +826,6 @@ export function Timeline() {
                 }}
                 onClick={handleTimelineAreaClick}
                 onMouseDown={handleTimelineMouseDown}
-                onWheel={handleWheel}
               >
                 {tracks.length === 0 ? (
                   <div className="absolute inset-0 flex items-center justify-center">
