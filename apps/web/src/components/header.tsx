@@ -42,13 +42,8 @@ export function Header() {
         </Button>
       </Link>
       <Link href="https://github.com/OpenCut-app/OpenCut" target="_blank">
-        <Button variant="text" className="text-sm">
-          GitHub
-        </Button>
-      </Link>
-      <Link href={session ? "/editor" : "/auth/login"}>
         <Button size="sm" className="text-sm ml-4">
-          Start editing
+          GitHub
           <ArrowRight className="h-4 w-4" />
         </Button>
       </Link>
