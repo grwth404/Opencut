@@ -40,7 +40,7 @@ export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their clips.
   // You can drag media here to add it to your project.
   // Clips can be trimmed, deleted, and moved.
-  const { tracks, addTrack, addClipToTrack, removeTrack, toggleTrackMute, removeClipFromTrack, moveClipToTrack, getTotalDuration, selectedClips, selectClip, deselectClip, clearSelectedClips, setSelectedClips } =
+  const { tracks, addTrack, addClipToTrack, removeTrack, toggleTrackMute, removeClipFromTrack, moveClipToTrack, getTotalDuration, selectedClips, selectClip, deselectClip, clearSelectedClips, setSelectedClips, updateClipTrim, undo, redo } =
     useTimelineStore();
   const { mediaItems, addMediaItem } = useMediaStore();
   const { currentTime, duration, seek, setDuration, isPlaying, play, pause, toggle, setSpeed, speed } = usePlaybackStore();
@@ -101,6 +101,33 @@ export function Timeline() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedClips, removeClipFromTrack, clearSelectedClips]);
+
+  // Keyboard event for undo (Cmd+Z)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undo]);
+
+  // Keyboard event for redo (Cmd+Shift+Z or Cmd+Y)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && e.shiftKey) {
+        e.preventDefault();
+        redo();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "y") {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [redo]);
 
   // Mouse down on timeline background to start marquee
   const handleTimelineMouseDown = (e: React.MouseEvent) => {
@@ -294,18 +321,32 @@ export function Timeline() {
     }
   };
 
-  // Deselect all clips when clicking empty timeline area
+  const handleSeekToPosition = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickedTime = clickX / (50 * zoomLevel);
+    const clampedTime = Math.max(0, Math.min(duration, clickedTime));
+    
+    seek(clampedTime);
+  };
+
   const handleTimelineAreaClick = (e: React.MouseEvent) => {
-    // Only clear selection if the click target is the timeline background (not a child/clip)
     if (e.target === e.currentTarget) {
       clearSelectedClips();
+      
+      // Calculate the clicked time position and seek to it
+      handleSeekToPosition(e);
     }
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.05 : 0.05;
-    setZoomLevel((prev) => Math.max(0.1, Math.min(10, prev + delta)));
+    // Only zoom if user is using pinch gesture (ctrlKey or metaKey is true)
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.05 : 0.05;
+      setZoomLevel((prev) => Math.max(0.1, Math.min(10, prev + delta)));
+    }
+    // Otherwise, allow normal scrolling
   };
 
   // --- Playhead Scrubbing Handlers ---
@@ -348,6 +389,92 @@ export function Timeline() {
     onDragOver: handleDragOver,
     onDragLeave: handleDragLeave,
     onDrop: handleDrop,
+  };
+
+  // Action handlers for toolbar
+  const handleSplitSelected = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+    selectedClips.forEach(({ trackId, clipId }) => {
+      const track = tracks.find(t => t.id === trackId);
+      const clip = track?.clips.find(c => c.id === clipId);
+      if (clip && track) {
+        const splitTime = currentTime;
+        const effectiveStart = clip.startTime;
+        const effectiveEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+        if (splitTime > effectiveStart && splitTime < effectiveEnd) {
+          updateClipTrim(track.id, clip.id, clip.trimStart, clip.trimEnd + (effectiveEnd - splitTime));
+          addClipToTrack(track.id, {
+            mediaId: clip.mediaId,
+            name: clip.name + " (split)",
+            duration: clip.duration,
+            startTime: splitTime,
+            trimStart: clip.trimStart + (splitTime - effectiveStart),
+            trimEnd: clip.trimEnd,
+          });
+        }
+      }
+    });
+    toast.success("Split selected clip(s)");
+  };
+
+  const handleDuplicateSelected = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+    selectedClips.forEach(({ trackId, clipId }) => {
+      const track = tracks.find(t => t.id === trackId);
+      const clip = track?.clips.find(c => c.id === clipId);
+      if (clip && track) {
+        addClipToTrack(track.id, {
+          mediaId: clip.mediaId,
+          name: clip.name + " (copy)",
+          duration: clip.duration,
+          startTime: clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd) + 0.1,
+          trimStart: clip.trimStart,
+          trimEnd: clip.trimEnd,
+        });
+      }
+    });
+    toast.success("Duplicated selected clip(s)");
+  };
+
+  const handleFreezeSelected = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+    selectedClips.forEach(({ trackId, clipId }) => {
+      const track = tracks.find(t => t.id === trackId);
+      const clip = track?.clips.find(c => c.id === clipId);
+      if (clip && track) {
+        // Add a new freeze frame clip at the playhead
+        addClipToTrack(track.id, {
+          mediaId: clip.mediaId,
+          name: clip.name + " (freeze)",
+          duration: 1, // 1 second freeze frame
+          startTime: currentTime,
+          trimStart: 0,
+          trimEnd: clip.duration - 1,
+        });
+      }
+    });
+    toast.success("Freeze frame added for selected clip(s)");
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+    selectedClips.forEach(({ trackId, clipId }) => {
+      removeClipFromTrack(trackId, clipId);
+    });
+    clearSelectedClips();
+    toast.success("Deleted selected clip(s)");
   };
 
   return (
@@ -422,7 +549,7 @@ export function Timeline() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={handleSplitSelected}>
                 <Scissors className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -458,7 +585,7 @@ export function Timeline() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={handleDuplicateSelected}>
                 <Copy className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -467,7 +594,7 @@ export function Timeline() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={handleFreezeSelected}>
                 <Snowflake className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -476,7 +603,7 @@ export function Timeline() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={handleDeleteSelected}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -526,9 +653,13 @@ export function Timeline() {
           <div className="flex-1 relative overflow-hidden">
             <ScrollArea className="w-full">
               <div
-                className="relative h-12 bg-muted/30"
+                className="relative h-12 bg-muted/30 cursor-pointer"
                 style={{
                   width: `${Math.max(1000, duration * 50 * zoomLevel)}px`,
+                }}
+                onClick={(e) => {
+                  // Calculate the clicked time position and seek to it
+                  handleSeekToPosition(e);
                 }}
               >
                 {/* Time markers */}
@@ -653,15 +784,14 @@ export function Timeline() {
           </div>
 
           {/* Timeline Tracks Content */}
-          <div className="flex-1 relative">
-            <ScrollArea className="h-full w-full">
+          <div className="flex-1 relative overflow-hidden">
+            <div className="w-full h-[600px] overflow-hidden flex" ref={timelineRef} style={{ position: 'relative' }}>
+              {/* Timeline grid and clips area (with left margin for sidebar) */}
               <div
-                ref={timelineRef}
-                className="relative cursor-pointer select-none"
+                className="relative flex-1"
                 style={{
+                  height: `${tracks.length * 60}px`,
                   width: `${Math.max(1000, duration * 50 * zoomLevel)}px`,
-                  minHeight:
-                    tracks.length > 0 ? `${tracks.length * 60}px` : "200px",
                 }}
                 onClick={handleTimelineAreaClick}
                 onMouseDown={handleTimelineMouseDown}
@@ -704,7 +834,6 @@ export function Timeline() {
                           zoomLevel={zoomLevel}
                           setContextMenu={setContextMenu}
                         />
-
                       </div>
                     ))}
 
@@ -722,7 +851,7 @@ export function Timeline() {
                   </>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         </div>
       </div>
@@ -788,7 +917,7 @@ export function Timeline() {
                       const effectiveEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
 
                       if (splitTime > effectiveStart && splitTime < effectiveEnd) {
-                        useTimelineStore.getState().updateClipTrim(
+                        updateClipTrim(
                           track.id,
                           clip.id,
                           clip.trimStart,
@@ -1452,9 +1581,18 @@ function TimelineTrackContent({
                   style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
                   onClick={(e) => {
                     e.stopPropagation();
+                    const isSelected = selectedClips.some(
+                      (c) => c.trackId === track.id && c.clipId === clip.id
+                    );
+                    
                     if (e.metaKey || e.ctrlKey || e.shiftKey) {
+                      // Multi-selection mode: toggle the clip
                       selectClip(track.id, clip.id, true);
+                    } else if (isSelected) {
+                      // If clip is already selected, deselect it
+                      deselectClip(track.id, clip.id);
                     } else {
+                      // If clip is not selected, select it (replacing other selections)
                       selectClip(track.id, clip.id, false);
                     }
                   }}
@@ -1527,8 +1665,7 @@ function TimelineTrackContent({
             {/* Drop position indicator */}
             {isDraggedOver && dropPosition !== null && (
               <div
-                className={`absolute top-0 bottom-0 w-1 pointer-events-none z-30 transition-all duration-75 ease-out ${wouldOverlap ? "bg-red-500" : "bg-blue-500"
-                  }`}
+                className={`absolute top-0 bottom-0 w-1 pointer-events-none z-30 transition-all duration-75 ease-out ${wouldOverlap ? "bg-red-500" : "bg-blue-500"}`}
                 style={{
                   left: `${dropPosition * 50 * zoomLevel}px`,
                   transform: "translateX(-50%)",
