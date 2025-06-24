@@ -42,7 +42,7 @@ export function VideoPlayer({
         if (!video) return;
 
         const handleSeekEvent = (e: CustomEvent) => {
-            if (!isInClipRange) return;
+            // Always update video time, even if outside clip range
             const timelineTime = e.detail.time;
             const newVideoTime = Math.max(trimStart, Math.min(
                 clipDuration - trimEnd,
@@ -52,7 +52,7 @@ export function VideoPlayer({
         };
 
         const handleUpdateEvent = (e: CustomEvent) => {
-            if (!isInClipRange) return;
+            // Always update video time, even if outside clip range
             const timelineTime = e.detail.time;
             const targetVideoTime = Math.max(trimStart, Math.min(
                 clipDuration - trimEnd,
