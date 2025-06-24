@@ -22,3 +22,9 @@
 
 # asdf version management
 .tool-versions
+
+node_modules
+.cursorignore
+.turbo
+
+*.env
