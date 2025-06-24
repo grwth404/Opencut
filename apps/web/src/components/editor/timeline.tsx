@@ -40,7 +40,7 @@ export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their clips.
   // You can drag media here to add it to your project.
   // Clips can be trimmed, deleted, and moved.
-  const { tracks, addTrack, addClipToTrack, removeTrack, toggleTrackMute, removeClipFromTrack, moveClipToTrack, getTotalDuration, selectedClips, selectClip, deselectClip, clearSelectedClips, setSelectedClips, updateClipTrim } =
+  const { tracks, addTrack, addClipToTrack, removeTrack, toggleTrackMute, removeClipFromTrack, moveClipToTrack, getTotalDuration, selectedClips, selectClip, deselectClip, clearSelectedClips, setSelectedClips, updateClipTrim, undo } =
     useTimelineStore();
   const { mediaItems, addMediaItem } = useMediaStore();
   const { currentTime, duration, seek, setDuration, isPlaying, play, pause, toggle, setSpeed, speed } = usePlaybackStore();
@@ -97,6 +97,18 @@ export function Timeline() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedClips, removeClipFromTrack, clearSelectedClips]);
+
+  // Keyboard event for undo (Cmd+Z)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undo]);
 
   // Mouse down on timeline background to start marquee
   const handleTimelineMouseDown = (e: React.MouseEvent) => {
