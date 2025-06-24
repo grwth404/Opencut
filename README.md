@@ -26,48 +26,69 @@ A free, open-source video editor for web, desktop, and mobile.
 
 ## Getting Started
 
-1. **Clone the repository:**
+### Prerequisites
 
-   ```bash
-   git clone <repo-url>
-   cd OpenCut
-   ```
-2. **Install dependencies:**
+Before you begin, ensure you have the following installed on your system:
 
-   ```bash
-   cd apps/web
-   npm install
-   # or, with Bun
-   bun install
-   ```
-3. **Run the development server:**
+- [Bun](https://bun.sh/docs/installation)
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
+- [Node.js](https://nodejs.org/en/) (for `npm` alternative)
 
-   ```bash
-   npm run dev
-   # or, with Bun
-   bun run dev
-   ```
-4. **Open in browser:**  
+### Setup
 
-   Visit [http://localhost:3000](http://localhost:3000)
+1.  **Clone the repository**
+    ```bash
+    git clone <repo-url>
+    cd OpenCut
+    ```
 
-## Run with Docker
-1. **Prepare environment variables:**  
+2.  **Start backend services**
+    From the project root, start the PostgreSQL and Redis services:
+    ```bash
+    docker-compose up -d
+    ```
 
-   Edit [docker-compose.yaml](https://github.com/OpenCut-app/OpenCut/blob/main/docker-compose.yaml#L57-L64)
-2. **Build and run:**
+3.  **Set up environment variables**
+    Navigate into the web app's directory and create a `.env` file from the example:
+    ```bash
+    cd apps/web
+    cp .env.example .env
+    ```
+    *The default values in the `.env` file should work for local development.*
 
-   ```bash
-   docker-compose up -d --build
-   ```
-3. *(Optional)* **Migrate database:**
+4.  **Install dependencies**
+    Install the project dependencies using `bun` (recommended) or `npm`.
+    ```bash
+    # With bun
+    bun install
 
-   ```bash
-   docker-compose exec web bun run db:migrate
-   ```
-4. **Open in browser:**
+    # Or with npm
+    npm install
+    ```
 
-   Visit [http://localhost:3000](http://localhost:3000)
+5.  **Run database migrations**
+    Apply the database schema to your local database:
+    ```bash
+    # With bun
+    bun run db:push:local
+
+    # Or with npm
+    npm run db:push:local
+    ```
+
+6.  **Start the development server**
+    ```bash
+    # With bun
+    bun run dev
+
+    # Or with npm
+    npm run dev
+    ```
+
+The application will be available at [http://localhost:3000](http://localhost:3000).
+
+=======
+
 
 ## Contributing
 
