@@ -30,6 +30,12 @@ jobs:
         with:
           bun-version: 1.2.2
 
+      - name: Cache Bun modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('apps/web/bun.lockb') }}
+
       - name: Install dependencies
         working-directory: apps/web
         run: bun install
