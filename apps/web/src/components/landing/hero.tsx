@@ -109,8 +109,8 @@ export function Hero({ signupCount }: HeroProps) {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.8 }}
         >
-          A simple but powerful video editor that gets the job done. In your
-          browser.
+          A simple but powerful video editor that gets the job done. Works on
+          any platform.
         </motion.p>
 
         <motion.div
