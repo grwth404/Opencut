@@ -313,7 +313,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   return (
     <div className="flex h-screen items-center justify-center relative">
       <Button
-        variant="ghost"
+        variant="text"
         onClick={() => router.back()}
         className="absolute top-6 left-6"
       >
