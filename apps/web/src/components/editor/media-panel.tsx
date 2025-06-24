@@ -18,7 +18,7 @@ export function MediaPanel() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [mediaFilter, setMediaFilter] = useState("all")
+  const [mediaFilter, setMediaFilter] = useState("all");
 
   const processFiles = async (files: FileList | File[]) => {
     // If no files, do nothing
