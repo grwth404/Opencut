@@ -1,7 +1,5 @@
-// Jeanpseven esteve aqui
 import { db } from "@opencut/db";
 import { waitlist } from "@opencut/db/schema";
-
 import { sql } from "drizzle-orm";
 
 export async function getWaitlistCount() {
