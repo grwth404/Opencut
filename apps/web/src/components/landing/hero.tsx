@@ -148,7 +148,7 @@ export function Hero({ signupCount }: HeroProps) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8, duration: 0.6 }}
-            className="mt-8 inline-flex items-center gap-2 bg-muted/30 px-4 py-2 rounded-full text-sm text-muted-foreground justify-center"
+            className="mt-8 inline-flex items-center gap-2 text-sm text-muted-foreground justify-center"
           >
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
             <span>{signupCount.toLocaleString()} people already joined</span>
