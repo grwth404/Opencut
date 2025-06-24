@@ -1,6 +1,12 @@
-# OpenCut (prev AppCut)
+<img src="apps/web/public/logo.png" align="left" width="130" height="130">
 
-A free, open-source video editor for web, desktop, and mobile.
+<div align="right">
+
+
+
+# OpenCut (prev AppCut)
+### A free, open-source video editor for web, desktop, and mobile.
+</div>
 
 ## Why?
 
