@@ -247,7 +247,7 @@ export function MediaPanel() {
                 <>
                   <Plus className="h-4 w-4" />
                   <span
-                    className="hidden min-w-[40px]:inline ml-2"
+                    className="hidden sm:inline ml-2"
                     aria-label="Add file"
                   >
                     Add
