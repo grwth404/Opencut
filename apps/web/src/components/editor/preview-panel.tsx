@@ -196,10 +196,10 @@ export function PreviewPanel() {
       </div>
 
       {/* Preview Area */}
-      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 bg-gray-900 min-h-0 min-w-0">
+      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 min-h-0 min-w-0">
         <div
           ref={previewRef}
-          className="relative overflow-hidden rounded-sm max-w-full max-h-full bg-black border border-gray-600"
+          className="relative overflow-hidden rounded-sm max-w-full max-h-full bg-black border"
           style={{
             aspectRatio: aspectRatio.toString(),
             width: "100%",
@@ -207,7 +207,7 @@ export function PreviewPanel() {
           }}
         >
           {activeClips.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center text-white/50">
+            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
               {tracks.length === 0
                 ? "Drop media to start editing"
                 : "No clips at current time"}
