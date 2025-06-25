@@ -1,33 +1,27 @@
 "use client";
 
-import { ScrollArea } from "../ui/scroll-area";
-import { Button } from "../ui/button";
-import {
-  Scissors,
-  ArrowLeftToLine,
-  ArrowRightToLine,
-  Trash2,
-  Snowflake,
-  Copy,
-  SplitSquareHorizontal,
-  MoreVertical,
-  Volume2,
-  VolumeX,
-  Pause,
-  Play,
-} from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-  TooltipProvider,
-} from "../ui/tooltip";
-import { useTimelineStore, type TimelineTrack } from "@/stores/timeline-store";
+import { processMediaFiles } from "@/lib/media-processing";
 import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
-import { processMediaFiles } from "@/lib/media-processing";
+import { useTimelineStore, type TimelineTrack } from "@/stores/timeline-store";
+import {
+  ArrowLeftToLine,
+  ArrowRightToLine,
+  Copy,
+  MoreVertical,
+  Pause,
+  Play,
+  Scissors,
+  Snowflake,
+  SplitSquareHorizontal,
+  Trash2,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { Button } from "../ui/button";
+import { ScrollArea } from "../ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -35,6 +29,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 
 export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their clips.
@@ -213,7 +213,7 @@ export function Timeline() {
     const bx2 = clamp(x2, 0, rect.width);
     const by1 = clamp(y1, 0, rect.height);
     const by2 = clamp(y2, 0, rect.height);
-    let newSelection: { trackId: string; clipId: string }[] = [];
+    let newSelection: { trackId: string; clipId: string; }[] = [];
     tracks.forEach((track, trackIdx) => {
       track.clips.forEach((clip) => {
         const effectiveDuration = clip.duration - clip.trimStart - clip.trimEnd;
@@ -604,8 +604,8 @@ export function Timeline() {
           {/* Time Display */}
           <div className="text-xs text-muted-foreground font-mono px-2"
             style={{ minWidth: '18ch', textAlign: 'center' }}
-            >
-              {currentTime.toFixed(1)}s / {duration.toFixed(1)}s
+          >
+            {currentTime.toFixed(1)}s / {duration.toFixed(1)}s
           </div>
 
           {/* Test Clip Button - for debugging */}
@@ -786,19 +786,17 @@ export function Timeline() {
                     return (
                       <div
                         key={i}
-                        className={`absolute top-0 bottom-0 ${
-                          isMainMarker
-                            ? "border-l border-muted-foreground/40"
-                            : "border-l border-muted-foreground/20"
-                        }`}
+                        className={`absolute top-0 bottom-0 ${isMainMarker
+                          ? "border-l border-muted-foreground/40"
+                          : "border-l border-muted-foreground/20"
+                          }`}
                         style={{ left: `${time * 50 * zoomLevel}px` }}
                       >
                         <span
-                          className={`absolute top-1 left-1 text-xs ${
-                            isMainMarker
-                              ? "text-muted-foreground font-medium"
-                              : "text-muted-foreground/70"
-                          }`}
+                          className={`absolute top-1 left-1 text-xs ${isMainMarker
+                            ? "text-muted-foreground font-medium"
+                            : "text-muted-foreground/70"
+                            }`}
                         >
                           {(() => {
                             const formatTime = (seconds: number) => {
@@ -859,13 +857,12 @@ export function Timeline() {
                   >
                     <div className="flex items-center flex-1 min-w-0">
                       <div
-                        className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                          track.type === "video"
-                            ? "bg-blue-500"
-                            : track.type === "audio"
-                              ? "bg-green-500"
-                              : "bg-purple-500"
-                        }`}
+                        className={`w-3 h-3 rounded-full flex-shrink-0 ${track.type === "video"
+                          ? "bg-blue-500"
+                          : track.type === "audio"
+                            ? "bg-green-500"
+                            : "bg-purple-500"
+                          }`}
                       />
                       <span className="ml-2 text-sm font-medium truncate">
                         {track.name}
@@ -1194,7 +1191,7 @@ function TimelineTrackContent({
     });
   };
 
-  const updateTrimFromMouseMove = (e: { clientX: number }) => {
+  const updateTrimFromMouseMove = (e: { clientX: number; }) => {
     if (!resizing) return;
 
     const clip = track.clips.find((c) => c.id === resizing.clipId);
@@ -1284,7 +1281,7 @@ function TimelineTrackContent({
             return;
           }
         }
-      } catch (error) {}
+      } catch (error) { }
     }
 
     // Calculate drop position for overlap checking
@@ -1662,13 +1659,12 @@ function TimelineTrackContent({
 
   return (
     <div
-      className={`w-full h-full transition-all duration-150 ease-out ${
-        isDraggedOver
-          ? wouldOverlap
-            ? "bg-red-500/15 border-2 border-dashed border-red-400 shadow-lg"
-            : "bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg"
-          : "hover:bg-muted/20"
-      }`}
+      className={`w-full h-full transition-all duration-150 ease-out ${isDraggedOver
+        ? wouldOverlap
+          ? "bg-red-500/15 border-2 border-dashed border-red-400 shadow-lg"
+          : "bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg"
+        : "hover:bg-muted/20"
+        }`}
       onContextMenu={(e) => {
         e.preventDefault();
         // Only show track menu if we didn't click on a clip
@@ -1692,13 +1688,12 @@ function TimelineTrackContent({
       <div className="h-full relative track-clips-container min-w-full">
         {track.clips.length === 0 ? (
           <div
-            className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${
-              isDropping
-                ? wouldOverlap
-                  ? "border-red-500 bg-red-500/10 text-red-600"
-                  : "border-blue-500 bg-blue-500/10 text-blue-600"
-                : "border-muted/30"
-            }`}
+            className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${isDropping
+              ? wouldOverlap
+                ? "border-red-500 bg-red-500/10 text-red-600"
+                : "border-blue-500 bg-blue-500/10 text-blue-600"
+              : "border-muted/30"
+              }`}
           >
             {isDropping
               ? wouldOverlap
@@ -1722,7 +1717,7 @@ function TimelineTrackContent({
               return (
                 <div
                   key={clip.id}
-                  className={`timeline-clip absolute h-full border transition-all duration-200 ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg ${isSelected ? "ring-2 ring-blue-500 z-10" : ""}`}
+                  className={`timeline-clip absolute h-full border transition-all-200 ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg ${isSelected ? "ring-2 ring-blue-500 z-10" : ""}`}
                   style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1785,7 +1780,7 @@ function TimelineTrackContent({
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                       {clipMenuOpen === clip.id && (
-                        <div className="absolute right-0 mt-2 w-32 bg-white border rounded shadow z-50">
+                        <div className="absolute right-0 mt-2 w-32 bg-white text-black border rounded shadow z-50">
                           <button
                             className="flex items-center w-full px-3 py-2 text-sm hover:bg-muted/30"
                             onClick={() => {
