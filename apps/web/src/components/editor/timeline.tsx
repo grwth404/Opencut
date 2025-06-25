@@ -221,7 +221,7 @@ export function Timeline() {
         const clipLeft = clip.startTime * 50 * zoomLevel;
         const clipTop = trackIdx * 60;
         const clipBottom = clipTop + 60;
-        const clipRight = clipLeft + clipWidth;
+        const clipRight = clipLeft + 60; // Set a fixed width for time display
         if (
           bx1 < clipRight &&
           bx2 > clipLeft &&
