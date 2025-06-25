@@ -59,7 +59,16 @@ Before you begin, ensure you have the following installed on your system:
     Navigate into the web app's directory and create a `.env` file from the example:
     ```bash
     cd apps/web
-    cp .env.example .env
+
+    
+    # Unix/Linux/Mac
+    cp .env.example .env.local
+
+    # Windows Command Prompt
+    copy .env.example .env.local
+    
+    # Windows PowerShell
+    Copy-Item .env.example .env.local
     ```
     *The default values in the `.env` file should work for local development.*
 

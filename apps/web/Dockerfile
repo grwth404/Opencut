@@ -19,7 +19,8 @@ COPY apps/web/ apps/web/
 COPY packages/db/ packages/db/
 COPY packages/auth/ packages/auth/
 
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
 
 WORKDIR /app/apps/web
 RUN bun run build
@@ -28,7 +29,8 @@ RUN bun run build
 FROM base AS runner
 WORKDIR /app
 
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
