@@ -48,7 +48,7 @@ services:
       start_period: 10s
   web:
     build:
-      context: ./apps/web
+      context: .
       dockerfile: ./apps/web/Dockerfile
     restart: unless-stopped
     ports:
