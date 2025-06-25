@@ -35,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import AudioWaveform from "./audio-waveform";
 
 export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their clips.
@@ -1626,7 +1627,21 @@ function TimelineTrackContent({
       );
     }
 
-    // Fallback for audio or videos without thumbnails
+    if (mediaItem.type === "audio") {
+    return (
+      <div className="w-full h-full flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <AudioWaveform 
+            audioUrl={mediaItem.url} 
+            height={24}
+            className="w-full"
+          />
+        </div>
+      </div>
+    );
+  }
+
+    // Fallback for videos without thumbnails
     return (
       <span className="text-xs text-foreground/80 truncate">{clip.name}</span>
     );
