@@ -1241,7 +1241,18 @@ function TimelineTrackContent({
   };
 
   const handleClipDragStart = (e: React.DragEvent, clip: any) => {
-    const dragData = { clipId: clip.id, trackId: track.id, name: clip.name };
+    // Calculate the offset from the left edge of the clip to where the user clicked
+    const clipElement = e.currentTarget.parentElement as HTMLElement;
+    const clipRect = clipElement.getBoundingClientRect();
+    const clickOffsetX = e.clientX - clipRect.left;
+    const clickOffsetTime = clickOffsetX / (50 * zoomLevel);
+
+    const dragData = {
+      clipId: clip.id,
+      trackId: track.id,
+      name: clip.name,
+      clickOffsetTime: clickOffsetTime,
+    };
 
     e.dataTransfer.setData(
       "application/x-timeline-clip",
@@ -1467,7 +1478,11 @@ function TimelineTrackContent({
         );
         if (!timelineClipData) return;
 
-        const { clipId, trackId: fromTrackId } = JSON.parse(timelineClipData);
+        const {
+          clipId,
+          trackId: fromTrackId,
+          clickOffsetTime = 0,
+        } = JSON.parse(timelineClipData);
 
         // Find the clip being moved
         const sourceTrack = tracks.find(
@@ -1480,10 +1495,17 @@ function TimelineTrackContent({
           return;
         }
 
+        // Adjust position based on where user clicked on the clip
+        const adjustedStartTime = snappedTime - clickOffsetTime;
+        const finalStartTime = Math.max(
+          0,
+          Math.round(adjustedStartTime * 10) / 10
+        );
+
         // Check for overlaps with existing clips (excluding the moving clip itself)
         const movingClipDuration =
           movingClip.duration - movingClip.trimStart - movingClip.trimEnd;
-        const movingClipEnd = snappedTime + movingClipDuration;
+        const movingClipEnd = finalStartTime + movingClipDuration;
 
         const hasOverlap = track.clips.some((existingClip) => {
           // Skip the clip being moved if it's on the same track
@@ -1498,7 +1520,7 @@ function TimelineTrackContent({
               existingClip.trimEnd);
 
           // Check if clips overlap
-          return snappedTime < existingEnd && movingClipEnd > existingStart;
+          return finalStartTime < existingEnd && movingClipEnd > existingStart;
         });
 
         if (hasOverlap) {
@@ -1510,12 +1532,12 @@ function TimelineTrackContent({
 
         if (fromTrackId === track.id) {
           // Moving within same track
-          updateClipStartTime(track.id, clipId, snappedTime);
+          updateClipStartTime(track.id, clipId, finalStartTime);
         } else {
           // Moving to different track
           moveClipToTrack(fromTrackId, track.id, clipId);
           requestAnimationFrame(() => {
-            updateClipStartTime(track.id, clipId, snappedTime);
+            updateClipStartTime(track.id, clipId, finalStartTime);
           });
         }
       } else if (hasMediaItem) {
@@ -1612,6 +1634,7 @@ function TimelineTrackContent({
             src={mediaItem.url}
             alt={mediaItem.name}
             className="w-full h-full object-cover"
+            draggable={false}
           />
         </div>
       );
@@ -1625,6 +1648,7 @@ function TimelineTrackContent({
               src={mediaItem.thumbnailUrl}
               alt={mediaItem.name}
               className="w-full h-full object-cover rounded-sm"
+              draggable={false}
             />
           </div>
           <span className="text-xs text-foreground/80 truncate flex-1">
@@ -1684,13 +1708,7 @@ function TimelineTrackContent({
 
   return (
     <div
-      className={`w-full h-full transition-all duration-150 ease-out ${
-        isDraggedOver
-          ? wouldOverlap
-            ? "bg-red-500/15 border-2 border-dashed border-red-400 shadow-lg"
-            : "bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg"
-          : "hover:bg-muted/20"
-      }`}
+      className="w-full h-full hover:bg-muted/20"
       onContextMenu={(e) => {
         e.preventDefault();
         // Only show track menu if we didn't click on a clip
@@ -1744,7 +1762,7 @@ function TimelineTrackContent({
               return (
                 <div
                   key={clip.id}
-                  className={`timeline-clip absolute h-full border transition-all duration-200 ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg ${isSelected ? "ring-2 ring-blue-500 z-10" : ""}`}
+                  className={`timeline-clip absolute h-full border ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg ${isSelected ? "ring-2 ring-blue-500 z-10" : ""}`}
                   style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1835,30 +1853,6 @@ function TimelineTrackContent({
                 </div>
               );
             })}
-
-            {/* Drop position indicator */}
-            {isDraggedOver && dropPosition !== null && (
-              <div
-                className={`absolute top-0 bottom-0 w-1 pointer-events-none z-30 transition-all duration-75 ease-out ${wouldOverlap ? "bg-red-500" : "bg-blue-500"}`}
-                style={{
-                  left: `${dropPosition * 50 * zoomLevel}px`,
-                  transform: "translateX(-50%)",
-                }}
-              >
-                <div
-                  className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${wouldOverlap ? "bg-red-500" : "bg-blue-500"}`}
-                />
-                <div
-                  className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${wouldOverlap ? "bg-red-500" : "bg-blue-500"}`}
-                />
-                <div
-                  className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-white px-1 py-0.5 rounded whitespace-nowrap ${wouldOverlap ? "bg-red-500" : "bg-blue-500"}`}
-                >
-                  {wouldOverlap ? "⚠️" : ""}
-                  {dropPosition.toFixed(1)}s
-                </div>
-              </div>
-            )}
           </>
         )}
       </div>
