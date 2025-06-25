@@ -104,8 +104,12 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => ({
   setCurrentTime: (time: number) => set({ currentTime: time }),
 
   mute: () => {
-    const { volume } = get();
-    set({ muted: true, previousVolume: volume, volume: 0 });
+    const { volume, previousVolume } = get();
+    set({
+      muted: true,
+      previousVolume: volume > 0 ? volume : previousVolume,
+      volume: 0,
+    });
   },
 
   unmute: () => {
