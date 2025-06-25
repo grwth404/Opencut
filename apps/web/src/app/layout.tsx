@@ -5,6 +5,7 @@ import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "../components/ui/sonner";
 import { TooltipProvider } from "../components/ui/tooltip";
+import { DevelopmentDebug } from "../components/development-debug";
 import { baseMetaData } from "./metadata";
 
 const inter = Inter({
@@ -27,6 +28,7 @@ export default function RootLayout({
             {children}
             <Analytics />
             <Toaster />
+            <DevelopmentDebug />
             <Script
               src="https://app.databuddy.cc/databuddy.js"
               strategy="afterInteractive"

@@ -12,9 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
-// Debug flag - set to false to hide active clips info
-const SHOW_DEBUG_INFO = process.env.NODE_ENV === "development";
-
 interface ActiveClip {
   clip: TimelineClip;
   track: TimelineTrack;
@@ -27,7 +24,6 @@ export function PreviewPanel() {
   const { isPlaying, toggle, currentTime, muted, toggleMute, volume } =
     usePlaybackStore();
   const [canvasSize, setCanvasSize] = useState({ width: 1920, height: 1080 });
-  const [showDebug, setShowDebug] = useState(SHOW_DEBUG_INFO);
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [previewDimensions, setPreviewDimensions] = useState({
@@ -197,18 +193,6 @@ export function PreviewPanel() {
           ))}
         </select>
 
-        {/* Debug Toggle - Only show in development */}
-        {SHOW_DEBUG_INFO && (
-          <Button
-            variant="text"
-            size="sm"
-            onClick={() => setShowDebug(!showDebug)}
-            className="text-xs"
-          >
-            Debug {showDebug ? "ON" : "OFF"}
-          </Button>
-        )}
-
         <Button
           variant="outline"
           size="sm"
@@ -257,34 +241,6 @@ export function PreviewPanel() {
           )}
         </div>
       </div>
-
-      {/* Debug Info Panel - Conditionally rendered */}
-      {showDebug && (
-        <div className="border-t bg-background p-2 flex-shrink-0">
-          <div className="text-xs font-medium mb-1">
-            Debug: Active Clips ({activeClips.length})
-          </div>
-          <div className="flex gap-2 overflow-x-auto">
-            {activeClips.map((clipData, index) => (
-              <div
-                key={clipData.clip.id}
-                className="flex items-center gap-1 px-2 py-1 bg-muted rounded text-xs whitespace-nowrap"
-              >
-                <span className="w-4 h-4 bg-primary/20 rounded text-center text-xs leading-4">
-                  {index + 1}
-                </span>
-                <span>{clipData.clip.name}</span>
-                <span className="text-muted-foreground">
-                  ({clipData.mediaItem?.type || "test"})
-                </span>
-              </div>
-            ))}
-            {activeClips.length === 0 && (
-              <span className="text-muted-foreground">No active clips</span>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
