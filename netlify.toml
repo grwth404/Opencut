@@ -1,5 +1,5 @@
 [build]
-  base = "../.."
+  base = "."
   command = "bun install && bunx turbo build --filter=opencut"
   publish = "apps/web/.next"
 
@@ -10,4 +10,4 @@
   from = "https://appcut.app/*"
   to = "https://opencut.app/:splat"
   status = 301
-  force = true
+  force = true 

@@ -29,12 +29,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
+
+import AudioWaveform from "./audio-waveform";
+
 
 export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their clips.
@@ -566,15 +570,6 @@ export function Timeline() {
       onMouseLeave={() => setIsInTimeline(false)}
       onWheel={handleWheel}
     >
-      {/* Show overlay when dragging media over the timeline */}
-      {isDragOver && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none backdrop-blur-lg">
-          <div>
-            Drop media here to add to timeline
-          </div>
-        </div>
-      )}
-
       {/* Toolbar */}
       <div className="border-b flex items-center px-2 py-1 gap-1">
         <TooltipProvider delayDuration={500}>
@@ -949,6 +944,17 @@ export function Timeline() {
                       />
                     )}
                   </>
+                )}
+                {isDragOver && (
+                  <div
+                    className="absolute left-0 right-0 border-2 border-dashed border-accent flex items-center justify-center text-muted-foreground"
+                    style={{
+                      top: `${tracks.length * 60}px`,
+                      height: "60px",
+                    }}
+                  >
+                    <div>Drop media here to add a new track</div>
+                  </div>
                 )}
               </div>
             </div>
@@ -1625,7 +1631,21 @@ function TimelineTrackContent({
       );
     }
 
-    // Fallback for audio or videos without thumbnails
+    if (mediaItem.type === "audio") {
+    return (
+      <div className="w-full h-full flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <AudioWaveform 
+            audioUrl={mediaItem.url} 
+            height={24}
+            className="w-full"
+          />
+        </div>
+      </div>
+    );
+  }
+
+    // Fallback for videos without thumbnails
     return (
       <span className="text-xs text-foreground/80 truncate">{clip.name}</span>
     );
