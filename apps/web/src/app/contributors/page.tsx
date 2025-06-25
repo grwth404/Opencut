@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { GithubIcon } from "@/components/icons";
+import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
   title: "Contributors - OpenCut",
@@ -77,10 +78,10 @@ export default async function ContributorsPage() {
         <div className="relative container mx-auto px-4 py-16">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-20">
-              <div className="inline-flex items-center gap-2 bg-muted/50 text-muted-foreground px-3 py-1 rounded-full text-sm mb-6">
+              <Badge variant="secondary" className="gap-2 mb-6">
                 <GithubIcon className="h-3 w-3" />
                 Open Source
-              </div>
+              </Badge>
               <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
                 Contributors
               </h1>
