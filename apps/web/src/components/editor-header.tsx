@@ -3,13 +3,11 @@
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { ChevronLeft, Download } from "lucide-react";
-import { useProjectStore } from "@/stores/project-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { HeaderBase } from "./header-base";
 import { ProjectNameEditor } from "./editor/project-name-editor";
 
 export function EditorHeader() {
-  const { activeProject } = useProjectStore();
   const { getTotalDuration } = useTimelineStore();
 
   const handleExport = () => {
