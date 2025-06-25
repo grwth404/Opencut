@@ -1281,7 +1281,9 @@ function TimelineTrackContent({
             return;
           }
         }
-      } catch (error) { }
+      } catch (error) {
+        console.error("Error parsing dropped media item:", error);
+      }
     }
 
     // Calculate drop position for overlap checking
