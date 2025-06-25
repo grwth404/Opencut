@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/react";
@@ -6,46 +5,14 @@ import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "../components/ui/sonner";
 import { TooltipProvider } from "../components/ui/tooltip";
+import { baseMetaData } from "./metadata";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
 });
 
-export const metadata: Metadata = {
-  title: "OpenCut",
-  description:
-    "A simple but powerful video editor that gets the job done. In your browser.",
-  openGraph: {
-    title: "OpenCut",
-    description:
-      "A simple but powerful video editor that gets the job done. In your browser.",
-    url: "https://opencut.app",
-    siteName: "OpenCut",
-    locale: "en_US",
-    type: "website",
-    images: [
-      {
-        url: "https://opencut.app/opengraph-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "OpenCut",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "OpenCut",
-    description:
-      "A simple but powerful video editor that gets the job done. In your browser.",
-    creator: "@opencutapp",
-    images: ["/opengraph-image.jpg"],
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
+export const metadata = baseMetaData;
 
 export default function RootLayout({
   children,
