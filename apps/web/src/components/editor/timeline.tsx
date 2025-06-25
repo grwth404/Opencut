@@ -1251,6 +1251,8 @@ function TimelineTrackContent({
     setResizing(null);
   };
 
+  const [justFinishedDrag, setJustFinishedDrag] = useState(false);
+
   const handleClipMouseDown = (e: React.MouseEvent, clip: any) => {
     // Calculate the offset from the left edge of the clip to where the user clicked
     const clipElement = e.currentTarget.parentElement as HTMLElement;
@@ -1260,6 +1262,16 @@ function TimelineTrackContent({
 
     startDrag(e, clip.id, track.id, clip.startTime, clickOffsetTime);
   };
+
+  // Reset drag flag when drag ends
+  useEffect(() => {
+    if (!isDragging && justFinishedDrag) {
+      const timer = setTimeout(() => setJustFinishedDrag(false), 50);
+      return () => clearTimeout(timer);
+    } else if (isDragging && !justFinishedDrag) {
+      setJustFinishedDrag(true);
+    }
+  }, [isDragging, justFinishedDrag]);
 
   const handleTrackDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -1765,6 +1777,11 @@ function TimelineTrackContent({
                   style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
                   onClick={(e) => {
                     e.stopPropagation();
+
+                    // Don't handle click if we just finished dragging
+                    if (justFinishedDrag) {
+                      return;
+                    }
 
                     // Close context menu if it's open
                     if (contextMenu) {
