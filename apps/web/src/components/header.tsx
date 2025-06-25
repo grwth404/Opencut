@@ -29,8 +29,7 @@ export function Header() {
 
   const leftContent = (
     <Link href="/" className="flex items-center gap-3">
-      <Image src="/logo.png" alt="OpenCut Logo" width={24} height={24} />
-      <span className="font-medium tracking-tight">OpenCut</span>
+      <Image src="/logo.svg" alt="OpenCut Logo" width={142} height={32} />
     </Link>
   );
 
@@ -59,5 +58,11 @@ export function Header() {
     </nav>
   );
 
-  return <HeaderBase leftContent={leftContent} rightContent={rightContent} />;
+  return (
+    <HeaderBase
+      className="bg-[#1D1D1D] border border-white/10 rounded-2xl max-w-3xl mx-auto mt-4 pl-4 pr-[14px]"
+      leftContent={leftContent}
+      rightContent={rightContent}
+    />
+  );
 }
