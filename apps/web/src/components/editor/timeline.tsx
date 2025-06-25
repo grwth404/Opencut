@@ -69,6 +69,7 @@ export function Timeline() {
   } = usePlaybackStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(1);
   const dragCounterRef = useRef(0);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -334,8 +335,12 @@ export function Timeline() {
     } else if (e.dataTransfer.files?.length > 0) {
       // Handle file drops by creating new tracks
       setIsProcessing(true);
+      setProgress(0);
       try {
-        const processedItems = await processMediaFiles(e.dataTransfer.files);
+        const processedItems = await processMediaFiles(
+          e.dataTransfer.files,
+          (p) => setProgress(p)
+        );
         for (const processedItem of processedItems) {
           addMediaItem(processedItem);
           const currentMediaItems = useMediaStore.getState().mediaItems;
@@ -363,6 +368,7 @@ export function Timeline() {
         toast.error("Failed to process dropped files");
       } finally {
         setIsProcessing(false);
+        setProgress(0);
       }
     }
   };
@@ -594,10 +600,11 @@ export function Timeline() {
           <div className="w-px h-6 bg-border mx-1" />
 
           {/* Time Display */}
-          <div className="text-xs text-muted-foreground font-mono px-2"
-            style={{ minWidth: '18ch', textAlign: 'center' }}
-            >
-              {currentTime.toFixed(1)}s / {duration.toFixed(1)}s
+          <div
+            className="text-xs text-muted-foreground font-mono px-2"
+            style={{ minWidth: "18ch", textAlign: "center" }}
+          >
+            {currentTime.toFixed(1)}s / {duration.toFixed(1)}s
           </div>
 
           {/* Test Clip Button - for debugging */}
@@ -946,14 +953,12 @@ export function Timeline() {
                   </>
                 )}
                 {isDragOver && (
-                  <div
-                    className="absolute left-0 right-0 border-2 border-dashed border-accent flex items-center justify-center text-muted-foreground"
-                    style={{
-                      top: `${tracks.length * 60}px`,
-                      height: "60px",
-                    }}
-                  >
-                    <div>Drop media here to add a new track</div>
+                  <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none backdrop-blur-lg">
+                    <div>
+                      {isProcessing
+                        ? `Processing ${progress}%`
+                        : "Drop media here to add to timeline"}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1630,18 +1635,18 @@ function TimelineTrackContent({
     }
 
     if (mediaItem.type === "audio") {
-    return (
-      <div className="w-full h-full flex items-center gap-2">
-        <div className="flex-1 min-w-0">
-          <AudioWaveform 
-            audioUrl={mediaItem.url} 
-            height={24}
-            className="w-full"
-          />
+      return (
+        <div className="w-full h-full flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <AudioWaveform
+              audioUrl={mediaItem.url}
+              height={24}
+              className="w-full"
+            />
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
     // Fallback for videos without thumbnails
     return (
