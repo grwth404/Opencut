@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "./ui/button";
 import { ArrowRight } from "lucide-react";
 import { HeaderBase } from "./header-base";
 import { useSession } from "@opencut/auth/client";
 import { getStars } from "@/lib/fetchGhStars";
-import { Star } from "lucide-react";
 import { useEffect, useState } from "react";
 
 function Logo() {
