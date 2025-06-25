@@ -21,7 +21,13 @@ const startTimer = (store: any) => {
 
       const newTime = state.currentTime + delta * state.speed;
       if (newTime >= state.duration) {
+        // When video completes, pause and reset playhead to start
         state.pause();
+        state.setCurrentTime(0);
+        // Notify video elements to sync with reset
+        window.dispatchEvent(
+          new CustomEvent("playback-seek", { detail: { time: 0 } })
+        );
       } else {
         state.setCurrentTime(newTime);
         // Notify video elements to sync
