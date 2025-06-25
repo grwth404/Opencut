@@ -9,7 +9,7 @@ import { useMediaStore, type MediaItem } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { VideoPlayer } from "@/components/ui/video-player";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, Plus } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 interface ActiveClip {
@@ -21,8 +21,7 @@ interface ActiveClip {
 export function PreviewPanel() {
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
-  const { isPlaying, toggle, currentTime, muted, toggleMute, volume } =
-    usePlaybackStore();
+  const { currentTime, muted, toggleMute, volume } = usePlaybackStore();
   const [canvasSize, setCanvasSize] = useState({ width: 1920, height: 1080 });
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -37,18 +36,44 @@ export function PreviewPanel() {
       if (!containerRef.current) return;
 
       const container = containerRef.current.getBoundingClientRect();
+      const computedStyle = getComputedStyle(containerRef.current);
+
+      // Get padding values
+      const paddingTop = parseFloat(computedStyle.paddingTop);
+      const paddingBottom = parseFloat(computedStyle.paddingBottom);
+      const paddingLeft = parseFloat(computedStyle.paddingLeft);
+      const paddingRight = parseFloat(computedStyle.paddingRight);
+
+      // Get gap value (gap-4 = 1rem = 16px)
+      const gap = parseFloat(computedStyle.gap) || 16;
+
+      // Get toolbar height if it exists
+      const toolbar = containerRef.current.querySelector("[data-toolbar]");
+      const toolbarHeight = toolbar
+        ? toolbar.getBoundingClientRect().height
+        : 0;
+
+      // Calculate available space after accounting for padding, gap, and toolbar
+      const availableWidth = container.width - paddingLeft - paddingRight;
+      const availableHeight =
+        container.height -
+        paddingTop -
+        paddingBottom -
+        toolbarHeight -
+        (toolbarHeight > 0 ? gap : 0);
+
       const targetRatio = canvasSize.width / canvasSize.height;
-      const containerRatio = container.width / container.height;
+      const containerRatio = availableWidth / availableHeight;
 
       let width, height;
 
       if (containerRatio > targetRatio) {
         // Container is wider - constrain by height
-        height = container.height;
+        height = availableHeight;
         width = height * targetRatio;
       } else {
         // Container is taller - constrain by width
-        width = container.width;
+        width = availableWidth;
         height = width / targetRatio;
       }
 
@@ -206,21 +231,12 @@ export function PreviewPanel() {
           )}
           {muted || volume === 0 ? "Unmute" : "Mute"}
         </Button>
-
-        <Button variant="outline" size="sm" onClick={toggle}>
-          {isPlaying ? (
-            <Pause className="h-3 w-3 mr-1" />
-          ) : (
-            <Play className="h-3 w-3 mr-1" />
-          )}
-          {isPlaying ? "Pause" : "Play"}
-        </Button>
       </div>
 
       {/* Preview Area */}
       <div
         ref={containerRef}
-        className="flex-1 flex items-center justify-center p-2 sm:p-4 min-h-0 min-w-0"
+        className="flex-1 flex flex-col items-center justify-center p-3 min-h-0 min-w-0 gap-4"
       >
         <div
           ref={previewRef}
@@ -240,7 +256,28 @@ export function PreviewPanel() {
             activeClips.map((clipData, index) => renderClip(clipData, index))
           )}
         </div>
+
+        <PreviewToolbar />
       </div>
+    </div>
+  );
+}
+
+function PreviewToolbar() {
+  const { isPlaying, toggle } = usePlaybackStore();
+
+  return (
+    <div
+      data-toolbar
+      className="flex items-center justify-center gap-2 px-4 pt-2 bg-background-500 w-full"
+    >
+      <Button variant="text" size="icon" onClick={toggle}>
+        {isPlaying ? (
+          <Pause className="h-3 w-3" />
+        ) : (
+          <Play className="h-3 w-3" />
+        )}
+      </Button>
     </div>
   );
 }
