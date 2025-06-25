@@ -1,6 +1,6 @@
 [build]
-  base = "."
-  command = "bun install && bunx turbo build --filter=opencut"
+  base = "apps/web"
+  command = "bun install && bun run build"
   publish = "apps/web/.next"
 
 [[plugins]]
