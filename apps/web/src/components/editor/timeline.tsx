@@ -936,6 +936,16 @@ export function Timeline() {
                             y: e.clientY,
                           });
                         }}
+                        onClick={(e) => {
+                          // If clicking empty area (not on a clip), deselect all clips
+                          if (
+                            !(e.target as HTMLElement).closest(".timeline-clip")
+                          ) {
+                            const { clearSelectedClips } =
+                              useTimelineStore.getState();
+                            clearSelectedClips();
+                          }
+                        }}
                       >
                         <TimelineTrackContent
                           track={track}
@@ -1162,8 +1172,10 @@ function TimelineTrackContent({
   const [dropPosition, setDropPosition] = useState<number | null>(null);
   const [wouldOverlap, setWouldOverlap] = useState(false);
   const dragCounterRef = useRef(0);
-
-  const [justFinishedDrag, setJustFinishedDrag] = useState(false);
+  const [mouseDownLocation, setMouseDownLocation] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   // Set up mouse event listeners for drag
   useEffect(() => {
@@ -1252,20 +1264,10 @@ function TimelineTrackContent({
   ]);
 
   const handleClipMouseDown = (e: React.MouseEvent, clip: TypeTimelineClip) => {
-    // Handle selection first
-    if (!justFinishedDrag) {
-      const isSelected = selectedClips.some(
-        (c) => c.trackId === track.id && c.clipId === clip.id
-      );
-
-      if (e.metaKey || e.ctrlKey || e.shiftKey) {
-        // Multi-selection mode: toggle the clip
-        selectClip(track.id, clip.id, true);
-      } else if (!isSelected) {
-        // If clip is not selected, select it (replacing other selections)
-        selectClip(track.id, clip.id, false);
-      }
-      // Note: Don't deselect if already selected, as user might want to drag
+    setMouseDownLocation({ x: e.clientX, y: e.clientY });
+    // Handle multi-selection only in mousedown
+    if (e.metaKey || e.ctrlKey || e.shiftKey) {
+      selectClip(track.id, clip.id, true);
     }
 
     // Calculate the offset from the left edge of the clip to where the user clicked
@@ -1286,35 +1288,39 @@ function TimelineTrackContent({
   const handleClipClick = (e: React.MouseEvent, clip: TypeTimelineClip) => {
     e.stopPropagation();
 
-    console.log(
-      "handleClipClick called, contextMenu:",
-      JSON.stringify(contextMenu)
-    );
-    console.log("Boolean check:", !!contextMenu, "Type:", typeof contextMenu);
-
-    // Don't handle click if we just finished dragging
-    if (justFinishedDrag) {
-      console.log("Skipping because justFinishedDrag");
-      return;
+    // Check if mouse moved significantly
+    if (mouseDownLocation) {
+      const deltaX = Math.abs(e.clientX - mouseDownLocation.x);
+      const deltaY = Math.abs(e.clientY - mouseDownLocation.y);
+      // If it moved more than a few pixels, consider it a drag and not a click.
+      if (deltaX > 5 || deltaY > 5) {
+        setMouseDownLocation(null); // Reset for next interaction
+        return;
+      }
     }
 
     // Close context menu if it's open
     if (contextMenu) {
-      console.log("Closing context menu");
       setContextMenu(null);
       return; // Don't handle selection when closing context menu
     }
 
-    console.log("Proceeding to selection logic");
+    // Skip selection logic for multi-selection (handled in mousedown)
+    if (e.metaKey || e.ctrlKey || e.shiftKey) {
+      return;
+    }
 
-    // Only handle deselection here (selection is handled in mouseDown)
+    // Handle single selection/deselection
     const isSelected = selectedClips.some(
       (c) => c.trackId === track.id && c.clipId === clip.id
     );
 
-    if (isSelected && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
-      // If clip is already selected and no modifier keys, deselect it
+    if (isSelected) {
+      // If clip is selected, deselect it
       deselectClip(track.id, clip.id);
+    } else {
+      // If clip is not selected, select it (replacing other selections)
+      selectClip(track.id, clip.id, false);
     }
   };
 
@@ -1329,17 +1335,6 @@ function TimelineTrackContent({
       y: e.clientY,
     });
   };
-
-  // Reset drag flag when drag ends
-  useEffect(() => {
-    if (!dragState.isDragging && justFinishedDrag) {
-      const timer = setTimeout(() => setJustFinishedDrag(false), 50);
-      return () => clearTimeout(timer);
-    } else if (!dragState.isDragging && dragState.clipId && !justFinishedDrag) {
-      // Only set justFinishedDrag when a drag actually ends (not when it starts)
-      setJustFinishedDrag(true);
-    }
-  }, [dragState.isDragging, justFinishedDrag, dragState.clipId]);
 
   const handleTrackDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -1683,6 +1678,13 @@ function TimelineTrackContent({
             x: e.clientX,
             y: e.clientY,
           });
+        }
+      }}
+      onClick={(e) => {
+        // If clicking empty area (not on a clip), deselect all clips
+        if (!(e.target as HTMLElement).closest(".timeline-clip")) {
+          const { clearSelectedClips } = useTimelineStore.getState();
+          clearSelectedClips();
         }
       }}
       onDragOver={handleTrackDragOver}
