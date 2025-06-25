@@ -96,10 +96,9 @@ export function Hero({ signupCount }: HeroProps) {
           transition={{ delay: 0.2, duration: 0.8 }}
           className="inline-block font-bold tracking-tighter text-4xl md:text-[4rem]"
         >
-          <h1>The First Open Source</h1>
+          <h1>The open source</h1>
           <div className="flex justify-center gap-4 leading-[4rem] mt-0 md:mt-2">
-            <span className="md:pl-24 ">Online</span>
-            <div className="relative -rotate-[3.76deg] max-w-[250px] md:max-w-[454px]">
+            <div className="relative -rotate-[2.76deg] max-w-[250px] md:max-w-[454px] mt-2">
               <Image
                 className="mt-2.5 md:mt-0"
                 src="/frame.svg"
@@ -107,7 +106,7 @@ export function Hero({ signupCount }: HeroProps) {
                 width={459}
                 alt="frame"
               />
-              <span className="absolute inset-0 flex items-center justify-center ">
+              <span className="absolute inset-0 flex items-center justify-center">
                 Video Editor
               </span>
             </div>
