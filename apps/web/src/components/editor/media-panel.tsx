@@ -84,17 +84,20 @@ export function MediaPanel() {
 
   useEffect(() => {
     const filtered = mediaItems.filter((item) => {
-      if (mediaFilter && mediaFilter !== 'all' && item.type !== mediaFilter) {
+      if (mediaFilter && mediaFilter !== "all" && item.type !== mediaFilter) {
         return false;
       }
-      
-      if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+
+      if (
+        searchQuery &&
+        !item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      ) {
         return false;
       }
-      
+
       return true;
     });
-    
+
     setFilteredMediaItems(filtered);
   }, [mediaItems, mediaFilter, searchQuery]);
 
@@ -209,23 +212,23 @@ export function MediaPanel() {
           {/* Button to add/upload media */}
           <div className="flex gap-2">
             {/* Search and filter controls */}
-              <select
-                value={mediaFilter}
-                onChange={(e) => setMediaFilter(e.target.value)}
-                className="px-2 py-1 text-xs border rounded bg-background"
-              >
-                <option value="all">All</option>
-                <option value="video">Video</option>
-                <option value="audio">Audio</option>
-                <option value="image">Image</option>
-              </select>
-              <input
-                type="text"
-                placeholder="Search media..."
-                className="min-w-[60px] flex-1 px-2 py-1 text-xs border rounded bg-background"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            <select
+              value={mediaFilter}
+              onChange={(e) => setMediaFilter(e.target.value)}
+              className="px-2 py-1 text-xs border rounded bg-background"
+            >
+              <option value="all">All</option>
+              <option value="video">Video</option>
+              <option value="audio">Audio</option>
+              <option value="image">Image</option>
+            </select>
+            <input
+              type="text"
+              placeholder="Search media..."
+              className="min-w-[60px] flex-1 px-2 py-1 text-xs border rounded bg-background"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
 
             {/* Add media button */}
             <Button
@@ -233,21 +236,26 @@ export function MediaPanel() {
               size="sm"
               onClick={handleFileSelect}
               disabled={isProcessing}
-              className="flex-none min-w-[80px] whitespace-nowrap"
+              className="flex-none min-w-[30px] whitespace-nowrap overflow-hidden px-2 justify-center items-center"
             >
               {isProcessing ? (
                 <>
-                  <Upload className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
+                  <Upload className="h-4 w-4 animate-spin" />
+                  <span className="hidden md:inline ml-2">Processing...</span>
                 </>
               ) : (
                 <>
                   <Plus className="h-4 w-4" />
-                  Add
+                  <span
+                    className="hidden sm:inline ml-2"
+                    aria-label="Add file"
+                  >
+                    Add
+                  </span>
                 </>
               )}
             </Button>
-            </div>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
@@ -276,7 +284,15 @@ export function MediaPanel() {
                     <AspectRatio ratio={item.aspectRatio}>
                       {renderPreview(item)}
                     </AspectRatio>
-                    <span className="text-xs truncate px-1">{item.name}</span>
+                    <span
+                      className="text-xs truncate px-1 max-w-full"
+                      aria-label={item.name}
+                      title={item.name}
+                    >
+                      {item.name.length > 8
+                        ? `${item.name.slice(0, 4)}...${item.name.slice(-3)}`
+                        : item.name}
+                    </span>
                   </Button>
 
                   {/* Show remove button on hover */}
