@@ -25,6 +25,7 @@ import {
 import { useTimelineStore, type TimelineTrack } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
+import { useDragClip } from "@/hooks/use-drag-clip";
 import { processMediaFiles } from "@/lib/media-processing";
 import { toast } from "sonner";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -1163,9 +1164,19 @@ function TimelineTrackContent({
     deselectClip,
   } = useTimelineStore();
   const { currentTime } = usePlaybackStore();
+
+  // Mouse-based drag hook
+  const {
+    isDragging,
+    draggedClipId,
+    startDrag,
+    endDrag,
+    getDraggedClipPosition,
+    isValidDropTarget,
+    timelineRef,
+  } = useDragClip(zoomLevel);
   const [isDropping, setIsDropping] = useState(false);
   const [dropPosition, setDropPosition] = useState<number | null>(null);
-  const [isDraggedOver, setIsDraggedOver] = useState(false);
   const [wouldOverlap, setWouldOverlap] = useState(false);
   const [resizing, setResizing] = useState<{
     clipId: string;
@@ -1240,37 +1251,14 @@ function TimelineTrackContent({
     setResizing(null);
   };
 
-  const handleClipDragStart = (e: React.DragEvent, clip: any) => {
+  const handleClipMouseDown = (e: React.MouseEvent, clip: any) => {
     // Calculate the offset from the left edge of the clip to where the user clicked
     const clipElement = e.currentTarget.parentElement as HTMLElement;
     const clipRect = clipElement.getBoundingClientRect();
     const clickOffsetX = e.clientX - clipRect.left;
     const clickOffsetTime = clickOffsetX / (50 * zoomLevel);
 
-    const dragData = {
-      clipId: clip.id,
-      trackId: track.id,
-      name: clip.name,
-      clickOffsetTime: clickOffsetTime,
-    };
-
-    e.dataTransfer.setData(
-      "application/x-timeline-clip",
-      JSON.stringify(dragData)
-    );
-    e.dataTransfer.effectAllowed = "move";
-
-    // Add visual feedback to the dragged element
-    const target = e.currentTarget.parentElement as HTMLElement;
-    target.style.opacity = "0.5";
-    target.style.transform = "scale(0.95)";
-  };
-
-  const handleClipDragEnd = (e: React.DragEvent) => {
-    // Reset visual feedback
-    const target = e.currentTarget.parentElement as HTMLElement;
-    target.style.opacity = "";
-    target.style.transform = "";
+    startDrag(e, clip.id, track.id, clip.startTime, clickOffsetTime);
   };
 
   const handleTrackDragOver = (e: React.DragEvent) => {
@@ -1388,14 +1376,12 @@ function TimelineTrackContent({
 
     if (wouldOverlap) {
       e.dataTransfer.dropEffect = "none";
-      setIsDraggedOver(true);
       setWouldOverlap(true);
       setDropPosition(Math.round(dropTime * 10) / 10);
       return;
     }
 
     e.dataTransfer.dropEffect = hasTimelineClip ? "move" : "copy";
-    setIsDraggedOver(true);
     setWouldOverlap(false);
     setDropPosition(Math.round(dropTime * 10) / 10);
   };
@@ -1414,7 +1400,6 @@ function TimelineTrackContent({
 
     dragCounterRef.current++;
     setIsDropping(true);
-    setIsDraggedOver(true);
   };
 
   const handleTrackDragLeave = (e: React.DragEvent) => {
@@ -1433,7 +1418,6 @@ function TimelineTrackContent({
 
     if (dragCounterRef.current === 0) {
       setIsDropping(false);
-      setIsDraggedOver(false);
       setWouldOverlap(false);
       setDropPosition(null);
     }
@@ -1446,7 +1430,6 @@ function TimelineTrackContent({
     // Reset all drag states
     dragCounterRef.current = 0;
     setIsDropping(false);
-    setIsDraggedOver(false);
     setWouldOverlap(false);
     const currentDropPosition = dropPosition;
     setDropPosition(null);
@@ -1726,10 +1709,18 @@ function TimelineTrackContent({
       onDragLeave={handleTrackDragLeave}
       onDrop={handleTrackDrop}
       onMouseMove={handleResizeMove}
-      onMouseUp={handleResizeEnd}
+      onMouseUp={(e) => {
+        handleResizeEnd();
+        if (isDragging) {
+          endDrag(track.id);
+        }
+      }}
       onMouseLeave={handleResizeEnd}
     >
-      <div className="h-full relative track-clips-container min-w-full">
+      <div
+        ref={timelineRef}
+        className="h-full relative track-clips-container min-w-full"
+      >
         {track.clips.length === 0 ? (
           <div
             className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${
@@ -1755,14 +1746,22 @@ function TimelineTrackContent({
                 80,
                 effectiveDuration * 50 * zoomLevel
               );
-              const clipLeft = clip.startTime * 50 * zoomLevel;
+
+              // Use real-time position during drag, otherwise use stored position
+              const dragPosition = getDraggedClipPosition(clip.id);
+              const clipStartTime =
+                dragPosition !== null ? dragPosition : clip.startTime;
+              const clipLeft = clipStartTime * 50 * zoomLevel;
+
               const isSelected = selectedClips.some(
                 (c) => c.trackId === track.id && c.clipId === clip.id
               );
+
+              const isBeingDragged = draggedClipId === clip.id;
               return (
                 <div
                   key={clip.id}
-                  className={`timeline-clip absolute h-full border ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg ${isSelected ? "ring-2 ring-blue-500 z-10" : ""}`}
+                  className={`timeline-clip absolute h-full border ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg ${isSelected ? "ring-2 ring-blue-500 z-10" : ""} ${isBeingDragged ? "opacity-50 shadow-lg scale-105 z-20" : ""}`}
                   style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1808,10 +1807,8 @@ function TimelineTrackContent({
                   />
                   {/* Clip content */}
                   <div
-                    className="flex-1 cursor-grab active:cursor-grabbing relative"
-                    draggable={true}
-                    onDragStart={(e) => handleClipDragStart(e, clip)}
-                    onDragEnd={handleClipDragEnd}
+                    className={`flex-1 relative ${isBeingDragged ? "cursor-grabbing" : "cursor-grab"}`}
+                    onMouseDown={(e) => handleClipMouseDown(e, clip)}
                   >
                     {renderClipContent(clip)}
                     {/* Clip options menu */}
