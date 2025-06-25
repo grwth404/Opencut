@@ -129,7 +129,7 @@ export function Hero({ signupCount }: HeroProps) {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.8 }}
         >
-          <form onSubmit={handleSubmit} className="flex gap-3 w-full max-w-lg">
+          <form onSubmit={handleSubmit} className="flex gap-3 w-full max-w-lg flex-col sm:flex-row">
             <Input
               type="email"
               placeholder="Enter your email"
