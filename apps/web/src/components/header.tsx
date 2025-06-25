@@ -34,9 +34,9 @@ export function Header() {
   );
 
   const rightContent = (
-    <nav className="flex items-center">
+    <nav className="flex items-center gap-3">
       <Link href="/contributors">
-        <Button variant="text" className="text-sm">
+        <Button variant="text" className="text-sm p-0">
           Contributors
         </Button>
       </Link>
