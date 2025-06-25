@@ -1802,7 +1802,7 @@ function TimelineTrackContent({
                 >
                   {/* Left trim handle */}
                   <div
-                    className="absolute left-0 top-0 bottom-0 w-2 cursor-w-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
+                    className={`absolute left-0 top-0 bottom-0 w-2 cursor-w-resize transition-opacity bg-blue-500/50 hover:bg-blue-500 ${isSelected ? "opacity-100" : "opacity-0"}`}
                     onMouseDown={(e) => handleResizeStart(e, clip.id, "left")}
                   />
                   {/* Clip content */}
@@ -1844,7 +1844,7 @@ function TimelineTrackContent({
                   </div>
                   {/* Right trim handle */}
                   <div
-                    className="absolute right-0 top-0 bottom-0 w-2 cursor-e-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
+                    className={`absolute right-0 top-0 bottom-0 w-2 cursor-e-resize transition-opacity bg-blue-500/50 hover:bg-blue-500 ${isSelected ? "opacity-100" : "opacity-0"}`}
                     onMouseDown={(e) => handleResizeStart(e, clip.id, "right")}
                   />
                 </div>
