@@ -1,8 +1,25 @@
+# Build configuration
+[build]
+  # Base directory - where Netlify installs dependencies and runs build
+  base = "../.."
+  
+  # Publish directory - relative to base directory
+  publish = "apps/web/.next"
+  
+  # Build command
+  command = "cd apps/web && npm run build"
+
+# Next.js plugin
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
+# Redirects for domain migration
 [[redirects]]
   from = "https://appcut.app/*"
   to = "https://opencut.app/:splat"
   status = 301
-  force = true 
+  force = true
+
+# Functions directory
+[functions]
+  directory = "apps/web/netlify/functions" 
