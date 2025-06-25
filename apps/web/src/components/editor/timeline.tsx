@@ -602,9 +602,10 @@ export function Timeline() {
           <div className="w-px h-6 bg-border mx-1" />
 
           {/* Time Display */}
-          <div className="text-xs text-muted-foreground font-mono px-2">
-            {Math.floor(currentTime * 10) / 10}s /{" "}
-            {Math.floor(duration * 10) / 10}s
+          <div className="text-xs text-muted-foreground font-mono px-2"
+            style={{ minWidth: '12ch', textAlign: 'right' }}
+            >
+              {currentTime.toFixed(1)}s / {duration.toFixed(1)}s
           </div>
 
           <div className="w-px h-6 bg-border mx-1" />
