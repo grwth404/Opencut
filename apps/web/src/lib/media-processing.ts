@@ -62,6 +62,9 @@ export async function processMediaFiles(
         aspectRatio,
       });
 
+      // Yield back to the event loop to keep the UI responsive
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
       completed += 1;
       if (onProgress) {
         const percent = Math.round((completed / total) * 100);
