@@ -49,7 +49,7 @@ async function getContributors(): Promise<Contributor[]> {
     const contributors = await response.json();
 
     const filteredContributors = contributors.filter(
-      (contributor: any) => contributor.type === "User"
+      (contributor: Contributor) => contributor.type === "User"
     );
 
     return filteredContributors;

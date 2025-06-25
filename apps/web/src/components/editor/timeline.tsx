@@ -22,7 +22,11 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "../ui/tooltip";
-import { useTimelineStore, type TimelineTrack } from "@/stores/timeline-store";
+import {
+  useTimelineStore,
+  type TimelineTrack,
+  type TimelineClip,
+} from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useDragClip } from "@/hooks/use-drag-clip";
@@ -1253,7 +1257,7 @@ function TimelineTrackContent({
 
   const [justFinishedDrag, setJustFinishedDrag] = useState(false);
 
-  const handleClipMouseDown = (e: React.MouseEvent, clip: any) => {
+  const handleClipMouseDown = (e: React.MouseEvent, clip: TimelineClip) => {
     // Handle selection first
     if (!justFinishedDrag) {
       const isSelected = selectedClips.some(
@@ -1374,7 +1378,7 @@ function TimelineTrackContent({
             (t: TimelineTrack) => t.id === fromTrackId
           );
           const movingClip = sourceTrack?.clips.find(
-            (c: any) => c.id === clipId
+            (c: TimelineClip) => c.id === clipId
           );
 
           if (movingClip) {
@@ -1499,7 +1503,9 @@ function TimelineTrackContent({
         const sourceTrack = tracks.find(
           (t: TimelineTrack) => t.id === fromTrackId
         );
-        const movingClip = sourceTrack?.clips.find((c: any) => c.id === clipId);
+        const movingClip = sourceTrack?.clips.find(
+          (c: TimelineClip) => c.id === clipId
+        );
 
         if (!movingClip) {
           toast.error("Clip not found");
@@ -1629,7 +1635,7 @@ function TimelineTrackContent({
     }
   };
 
-  const renderClipContent = (clip: any) => {
+  const renderClipContent = (clip: TimelineClip) => {
     const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
 
     if (!mediaItem) {
@@ -1689,7 +1695,7 @@ function TimelineTrackContent({
     );
   };
 
-  const handleSplitClip = (clip: any) => {
+  const handleSplitClip = (clip: TimelineClip) => {
     // Use current playback time as split point
     const splitTime = currentTime;
     // Only split if splitTime is within the clip's effective range

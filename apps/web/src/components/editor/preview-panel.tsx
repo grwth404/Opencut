@@ -1,7 +1,11 @@
 "use client";
 
-import { useTimelineStore } from "@/stores/timeline-store";
-import { useMediaStore } from "@/stores/media-store";
+import {
+  useTimelineStore,
+  type TimelineClip,
+  type TimelineTrack,
+} from "@/stores/timeline-store";
+import { useMediaStore, type MediaItem } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { VideoPlayer } from "@/components/ui/video-player";
 import { Button } from "@/components/ui/button";
@@ -10,6 +14,12 @@ import { useState, useRef } from "react";
 
 // Debug flag - set to false to hide active clips info
 const SHOW_DEBUG_INFO = process.env.NODE_ENV === "development";
+
+interface ActiveClip {
+  clip: TimelineClip;
+  track: TimelineTrack;
+  mediaItem: MediaItem | null;
+}
 
 export function PreviewPanel() {
   const { tracks } = useTimelineStore();
@@ -21,12 +31,8 @@ export function PreviewPanel() {
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Get active clips at current time
-  const getActiveClips = () => {
-    const activeClips: Array<{
-      clip: any;
-      track: any;
-      mediaItem: any;
-    }> = [];
+  const getActiveClips = (): ActiveClip[] => {
+    const activeClips: ActiveClip[] = [];
 
     tracks.forEach((track) => {
       track.clips.forEach((clip) => {
@@ -37,12 +43,10 @@ export function PreviewPanel() {
         if (currentTime >= clipStart && currentTime < clipEnd) {
           const mediaItem =
             clip.mediaId === "test"
-              ? { type: "test", name: clip.name, url: "", thumbnailUrl: "" }
-              : mediaItems.find((item) => item.id === clip.mediaId);
+              ? null // Test clips don't have a real media item
+              : mediaItems.find((item) => item.id === clip.mediaId) || null;
 
-          if (mediaItem || clip.mediaId === "test") {
-            activeClips.push({ clip, track, mediaItem });
-          }
+          activeClips.push({ clip, track, mediaItem });
         }
       });
     });
@@ -54,7 +58,7 @@ export function PreviewPanel() {
   const aspectRatio = canvasSize.width / canvasSize.height;
 
   // Render a clip
-  const renderClip = (clipData: any, index: number) => {
+  const renderClip = (clipData: ActiveClip, index: number) => {
     const { clip, mediaItem } = clipData;
 
     // Test clips

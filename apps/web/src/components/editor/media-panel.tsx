@@ -3,7 +3,7 @@
 import { Button } from "../ui/button";
 import { AspectRatio } from "../ui/aspect-ratio";
 import { DragOverlay } from "../ui/drag-overlay";
-import { useMediaStore } from "@/stores/media-store";
+import { useMediaStore, type MediaItem } from "@/stores/media-store";
 import { processMediaFiles } from "@/lib/media-processing";
 import { Plus, Image, Video, Music, Trash2, Upload } from "lucide-react";
 import { useDragDrop } from "@/hooks/use-drag-drop";
@@ -68,7 +68,7 @@ export function MediaPanel() {
     return `${min}:${sec.toString().padStart(2, "0")}`;
   };
 
-  const startDrag = (e: React.DragEvent, item: any) => {
+  const startDrag = (e: React.DragEvent, item: MediaItem) => {
     // When dragging a media item, set drag data for timeline to read
     e.dataTransfer.setData(
       "application/x-media-item",
@@ -102,7 +102,7 @@ export function MediaPanel() {
     setFilteredMediaItems(filtered);
   }, [mediaItems, mediaFilter, searchQuery]);
 
-  const renderPreview = (item: any) => {
+  const renderPreview = (item: MediaItem) => {
     // Render a preview for each media type (image, video, audio, unknown)
     // Each preview is draggable to the timeline
     const baseDragProps = {
