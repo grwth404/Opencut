@@ -10,7 +10,7 @@ import { usePlaybackStore } from "@/stores/playback-store";
 import { VideoPlayer } from "@/components/ui/video-player";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Volume2, VolumeX } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 // Debug flag - set to false to hide active clips info
 const SHOW_DEBUG_INFO = process.env.NODE_ENV === "development";
@@ -29,6 +29,45 @@ export function PreviewPanel() {
   const [canvasSize, setCanvasSize] = useState({ width: 1920, height: 1080 });
   const [showDebug, setShowDebug] = useState(SHOW_DEBUG_INFO);
   const previewRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [previewDimensions, setPreviewDimensions] = useState({
+    width: 0,
+    height: 0,
+  });
+
+  // Calculate optimal preview size that fits in container while maintaining aspect ratio
+  useEffect(() => {
+    const updatePreviewSize = () => {
+      if (!containerRef.current) return;
+
+      const container = containerRef.current.getBoundingClientRect();
+      const targetRatio = canvasSize.width / canvasSize.height;
+      const containerRatio = container.width / container.height;
+
+      let width, height;
+
+      if (containerRatio > targetRatio) {
+        // Container is wider - constrain by height
+        height = container.height;
+        width = height * targetRatio;
+      } else {
+        // Container is taller - constrain by width
+        width = container.width;
+        height = width / targetRatio;
+      }
+
+      setPreviewDimensions({ width, height });
+    };
+
+    updatePreviewSize();
+
+    const resizeObserver = new ResizeObserver(updatePreviewSize);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [canvasSize.width, canvasSize.height]);
 
   // Get active clips at current time
   const getActiveClips = (): ActiveClip[] => {
@@ -55,7 +94,6 @@ export function PreviewPanel() {
   };
 
   const activeClips = getActiveClips();
-  const aspectRatio = canvasSize.width / canvasSize.height;
 
   // Render a clip
   const renderClip = (clipData: ActiveClip, index: number) => {
@@ -196,14 +234,16 @@ export function PreviewPanel() {
       </div>
 
       {/* Preview Area */}
-      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 min-h-0 min-w-0">
+      <div
+        ref={containerRef}
+        className="flex-1 flex items-center justify-center p-2 sm:p-4 min-h-0 min-w-0"
+      >
         <div
           ref={previewRef}
-          className="relative overflow-hidden rounded-sm max-w-full max-h-full bg-black border"
+          className="relative overflow-hidden rounded-sm bg-black border"
           style={{
-            aspectRatio: aspectRatio.toString(),
-            width: "100%",
-            height: "100%",
+            width: previewDimensions.width,
+            height: previewDimensions.height,
           }}
         >
           {activeClips.length === 0 ? (
