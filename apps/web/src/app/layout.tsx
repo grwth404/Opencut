@@ -5,13 +5,14 @@ import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "../components/ui/sonner";
 import { TooltipProvider } from "../components/ui/tooltip";
+import { baseMetaData } from "./metadata";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
 });
 
-export { metadata } from './metadata'
+export const metadata = baseMetaData;
 
 export default function RootLayout({
   children,

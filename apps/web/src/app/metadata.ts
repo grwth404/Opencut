@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 
-export const metadata: Metadata = {
+export const baseMetaData: Metadata = {
     title: "OpenCut",
     description:
         "A simple but powerful video editor that gets the job done. In your browser.",
