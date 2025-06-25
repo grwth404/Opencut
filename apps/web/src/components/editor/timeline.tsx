@@ -602,38 +602,40 @@ export function Timeline() {
           <div className="w-px h-6 bg-border mx-1" />
 
           {/* Time Display */}
-          <div className="text-xs text-muted-foreground font-mono px-2">
-            {Math.floor(currentTime * 10) / 10}s /{" "}
-            {Math.floor(duration * 10) / 10}s
+          <div className="text-xs text-muted-foreground font-mono px-2"
+            style={{ minWidth: '18ch', textAlign: 'center' }}
+            >
+              {currentTime.toFixed(1)}s / {duration.toFixed(1)}s
           </div>
-
-          <div className="w-px h-6 bg-border mx-1" />
 
           {/* Test Clip Button - for debugging */}
           {tracks.length === 0 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const trackId = addTrack("video");
-                    addClipToTrack(trackId, {
-                      mediaId: "test",
-                      name: "Test Clip",
-                      duration: 5,
-                      startTime: 0,
-                      trimStart: 0,
-                      trimEnd: 0,
-                    });
-                  }}
-                  className="text-xs"
-                >
-                  Add Test Clip
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Add a test clip to try playback</TooltipContent>
-            </Tooltip>
+            <>
+              <div className="w-px h-6 bg-border mx-1" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const trackId = addTrack("video");
+                      addClipToTrack(trackId, {
+                        mediaId: "test",
+                        name: "Test Clip",
+                        duration: 5,
+                        startTime: 0,
+                        trimStart: 0,
+                        trimEnd: 0,
+                      });
+                    }}
+                    className="text-xs"
+                  >
+                    Add Test Clip
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add a test clip to try playback</TooltipContent>
+              </Tooltip>
+            </>
           )}
 
           <div className="w-px h-6 bg-border mx-1" />
