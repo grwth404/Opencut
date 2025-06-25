@@ -173,7 +173,7 @@ export default async function ContributorsPage() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
                   {otherContributors.map((contributor, index) => (
                     <Link
                       key={contributor.id}
@@ -185,8 +185,8 @@ export default async function ContributorsPage() {
                         animationDelay: `${index * 50}ms`,
                       }}
                     >
-                      <div className="text-center p-4 rounded-xl hover:bg-muted/50 transition-all duration-300 group-hover:scale-105">
-                        <Avatar className="h-16 w-16 mx-auto mb-3 ring-2 ring-transparent group-hover:ring-muted-foreground/20 transition-all duration-300">
+                      <div className="text-center p-2 rounded-xl transition-all duration-300 hover:opacity-50">
+                        <Avatar className="h-16 w-16 mx-auto mb-3">
                           <AvatarImage
                             src={contributor.avatar_url}
                             alt={`${contributor.login}'s avatar`}
