@@ -1,5 +1,6 @@
 FROM oven/bun:alpine AS base
 
+# Install dependencies and build the application
 FROM base AS builder
 
 WORKDIR /app
@@ -18,7 +19,6 @@ COPY apps/web/ apps/web/
 COPY packages/db/ packages/db/
 COPY packages/auth/ packages/auth/
 
-ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 WORKDIR /app/apps/web
@@ -28,7 +28,6 @@ RUN bun run build
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs
