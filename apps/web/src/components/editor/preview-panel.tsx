@@ -5,16 +5,17 @@ import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { VideoPlayer } from "@/components/ui/video-player";
 import { Button } from "@/components/ui/button";
-import { Play, Pause } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { useState, useRef } from "react";
 
 // Debug flag - set to false to hide active clips info
-const SHOW_DEBUG_INFO = process.env.NODE_ENV === 'development';
+const SHOW_DEBUG_INFO = process.env.NODE_ENV === "development";
 
 export function PreviewPanel() {
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
-  const { isPlaying, toggle, currentTime } = usePlaybackStore();
+  const { isPlaying, toggle, currentTime, muted, toggleMute, volume } =
+    usePlaybackStore();
   const [canvasSize, setCanvasSize] = useState({ width: 1920, height: 1080 });
   const [showDebug, setShowDebug] = useState(SHOW_DEBUG_INFO);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -30,12 +31,14 @@ export function PreviewPanel() {
     tracks.forEach((track) => {
       track.clips.forEach((clip) => {
         const clipStart = clip.startTime;
-        const clipEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+        const clipEnd =
+          clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
 
         if (currentTime >= clipStart && currentTime < clipEnd) {
-          const mediaItem = clip.mediaId === "test"
-            ? { type: "test", name: clip.name, url: "", thumbnailUrl: "" }
-            : mediaItems.find((item) => item.id === clip.mediaId);
+          const mediaItem =
+            clip.mediaId === "test"
+              ? { type: "test", name: clip.name, url: "", thumbnailUrl: "" }
+              : mediaItems.find((item) => item.id === clip.mediaId);
 
           if (mediaItem || clip.mediaId === "test") {
             activeClips.push({ clip, track, mediaItem });
@@ -134,13 +137,19 @@ export function PreviewPanel() {
         <select
           value={`${canvasSize.width}x${canvasSize.height}`}
           onChange={(e) => {
-            const preset = canvasPresets.find(p => `${p.width}x${p.height}` === e.target.value);
-            if (preset) setCanvasSize({ width: preset.width, height: preset.height });
+            const preset = canvasPresets.find(
+              (p) => `${p.width}x${p.height}` === e.target.value
+            );
+            if (preset)
+              setCanvasSize({ width: preset.width, height: preset.height });
           }}
           className="bg-background border rounded px-2 py-1 text-xs"
         >
-          {canvasPresets.map(preset => (
-            <option key={preset.name} value={`${preset.width}x${preset.height}`}>
+          {canvasPresets.map((preset) => (
+            <option
+              key={preset.name}
+              value={`${preset.width}x${preset.height}`}
+            >
               {preset.name} ({preset.width}×{preset.height})
             </option>
           ))}
@@ -154,12 +163,30 @@ export function PreviewPanel() {
             onClick={() => setShowDebug(!showDebug)}
             className="text-xs"
           >
-            Debug {showDebug ? 'ON' : 'OFF'}
+            Debug {showDebug ? "ON" : "OFF"}
           </Button>
         )}
 
-        <Button variant="outline" size="sm" onClick={toggle} className="ml-auto">
-          {isPlaying ? <Pause className="h-3 w-3 mr-1" /> : <Play className="h-3 w-3 mr-1" />}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleMute}
+          className="ml-auto"
+        >
+          {muted || volume === 0 ? (
+            <VolumeX className="h-3 w-3 mr-1" />
+          ) : (
+            <Volume2 className="h-3 w-3 mr-1" />
+          )}
+          {muted || volume === 0 ? "Unmute" : "Mute"}
+        </Button>
+
+        <Button variant="outline" size="sm" onClick={toggle}>
+          {isPlaying ? (
+            <Pause className="h-3 w-3 mr-1" />
+          ) : (
+            <Play className="h-3 w-3 mr-1" />
+          )}
           {isPlaying ? "Pause" : "Play"}
         </Button>
       </div>
@@ -177,7 +204,9 @@ export function PreviewPanel() {
         >
           {activeClips.length === 0 ? (
             <div className="absolute inset-0 flex items-center justify-center text-white/50">
-              {tracks.length === 0 ? "Drop media to start editing" : "No clips at current time"}
+              {tracks.length === 0
+                ? "Drop media to start editing"
+                : "No clips at current time"}
             </div>
           ) : (
             activeClips.map((clipData, index) => renderClip(clipData, index))
@@ -188,7 +217,9 @@ export function PreviewPanel() {
       {/* Debug Info Panel - Conditionally rendered */}
       {showDebug && (
         <div className="border-t bg-background p-2 flex-shrink-0">
-          <div className="text-xs font-medium mb-1">Debug: Active Clips ({activeClips.length})</div>
+          <div className="text-xs font-medium mb-1">
+            Debug: Active Clips ({activeClips.length})
+          </div>
           <div className="flex gap-2 overflow-x-auto">
             {activeClips.map((clipData, index) => (
               <div
@@ -199,7 +230,9 @@ export function PreviewPanel() {
                   {index + 1}
                 </span>
                 <span>{clipData.clip.name}</span>
-                <span className="text-muted-foreground">({clipData.mediaItem?.type || 'test'})</span>
+                <span className="text-muted-foreground">
+                  ({clipData.mediaItem?.type || "test"})
+                </span>
               </div>
             ))}
             {activeClips.length === 0 && (
