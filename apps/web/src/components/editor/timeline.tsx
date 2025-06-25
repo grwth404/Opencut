@@ -60,6 +60,14 @@ export function Timeline() {
     updateClipTrim,
     undo,
     redo,
+    moveClipToTrack,
+    updateClipStartTime,
+    selectClip,
+    deselectClip,
+    dragState,
+    startDrag: startDragAction,
+    updateDragTime,
+    endDrag: endDragAction,
   } = useTimelineStore();
   const { mediaItems, addMediaItem } = useMediaStore();
   const {
@@ -941,7 +949,7 @@ export function Timeline() {
                     {/* Playhead for tracks area (scrubbable) */}
                     {tracks.length > 0 && (
                       <div
-                        className="absolute top-0 w-0.5 bg-red-500 pointer-events-auto z-20 cursor-ew-resize"
+                        className="absolute top-0 w-0.5 bg-red-500 pointer-events-auto z-20"
                         style={{
                           left: `${playheadPosition * 50 * zoomLevel}px`,
                           height: `${tracks.length * 60}px`,
@@ -1143,17 +1151,105 @@ function TimelineTrackContent({
     selectedClips,
     selectClip,
     deselectClip,
+    dragState,
+    startDrag: startDragAction,
+    updateDragTime,
+    endDrag: endDragAction,
   } = useTimelineStore();
 
-  // Mouse-based drag hook
-  const { isDragging, startDrag, endDrag, timelineRef } =
-    useDragClip(zoomLevel);
+  const timelineRef = useRef<HTMLDivElement>(null);
   const [isDropping, setIsDropping] = useState(false);
   const [dropPosition, setDropPosition] = useState<number | null>(null);
   const [wouldOverlap, setWouldOverlap] = useState(false);
   const dragCounterRef = useRef(0);
 
   const [justFinishedDrag, setJustFinishedDrag] = useState(false);
+
+  // Set up mouse event listeners for drag
+  useEffect(() => {
+    if (!dragState.isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!timelineRef.current) return;
+
+      const timelineRect = timelineRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - timelineRect.left;
+      const mouseTime = Math.max(0, mouseX / (50 * zoomLevel));
+      const adjustedTime = Math.max(0, mouseTime - dragState.clickOffsetTime);
+      const snappedTime = Math.round(adjustedTime * 10) / 10;
+
+      updateDragTime(snappedTime);
+    };
+
+    const handleMouseUp = () => {
+      if (!dragState.clipId || !dragState.trackId) return;
+
+      const finalTime = dragState.currentTime;
+
+      // Check for overlaps and update position
+      const sourceTrack = tracks.find((t) => t.id === dragState.trackId);
+      const movingClip = sourceTrack?.clips.find(
+        (c) => c.id === dragState.clipId
+      );
+
+      if (movingClip) {
+        const movingClipDuration =
+          movingClip.duration - movingClip.trimStart - movingClip.trimEnd;
+        const movingClipEnd = finalTime + movingClipDuration;
+
+        const targetTrack = tracks.find((t) => t.id === track.id);
+        const hasOverlap = targetTrack?.clips.some((existingClip) => {
+          if (
+            dragState.trackId === track.id &&
+            existingClip.id === dragState.clipId
+          ) {
+            return false;
+          }
+          const existingStart = existingClip.startTime;
+          const existingEnd =
+            existingClip.startTime +
+            (existingClip.duration -
+              existingClip.trimStart -
+              existingClip.trimEnd);
+          return finalTime < existingEnd && movingClipEnd > existingStart;
+        });
+
+        if (!hasOverlap) {
+          if (dragState.trackId === track.id) {
+            updateClipStartTime(track.id, dragState.clipId, finalTime);
+          } else {
+            moveClipToTrack(dragState.trackId, track.id, dragState.clipId);
+            requestAnimationFrame(() => {
+              updateClipStartTime(track.id, dragState.clipId!, finalTime);
+            });
+          }
+        }
+      }
+
+      endDragAction();
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [
+    dragState.isDragging,
+    dragState.clickOffsetTime,
+    dragState.clipId,
+    dragState.trackId,
+    dragState.currentTime,
+    zoomLevel,
+    tracks,
+    track.id,
+    updateDragTime,
+    updateClipStartTime,
+    moveClipToTrack,
+    endDragAction,
+  ]);
 
   const handleClipMouseDown = (e: React.MouseEvent, clip: TypeTimelineClip) => {
     // Handle selection first
@@ -1178,22 +1274,38 @@ function TimelineTrackContent({
     const clickOffsetX = e.clientX - clipRect.left;
     const clickOffsetTime = clickOffsetX / (50 * zoomLevel);
 
-    startDrag(e, clip.id, track.id, clip.startTime, clickOffsetTime);
+    startDragAction(
+      clip.id,
+      track.id,
+      e.clientX,
+      clip.startTime,
+      clickOffsetTime
+    );
   };
 
   const handleClipClick = (e: React.MouseEvent, clip: TypeTimelineClip) => {
     e.stopPropagation();
 
+    console.log(
+      "handleClipClick called, contextMenu:",
+      JSON.stringify(contextMenu)
+    );
+    console.log("Boolean check:", !!contextMenu, "Type:", typeof contextMenu);
+
     // Don't handle click if we just finished dragging
     if (justFinishedDrag) {
+      console.log("Skipping because justFinishedDrag");
       return;
     }
 
     // Close context menu if it's open
     if (contextMenu) {
+      console.log("Closing context menu");
       setContextMenu(null);
       return; // Don't handle selection when closing context menu
     }
+
+    console.log("Proceeding to selection logic");
 
     // Only handle deselection here (selection is handled in mouseDown)
     const isSelected = selectedClips.some(
@@ -1220,13 +1332,14 @@ function TimelineTrackContent({
 
   // Reset drag flag when drag ends
   useEffect(() => {
-    if (!isDragging && justFinishedDrag) {
+    if (!dragState.isDragging && justFinishedDrag) {
       const timer = setTimeout(() => setJustFinishedDrag(false), 50);
       return () => clearTimeout(timer);
-    } else if (isDragging && !justFinishedDrag) {
+    } else if (!dragState.isDragging && dragState.clipId && !justFinishedDrag) {
+      // Only set justFinishedDrag when a drag actually ends (not when it starts)
       setJustFinishedDrag(true);
     }
-  }, [isDragging, justFinishedDrag]);
+  }, [dragState.isDragging, justFinishedDrag, dragState.clipId]);
 
   const handleTrackDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -1576,11 +1689,6 @@ function TimelineTrackContent({
       onDragEnter={handleTrackDragEnter}
       onDragLeave={handleTrackDragLeave}
       onDrop={handleTrackDrop}
-      onMouseUp={(e) => {
-        if (isDragging) {
-          endDrag(track.id);
-        }
-      }}
     >
       <div
         ref={timelineRef}
