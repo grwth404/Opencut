@@ -1,20 +1,23 @@
 import { Metadata } from "next";
 
+const title = "OpenCut";
+const description = "A simple but powerful video editor that gets the job done. In your browser.";
+const openGraphImageUrl = "https://opencut.app/opengraph-image.jpg";
+const twitterImageUrl = "/opengraph-image.jpg";
+
 export const baseMetaData: Metadata = {
-    title: "OpenCut",
-    description:
-        "A simple but powerful video editor that gets the job done. In your browser.",
+    title: title,
+    description: description,
     openGraph: {
-        title: "OpenCut",
-        description:
-            "A simple but powerful video editor that gets the job done. In your browser.",
+        title: title,
+        description: description,
         url: "https://opencut.app",
         siteName: "OpenCut",
         locale: "en_US",
         type: "website",
         images: [
             {
-                url: "https://opencut.app/opengraph-image.jpg",
+                url: openGraphImageUrl,
                 width: 1200,
                 height: 630,
                 alt: "OpenCut",
@@ -23,11 +26,10 @@ export const baseMetaData: Metadata = {
     },
     twitter: {
         card: "summary_large_image",
-        title: "OpenCut",
-        description:
-            "A simple but powerful video editor that gets the job done. In your browser.",
+        title: title,
+        description: description,
         creator: "@opencutapp",
-        images: ["/opengraph-image.jpg"],
+        images: [twitterImageUrl],
     },
     robots: {
         index: true,
@@ -55,7 +57,7 @@ export const baseMetaData: Metadata = {
     },
     appleWebApp: {
         capable: true,
-        title: "OpenCut",
+        title: title,
     },
     manifest: "/manifest.json",
     other: {
