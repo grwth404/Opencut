@@ -17,27 +17,28 @@ export function MediaPanel() {
   const { mediaItems, addMediaItem, removeMediaItem } = useMediaStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [mediaFilter, setMediaFilter] = useState("all");
 
   const processFiles = async (files: FileList | File[]) => {
-    // If no files, do nothing
-    if (!files?.length) return;
-
+    if (!files || files.length === 0) return;
     setIsProcessing(true);
+    setProgress(0);
     try {
       // Process files (extract metadata, generate thumbnails, etc.)
-      const items = await processMediaFiles(files);
+      const processedItems = await processMediaFiles(files, (p) =>
+        setProgress(p)
+      );
       // Add each processed media item to the store
-      items.forEach((item) => {
-        addMediaItem(item);
-      });
+      processedItems.forEach((item) => addMediaItem(item));
     } catch (error) {
-      // Show error if processing fails
-      console.error("File processing failed:", error);
+      // Show error toast if processing fails
+      console.error("Error processing files:", error);
       toast.error("Failed to process files");
     } finally {
       setIsProcessing(false);
+      setProgress(0);
     }
   };
 
@@ -241,15 +242,12 @@ export function MediaPanel() {
               {isProcessing ? (
                 <>
                   <Upload className="h-4 w-4 animate-spin" />
-                  <span className="hidden md:inline ml-2">Processing...</span>
+                  <span className="hidden md:inline ml-2">{progress}%</span>
                 </>
               ) : (
                 <>
                   <Plus className="h-4 w-4" />
-                  <span
-                    className="hidden sm:inline ml-2"
-                    aria-label="Add file"
-                  >
+                  <span className="hidden sm:inline ml-2" aria-label="Add file">
                     Add
                   </span>
                 </>
