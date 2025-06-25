@@ -1254,8 +1254,24 @@ function TimelineTrackContent({
   const [justFinishedDrag, setJustFinishedDrag] = useState(false);
 
   const handleClipMouseDown = (e: React.MouseEvent, clip: any) => {
+    // Handle selection first
+    if (!justFinishedDrag) {
+      const isSelected = selectedClips.some(
+        (c) => c.trackId === track.id && c.clipId === clip.id
+      );
+
+      if (e.metaKey || e.ctrlKey || e.shiftKey) {
+        // Multi-selection mode: toggle the clip
+        selectClip(track.id, clip.id, true);
+      } else if (!isSelected) {
+        // If clip is not selected, select it (replacing other selections)
+        selectClip(track.id, clip.id, false);
+      }
+      // Note: Don't deselect if already selected, as user might want to drag
+    }
+
     // Calculate the offset from the left edge of the clip to where the user clicked
-    const clipElement = e.currentTarget.parentElement as HTMLElement;
+    const clipElement = e.currentTarget as HTMLElement;
     const clipRect = clipElement.getBoundingClientRect();
     const clickOffsetX = e.clientX - clipRect.left;
     const clickOffsetTime = clickOffsetX / (50 * zoomLevel);
@@ -1773,8 +1789,9 @@ function TimelineTrackContent({
               return (
                 <div
                   key={clip.id}
-                  className={`timeline-clip absolute h-full border ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg ${isSelected ? "ring-2 ring-blue-500 z-10" : ""} ${isBeingDragged ? "shadow-lg z-20" : ""}`}
+                  className={`timeline-clip absolute h-full border ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg ${isSelected ? "ring-2 ring-blue-500 z-10" : ""} ${isBeingDragged ? "shadow-lg z-20" : ""} ${isBeingDragged ? "cursor-grabbing" : "cursor-grab"}`}
                   style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
+                  onMouseDown={(e) => handleClipMouseDown(e, clip)}
                   onClick={(e) => {
                     e.stopPropagation();
 
@@ -1789,19 +1806,14 @@ function TimelineTrackContent({
                       return; // Don't handle selection when closing context menu
                     }
 
+                    // Only handle deselection here (selection is handled in mouseDown)
                     const isSelected = selectedClips.some(
                       (c) => c.trackId === track.id && c.clipId === clip.id
                     );
 
-                    if (e.metaKey || e.ctrlKey || e.shiftKey) {
-                      // Multi-selection mode: toggle the clip
-                      selectClip(track.id, clip.id, true);
-                    } else if (isSelected) {
-                      // If clip is already selected, deselect it
+                    if (isSelected && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+                      // If clip is already selected and no modifier keys, deselect it
                       deselectClip(track.id, clip.id);
-                    } else {
-                      // If clip is not selected, select it (replacing other selections)
-                      selectClip(track.id, clip.id, false);
                     }
                   }}
                   tabIndex={0}
@@ -1820,13 +1832,13 @@ function TimelineTrackContent({
                   {/* Left trim handle */}
                   <div
                     className={`absolute left-0 top-0 bottom-0 w-2 cursor-w-resize transition-opacity bg-blue-500/50 hover:bg-blue-500 ${isSelected ? "opacity-100" : "opacity-0"}`}
-                    onMouseDown={(e) => handleResizeStart(e, clip.id, "left")}
+                    onMouseDown={(e) => {
+                      e.stopPropagation(); // Prevent triggering clip drag
+                      handleResizeStart(e, clip.id, "left");
+                    }}
                   />
                   {/* Clip content */}
-                  <div
-                    className={`flex-1 relative ${isBeingDragged ? "cursor-grabbing" : "cursor-grab"}`}
-                    onMouseDown={(e) => handleClipMouseDown(e, clip)}
-                  >
+                  <div className="flex-1 relative">
                     {renderClipContent(clip)}
                     {/* Clip options menu */}
                     <div className="absolute top-1 right-1 z-10">
@@ -1835,11 +1847,15 @@ function TimelineTrackContent({
                         size="icon"
                         className="opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => setClipMenuOpen(clip.id)}
+                        onMouseDown={(e) => e.stopPropagation()}
                       >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                       {clipMenuOpen === clip.id && (
-                        <div className="absolute right-0 mt-2 w-32 bg-white border rounded shadow z-50">
+                        <div
+                          className="absolute right-0 mt-2 w-32 bg-white border rounded shadow z-50"
+                          onMouseDown={(e) => e.stopPropagation()}
+                        >
                           <button
                             className="flex items-center w-full px-3 py-2 text-sm hover:bg-muted/30"
                             onClick={() => {
@@ -1862,7 +1878,10 @@ function TimelineTrackContent({
                   {/* Right trim handle */}
                   <div
                     className={`absolute right-0 top-0 bottom-0 w-2 cursor-e-resize transition-opacity bg-blue-500/50 hover:bg-blue-500 ${isSelected ? "opacity-100" : "opacity-0"}`}
-                    onMouseDown={(e) => handleResizeStart(e, clip.id, "right")}
+                    onMouseDown={(e) => {
+                      e.stopPropagation(); // Prevent triggering clip drag
+                      handleResizeStart(e, clip.id, "right");
+                    }}
                   />
                 </div>
               );
