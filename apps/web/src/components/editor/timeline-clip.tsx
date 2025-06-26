@@ -14,7 +14,6 @@ import {
 import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
-import { useDragClip } from "@/hooks/use-drag-clip";
 import AudioWaveform from "./audio-waveform";
 import { toast } from "sonner";
 import { TimelineClipProps, ResizeState } from "@/types/timeline";
