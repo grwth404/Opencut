@@ -1,14 +1,15 @@
 "use client";
 
-import { Button } from "../ui/button";
-import { AspectRatio } from "../ui/aspect-ratio";
-import { DragOverlay } from "../ui/drag-overlay";
-import { useMediaStore, type MediaItem } from "@/stores/media-store";
-import { processMediaFiles } from "@/lib/media-processing";
-import { Plus, Image, Video, Music, Trash2, Upload } from "lucide-react";
 import { useDragDrop } from "@/hooks/use-drag-drop";
+import { processMediaFiles } from "@/lib/media-processing";
+import { useMediaStore, type MediaItem } from "@/stores/media-store";
+import { useTimelineStore } from "@/stores/timeline-store";
+import { Image, Music, Plus, Trash2, Upload, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { AspectRatio } from "../ui/aspect-ratio";
+import { Button } from "../ui/button";
+import { DragOverlay } from "../ui/drag-overlay";
 
 // MediaPanel lets users add, view, and drag media (images, videos, audio) into the project.
 // You can upload files or drag them from your computer. Dragging from here to the timeline adds them to your video project.
@@ -58,6 +59,21 @@ export function MediaPanel() {
   const handleRemove = (e: React.MouseEvent, id: string) => {
     // Remove a media item from the store
     e.stopPropagation();
+
+
+    // Remove tracks automatically when delete media 
+    const { tracks, removeTrack } = useTimelineStore.getState();
+    tracks.forEach((track) => {
+      const clipsToRemove = track.clips.filter((clip) => clip.mediaId === id);
+      clipsToRemove.forEach((clip) => {
+        useTimelineStore.getState().removeClipFromTrack(track.id, clip.id);
+      });
+      // Only remove track if it becomes empty and has no other clips
+      const updatedTrack = useTimelineStore.getState().tracks.find(t => t.id === track.id);
+      if (updatedTrack && updatedTrack.clips.length === 0) {
+        removeTrack(track.id);
+      }
+    });
     removeMediaItem(id);
   };
 

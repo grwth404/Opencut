@@ -1631,36 +1631,6 @@ function TimelineTrackContent({
                     onDragEnd={handleClipDragEnd}
                   >
                     {renderClipContent(clip)}
-                    {/* Clip options menu */}
-                    <div className="absolute top-1 right-1 z-10">
-                      <Button
-                        variant="text"
-                        size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => setClipMenuOpen(clip.id)}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                      {clipMenuOpen === clip.id && (
-                        <div className="absolute right-0 mt-2 w-32 bg-white text-black border rounded shadow z-50">
-                          <button
-                            className="flex items-center w-full px-3 py-2 text-sm hover:bg-muted/30"
-                            onClick={() => {
-                              handleSplitClip(clip);
-                              setClipMenuOpen(null);
-                            }}
-                          >
-                            <Scissors className="h-4 w-4 mr-2" /> Split
-                          </button>
-                          <button
-                            className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                            onClick={() => handleDeleteClip(clip.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" /> Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
                   </div>
                   {/* Right trim handle */}
                   <div
