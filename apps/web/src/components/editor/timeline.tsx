@@ -611,7 +611,7 @@ export function Timeline() {
       rulerViewport.removeEventListener('scroll', handleRulerScroll);
       tracksViewport.removeEventListener('scroll', handleTracksScroll);
     };
-  }, [duration, zoomLevel]);
+  }, []);
 
   // --- Playhead auto-scroll effect ---
   useEffect(() => {
@@ -622,20 +622,16 @@ export function Timeline() {
     const viewportWidth = rulerViewport.clientWidth;
     const scrollMin = 0;
     const scrollMax = rulerViewport.scrollWidth - viewportWidth;
-    // Center the playhead if it's not visible (60px buffer)
+    // Center the playhead if it's not visible (100px buffer)
     const desiredScroll = Math.max(
       scrollMin,
       Math.min(scrollMax, playheadPx - viewportWidth / 2)
     );
     if (
-      playheadPx < rulerViewport.scrollLeft + 60 ||
-      playheadPx > rulerViewport.scrollLeft + viewportWidth - 60
+      playheadPx < rulerViewport.scrollLeft + 100 ||
+      playheadPx > rulerViewport.scrollLeft + viewportWidth - 100
     ) {
       rulerViewport.scrollLeft = tracksViewport.scrollLeft = desiredScroll;
-    }
-    // Keep both scrolls in sync
-    if (rulerViewport.scrollLeft !== tracksViewport.scrollLeft) {
-      rulerViewport.scrollLeft = tracksViewport.scrollLeft = Math.max(rulerViewport.scrollLeft, tracksViewport.scrollLeft);
     }
   }, [playheadPosition, duration, zoomLevel]);
 
