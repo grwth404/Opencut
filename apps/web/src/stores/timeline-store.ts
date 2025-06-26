@@ -74,7 +74,7 @@ interface TimelineStore {
   ) => void;
   toggleTrackMute: (trackId: string) => void;
 
-  // Split operations
+  // Split operations for clips
   splitClip: (
     trackId: string,
     clipId: string,
@@ -339,6 +339,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     return secondClipId;
   },
 
+  // Split clip and keep only the left portion
   splitAndKeepLeft: (trackId, clipId, splitTime) => {
     const { tracks } = get();
     const track = tracks.find((t) => t.id === trackId);
@@ -378,6 +379,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     }));
   },
 
+  // Split clip and keep only the right portion
   splitAndKeepRight: (trackId, clipId, splitTime) => {
     const { tracks } = get();
     const track = tracks.find((t) => t.id === trackId);
@@ -416,6 +418,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     }));
   },
 
+  // Extract audio from video clip to an audio track
   separateAudio: (trackId, clipId) => {
     const { tracks } = get();
     const track = tracks.find((t) => t.id === trackId);
@@ -425,6 +428,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
 
     get().pushHistory();
 
+    // Find or create an audio track
     let audioTrackId = tracks.find((t) => t.type === "audio")?.id;
 
     if (!audioTrackId) {
