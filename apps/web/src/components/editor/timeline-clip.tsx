@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { Button } from "../ui/button";
-import { MoreVertical, Scissors, Trash2 } from "lucide-react";
+import {
+  MoreVertical,
+  Scissors,
+  Trash2,
+  SplitSquareHorizontal,
+  Music,
+  ChevronRight,
+  ChevronLeft,
+} from "lucide-react";
 import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
@@ -10,6 +18,17 @@ import { useDragClip } from "@/hooks/use-drag-clip";
 import AudioWaveform from "./audio-waveform";
 import { toast } from "sonner";
 import { TimelineClipProps, ResizeState } from "@/types/timeline";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "../ui/dropdown-menu";
+import { isDragging } from "motion/react";
 
 export function TimelineClip({
   clip,
@@ -21,8 +40,16 @@ export function TimelineClip({
   onClipClick,
 }: TimelineClipProps) {
   const { mediaItems } = useMediaStore();
-  const { updateClipTrim, addClipToTrack, removeClipFromTrack, dragState } =
-    useTimelineStore();
+  const {
+    updateClipTrim,
+    addClipToTrack,
+    removeClipFromTrack,
+    dragState,
+    splitClip,
+    splitAndKeepLeft,
+    splitAndKeepRight,
+    separateAudio,
+  } = useTimelineStore();
   const { currentTime } = usePlaybackStore();
 
   const [resizing, setResizing] = useState<ResizeState | null>(null);
@@ -31,7 +58,6 @@ export function TimelineClip({
   const effectiveDuration = clip.duration - clip.trimStart - clip.trimEnd;
   const clipWidth = Math.max(80, effectiveDuration * 50 * zoomLevel);
 
-  // Use real-time position during drag, otherwise use stored position
   const isBeingDragged = dragState.clipId === clip.id;
   const clipStartTime =
     isBeingDragged && dragState.isDragging
@@ -107,44 +133,85 @@ export function TimelineClip({
   const handleDeleteClip = () => {
     removeClipFromTrack(track.id, clip.id);
     setClipMenuOpen(false);
+    toast.success("Clip deleted");
   };
 
   const handleSplitClip = () => {
-    // Use current playback time as split point
-    const splitTime = currentTime;
-    // Only split if splitTime is within the clip's effective range
     const effectiveStart = clip.startTime;
     const effectiveEnd =
       clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
 
-    if (splitTime <= effectiveStart || splitTime >= effectiveEnd) {
+    if (currentTime <= effectiveStart || currentTime >= effectiveEnd) {
       toast.error("Playhead must be within clip to split");
       return;
     }
 
-    const firstDuration = splitTime - effectiveStart;
-    const secondDuration = effectiveEnd - splitTime;
-
-    // First part: adjust original clip
-    updateClipTrim(
-      track.id,
-      clip.id,
-      clip.trimStart,
-      clip.trimEnd + secondDuration
-    );
-
-    // Second part: add new clip after split
-    addClipToTrack(track.id, {
-      mediaId: clip.mediaId,
-      name: clip.name + " (cut)",
-      duration: clip.duration,
-      startTime: splitTime,
-      trimStart: clip.trimStart + firstDuration,
-      trimEnd: clip.trimEnd,
-    });
-
+    const secondClipId = splitClip(track.id, clip.id, currentTime);
+    if (secondClipId) {
+      toast.success("Clip split successfully");
+    } else {
+      toast.error("Failed to split clip");
+    }
     setClipMenuOpen(false);
-    toast.success("Clip split successfully");
+  };
+
+  const handleSplitAndKeepLeft = () => {
+    const effectiveStart = clip.startTime;
+    const effectiveEnd =
+      clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+
+    if (currentTime <= effectiveStart || currentTime >= effectiveEnd) {
+      toast.error("Playhead must be within clip");
+      return;
+    }
+
+    splitAndKeepLeft(track.id, clip.id, currentTime);
+    toast.success("Split and kept left portion");
+    setClipMenuOpen(false);
+  };
+
+  const handleSplitAndKeepRight = () => {
+    const effectiveStart = clip.startTime;
+    const effectiveEnd =
+      clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+
+    if (currentTime <= effectiveStart || currentTime >= effectiveEnd) {
+      toast.error("Playhead must be within clip");
+      return;
+    }
+
+    splitAndKeepRight(track.id, clip.id, currentTime);
+    toast.success("Split and kept right portion");
+    setClipMenuOpen(false);
+  };
+
+  const handleSeparateAudio = () => {
+    const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
+
+    if (!mediaItem || mediaItem.type !== "video") {
+      toast.error("Audio separation only available for video clips");
+      return;
+    }
+
+    const audioClipId = separateAudio(track.id, clip.id);
+    if (audioClipId) {
+      toast.success("Audio separated to audio track");
+    } else {
+      toast.error("Failed to separate audio");
+    }
+    setClipMenuOpen(false);
+  };
+
+  const canSplitAtPlayhead = () => {
+    const effectiveStart = clip.startTime;
+    const effectiveEnd =
+      clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+    return currentTime > effectiveStart && currentTime < effectiveEnd;
+  };
+
+  const canSeparateAudio = () => {
+    const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
+    return mediaItem?.type === "video" && track.type === "video";
   };
 
   const renderClipContent = () => {
@@ -201,76 +268,110 @@ export function TimelineClip({
       );
     }
 
-    // Fallback for videos without thumbnails
     return (
       <span className="text-xs text-foreground/80 truncate">{clip.name}</span>
     );
   };
 
+  const handleClipMouseDown = (e: React.MouseEvent) => {
+    if (onClipMouseDown) {
+      onClipMouseDown(e, clip);
+    }
+  };
+
   return (
     <div
-      className={`timeline-clip absolute h-full border ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg ${isSelected ? "ring-2 ring-blue-500 z-10" : ""} ${isBeingDragged ? "shadow-lg z-20" : ""}`}
-      style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
-      onMouseDown={(e) => onClipMouseDown(e, clip)}
-      onClick={(e) => onClipClick(e, clip)}
-      onMouseMove={handleResizeMove}
-      onMouseUp={handleResizeEnd}
-      onMouseLeave={handleResizeEnd}
-      tabIndex={0}
-      onContextMenu={(e) => onContextMenu(e, clip.id)}
+      className={`absolute top-0 h-full select-none transition-all duration-75 ${
+        isBeingDragged ? "z-50" : "z-10"
+      } ${isSelected ? "ring-2 ring-primary" : ""}`}
+      style={{
+        left: `${clipLeft}px`,
+        width: `${clipWidth}px`,
+      }}
+      onMouseMove={resizing ? handleResizeMove : undefined}
+      onMouseUp={resizing ? handleResizeEnd : undefined}
+      onMouseLeave={resizing ? handleResizeEnd : undefined}
     >
-      {/* Left trim handle */}
       <div
-        className={`absolute left-0 top-0 bottom-0 w-2 cursor-w-resize transition-opacity bg-blue-500/50 hover:bg-blue-500 ${isSelected ? "opacity-100" : "opacity-0"}`}
-        onMouseDown={(e) => handleResizeStart(e, clip.id, "left")}
-      />
+        className={`relative h-full rounded border cursor-pointer overflow-hidden ${getTrackColor(
+          track.type
+        )} ${isSelected ? "ring-2 ring-primary ring-offset-1" : ""}`}
+        onClick={(e) => onClipClick && onClipClick(e, clip)}
+        onMouseDown={handleClipMouseDown}
+        onContextMenu={(e) => onContextMenu && onContextMenu(e, clip.id)}
+      >
+        <div className="absolute inset-1 flex items-center p-1">
+          {renderClipContent()}
+        </div>
 
-      {/* Clip content */}
-      <div className="flex-1 relative">
-        {renderClipContent()}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-1 cursor-w-resize hover:bg-primary/50 transition-colors"
+          onMouseDown={(e) => handleResizeStart(e, clip.id, "left")}
+        />
+        <div
+          className="absolute right-0 top-0 bottom-0 w-1 cursor-e-resize hover:bg-primary/50 transition-colors"
+          onMouseDown={(e) => handleResizeStart(e, clip.id, "right")}
+        />
 
-        {/* Clip options menu */}
-        <div className="absolute top-1 right-1 z-10">
-          <Button
-            variant="text"
-            size="icon"
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={(e) => {
-              e.stopPropagation();
-              setClipMenuOpen(!clipMenuOpen);
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-
-          {clipMenuOpen && (
-            <div
-              className="absolute right-0 mt-2 w-32 bg-white border rounded shadow z-50"
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              <button
-                className="flex items-center w-full px-3 py-2 text-sm hover:bg-muted/30"
-                onClick={handleSplitClip}
+        <div className="absolute top-1 right-1">
+          <DropdownMenu open={clipMenuOpen} onOpenChange={setClipMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setClipMenuOpen(true);
+                }}
               >
-                <Scissors className="h-4 w-4 mr-2" /> Split
-              </button>
-              <button
-                className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                <MoreVertical className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger disabled={!canSplitAtPlayhead()}>
+                  <Scissors className="mr-2 h-4 w-4" />
+                  Split
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onClick={handleSplitClip}>
+                    <SplitSquareHorizontal className="mr-2 h-4 w-4" />
+                    Split at Playhead
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSplitAndKeepLeft}>
+                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    Split and Keep Left
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSplitAndKeepRight}>
+                    <ChevronRight className="mr-2 h-4 w-4" />
+                    Split and Keep Right
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+
+              {canSeparateAudio() && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSeparateAudio}>
+                    <Music className="mr-2 h-4 w-4" />
+                    Separate Audio
+                  </DropdownMenuItem>
+                </>
+              )}
+
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
                 onClick={handleDeleteClip}
+                className="text-destructive"
               >
-                <Trash2 className="h-4 w-4 mr-2" /> Delete
-              </button>
-            </div>
-          )}
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Clip
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-
-      {/* Right trim handle */}
-      <div
-        className={`absolute right-0 top-0 bottom-0 w-2 cursor-e-resize transition-opacity bg-blue-500/50 hover:bg-blue-500 ${isSelected ? "opacity-100" : "opacity-0"}`}
-        onMouseDown={(e) => handleResizeStart(e, clip.id, "right")}
-      />
     </div>
   );
 }
