@@ -9,7 +9,6 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { getStars } from "@/lib/fetchGhStars";
 import Image from "next/image";
-// import { BsTwitterX, BsGithub } from "react-icons/bs";
 import { RiGithubLine, RiTwitterXLine } from "react-icons/ri";
 
 interface HeroProps {
