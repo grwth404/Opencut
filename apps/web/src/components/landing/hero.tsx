@@ -175,6 +175,7 @@ export function Hero({ signupCount }: HeroProps) {
           href="https://github.com/OpenCut-app/OpenCut"
           className="text-foreground flex items-center gap-1"
           target="_blank"
+          rel="noopener noreferrer"
         >
           Github
           <RiGithubLine className="h-5 w-5 " />
@@ -185,6 +186,7 @@ export function Hero({ signupCount }: HeroProps) {
           href="https://x.com/OpenCutApp"
           className="text-foreground flex items-center gap-1"
           target="_blank"
+          rel="noopener noreferrer"
         >
           Twitter
           <RiTwitterXLine className="h-5 w-5 " />
