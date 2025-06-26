@@ -58,6 +58,7 @@ export function TimelineClip({
   const effectiveDuration = clip.duration - clip.trimStart - clip.trimEnd;
   const clipWidth = Math.max(80, effectiveDuration * 50 * zoomLevel);
 
+  // Use real-time position during drag, otherwise use stored position
   const isBeingDragged = dragState.clipId === clip.id;
   const clipStartTime =
     isBeingDragged && dragState.isDragging
@@ -78,6 +79,7 @@ export function TimelineClip({
     }
   };
 
+  // Resize handles for trimming clips
   const handleResizeStart = (
     e: React.MouseEvent,
     clipId: string,
@@ -329,6 +331,7 @@ export function TimelineClip({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
+              {/* Split operations - only available when playhead is within clip */}
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger disabled={!canSplitAtPlayhead()}>
                   <Scissors className="mr-2 h-4 w-4" />
@@ -350,6 +353,7 @@ export function TimelineClip({
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
 
+              {/* Audio separation - only available for video clips */}
               {canSeparateAudio() && (
                 <>
                   <DropdownMenuSeparator />
