@@ -1,14 +1,13 @@
-"use client";
+'use client';
 
-import { processMediaFiles } from "@/lib/media-processing";
-import { useMediaStore } from "@/stores/media-store";
-import { usePlaybackStore } from "@/stores/playback-store";
-import { useTimelineStore, type TimelineTrack } from "@/stores/timeline-store";
+import { processMediaFiles } from '@/lib/media-processing';
+import { useMediaStore } from '@/stores/media-store';
+import { usePlaybackStore } from '@/stores/playback-store';
+import { useTimelineStore, type TimelineTrack } from '@/stores/timeline-store';
 import {
   ArrowLeftToLine,
   ArrowRightToLine,
   Copy,
-  MoreVertical,
   Pause,
   Play,
   Scissors,
@@ -17,28 +16,27 @@ import {
   Trash2,
   Volume2,
   VolumeX,
-} from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
-import { Button } from "../ui/button";
-import { ScrollArea } from "../ui/scroll-area";
+} from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '../ui/button';
+import { ScrollArea } from '../ui/scroll-area';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
+} from '../ui/select';
 
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../ui/tooltip";
+} from '../ui/tooltip';
 
-import AudioWaveform from "./audio-waveform";
-
+import AudioWaveform from './audio-waveform';
 
 export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their clips.
@@ -79,7 +77,7 @@ export function Timeline() {
 
   // Unified context menu state
   const [contextMenu, setContextMenu] = useState<{
-    type: "track" | "clip";
+    type: 'track' | 'clip';
     trackId: string;
     clipId?: string;
     x: number;
@@ -110,8 +108,8 @@ export function Timeline() {
   useEffect(() => {
     const handleClick = () => setContextMenu(null);
     if (contextMenu) {
-      window.addEventListener("click", handleClick);
-      return () => window.removeEventListener("click", handleClick);
+      window.addEventListener('click', handleClick);
+      return () => window.removeEventListener('click', handleClick);
     }
   }, [contextMenu]);
 
@@ -119,7 +117,7 @@ export function Timeline() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
-        (e.key === "Delete" || e.key === "Backspace") &&
+        (e.key === 'Delete' || e.key === 'Backspace') &&
         selectedClips.length > 0
       ) {
         selectedClips.forEach(({ trackId, clipId }) => {
@@ -128,35 +126,35 @@ export function Timeline() {
         clearSelectedClips();
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedClips, removeClipFromTrack, clearSelectedClips]);
 
   // Keyboard event for undo (Cmd+Z)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo]);
 
   // Keyboard event for redo (Cmd+Shift+Z or Cmd+Y)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "z" && e.shiftKey) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
         e.preventDefault();
         redo();
-      } else if ((e.metaKey || e.ctrlKey) && e.key === "y") {
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
         e.preventDefault();
         redo();
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [redo]);
 
   // Mouse down on timeline background to start marquee
@@ -187,11 +185,11 @@ export function Timeline() {
           prev && { ...prev, endX: e.clientX, endY: e.clientY, active: false }
       );
     };
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [marquee]);
 
@@ -239,12 +237,12 @@ export function Timeline() {
     if (newSelection.length > 0) {
       if (marquee.additive) {
         const selectedSet = new Set(
-          selectedClips.map((c) => c.trackId + ":" + c.clipId)
+          selectedClips.map((c) => c.trackId + ':' + c.clipId)
         );
         newSelection = [
           ...selectedClips,
           ...newSelection.filter(
-            (c) => !selectedSet.has(c.trackId + ":" + c.clipId)
+            (c) => !selectedSet.has(c.trackId + ':' + c.clipId)
           ),
         ];
       }
@@ -266,7 +264,7 @@ export function Timeline() {
     // When something is dragged over the timeline, show overlay
     e.preventDefault();
     // Don't show overlay for timeline clips - they're handled by tracks
-    if (e.dataTransfer.types.includes("application/x-timeline-clip")) {
+    if (e.dataTransfer.types.includes('application/x-timeline-clip')) {
       return;
     }
     dragCounterRef.current += 1;
@@ -283,7 +281,7 @@ export function Timeline() {
     e.preventDefault();
 
     // Don't update state for timeline clips - they're handled by tracks
-    if (e.dataTransfer.types.includes("application/x-timeline-clip")) {
+    if (e.dataTransfer.types.includes('application/x-timeline-clip')) {
       return;
     }
 
@@ -301,24 +299,24 @@ export function Timeline() {
 
     // Ignore timeline clip drags - they're handled by track-specific handlers
     const hasTimelineClip = e.dataTransfer.types.includes(
-      "application/x-timeline-clip"
+      'application/x-timeline-clip'
     );
     if (hasTimelineClip) {
       return;
     }
 
-    const mediaItemData = e.dataTransfer.getData("application/x-media-item");
+    const mediaItemData = e.dataTransfer.getData('application/x-media-item');
     if (mediaItemData) {
       // Handle media item drops by creating new tracks
       try {
         const { id, type } = JSON.parse(mediaItemData);
         const mediaItem = mediaItems.find((item) => item.id === id);
         if (!mediaItem) {
-          toast.error("Media item not found");
+          toast.error('Media item not found');
           return;
         }
         // Add to video or audio track depending on type
-        const trackType = type === "audio" ? "audio" : "video";
+        const trackType = type === 'audio' ? 'audio' : 'video';
         const newTrackId = addTrack(trackType);
         addClipToTrack(newTrackId, {
           mediaId: mediaItem.id,
@@ -331,8 +329,8 @@ export function Timeline() {
         toast.success(`Added ${mediaItem.name} to new ${trackType} track`);
       } catch (error) {
         // Show error if parsing fails
-        console.error("Error parsing media item data:", error);
-        toast.error("Failed to add media to timeline");
+        console.error('Error parsing media item data:', error);
+        toast.error('Failed to add media to timeline');
       }
     } else if (e.dataTransfer.files?.length > 0) {
       // Handle file drops by creating new tracks
@@ -348,7 +346,7 @@ export function Timeline() {
           );
           if (addedItem) {
             const trackType =
-              processedItem.type === "audio" ? "audio" : "video";
+              processedItem.type === 'audio' ? 'audio' : 'video';
             const newTrackId = addTrack(trackType);
             addClipToTrack(newTrackId, {
               mediaId: addedItem.id,
@@ -362,8 +360,8 @@ export function Timeline() {
         }
       } catch (error) {
         // Show error if file processing fails
-        console.error("Error processing external files:", error);
-        toast.error("Failed to process dropped files");
+        console.error('Error processing external files:', error);
+        toast.error('Failed to process dropped files');
       } finally {
         setIsProcessing(false);
       }
@@ -429,11 +427,11 @@ export function Timeline() {
       if (scrubTime !== null) seek(scrubTime); // finalize seek
       setScrubTime(null);
     };
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
     return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
     };
   }, [isScrubbing, scrubTime, seek, handleScrub]);
 
@@ -450,7 +448,7 @@ export function Timeline() {
   // Action handlers for toolbar
   const handleSplitSelected = () => {
     if (selectedClips.length === 0) {
-      toast.error("No clips selected");
+      toast.error('No clips selected');
       return;
     }
     selectedClips.forEach(({ trackId, clipId }) => {
@@ -470,7 +468,7 @@ export function Timeline() {
           );
           addClipToTrack(track.id, {
             mediaId: clip.mediaId,
-            name: clip.name + " (split)",
+            name: clip.name + ' (split)',
             duration: clip.duration,
             startTime: splitTime,
             trimStart: clip.trimStart + (splitTime - effectiveStart),
@@ -479,12 +477,12 @@ export function Timeline() {
         }
       }
     });
-    toast.success("Split selected clip(s)");
+    toast.success('Split selected clip(s)');
   };
 
   const handleDuplicateSelected = () => {
     if (selectedClips.length === 0) {
-      toast.error("No clips selected");
+      toast.error('No clips selected');
       return;
     }
     selectedClips.forEach(({ trackId, clipId }) => {
@@ -493,7 +491,7 @@ export function Timeline() {
       if (clip && track) {
         addClipToTrack(track.id, {
           mediaId: clip.mediaId,
-          name: clip.name + " (copy)",
+          name: clip.name + ' (copy)',
           duration: clip.duration,
           startTime:
             clip.startTime +
@@ -504,12 +502,12 @@ export function Timeline() {
         });
       }
     });
-    toast.success("Duplicated selected clip(s)");
+    toast.success('Duplicated selected clip(s)');
   };
 
   const handleFreezeSelected = () => {
     if (selectedClips.length === 0) {
-      toast.error("No clips selected");
+      toast.error('No clips selected');
       return;
     }
     selectedClips.forEach(({ trackId, clipId }) => {
@@ -519,7 +517,7 @@ export function Timeline() {
         // Add a new freeze frame clip at the playhead
         addClipToTrack(track.id, {
           mediaId: clip.mediaId,
-          name: clip.name + " (freeze)",
+          name: clip.name + ' (freeze)',
           duration: 1, // 1 second freeze frame
           startTime: currentTime,
           trimStart: 0,
@@ -527,19 +525,19 @@ export function Timeline() {
         });
       }
     });
-    toast.success("Freeze frame added for selected clip(s)");
+    toast.success('Freeze frame added for selected clip(s)');
   };
 
   const handleDeleteSelected = () => {
     if (selectedClips.length === 0) {
-      toast.error("No clips selected");
+      toast.error('No clips selected');
       return;
     }
     selectedClips.forEach(({ trackId, clipId }) => {
       removeClipFromTrack(trackId, clipId);
     });
     clearSelectedClips();
-    toast.success("Deleted selected clip(s)");
+    toast.success('Deleted selected clip(s)');
   };
 
   // Prevent explorer zooming in/out when in timeline
@@ -555,16 +553,16 @@ export function Timeline() {
       }
     };
 
-    document.addEventListener("wheel", preventZoom, { passive: false });
+    document.addEventListener('wheel', preventZoom, { passive: false });
 
     return () => {
-      document.removeEventListener("wheel", preventZoom);
+      document.removeEventListener('wheel', preventZoom);
     };
   }, [isInTimeline]);
 
   return (
     <div
-      className={`h-full flex flex-col transition-colors duration-200 relative ${isDragOver ? "bg-accent/30 border-accent" : ""}`}
+      className={`h-full flex flex-col transition-colors duration-200 relative ${isDragOver ? 'bg-accent/30 border-accent' : ''}`}
       {...dragProps}
       onMouseEnter={() => setIsInTimeline(true)}
       onMouseLeave={() => setIsInTimeline(false)}
@@ -590,14 +588,15 @@ export function Timeline() {
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {isPlaying ? "Pause (Space)" : "Play (Space)"}
+              {isPlaying ? 'Pause (Space)' : 'Play (Space)'}
             </TooltipContent>
           </Tooltip>
 
           <div className="w-px h-6 bg-border mx-1" />
 
           {/* Time Display */}
-          <div className="text-xs text-muted-foreground font-mono px-2"
+          <div
+            className="text-xs text-muted-foreground font-mono px-2"
             style={{ minWidth: '18ch', textAlign: 'center' }}
           >
             {currentTime.toFixed(1)}s / {duration.toFixed(1)}s
@@ -613,10 +612,10 @@ export function Timeline() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const trackId = addTrack("video");
+                      const trackId = addTrack('video');
                       addClipToTrack(trackId, {
-                        mediaId: "test",
-                        name: "Test Clip",
+                        mediaId: 'test',
+                        name: 'Test Clip',
                         duration: 5,
                         startTime: 0,
                         trimStart: 0,
@@ -782,15 +781,15 @@ export function Timeline() {
                       <div
                         key={i}
                         className={`absolute top-0 bottom-0 ${isMainMarker
-                          ? "border-l border-muted-foreground/40"
-                          : "border-l border-muted-foreground/20"
+                            ? 'border-l border-muted-foreground/40'
+                            : 'border-l border-muted-foreground/20'
                           }`}
                         style={{ left: `${time * 50 * zoomLevel}px` }}
                       >
                         <span
                           className={`absolute top-1 left-1 text-xs ${isMainMarker
-                            ? "text-muted-foreground font-medium"
-                            : "text-muted-foreground/70"
+                              ? 'text-muted-foreground font-medium'
+                              : 'text-muted-foreground/70'
                             }`}
                         >
                           {(() => {
@@ -800,9 +799,9 @@ export function Timeline() {
                               const secs = seconds % 60;
 
                               if (hours > 0) {
-                                return `${hours}:${minutes.toString().padStart(2, "0")}:${Math.floor(secs).toString().padStart(2, "0")}`;
+                                return `${hours}:${minutes.toString().padStart(2, '0')}:${Math.floor(secs).toString().padStart(2, '0')}`;
                               } else if (minutes > 0) {
-                                return `${minutes}:${Math.floor(secs).toString().padStart(2, "0")}`;
+                                return `${minutes}:${Math.floor(secs).toString().padStart(2, '0')}`;
                               } else if (interval >= 1) {
                                 return `${Math.floor(secs)}s`;
                               } else {
@@ -843,7 +842,7 @@ export function Timeline() {
                     onContextMenu={(e) => {
                       e.preventDefault();
                       setContextMenu({
-                        type: "track",
+                        type: 'track',
                         trackId: track.id,
                         x: e.clientX,
                         y: e.clientY,
@@ -852,11 +851,11 @@ export function Timeline() {
                   >
                     <div className="flex items-center flex-1 min-w-0">
                       <div
-                        className={`w-3 h-3 rounded-full flex-shrink-0 ${track.type === "video"
-                          ? "bg-blue-500"
-                          : track.type === "audio"
-                            ? "bg-green-500"
-                            : "bg-purple-500"
+                        className={`w-3 h-3 rounded-full flex-shrink-0 ${track.type === 'video'
+                            ? 'bg-blue-500'
+                            : track.type === 'audio'
+                              ? 'bg-green-500'
+                              : 'bg-purple-500'
                           }`}
                       />
                       <span className="ml-2 text-sm font-medium truncate">
@@ -879,7 +878,7 @@ export function Timeline() {
             <div
               className="w-full h-full overflow-hidden flex"
               ref={timelineRef}
-              style={{ position: "relative" }}
+              style={{ position: 'relative' }}
             >
               {/* Timeline grid and clips area (with left margin for sifdebar) */}
               <div
@@ -910,13 +909,13 @@ export function Timeline() {
                         className="absolute left-0 right-0 border-b border-muted/30"
                         style={{
                           top: `${index * 60}px`,
-                          height: "60px",
+                          height: '60px',
                         }}
                         // Show context menu on right click
                         onContextMenu={(e) => {
                           e.preventDefault();
                           setContextMenu({
-                            type: "track",
+                            type: 'track',
                             trackId: track.id,
                             x: e.clientX,
                             y: e.clientY,
@@ -950,7 +949,7 @@ export function Timeline() {
                     className="absolute left-0 right-0 border-2 border-dashed border-accent flex items-center justify-center text-muted-foreground"
                     style={{
                       top: `${tracks.length * 60}px`,
-                      height: "60px",
+                      height: '60px',
                     }}
                   >
                     <div>Drop media here to add a new track</div>
@@ -969,7 +968,7 @@ export function Timeline() {
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onContextMenu={(e) => e.preventDefault()}
         >
-          {contextMenu.type === "track" ? (
+          {contextMenu.type === 'track' ? (
             // Track context menu
             <>
               <button
@@ -1005,7 +1004,7 @@ export function Timeline() {
                 onClick={() => {
                   removeTrack(contextMenu.trackId);
                   setContextMenu(null);
-                  toast.success("Track deleted");
+                  toast.success('Track deleted');
                 }}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -1044,16 +1043,16 @@ export function Timeline() {
                         );
                         useTimelineStore.getState().addClipToTrack(track.id, {
                           mediaId: clip.mediaId,
-                          name: clip.name + " (split)",
+                          name: clip.name + ' (split)',
                           duration: clip.duration,
                           startTime: splitTime,
                           trimStart:
                             clip.trimStart + (splitTime - effectiveStart),
                           trimEnd: clip.trimEnd,
                         });
-                        toast.success("Clip split successfully");
+                        toast.success('Clip split successfully');
                       } else {
-                        toast.error("Playhead must be within clip to split");
+                        toast.error('Playhead must be within clip to split');
                       }
                     }
                   }
@@ -1076,7 +1075,7 @@ export function Timeline() {
                     if (clip && track) {
                       useTimelineStore.getState().addClipToTrack(track.id, {
                         mediaId: clip.mediaId,
-                        name: clip.name + " (copy)",
+                        name: clip.name + ' (copy)',
                         duration: clip.duration,
                         startTime:
                           clip.startTime +
@@ -1085,7 +1084,7 @@ export function Timeline() {
                         trimStart: clip.trimStart,
                         trimEnd: clip.trimEnd,
                       });
-                      toast.success("Clip duplicated");
+                      toast.success('Clip duplicated');
                     }
                   }
                   setContextMenu(null);
@@ -1103,7 +1102,7 @@ export function Timeline() {
                       contextMenu.trackId,
                       contextMenu.clipId
                     );
-                    toast.success("Clip deleted");
+                    toast.success('Clip deleted');
                   }
                   setContextMenu(null);
                 }}
@@ -1129,7 +1128,7 @@ function TimelineTrackContent({
   zoomLevel: number;
   setContextMenu: (
     menu: {
-      type: "track" | "clip";
+      type: 'track' | 'clip';
       trackId: string;
       clipId?: string;
       x: number;
@@ -1137,7 +1136,7 @@ function TimelineTrackContent({
     } | null
   ) => void;
   contextMenu: {
-    type: "track" | "clip";
+    type: 'track' | 'clip';
     trackId: string;
     clipId?: string;
     x: number;
@@ -1164,7 +1163,7 @@ function TimelineTrackContent({
   const [wouldOverlap, setWouldOverlap] = useState(false);
   const [resizing, setResizing] = useState<{
     clipId: string;
-    side: "left" | "right";
+    side: 'left' | 'right';
     startX: number;
     initialTrimStart: number;
     initialTrimEnd: number;
@@ -1180,7 +1179,7 @@ function TimelineTrackContent({
   const handleResizeStart = (
     e: React.MouseEvent,
     clipId: string,
-    side: "left" | "right"
+    side: 'left' | 'right'
   ) => {
     e.stopPropagation();
     e.preventDefault();
@@ -1206,7 +1205,7 @@ function TimelineTrackContent({
     const deltaX = e.clientX - resizing.startX;
     const deltaTime = deltaX / (50 * zoomLevel);
 
-    if (resizing.side === "left") {
+    if (resizing.side === 'left') {
       const newTrimStart = Math.max(
         0,
         Math.min(
@@ -1239,22 +1238,22 @@ function TimelineTrackContent({
     const dragData = { clipId: clip.id, trackId: track.id, name: clip.name };
 
     e.dataTransfer.setData(
-      "application/x-timeline-clip",
+      'application/x-timeline-clip',
       JSON.stringify(dragData)
     );
-    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.effectAllowed = 'move';
 
     // Add visual feedback to the dragged element
     const target = e.currentTarget.parentElement as HTMLElement;
-    target.style.opacity = "0.5";
-    target.style.transform = "scale(0.95)";
+    target.style.opacity = '0.5';
+    target.style.transform = 'scale(0.95)';
   };
 
   const handleClipDragEnd = (e: React.DragEvent) => {
     // Reset visual feedback
     const target = e.currentTarget.parentElement as HTMLElement;
-    target.style.opacity = "";
-    target.style.transform = "";
+    target.style.opacity = '';
+    target.style.transform = '';
   };
 
   const handleTrackDragOver = (e: React.DragEvent) => {
@@ -1262,10 +1261,10 @@ function TimelineTrackContent({
 
     // Handle both timeline clips and media items
     const hasTimelineClip = e.dataTransfer.types.includes(
-      "application/x-timeline-clip"
+      'application/x-timeline-clip'
     );
     const hasMediaItem = e.dataTransfer.types.includes(
-      "application/x-media-item"
+      'application/x-media-item'
     );
 
     if (!hasTimelineClip && !hasMediaItem) return;
@@ -1273,28 +1272,28 @@ function TimelineTrackContent({
     if (hasMediaItem) {
       try {
         const mediaItemData = e.dataTransfer.getData(
-          "application/x-media-item"
+          'application/x-media-item'
         );
         if (mediaItemData) {
           const { type } = JSON.parse(mediaItemData);
           const isCompatible =
-            (track.type === "video" &&
-              (type === "video" || type === "image")) ||
-            (track.type === "audio" && type === "audio");
+            (track.type === 'video' &&
+              (type === 'video' || type === 'image')) ||
+            (track.type === 'audio' && type === 'audio');
 
           if (!isCompatible) {
-            e.dataTransfer.dropEffect = "none";
+            e.dataTransfer.dropEffect = 'none';
             return;
           }
         }
       } catch (error) {
-        console.error("Error parsing dropped media item:", error);
+        console.error('Error parsing dropped media item:', error);
       }
     }
 
     // Calculate drop position for overlap checking
     const trackContainer = e.currentTarget.querySelector(
-      ".track-clips-container"
+      '.track-clips-container'
     ) as HTMLElement;
     let dropTime = 0;
     if (trackContainer) {
@@ -1309,7 +1308,7 @@ function TimelineTrackContent({
     if (hasMediaItem) {
       try {
         const mediaItemData = e.dataTransfer.getData(
-          "application/x-media-item"
+          'application/x-media-item'
         );
         if (mediaItemData) {
           const { id } = JSON.parse(mediaItemData);
@@ -1336,7 +1335,7 @@ function TimelineTrackContent({
     } else if (hasTimelineClip) {
       try {
         const timelineClipData = e.dataTransfer.getData(
-          "application/x-timeline-clip"
+          'application/x-timeline-clip'
         );
         if (timelineClipData) {
           const { clipId, trackId: fromTrackId } = JSON.parse(timelineClipData);
@@ -1373,14 +1372,14 @@ function TimelineTrackContent({
     }
 
     if (wouldOverlap) {
-      e.dataTransfer.dropEffect = "none";
+      e.dataTransfer.dropEffect = 'none';
       setIsDraggedOver(true);
       setWouldOverlap(true);
       setDropPosition(Math.round(dropTime * 10) / 10);
       return;
     }
 
-    e.dataTransfer.dropEffect = hasTimelineClip ? "move" : "copy";
+    e.dataTransfer.dropEffect = hasTimelineClip ? 'move' : 'copy';
     setIsDraggedOver(true);
     setWouldOverlap(false);
     setDropPosition(Math.round(dropTime * 10) / 10);
@@ -1390,10 +1389,10 @@ function TimelineTrackContent({
     e.preventDefault();
 
     const hasTimelineClip = e.dataTransfer.types.includes(
-      "application/x-timeline-clip"
+      'application/x-timeline-clip'
     );
     const hasMediaItem = e.dataTransfer.types.includes(
-      "application/x-media-item"
+      'application/x-media-item'
     );
 
     if (!hasTimelineClip && !hasMediaItem) return;
@@ -1407,10 +1406,10 @@ function TimelineTrackContent({
     e.preventDefault();
 
     const hasTimelineClip = e.dataTransfer.types.includes(
-      "application/x-timeline-clip"
+      'application/x-timeline-clip'
     );
     const hasMediaItem = e.dataTransfer.types.includes(
-      "application/x-media-item"
+      'application/x-media-item'
     );
 
     if (!hasTimelineClip && !hasMediaItem) return;
@@ -1438,16 +1437,16 @@ function TimelineTrackContent({
     setDropPosition(null);
 
     const hasTimelineClip = e.dataTransfer.types.includes(
-      "application/x-timeline-clip"
+      'application/x-timeline-clip'
     );
     const hasMediaItem = e.dataTransfer.types.includes(
-      "application/x-media-item"
+      'application/x-media-item'
     );
 
     if (!hasTimelineClip && !hasMediaItem) return;
 
     const trackContainer = e.currentTarget.querySelector(
-      ".track-clips-container"
+      '.track-clips-container'
     ) as HTMLElement;
     if (!trackContainer) return;
 
@@ -1460,7 +1459,7 @@ function TimelineTrackContent({
       if (hasTimelineClip) {
         // Handle timeline clip movement
         const timelineClipData = e.dataTransfer.getData(
-          "application/x-timeline-clip"
+          'application/x-timeline-clip'
         );
         if (!timelineClipData) return;
 
@@ -1473,7 +1472,7 @@ function TimelineTrackContent({
         const movingClip = sourceTrack?.clips.find((c: any) => c.id === clipId);
 
         if (!movingClip) {
-          toast.error("Clip not found");
+          toast.error('Clip not found');
           return;
         }
 
@@ -1500,7 +1499,7 @@ function TimelineTrackContent({
 
         if (hasOverlap) {
           toast.error(
-            "Cannot move clip here - it would overlap with existing clips"
+            'Cannot move clip here - it would overlap with existing clips'
           );
           return;
         }
@@ -1518,7 +1517,7 @@ function TimelineTrackContent({
       } else if (hasMediaItem) {
         // Handle media item drop
         const mediaItemData = e.dataTransfer.getData(
-          "application/x-media-item"
+          'application/x-media-item'
         );
         if (!mediaItemData) return;
 
@@ -1526,14 +1525,14 @@ function TimelineTrackContent({
         const mediaItem = mediaItems.find((item) => item.id === id);
 
         if (!mediaItem) {
-          toast.error("Media item not found");
+          toast.error('Media item not found');
           return;
         }
 
         // Check if track type is compatible
         const isCompatible =
-          (track.type === "video" && (type === "video" || type === "image")) ||
-          (track.type === "audio" && type === "audio");
+          (track.type === 'video' && (type === 'video' || type === 'image')) ||
+          (track.type === 'audio' && type === 'audio');
 
         if (!isCompatible) {
           toast.error(`Cannot add ${type} to ${track.type} track`);
@@ -1558,7 +1557,7 @@ function TimelineTrackContent({
 
         if (hasOverlap) {
           toast.error(
-            "Cannot place clip here - it would overlap with existing clips"
+            'Cannot place clip here - it would overlap with existing clips'
           );
           return;
         }
@@ -1575,21 +1574,21 @@ function TimelineTrackContent({
         toast.success(`Added ${mediaItem.name} to ${track.name}`);
       }
     } catch (error) {
-      console.error("Error handling drop:", error);
-      toast.error("Failed to add media to track");
+      console.error('Error handling drop:', error);
+      toast.error('Failed to add media to track');
     }
   };
 
   const getTrackColor = (type: string) => {
     switch (type) {
-      case "video":
-        return "bg-blue-500/20 border-blue-500/30";
-      case "audio":
-        return "bg-green-500/20 border-green-500/30";
-      case "effects":
-        return "bg-purple-500/20 border-purple-500/30";
+      case 'video':
+        return 'bg-blue-500/20 border-blue-500/30';
+      case 'audio':
+        return 'bg-green-500/20 border-green-500/30';
+      case 'effects':
+        return 'bg-purple-500/20 border-purple-500/30';
       default:
-        return "bg-gray-500/20 border-gray-500/30";
+        return 'bg-gray-500/20 border-gray-500/30';
     }
   };
 
@@ -1602,7 +1601,7 @@ function TimelineTrackContent({
       );
     }
 
-    if (mediaItem.type === "image") {
+    if (mediaItem.type === 'image') {
       return (
         <div className="w-full h-full flex items-center justify-center">
           <img
@@ -1614,7 +1613,7 @@ function TimelineTrackContent({
       );
     }
 
-    if (mediaItem.type === "video" && mediaItem.thumbnailUrl) {
+    if (mediaItem.type === 'video' && mediaItem.thumbnailUrl) {
       return (
         <div className="w-full h-full flex items-center gap-2">
           <div className="w-8 h-8 flex-shrink-0">
@@ -1631,19 +1630,19 @@ function TimelineTrackContent({
       );
     }
 
-    if (mediaItem.type === "audio") {
-    return (
-      <div className="w-full h-full flex items-center gap-2">
-        <div className="flex-1 min-w-0">
-          <AudioWaveform 
-            audioUrl={mediaItem.url} 
-            height={24}
-            className="w-full"
-          />
+    if (mediaItem.type === 'audio') {
+      return (
+        <div className="w-full h-full flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <AudioWaveform
+              audioUrl={mediaItem.url}
+              height={24}
+              className="w-full"
+            />
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
     // Fallback for videos without thumbnails
     return (
@@ -1671,7 +1670,7 @@ function TimelineTrackContent({
     // Second part: add new clip after split
     addClipToTrack(track.id, {
       mediaId: clip.mediaId,
-      name: clip.name + " (cut)",
+      name: clip.name + ' (cut)',
       duration: clip.duration,
       startTime: splitTime,
       trimStart: clip.trimStart + firstDuration,
@@ -1682,17 +1681,17 @@ function TimelineTrackContent({
   return (
     <div
       className={`w-full h-full transition-all duration-150 ease-out ${isDraggedOver
-        ? wouldOverlap
-          ? "bg-red-500/15 border-2 border-dashed border-red-400 shadow-lg"
-          : "bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg"
-        : "hover:bg-muted/20"
+          ? wouldOverlap
+            ? 'bg-red-500/15 border-2 border-dashed border-red-400 shadow-lg'
+            : 'bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg'
+          : 'hover:bg-muted/20'
         }`}
       onContextMenu={(e) => {
         e.preventDefault();
         // Only show track menu if we didn't click on a clip
-        if (!(e.target as HTMLElement).closest(".timeline-clip")) {
+        if (!(e.target as HTMLElement).closest('.timeline-clip')) {
           setContextMenu({
-            type: "track",
+            type: 'track',
             trackId: track.id,
             x: e.clientX,
             y: e.clientY,
@@ -1711,17 +1710,17 @@ function TimelineTrackContent({
         {track.clips.length === 0 ? (
           <div
             className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${isDropping
-              ? wouldOverlap
-                ? "border-red-500 bg-red-500/10 text-red-600"
-                : "border-blue-500 bg-blue-500/10 text-blue-600"
-              : "border-muted/30"
+                ? wouldOverlap
+                  ? 'border-red-500 bg-red-500/10 text-red-600'
+                  : 'border-blue-500 bg-blue-500/10 text-blue-600'
+                : 'border-muted/30'
               }`}
           >
             {isDropping
               ? wouldOverlap
-                ? "Cannot drop - would overlap"
-                : "Drop clip here"
-              : "Drop media here"}
+                ? 'Cannot drop - would overlap'
+                : 'Drop clip here'
+              : 'Drop media here'}
           </div>
         ) : (
           <>
@@ -1739,7 +1738,7 @@ function TimelineTrackContent({
               return (
                 <div
                   key={clip.id}
-                  className={`timeline-clip absolute h-full border transition-all-200 ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg ${isSelected ? "ring-2 ring-blue-500 z-10" : ""}`}
+                  className={`timeline-clip absolute h-full border transition-all-200 ${getTrackColor(track.type)} flex items-center py-3 min-w-[80px] overflow-hidden group hover:shadow-lg ${isSelected ? 'ring-2 ring-blue-500 z-10' : ''}`}
                   style={{ width: `${clipWidth}px`, left: `${clipLeft}px` }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1770,7 +1769,7 @@ function TimelineTrackContent({
                     e.preventDefault();
                     e.stopPropagation();
                     setContextMenu({
-                      type: "clip",
+                      type: 'clip',
                       trackId: track.id,
                       clipId: clip.id,
                       x: e.clientX,
@@ -1781,7 +1780,7 @@ function TimelineTrackContent({
                   {/* Left trim handle */}
                   <div
                     className="absolute left-0 top-0 bottom-0 w-2 cursor-w-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
-                    onMouseDown={(e) => handleResizeStart(e, clip.id, "left")}
+                    onMouseDown={(e) => handleResizeStart(e, clip.id, 'left')}
                   />
                   {/* Clip content */}
                   <div
@@ -1791,41 +1790,11 @@ function TimelineTrackContent({
                     onDragEnd={handleClipDragEnd}
                   >
                     {renderClipContent(clip)}
-                    {/* Clip options menu */}
-                    <div className="absolute top-1 right-1 z-10">
-                      <Button
-                        variant="text"
-                        size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => setClipMenuOpen(clip.id)}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                      {clipMenuOpen === clip.id && (
-                        <div className="absolute right-0 mt-2 w-32 bg-white text-black border rounded shadow z-50">
-                          <button
-                            className="flex items-center w-full px-3 py-2 text-sm hover:bg-muted/30"
-                            onClick={() => {
-                              handleSplitClip(clip);
-                              setClipMenuOpen(null);
-                            }}
-                          >
-                            <Scissors className="h-4 w-4 mr-2" /> Split
-                          </button>
-                          <button
-                            className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                            onClick={() => handleDeleteClip(clip.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" /> Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
                   </div>
                   {/* Right trim handle */}
                   <div
                     className="absolute right-0 top-0 bottom-0 w-2 cursor-e-resize opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500/50 hover:bg-blue-500"
-                    onMouseDown={(e) => handleResizeStart(e, clip.id, "right")}
+                    onMouseDown={(e) => handleResizeStart(e, clip.id, 'right')}
                   />
                 </div>
               );
@@ -1834,22 +1803,22 @@ function TimelineTrackContent({
             {/* Drop position indicator */}
             {isDraggedOver && dropPosition !== null && (
               <div
-                className={`absolute top-0 bottom-0 w-1 pointer-events-none z-30 transition-all duration-75 ease-out ${wouldOverlap ? "bg-red-500" : "bg-blue-500"}`}
+                className={`absolute top-0 bottom-0 w-1 pointer-events-none z-30 transition-all duration-75 ease-out ${wouldOverlap ? 'bg-red-500' : 'bg-blue-500'}`}
                 style={{
                   left: `${dropPosition * 50 * zoomLevel}px`,
-                  transform: "translateX(-50%)",
+                  transform: 'translateX(-50%)',
                 }}
               >
                 <div
-                  className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${wouldOverlap ? "bg-red-500" : "bg-blue-500"}`}
+                  className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${wouldOverlap ? 'bg-red-500' : 'bg-blue-500'}`}
                 />
                 <div
-                  className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${wouldOverlap ? "bg-red-500" : "bg-blue-500"}`}
+                  className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md ${wouldOverlap ? 'bg-red-500' : 'bg-blue-500'}`}
                 />
                 <div
-                  className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-white px-1 py-0.5 rounded whitespace-nowrap ${wouldOverlap ? "bg-red-500" : "bg-blue-500"}`}
+                  className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-white px-1 py-0.5 rounded whitespace-nowrap ${wouldOverlap ? 'bg-red-500' : 'bg-blue-500'}`}
                 >
-                  {wouldOverlap ? "⚠️" : ""}
+                  {wouldOverlap ? '⚠️' : ''}
                   {dropPosition.toFixed(1)}s
                 </div>
               </div>
@@ -1860,4 +1829,3 @@ function TimelineTrackContent({
     </div>
   );
 }
-
