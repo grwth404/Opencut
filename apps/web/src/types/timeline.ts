@@ -1,5 +1,7 @@
 import { TimelineTrack, TimelineClip } from "@/stores/timeline-store";
 
+export type TrackType = "video" | "audio" | "effects";
+
 export interface TimelineClipProps {
   clip: TimelineClip;
   track: TimelineTrack;

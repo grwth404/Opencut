@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { TrackType } from "@/types/timeline";
 
 export interface TimelineClip {
   id: string;
@@ -13,7 +14,7 @@ export interface TimelineClip {
 export interface TimelineTrack {
   id: string;
   name: string;
-  type: "video" | "audio" | "effects";
+  type: TrackType;
   clips: TimelineClip[];
   muted?: boolean;
 }
@@ -52,7 +53,7 @@ interface TimelineStore {
   endDrag: () => void;
 
   // Actions
-  addTrack: (type: "video" | "audio" | "effects") => string;
+  addTrack: (type: TrackType) => string;
   removeTrack: (trackId: string) => void;
   addClipToTrack: (trackId: string, clip: Omit<TimelineClip, "id">) => void;
   removeClipFromTrack: (trackId: string, clipId: string) => void;
