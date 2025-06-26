@@ -9,6 +9,8 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { getStars } from "@/lib/fetchGhStars";
 import Image from "next/image";
+// import { BsTwitterX, BsGithub } from "react-icons/bs";
+import { RiGithubLine, RiTwitterXLine } from "react-icons/ri";
 
 interface HeroProps {
   signupCount: number;
@@ -164,7 +166,7 @@ export function Hero({ signupCount }: HeroProps) {
       </motion.div>
 
       <motion.div
-        className="mb-8 text-center text-sm text-muted-foreground/60"
+        className="mb-8 text-center text-sm text-muted-foreground/60 flex flex-row gap-2 items-center justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8, duration: 0.8 }}
@@ -172,9 +174,21 @@ export function Hero({ signupCount }: HeroProps) {
         Currently in beta • Open source on{" "}
         <Link
           href="https://github.com/OpenCut-app/OpenCut"
-          className="text-foreground underline"
+          className="text-foreground flex items-center gap-1"
+          target="_blank"
         >
-          GitHub {star}+
+          Github
+          <RiGithubLine className="h-5 w-5 " />
+          {star}+
+        </Link>
+        • Follow us on
+        <Link
+          href="https://x.com/OpenCutApp"
+          className="text-foreground flex items-center gap-1"
+          target="_blank"
+        >
+          Twitter
+          <RiTwitterXLine className="h-5 w-5 " />
         </Link>
       </motion.div>
     </div>
