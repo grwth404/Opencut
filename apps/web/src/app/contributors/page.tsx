@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { GithubIcon } from "@/components/icons";
+import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
   title: "Contributors - OpenCut",
@@ -49,7 +50,7 @@ async function getContributors(): Promise<Contributor[]> {
     const contributors = await response.json();
 
     const filteredContributors = contributors.filter(
-      (contributor: any) => contributor.type === "User"
+      (contributor: Contributor) => contributor.type === "User"
     );
 
     return filteredContributors;
@@ -61,8 +62,8 @@ async function getContributors(): Promise<Contributor[]> {
 
 export default async function ContributorsPage() {
   const contributors = await getContributors();
-  const topContributor = contributors[0];
-  const otherContributors = contributors.slice(1);
+  const topContributors = contributors.slice(0, 2);
+  const otherContributors = contributors.slice(2);
 
   return (
     <div className="min-h-screen bg-background">
@@ -77,10 +78,10 @@ export default async function ContributorsPage() {
         <div className="relative container mx-auto px-4 py-16">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-20">
-              <div className="inline-flex items-center gap-2 bg-muted/50 text-muted-foreground px-3 py-1 rounded-full text-sm mb-6">
+              <Badge variant="secondary" className="gap-2 mb-6">
                 <GithubIcon className="h-3 w-3" />
                 Open Source
-              </div>
+              </Badge>
               <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
                 Contributors
               </h1>
@@ -105,54 +106,59 @@ export default async function ContributorsPage() {
               </div>
             </div>
 
-            {topContributor && (
+            {topContributors.length > 0 && (
               <div className="mb-20">
                 <div className="text-center mb-12">
                   <h2 className="text-2xl font-semibold mb-2">
-                    Top Contributor
+                    Top Contributors
                   </h2>
                   <p className="text-muted-foreground">
                     Leading the way in contributions
                   </p>
                 </div>
 
-                <Link
-                  href={topContributor.html_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block"
-                >
-                  <div className="relative mx-auto max-w-md">
-                    <div className="absolute inset-0 bg-gradient-to-r from-muted/50 to-muted/30 rounded-2xl blur group-hover:blur-md transition-all duration-300" />
-                    <Card className="relative bg-background/80 backdrop-blur-sm border-2 group-hover:border-muted-foreground/20 transition-all duration-300 group-hover:shadow-xl">
-                      <CardContent className="p-8 text-center">
-                        <div className="relative mb-6">
-                          <Avatar className="h-24 w-24 mx-auto ring-4 ring-background shadow-2xl">
-                            <AvatarImage
-                              src={topContributor.avatar_url}
-                              alt={`${topContributor.login}'s avatar`}
-                            />
-                            <AvatarFallback className="text-lg font-semibold">
-                              {topContributor.login.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="absolute -top-2 -right-2 bg-foreground text-background rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
-                            1
-                          </div>
-                        </div>
-                        <h3 className="text-xl font-semibold mb-2 group-hover:text-foreground/80 transition-colors">
-                          {topContributor.login}
-                        </h3>
-                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                          <span className="font-medium text-foreground">
-                            {topContributor.contributions}
-                          </span>
-                          <span>contributions</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </Link>
+                <div className="flex flex-col md:flex-row gap-6 justify-center max-w-4xl mx-auto">
+                  {topContributors.map((contributor, index) => (
+                    <Link
+                      key={contributor.id}
+                      href={contributor.html_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group block flex-1"
+                    >
+                      <div className="relative mx-auto max-w-md">
+                        <div className="absolute inset-0 bg-gradient-to-r from-muted/50 to-muted/30 rounded-2xl blur group-hover:blur-md transition-all duration-300" />
+                        <Card className="relative bg-background/80 backdrop-blur-sm border-2 group-hover:border-muted-foreground/20 transition-all duration-300 group-hover:shadow-xl">
+                          <CardContent className="p-8 text-center">
+                            <div className="relative mb-6">
+                              <Avatar className="h-24 w-24 mx-auto ring-4 ring-background shadow-2xl">
+                                <AvatarImage
+                                  src={contributor.avatar_url}
+                                  alt={`${contributor.login}'s avatar`}
+                                />
+                                <AvatarFallback className="text-lg font-semibold">
+                                  {contributor.login.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="absolute -top-2 -right-2 bg-foreground text-background rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                                {index + 1}
+                              </div>
+                            </div>
+                            <h3 className="text-xl font-semibold mb-2 group-hover:text-foreground/80 transition-colors">
+                              {contributor.login}
+                            </h3>
+                            <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                              <span className="font-medium text-foreground">
+                                {contributor.contributions}
+                              </span>
+                              <span>contributions</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -167,7 +173,7 @@ export default async function ContributorsPage() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
                   {otherContributors.map((contributor, index) => (
                     <Link
                       key={contributor.id}
@@ -179,8 +185,8 @@ export default async function ContributorsPage() {
                         animationDelay: `${index * 50}ms`,
                       }}
                     >
-                      <div className="text-center p-4 rounded-xl hover:bg-muted/50 transition-all duration-300 group-hover:scale-105">
-                        <Avatar className="h-16 w-16 mx-auto mb-3 ring-2 ring-transparent group-hover:ring-muted-foreground/20 transition-all duration-300">
+                      <div className="text-center p-2 rounded-xl transition-all duration-300 hover:opacity-50">
+                        <Avatar className="h-16 w-16 mx-auto mb-3">
                           <AvatarImage
                             src={contributor.avatar_url}
                             alt={`${contributor.login}'s avatar`}

@@ -59,7 +59,16 @@ Before you begin, ensure you have the following installed on your system:
     Navigate into the web app's directory and create a `.env` file from the example:
     ```bash
     cd apps/web
-    cp .env.example .env
+
+    
+    # Unix/Linux/Mac
+    cp .env.example .env.local
+
+    # Windows Command Prompt
+    copy .env.example .env.local
+    
+    # Windows PowerShell
+    Copy-Item .env.example .env.local
     ```
     *The default values in the `.env` file should work for local development.*
 
@@ -94,13 +103,13 @@ Before you begin, ensure you have the following installed on your system:
 
 The application will be available at [http://localhost:3000](http://localhost:3000).
 
-=======
+---
 
 
 ## Contributing
 
 Visit [CONTRIBUTING.md](.github/CONTRIBUTING.md)
-=======
+---
 We welcome contributions! Please see our [Contributing Guide](.github/CONTRIBUTING.md) for detailed setup instructions and development guidelines.
 
 Quick start for contributors:

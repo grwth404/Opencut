@@ -1,32 +1,98 @@
 "use client";
 
-import { useTimelineStore } from "@/stores/timeline-store";
-import { useMediaStore } from "@/stores/media-store";
+import {
+  useTimelineStore,
+  type TimelineClip,
+  type TimelineTrack,
+} from "@/stores/timeline-store";
+import { useMediaStore, type MediaItem } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { VideoPlayer } from "@/components/ui/video-player";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Volume2, VolumeX } from "lucide-react";
-import { useState, useRef } from "react";
+import { Play, Pause, Volume2, VolumeX, Plus } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 
-// Debug flag - set to false to hide active clips info
-const SHOW_DEBUG_INFO = process.env.NODE_ENV === "development";
+interface ActiveClip {
+  clip: TimelineClip;
+  track: TimelineTrack;
+  mediaItem: MediaItem | null;
+}
 
 export function PreviewPanel() {
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
-  const { isPlaying, toggle, currentTime, muted, toggleMute, volume } =
-    usePlaybackStore();
+  const { currentTime, muted, toggleMute, volume } = usePlaybackStore();
   const [canvasSize, setCanvasSize] = useState({ width: 1920, height: 1080 });
-  const [showDebug, setShowDebug] = useState(SHOW_DEBUG_INFO);
   const previewRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [previewDimensions, setPreviewDimensions] = useState({
+    width: 0,
+    height: 0,
+  });
+
+  // Calculate optimal preview size that fits in container while maintaining aspect ratio
+  useEffect(() => {
+    const updatePreviewSize = () => {
+      if (!containerRef.current) return;
+
+      const container = containerRef.current.getBoundingClientRect();
+      const computedStyle = getComputedStyle(containerRef.current);
+
+      // Get padding values
+      const paddingTop = parseFloat(computedStyle.paddingTop);
+      const paddingBottom = parseFloat(computedStyle.paddingBottom);
+      const paddingLeft = parseFloat(computedStyle.paddingLeft);
+      const paddingRight = parseFloat(computedStyle.paddingRight);
+
+      // Get gap value (gap-4 = 1rem = 16px)
+      const gap = parseFloat(computedStyle.gap) || 16;
+
+      // Get toolbar height if it exists
+      const toolbar = containerRef.current.querySelector("[data-toolbar]");
+      const toolbarHeight = toolbar
+        ? toolbar.getBoundingClientRect().height
+        : 0;
+
+      // Calculate available space after accounting for padding, gap, and toolbar
+      const availableWidth = container.width - paddingLeft - paddingRight;
+      const availableHeight =
+        container.height -
+        paddingTop -
+        paddingBottom -
+        toolbarHeight -
+        (toolbarHeight > 0 ? gap : 0);
+
+      const targetRatio = canvasSize.width / canvasSize.height;
+      const containerRatio = availableWidth / availableHeight;
+
+      let width, height;
+
+      if (containerRatio > targetRatio) {
+        // Container is wider - constrain by height
+        height = availableHeight;
+        width = height * targetRatio;
+      } else {
+        // Container is taller - constrain by width
+        width = availableWidth;
+        height = width / targetRatio;
+      }
+
+      setPreviewDimensions({ width, height });
+    };
+
+    updatePreviewSize();
+
+    const resizeObserver = new ResizeObserver(updatePreviewSize);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [canvasSize.width, canvasSize.height]);
 
   // Get active clips at current time
-  const getActiveClips = () => {
-    const activeClips: Array<{
-      clip: any;
-      track: any;
-      mediaItem: any;
-    }> = [];
+  const getActiveClips = (): ActiveClip[] => {
+    const activeClips: ActiveClip[] = [];
 
     tracks.forEach((track) => {
       track.clips.forEach((clip) => {
@@ -37,12 +103,10 @@ export function PreviewPanel() {
         if (currentTime >= clipStart && currentTime < clipEnd) {
           const mediaItem =
             clip.mediaId === "test"
-              ? { type: "test", name: clip.name, url: "", thumbnailUrl: "" }
-              : mediaItems.find((item) => item.id === clip.mediaId);
+              ? null // Test clips don't have a real media item
+              : mediaItems.find((item) => item.id === clip.mediaId) || null;
 
-          if (mediaItem || clip.mediaId === "test") {
-            activeClips.push({ clip, track, mediaItem });
-          }
+          activeClips.push({ clip, track, mediaItem });
         }
       });
     });
@@ -51,10 +115,9 @@ export function PreviewPanel() {
   };
 
   const activeClips = getActiveClips();
-  const aspectRatio = canvasSize.width / canvasSize.height;
 
   // Render a clip
-  const renderClip = (clipData: any, index: number) => {
+  const renderClip = (clipData: ActiveClip, index: number) => {
     const { clip, mediaItem } = clipData;
 
     // Test clips
@@ -155,18 +218,6 @@ export function PreviewPanel() {
           ))}
         </select>
 
-        {/* Debug Toggle - Only show in development */}
-        {SHOW_DEBUG_INFO && (
-          <Button
-            variant="text"
-            size="sm"
-            onClick={() => setShowDebug(!showDebug)}
-            className="text-xs"
-          >
-            Debug {showDebug ? "ON" : "OFF"}
-          </Button>
-        )}
-
         <Button
           variant="outline"
           size="sm"
@@ -180,30 +231,23 @@ export function PreviewPanel() {
           )}
           {muted || volume === 0 ? "Unmute" : "Mute"}
         </Button>
-
-        <Button variant="outline" size="sm" onClick={toggle}>
-          {isPlaying ? (
-            <Pause className="h-3 w-3 mr-1" />
-          ) : (
-            <Play className="h-3 w-3 mr-1" />
-          )}
-          {isPlaying ? "Pause" : "Play"}
-        </Button>
       </div>
 
       {/* Preview Area */}
-      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 bg-gray-900 min-h-0 min-w-0">
+      <div
+        ref={containerRef}
+        className="flex-1 flex flex-col items-center justify-center p-3 min-h-0 min-w-0 gap-4"
+      >
         <div
           ref={previewRef}
-          className="relative overflow-hidden rounded-sm max-w-full max-h-full bg-black border border-gray-600"
+          className="relative overflow-hidden rounded-sm bg-black border"
           style={{
-            aspectRatio: aspectRatio.toString(),
-            width: "100%",
-            height: "100%",
+            width: previewDimensions.width,
+            height: previewDimensions.height,
           }}
         >
           {activeClips.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center text-white/50">
+            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
               {tracks.length === 0
                 ? "Drop media to start editing"
                 : "No clips at current time"}
@@ -212,35 +256,28 @@ export function PreviewPanel() {
             activeClips.map((clipData, index) => renderClip(clipData, index))
           )}
         </div>
-      </div>
 
-      {/* Debug Info Panel - Conditionally rendered */}
-      {showDebug && (
-        <div className="border-t bg-background p-2 flex-shrink-0">
-          <div className="text-xs font-medium mb-1">
-            Debug: Active Clips ({activeClips.length})
-          </div>
-          <div className="flex gap-2 overflow-x-auto">
-            {activeClips.map((clipData, index) => (
-              <div
-                key={clipData.clip.id}
-                className="flex items-center gap-1 px-2 py-1 bg-muted rounded text-xs whitespace-nowrap"
-              >
-                <span className="w-4 h-4 bg-primary/20 rounded text-center text-xs leading-4">
-                  {index + 1}
-                </span>
-                <span>{clipData.clip.name}</span>
-                <span className="text-muted-foreground">
-                  ({clipData.mediaItem?.type || "test"})
-                </span>
-              </div>
-            ))}
-            {activeClips.length === 0 && (
-              <span className="text-muted-foreground">No active clips</span>
-            )}
-          </div>
-        </div>
-      )}
+        <PreviewToolbar />
+      </div>
+    </div>
+  );
+}
+
+function PreviewToolbar() {
+  const { isPlaying, toggle } = usePlaybackStore();
+
+  return (
+    <div
+      data-toolbar
+      className="flex items-center justify-center gap-2 px-4 pt-2 bg-background-500 w-full"
+    >
+      <Button variant="text" size="icon" onClick={toggle}>
+        {isPlaying ? (
+          <Pause className="h-3 w-3" />
+        ) : (
+          <Play className="h-3 w-3" />
+        )}
+      </Button>
     </div>
   );
 }

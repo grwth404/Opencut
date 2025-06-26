@@ -1,13 +1,10 @@
-[build]
-  base = "."
-  command = "bun install && bunx turbo build --filter=opencut"
-  publish = "apps/web/.next"
-
+# Next.js plugin
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
+# Redirects for domain migration
 [[redirects]]
   from = "https://appcut.app/*"
   to = "https://opencut.app/:splat"
   status = 301
-  force = true 
+  force = true
