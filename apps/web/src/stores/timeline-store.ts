@@ -443,16 +443,42 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
 
     get().pushHistory();
 
-    // Find or create an audio track
-    let audioTrackId = tracks.find((t) => t.type === "audio")?.id;
+    // Find existing audio track or prepare to create one
+    const existingAudioTrack = tracks.find((t) => t.type === "audio");
+    const audioClipId = crypto.randomUUID();
 
-    if (!audioTrackId) {
-      audioTrackId = crypto.randomUUID();
+    if (existingAudioTrack) {
+      // Add audio clip to existing audio track
+      set((state) => ({
+        tracks: state.tracks.map((track) =>
+          track.id === existingAudioTrack.id
+            ? {
+                ...track,
+                clips: [
+                  ...track.clips,
+                  {
+                    ...clip,
+                    id: audioClipId,
+                    name: getClipNameWithSuffix(clip.name, "audio"),
+                  },
+                ],
+              }
+            : track
+        ),
+      }));
+    } else {
+      // Create new audio track with the audio clip in a single atomic update
       const newAudioTrack: TimelineTrack = {
-        id: audioTrackId,
+        id: crypto.randomUUID(),
         name: "Audio Track",
         type: "audio",
-        clips: [],
+        clips: [
+          {
+            ...clip,
+            id: audioClipId,
+            name: getClipNameWithSuffix(clip.name, "audio"),
+          },
+        ],
         muted: false,
       };
 
@@ -460,26 +486,6 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
         tracks: [...state.tracks, newAudioTrack],
       }));
     }
-
-    const audioClipId = crypto.randomUUID();
-
-    set((state) => ({
-      tracks: state.tracks.map((track) =>
-        track.id === audioTrackId
-          ? {
-              ...track,
-              clips: [
-                ...track.clips,
-                {
-                  ...clip,
-                  id: audioClipId,
-                  name: getClipNameWithSuffix(clip.name, "audio"),
-                },
-              ],
-            }
-          : track
-      ),
-    }));
 
     return audioClipId;
   },
