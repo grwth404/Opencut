@@ -64,7 +64,13 @@ export function MediaPanel() {
     // Remove tracks automatically when delete media 
     const { tracks, removeTrack } = useTimelineStore.getState();
     tracks.forEach((track) => {
-      if (track.clips.some((clip) => clip.mediaId === id)) {
+      const clipsToRemove = track.clips.filter((clip) => clip.mediaId === id);
+      clipsToRemove.forEach((clip) => {
+        useTimelineStore.getState().removeClipFromTrack(track.id, clip.id);
+      });
+      // Only remove track if it becomes empty and has no other clips
+      const updatedTrack = useTimelineStore.getState().tracks.find(t => t.id === track.id);
+      if (updatedTrack && updatedTrack.clips.length === 0) {
         removeTrack(track.id);
       }
     });
