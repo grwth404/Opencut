@@ -39,7 +39,6 @@ import {
 
 import AudioWaveform from "./audio-waveform";
 
-
 export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their clips.
   // You can drag media here to add it to your project.
@@ -58,6 +57,10 @@ export function Timeline() {
     updateClipTrim,
     undo,
     redo,
+    splitClip,
+    splitAndKeepLeft,
+    splitAndKeepRight,
+    separateAudio,
   } = useTimelineStore();
   const { mediaItems, addMediaItem } = useMediaStore();
   const {
@@ -217,7 +220,7 @@ export function Timeline() {
     const bx2 = clamp(x2, 0, rect.width);
     const by1 = clamp(y1, 0, rect.height);
     const by2 = clamp(y2, 0, rect.height);
-    let newSelection: { trackId: string; clipId: string; }[] = [];
+    let newSelection: { trackId: string; clipId: string }[] = [];
     tracks.forEach((track, trackIdx) => {
       track.clips.forEach((clip) => {
         const effectiveDuration = clip.duration - clip.trimStart - clip.trimEnd;
@@ -453,33 +456,28 @@ export function Timeline() {
       toast.error("No clips selected");
       return;
     }
+
+    let splitCount = 0;
     selectedClips.forEach(({ trackId, clipId }) => {
       const track = tracks.find((t) => t.id === trackId);
       const clip = track?.clips.find((c) => c.id === clipId);
       if (clip && track) {
-        const splitTime = currentTime;
         const effectiveStart = clip.startTime;
         const effectiveEnd =
           clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
-        if (splitTime > effectiveStart && splitTime < effectiveEnd) {
-          updateClipTrim(
-            track.id,
-            clip.id,
-            clip.trimStart,
-            clip.trimEnd + (effectiveEnd - splitTime)
-          );
-          addClipToTrack(track.id, {
-            mediaId: clip.mediaId,
-            name: clip.name + " (split)",
-            duration: clip.duration,
-            startTime: splitTime,
-            trimStart: clip.trimStart + (splitTime - effectiveStart),
-            trimEnd: clip.trimEnd,
-          });
+
+        if (currentTime > effectiveStart && currentTime < effectiveEnd) {
+          const newClipId = splitClip(trackId, clipId, currentTime);
+          if (newClipId) splitCount++;
         }
       }
     });
-    toast.success("Split selected clip(s)");
+
+    if (splitCount > 0) {
+      toast.success(`Split ${splitCount} clip(s) at playhead`);
+    } else {
+      toast.error("Playhead must be within selected clips to split");
+    }
   };
 
   const handleDuplicateSelected = () => {
@@ -528,6 +526,94 @@ export function Timeline() {
       }
     });
     toast.success("Freeze frame added for selected clip(s)");
+  };
+
+  const handleSplitAndKeepLeft = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+
+    let splitCount = 0;
+    selectedClips.forEach(({ trackId, clipId }) => {
+      const track = tracks.find((t) => t.id === trackId);
+      const clip = track?.clips.find((c) => c.id === clipId);
+      if (clip && track) {
+        const effectiveStart = clip.startTime;
+        const effectiveEnd =
+          clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+
+        if (currentTime > effectiveStart && currentTime < effectiveEnd) {
+          splitAndKeepLeft(trackId, clipId, currentTime);
+          splitCount++;
+        }
+      }
+    });
+
+    if (splitCount > 0) {
+      toast.success(`Split and kept left portion of ${splitCount} clip(s)`);
+    } else {
+      toast.error("Playhead must be within selected clips");
+    }
+  };
+
+  const handleSplitAndKeepRight = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+
+    let splitCount = 0;
+    selectedClips.forEach(({ trackId, clipId }) => {
+      const track = tracks.find((t) => t.id === trackId);
+      const clip = track?.clips.find((c) => c.id === clipId);
+      if (clip && track) {
+        const effectiveStart = clip.startTime;
+        const effectiveEnd =
+          clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+
+        if (currentTime > effectiveStart && currentTime < effectiveEnd) {
+          splitAndKeepRight(trackId, clipId, currentTime);
+          splitCount++;
+        }
+      }
+    });
+
+    if (splitCount > 0) {
+      toast.success(`Split and kept right portion of ${splitCount} clip(s)`);
+    } else {
+      toast.error("Playhead must be within selected clips");
+    }
+  };
+
+  const handleSeparateAudio = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+
+    let separatedCount = 0;
+    selectedClips.forEach(({ trackId, clipId }) => {
+      const track = tracks.find((t) => t.id === trackId);
+      const clip = track?.clips.find((c) => c.id === clipId);
+      const mediaItem = mediaItems.find((item) => item.id === clip?.mediaId);
+
+      if (
+        clip &&
+        track &&
+        mediaItem?.type === "video" &&
+        track.type === "video"
+      ) {
+        const audioClipId = separateAudio(trackId, clipId);
+        if (audioClipId) separatedCount++;
+      }
+    });
+
+    if (separatedCount > 0) {
+      toast.success(`Separated audio from ${separatedCount} video clip(s)`);
+    } else {
+      toast.error("Select video clips to separate audio");
+    }
   };
 
   const handleDeleteSelected = () => {
@@ -597,8 +683,9 @@ export function Timeline() {
           <div className="w-px h-6 bg-border mx-1" />
 
           {/* Time Display */}
-          <div className="text-xs text-muted-foreground font-mono px-2"
-            style={{ minWidth: '18ch', textAlign: 'center' }}
+          <div
+            className="text-xs text-muted-foreground font-mono px-2"
+            style={{ minWidth: "18ch", textAlign: "center" }}
           >
             {currentTime.toFixed(1)}s / {duration.toFixed(1)}s
           </div>
@@ -641,34 +728,42 @@ export function Timeline() {
                 <Scissors className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Split clip (S)</TooltipContent>
+            <TooltipContent>Split clip (Ctrl+S)</TooltipContent>
           </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="text" size="icon">
+              <Button
+                variant="text"
+                size="icon"
+                onClick={handleSplitAndKeepLeft}
+              >
                 <ArrowLeftToLine className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Split and keep left (A)</TooltipContent>
+            <TooltipContent>Split and keep left (Ctrl+Q)</TooltipContent>
           </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="text" size="icon">
+              <Button
+                variant="text"
+                size="icon"
+                onClick={handleSplitAndKeepRight}
+              >
                 <ArrowRightToLine className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Split and keep right (D)</TooltipContent>
+            <TooltipContent>Split and keep right (Ctrl+W)</TooltipContent>
           </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="text" size="icon">
+              <Button variant="text" size="icon" onClick={handleSeparateAudio}>
                 <SplitSquareHorizontal className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Separate audio (E)</TooltipContent>
+            <TooltipContent>Separate audio (Ctrl+D)</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -781,17 +876,19 @@ export function Timeline() {
                     return (
                       <div
                         key={i}
-                        className={`absolute top-0 bottom-0 ${isMainMarker
-                          ? "border-l border-muted-foreground/40"
-                          : "border-l border-muted-foreground/20"
-                          }`}
+                        className={`absolute top-0 bottom-0 ${
+                          isMainMarker
+                            ? "border-l border-muted-foreground/40"
+                            : "border-l border-muted-foreground/20"
+                        }`}
                         style={{ left: `${time * 50 * zoomLevel}px` }}
                       >
                         <span
-                          className={`absolute top-1 left-1 text-xs ${isMainMarker
-                            ? "text-muted-foreground font-medium"
-                            : "text-muted-foreground/70"
-                            }`}
+                          className={`absolute top-1 left-1 text-xs ${
+                            isMainMarker
+                              ? "text-muted-foreground font-medium"
+                              : "text-muted-foreground/70"
+                          }`}
                         >
                           {(() => {
                             const formatTime = (seconds: number) => {
@@ -852,12 +949,13 @@ export function Timeline() {
                   >
                     <div className="flex items-center flex-1 min-w-0">
                       <div
-                        className={`w-3 h-3 rounded-full flex-shrink-0 ${track.type === "video"
-                          ? "bg-blue-500"
-                          : track.type === "audio"
-                            ? "bg-green-500"
-                            : "bg-purple-500"
-                          }`}
+                        className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                          track.type === "video"
+                            ? "bg-blue-500"
+                            : track.type === "audio"
+                              ? "bg-green-500"
+                              : "bg-purple-500"
+                        }`}
                       />
                       <span className="ml-2 text-sm font-medium truncate">
                         {track.name}
@@ -1197,7 +1295,7 @@ function TimelineTrackContent({
     });
   };
 
-  const updateTrimFromMouseMove = (e: { clientX: number; }) => {
+  const updateTrimFromMouseMove = (e: { clientX: number }) => {
     if (!resizing) return;
 
     const clip = track.clips.find((c) => c.id === resizing.clipId);
@@ -1632,18 +1730,18 @@ function TimelineTrackContent({
     }
 
     if (mediaItem.type === "audio") {
-    return (
-      <div className="w-full h-full flex items-center gap-2">
-        <div className="flex-1 min-w-0">
-          <AudioWaveform 
-            audioUrl={mediaItem.url} 
-            height={24}
-            className="w-full"
-          />
+      return (
+        <div className="w-full h-full flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <AudioWaveform
+              audioUrl={mediaItem.url}
+              height={24}
+              className="w-full"
+            />
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
     // Fallback for videos without thumbnails
     return (
@@ -1681,12 +1779,13 @@ function TimelineTrackContent({
 
   return (
     <div
-      className={`w-full h-full transition-all duration-150 ease-out ${isDraggedOver
-        ? wouldOverlap
-          ? "bg-red-500/15 border-2 border-dashed border-red-400 shadow-lg"
-          : "bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg"
-        : "hover:bg-muted/20"
-        }`}
+      className={`w-full h-full transition-all duration-150 ease-out ${
+        isDraggedOver
+          ? wouldOverlap
+            ? "bg-red-500/15 border-2 border-dashed border-red-400 shadow-lg"
+            : "bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg"
+          : "hover:bg-muted/20"
+      }`}
       onContextMenu={(e) => {
         e.preventDefault();
         // Only show track menu if we didn't click on a clip
@@ -1710,12 +1809,13 @@ function TimelineTrackContent({
       <div className="h-full relative track-clips-container min-w-full">
         {track.clips.length === 0 ? (
           <div
-            className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${isDropping
-              ? wouldOverlap
-                ? "border-red-500 bg-red-500/10 text-red-600"
-                : "border-blue-500 bg-blue-500/10 text-blue-600"
-              : "border-muted/30"
-              }`}
+            className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${
+              isDropping
+                ? wouldOverlap
+                  ? "border-red-500 bg-red-500/10 text-red-600"
+                  : "border-blue-500 bg-blue-500/10 text-blue-600"
+                : "border-muted/30"
+            }`}
           >
             {isDropping
               ? wouldOverlap
@@ -1860,4 +1960,3 @@ function TimelineTrackContent({
     </div>
   );
 }
-
