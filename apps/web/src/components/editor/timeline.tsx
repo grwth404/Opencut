@@ -722,6 +722,7 @@ export function Timeline() {
 
           <div className="w-px h-6 bg-border mx-1" />
 
+          {/* Clip editing operations */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="text" size="icon" onClick={handleSplitSelected}>
