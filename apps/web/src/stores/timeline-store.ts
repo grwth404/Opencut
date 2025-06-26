@@ -1,5 +1,20 @@
 import { create } from "zustand";
 
+// Helper function to manage clip naming with suffixes
+const getClipNameWithSuffix = (
+  originalName: string,
+  suffix: string
+): string => {
+  // Remove existing suffixes to prevent accumulation
+  const baseName = originalName
+    .replace(/ \(left\)$/, "")
+    .replace(/ \(right\)$/, "")
+    .replace(/ \(audio\)$/, "")
+    .replace(/ \(split \d+\)$/, "");
+
+  return `${baseName} (${suffix})`;
+};
+
 export interface TimelineClip {
   id: string;
   mediaId: string;
@@ -319,14 +334,14 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
                       {
                         ...c,
                         trimEnd: c.trimEnd + secondDuration,
-                        name: c.name + " (left)",
+                        name: getClipNameWithSuffix(c.name, "left"),
                       },
                       {
                         ...c,
                         id: secondClipId,
                         startTime: splitTime,
                         trimStart: c.trimStart + firstDuration,
-                        name: c.name + " (right)",
+                        name: getClipNameWithSuffix(c.name, "right"),
                       },
                     ]
                   : [c]
@@ -369,7 +384,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
                   ? {
                       ...c,
                       trimEnd: c.trimEnd + durationToRemove,
-                      name: c.name + " (left)",
+                      name: getClipNameWithSuffix(c.name, "left"),
                     }
                   : c
               ),
@@ -408,7 +423,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
                       ...c,
                       startTime: splitTime,
                       trimStart: c.trimStart + relativeTime,
-                      name: c.name + " (right)",
+                      name: getClipNameWithSuffix(c.name, "right"),
                     }
                   : c
               ),
@@ -458,7 +473,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
                 {
                   ...clip,
                   id: audioClipId,
-                  name: clip.name + " (audio)",
+                  name: getClipNameWithSuffix(clip.name, "audio"),
                 },
               ],
             }
