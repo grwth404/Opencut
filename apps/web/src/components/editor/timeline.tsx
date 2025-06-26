@@ -781,15 +781,15 @@ export function Timeline() {
                       <div
                         key={i}
                         className={`absolute top-0 bottom-0 ${isMainMarker
-                            ? 'border-l border-muted-foreground/40'
-                            : 'border-l border-muted-foreground/20'
+                          ? 'border-l border-muted-foreground/40'
+                          : 'border-l border-muted-foreground/20'
                           }`}
                         style={{ left: `${time * 50 * zoomLevel}px` }}
                       >
                         <span
                           className={`absolute top-1 left-1 text-xs ${isMainMarker
-                              ? 'text-muted-foreground font-medium'
-                              : 'text-muted-foreground/70'
+                            ? 'text-muted-foreground font-medium'
+                            : 'text-muted-foreground/70'
                             }`}
                         >
                           {(() => {
@@ -852,10 +852,10 @@ export function Timeline() {
                     <div className="flex items-center flex-1 min-w-0">
                       <div
                         className={`w-3 h-3 rounded-full flex-shrink-0 ${track.type === 'video'
-                            ? 'bg-blue-500'
-                            : track.type === 'audio'
-                              ? 'bg-green-500'
-                              : 'bg-purple-500'
+                          ? 'bg-blue-500'
+                          : track.type === 'audio'
+                            ? 'bg-green-500'
+                            : 'bg-purple-500'
                           }`}
                       />
                       <span className="ml-2 text-sm font-medium truncate">
@@ -1681,10 +1681,10 @@ function TimelineTrackContent({
   return (
     <div
       className={`w-full h-full transition-all duration-150 ease-out ${isDraggedOver
-          ? wouldOverlap
-            ? 'bg-red-500/15 border-2 border-dashed border-red-400 shadow-lg'
-            : 'bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg'
-          : 'hover:bg-muted/20'
+        ? wouldOverlap
+          ? 'bg-red-500/15 border-2 border-dashed border-red-400 shadow-lg'
+          : 'bg-blue-500/15 border-2 border-dashed border-blue-400 shadow-lg'
+        : 'hover:bg-muted/20'
         }`}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -1710,10 +1710,10 @@ function TimelineTrackContent({
         {track.clips.length === 0 ? (
           <div
             className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${isDropping
-                ? wouldOverlap
-                  ? 'border-red-500 bg-red-500/10 text-red-600'
-                  : 'border-blue-500 bg-blue-500/10 text-blue-600'
-                : 'border-muted/30'
+              ? wouldOverlap
+                ? 'border-red-500 bg-red-500/10 text-red-600'
+                : 'border-blue-500 bg-blue-500/10 text-blue-600'
+              : 'border-muted/30'
               }`}
           >
             {isDropping
