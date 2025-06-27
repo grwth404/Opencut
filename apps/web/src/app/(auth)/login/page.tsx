@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Suspense } from "react";
+import { memo, Suspense } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -19,7 +19,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { GoogleIcon } from "@/components/icons";
 import { useLogin } from "@/hooks/auth/useLogin";
 
-export default function LoginPage() {
+const LoginPage = () => {
   const router = useRouter();
   const {
     email,
@@ -138,3 +138,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+export default memo(LoginPage);
