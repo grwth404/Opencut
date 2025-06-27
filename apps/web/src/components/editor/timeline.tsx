@@ -58,6 +58,10 @@ export function Timeline() {
     clearSelectedClips,
     setSelectedClips,
     updateClipTrim,
+    splitClip,
+    splitAndKeepLeft,
+    splitAndKeepRight,
+    separateAudio,
     undo,
     redo,
   } = useTimelineStore();
@@ -455,33 +459,26 @@ export function Timeline() {
       toast.error("No clips selected");
       return;
     }
+    let splitCount = 0;
     selectedClips.forEach(({ trackId, clipId }) => {
       const track = tracks.find((t) => t.id === trackId);
       const clip = track?.clips.find((c) => c.id === clipId);
       if (clip && track) {
-        const splitTime = currentTime;
         const effectiveStart = clip.startTime;
         const effectiveEnd =
           clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
-        if (splitTime > effectiveStart && splitTime < effectiveEnd) {
-          updateClipTrim(
-            track.id,
-            clip.id,
-            clip.trimStart,
-            clip.trimEnd + (effectiveEnd - splitTime)
-          );
-          addClipToTrack(track.id, {
-            mediaId: clip.mediaId,
-            name: clip.name + " (split)",
-            duration: clip.duration,
-            startTime: splitTime,
-            trimStart: clip.trimStart + (splitTime - effectiveStart),
-            trimEnd: clip.trimEnd,
-          });
+
+        if (currentTime > effectiveStart && currentTime < effectiveEnd) {
+          const newClipId = splitClip(trackId, clipId, currentTime);
+          if (newClipId) splitCount++;
         }
       }
     });
-    toast.success("Split selected clip(s)");
+    if (splitCount > 0) {
+      toast.success(`Split ${splitCount} clip(s) at playhead`);
+    } else {
+      toast.error("Playhead must be within selected clips to split");
+    }
   };
 
   const handleDuplicateSelected = () => {
@@ -531,7 +528,86 @@ export function Timeline() {
     });
     toast.success("Freeze frame added for selected clip(s)");
   };
+  const handleSplitAndKeepLeft = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+    
+    let splitCount = 0;
+    selectedClips.forEach(({ trackId, clipId }) => {
+      const track = tracks.find((t) => t.id === trackId);
+      const clip = track?.clips.find((c) => c.id === clipId);
+      if (clip && track) {
+        const effectiveStart = clip.startTime;
+        const effectiveEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+        
+        if (currentTime > effectiveStart && currentTime < effectiveEnd) {
+          splitAndKeepLeft(trackId, clipId, currentTime);
+          splitCount++;
+        }
+      }
+    });
+    
+    if (splitCount > 0) {
+      toast.success(`Split and kept left portion of ${splitCount} clip(s)`);
+    } else {
+      toast.error("Playhead must be within selected clips");
+    }
+  };
 
+  const handleSplitAndKeepRight = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+    
+    let splitCount = 0;
+    selectedClips.forEach(({ trackId, clipId }) => {
+      const track = tracks.find((t) => t.id === trackId);
+      const clip = track?.clips.find((c) => c.id === clipId);
+      if (clip && track) {
+        const effectiveStart = clip.startTime;
+        const effectiveEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+        
+        if (currentTime > effectiveStart && currentTime < effectiveEnd) {
+          splitAndKeepRight(trackId, clipId, currentTime);
+          splitCount++;
+        }
+      }
+    });
+    
+    if (splitCount > 0) {
+      toast.success(`Split and kept right portion of ${splitCount} clip(s)`);
+    } else {
+      toast.error("Playhead must be within selected clips");
+    }
+  };
+
+  const handleSeparateAudio = () => {
+    if (selectedClips.length === 0) {
+      toast.error("No clips selected");
+      return;
+    }
+    
+    let separatedCount = 0;
+    selectedClips.forEach(({ trackId, clipId }) => {
+      const track = tracks.find((t) => t.id === trackId);
+      const clip = track?.clips.find((c) => c.id === clipId);
+      const mediaItem = mediaItems.find((item) => item.id === clip?.mediaId);
+      
+      if (clip && track && mediaItem?.type === "video" && track.type === "video") {
+        const audioClipId = separateAudio(trackId, clipId);
+        if (audioClipId) separatedCount++;
+      }
+    });
+    
+    if (separatedCount > 0) {
+      toast.success(`Separated audio from ${separatedCount} video clip(s)`);
+    } else {
+      toast.error("Select video clips to separate audio");
+    }
+  };
   const handleDeleteSelected = () => {
     if (selectedClips.length === 0) {
       toast.error("No clips selected");
@@ -644,34 +720,34 @@ export function Timeline() {
                 <Scissors className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Split clip (S)</TooltipContent>
+            <TooltipContent>Split clip (Ctrl+S)</TooltipContent>
           </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="text" size="icon">
+              <Button variant="text" size="icon" onClick={handleSplitAndKeepLeft}>
                 <ArrowLeftToLine className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Split and keep left (A)</TooltipContent>
+            <TooltipContent>Split and keep left (Ctrl+Q)</TooltipContent>
           </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="text" size="icon">
+              <Button variant="text" size="icon" onClick={handleSplitAndKeepRight}>
                 <ArrowRightToLine className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Split and keep right (D)</TooltipContent>
+            <TooltipContent>Split and keep right (Ctrl+W)</TooltipContent>
           </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="text" size="icon">
+              <Button variant="text" size="icon" onClick={handleSeparateAudio}>
                 <SplitSquareHorizontal className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Separate audio (E)</TooltipContent>
+            <TooltipContent>Separate audio (Ctrl+D)</TooltipContent>
           </Tooltip>
 
           <Tooltip>
