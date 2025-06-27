@@ -101,6 +101,28 @@ export function Timeline() {
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubTime, setScrubTime] = useState<number | null>(null);
 
+  // Dynamic timeline width calculation based on playhead position and duration
+  const dynamicTimelineWidth = Math.max(
+    (duration || 0) * 50 * zoomLevel, // Base width from duration
+    (currentTime + 30) * 50 * zoomLevel, // Width to show current time + 30 seconds buffer
+    timelineRef.current?.clientWidth || 1000 // Minimum width
+  );
+
+  // Scroll synchronization and auto-scroll to playhead
+  const rulerScrollRef = useRef<HTMLDivElement>(null);
+  const tracksScrollRef = useRef<HTMLDivElement>(null);
+  const isUpdatingRef = useRef(false);
+  const lastRulerSync = useRef(0);
+  const lastTracksSync = useRef(0);
+
+  // New refs for direct playhead DOM manipulation
+  const rulerPlayheadRef = useRef<HTMLDivElement>(null);
+  const tracksPlayheadRef = useRef<HTMLDivElement>(null);
+
+  // Refs to store initial mouse and scroll positions for drag calculations
+  const initialMouseXRef = useRef(0);
+  const initialTimelineScrollLeftRef = useRef(0);
+
   // Update timeline duration when tracks change
   useEffect(() => {
     const totalDuration = getTotalDuration();
@@ -640,6 +662,57 @@ export function Timeline() {
     };
   }, [isInTimeline]);
 
+  // --- Scroll synchronization effect ---
+  useEffect(() => {
+    const rulerViewport = rulerScrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+    const tracksViewport = tracksScrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+    if (!rulerViewport || !tracksViewport) return;
+    const handleRulerScroll = () => {
+      const now = Date.now();
+      if (isUpdatingRef.current || now - lastRulerSync.current < 16) return;
+      lastRulerSync.current = now;
+      isUpdatingRef.current = true;
+      tracksViewport.scrollLeft = rulerViewport.scrollLeft;
+      isUpdatingRef.current = false;
+    };
+    const handleTracksScroll = () => {
+      const now = Date.now();
+      if (isUpdatingRef.current || now - lastTracksSync.current < 16) return;
+      lastTracksSync.current = now;
+      isUpdatingRef.current = true;
+      rulerViewport.scrollLeft = tracksViewport.scrollLeft;
+      isUpdatingRef.current = false;
+    };
+    rulerViewport.addEventListener('scroll', handleRulerScroll);
+    tracksViewport.addEventListener('scroll', handleTracksScroll);
+    return () => {
+      rulerViewport.removeEventListener('scroll', handleRulerScroll);
+      tracksViewport.removeEventListener('scroll', handleTracksScroll);
+    };
+  }, []);
+
+  // --- Playhead auto-scroll effect ---
+  useEffect(() => {
+    const rulerViewport = rulerScrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+    const tracksViewport = tracksScrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+    if (!rulerViewport || !tracksViewport) return;
+    const playheadPx = playheadPosition * 50 * zoomLevel;
+    const viewportWidth = rulerViewport.clientWidth;
+    const scrollMin = 0;
+    const scrollMax = rulerViewport.scrollWidth - viewportWidth;
+    // Center the playhead if it's not visible (100px buffer)
+    const desiredScroll = Math.max(
+      scrollMin,
+      Math.min(scrollMax, playheadPx - viewportWidth / 2)
+    );
+    if (
+      playheadPx < rulerViewport.scrollLeft + 100 ||
+      playheadPx > rulerViewport.scrollLeft + viewportWidth - 100
+    ) {
+      rulerViewport.scrollLeft = tracksViewport.scrollLeft = desiredScroll;
+    }
+  }, [playheadPosition, duration, zoomLevel]);
+
   return (
     <div
       className={`h-full flex flex-col transition-colors duration-200 relative ${isDragOver ? "bg-accent/30 border-accent" : ""}`}
@@ -822,11 +895,11 @@ export function Timeline() {
 
           {/* Timeline Ruler */}
           <div className="flex-1 relative overflow-hidden">
-            <ScrollArea className="w-full">
+            <ScrollArea className="w-full" ref={rulerScrollRef}>
               <div
                 className="relative h-12 bg-muted/30 cursor-pointer"
                 style={{
-                  width: `${Math.max(1000, duration * 50 * zoomLevel)}px`,
+                  width: `${dynamicTimelineWidth}px`,
                 }}
                 onClick={(e) => {
                   // Calculate the clicked time position and seek to it
@@ -958,17 +1031,12 @@ export function Timeline() {
 
           {/* Timeline Tracks Content */}
           <div className="flex-1 relative overflow-hidden">
-            <div
-              className="w-full h-full overflow-hidden flex"
-              ref={timelineRef}
-              style={{ position: "relative" }}
-            >
-              {/* Timeline grid and clips area (with left margin for sifdebar) */}
+            <ScrollArea className="w-full h-full" ref={tracksScrollRef}>
               <div
                 className="relative flex-1"
                 style={{
                   height: `${Math.max(200, Math.min(800, tracks.length * 60))}px`,
-                  width: `${Math.max(1000, duration * 50 * zoomLevel)}px`,
+                  width: `${dynamicTimelineWidth}px`,
                 }}
                 onClick={handleTimelineAreaClick}
                 onMouseDown={handleTimelineMouseDown}
@@ -1047,7 +1115,7 @@ export function Timeline() {
                   </div>
                 )}
               </div>
-            </div>
+            </ScrollArea>
           </div>
         </div>
       </div>
