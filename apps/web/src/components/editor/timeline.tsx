@@ -22,6 +22,13 @@ import {
   TooltipProvider,
 } from "../ui/tooltip";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "../ui/context-menu";
+import {
   useTimelineStore,
   type TimelineTrack,
   type TimelineClip as TypeTimelineClip,
@@ -40,7 +47,6 @@ import {
   SelectValue,
 } from "../ui/select";
 import { TimelineClip } from "./timeline-clip";
-import { ContextMenuState } from "@/types/timeline";
 
 export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their clips.
@@ -57,7 +63,6 @@ export function Timeline() {
     selectedClips,
     clearSelectedClips,
     setSelectedClips,
-    updateClipTrim,
     splitClip,
     splitAndKeepLeft,
     splitAndKeepRight,
@@ -83,9 +88,6 @@ export function Timeline() {
   const dragCounterRef = useRef(0);
   const timelineRef = useRef<HTMLDivElement>(null);
   const [isInTimeline, setIsInTimeline] = useState(false);
-
-  // Unified context menu state
-  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
   // Marquee selection state
   const [marquee, setMarquee] = useState<{
@@ -128,15 +130,6 @@ export function Timeline() {
     const totalDuration = getTotalDuration();
     setDuration(Math.max(totalDuration, 10)); // Minimum 10 seconds for empty timeline
   }, [tracks, setDuration, getTotalDuration]);
-
-  // Close context menu on click elsewhere
-  useEffect(() => {
-    const handleClick = () => setContextMenu(null);
-    if (contextMenu) {
-      window.addEventListener("click", handleClick);
-      return () => window.removeEventListener("click", handleClick);
-    }
-  }, [contextMenu]);
 
   // Keyboard event for deleting selected clips
   useEffect(() => {
@@ -555,22 +548,23 @@ export function Timeline() {
       toast.error("No clips selected");
       return;
     }
-    
+
     let splitCount = 0;
     selectedClips.forEach(({ trackId, clipId }) => {
       const track = tracks.find((t) => t.id === trackId);
       const clip = track?.clips.find((c) => c.id === clipId);
       if (clip && track) {
         const effectiveStart = clip.startTime;
-        const effectiveEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
-        
+        const effectiveEnd =
+          clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+
         if (currentTime > effectiveStart && currentTime < effectiveEnd) {
           splitAndKeepLeft(trackId, clipId, currentTime);
           splitCount++;
         }
       }
     });
-    
+
     if (splitCount > 0) {
       toast.success(`Split and kept left portion of ${splitCount} clip(s)`);
     } else {
@@ -583,22 +577,23 @@ export function Timeline() {
       toast.error("No clips selected");
       return;
     }
-    
+
     let splitCount = 0;
     selectedClips.forEach(({ trackId, clipId }) => {
       const track = tracks.find((t) => t.id === trackId);
       const clip = track?.clips.find((c) => c.id === clipId);
       if (clip && track) {
         const effectiveStart = clip.startTime;
-        const effectiveEnd = clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
-        
+        const effectiveEnd =
+          clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+
         if (currentTime > effectiveStart && currentTime < effectiveEnd) {
           splitAndKeepRight(trackId, clipId, currentTime);
           splitCount++;
         }
       }
     });
-    
+
     if (splitCount > 0) {
       toast.success(`Split and kept right portion of ${splitCount} clip(s)`);
     } else {
@@ -611,19 +606,24 @@ export function Timeline() {
       toast.error("No clips selected");
       return;
     }
-    
+
     let separatedCount = 0;
     selectedClips.forEach(({ trackId, clipId }) => {
       const track = tracks.find((t) => t.id === trackId);
       const clip = track?.clips.find((c) => c.id === clipId);
       const mediaItem = mediaItems.find((item) => item.id === clip?.mediaId);
-      
-      if (clip && track && mediaItem?.type === "video" && track.type === "video") {
+
+      if (
+        clip &&
+        track &&
+        mediaItem?.type === "video" &&
+        track.type === "video"
+      ) {
         const audioClipId = separateAudio(trackId, clipId);
         if (audioClipId) separatedCount++;
       }
     });
-    
+
     if (separatedCount > 0) {
       toast.success(`Separated audio from ${separatedCount} video clip(s)`);
     } else {
@@ -664,8 +664,12 @@ export function Timeline() {
 
   // --- Scroll synchronization effect ---
   useEffect(() => {
-    const rulerViewport = rulerScrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
-    const tracksViewport = tracksScrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+    const rulerViewport = rulerScrollRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    ) as HTMLElement;
+    const tracksViewport = tracksScrollRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    ) as HTMLElement;
     if (!rulerViewport || !tracksViewport) return;
     const handleRulerScroll = () => {
       const now = Date.now();
@@ -683,18 +687,22 @@ export function Timeline() {
       rulerViewport.scrollLeft = tracksViewport.scrollLeft;
       isUpdatingRef.current = false;
     };
-    rulerViewport.addEventListener('scroll', handleRulerScroll);
-    tracksViewport.addEventListener('scroll', handleTracksScroll);
+    rulerViewport.addEventListener("scroll", handleRulerScroll);
+    tracksViewport.addEventListener("scroll", handleTracksScroll);
     return () => {
-      rulerViewport.removeEventListener('scroll', handleRulerScroll);
-      tracksViewport.removeEventListener('scroll', handleTracksScroll);
+      rulerViewport.removeEventListener("scroll", handleRulerScroll);
+      tracksViewport.removeEventListener("scroll", handleTracksScroll);
     };
   }, []);
 
   // --- Playhead auto-scroll effect ---
   useEffect(() => {
-    const rulerViewport = rulerScrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
-    const tracksViewport = tracksScrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+    const rulerViewport = rulerScrollRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    ) as HTMLElement;
+    const tracksViewport = tracksScrollRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    ) as HTMLElement;
     if (!rulerViewport || !tracksViewport) return;
     const playheadPx = playheadPosition * 50 * zoomLevel;
     const viewportWidth = rulerViewport.clientWidth;
@@ -798,7 +806,11 @@ export function Timeline() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="text" size="icon" onClick={handleSplitAndKeepLeft}>
+              <Button
+                variant="text"
+                size="icon"
+                onClick={handleSplitAndKeepLeft}
+              >
                 <ArrowLeftToLine className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -807,7 +819,11 @@ export function Timeline() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="text" size="icon" onClick={handleSplitAndKeepRight}>
+              <Button
+                variant="text"
+                size="icon"
+                onClick={handleSplitAndKeepRight}
+              >
                 <ArrowRightToLine className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -994,15 +1010,6 @@ export function Timeline() {
                   <div
                     key={track.id}
                     className="h-[60px] flex items-center px-3 border-b border-muted/30 bg-background group"
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      setContextMenu({
-                        type: "track",
-                        trackId: track.id,
-                        x: e.clientX,
-                        y: e.clientY,
-                      });
-                    }}
                   >
                     <div className="flex items-center flex-1 min-w-0">
                       <div
@@ -1055,41 +1062,62 @@ export function Timeline() {
                 ) : (
                   <>
                     {tracks.map((track, index) => (
-                      <div
-                        key={track.id}
-                        className="absolute left-0 right-0 border-b border-muted/30"
-                        style={{
-                          top: `${index * 60}px`,
-                          height: "60px",
-                        }}
-                        // Show context menu on right click
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          setContextMenu({
-                            type: "track",
-                            trackId: track.id,
-                            x: e.clientX,
-                            y: e.clientY,
-                          });
-                        }}
-                        onClick={(e) => {
-                          // If clicking empty area (not on a clip), deselect all clips
-                          if (
-                            !(e.target as HTMLElement).closest(".timeline-clip")
-                          ) {
-                            const { clearSelectedClips } =
-                              useTimelineStore.getState();
-                            clearSelectedClips();
-                          }
-                        }}
-                      >
-                        <TimelineTrackContent
-                          track={track}
-                          zoomLevel={zoomLevel}
-                          setContextMenu={setContextMenu}
-                          contextMenu={contextMenu}
-                        />
-                      </div>
+                      <ContextMenu key={track.id}>
+                        <ContextMenuTrigger asChild>
+                          <div
+                            className="absolute left-0 right-0 border-b border-muted/30"
+                            style={{
+                              top: `${index * 60}px`,
+                              height: "60px",
+                            }}
+                            onClick={(e) => {
+                              // If clicking empty area (not on a clip), deselect all clips
+                              if (
+                                !(e.target as HTMLElement).closest(
+                                  ".timeline-clip"
+                                )
+                              ) {
+                                clearSelectedClips();
+                              }
+                            }}
+                          >
+                            <TimelineTrackContent
+                              track={track}
+                              zoomLevel={zoomLevel}
+                            />
+                          </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem
+                            onClick={() => {
+                              toggleTrackMute(track.id);
+                            }}
+                          >
+                            {track.muted ? (
+                              <>
+                                <Volume2 className="h-4 w-4 mr-2" />
+                                Unmute Track
+                              </>
+                            ) : (
+                              <>
+                                <VolumeX className="h-4 w-4 mr-2" />
+                                Mute Track
+                              </>
+                            )}
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
+                            onClick={() => {
+                              removeTrack(track.id);
+                              toast.success("Track deleted");
+                            }}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Track
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
                     ))}
 
                     {/* Playhead for tracks area (scrubbable) */}
@@ -1119,155 +1147,6 @@ export function Timeline() {
           </div>
         </div>
       </div>
-
-      {/* Clean Unified Context Menu */}
-      {contextMenu && (
-        <div
-          className="fixed z-50 min-w-[160px] bg-popover border border-border rounded-md shadow-md py-1 text-sm"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onContextMenu={(e) => e.preventDefault()}
-        >
-          {contextMenu.type === "track" ? (
-            // Track context menu
-            <>
-              <button
-                className="flex items-center w-full px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors text-left"
-                onClick={() => {
-                  const track = tracks.find(
-                    (t) => t.id === contextMenu.trackId
-                  );
-                  if (track) toggleTrackMute(track.id);
-                  setContextMenu(null);
-                }}
-              >
-                {contextMenu.trackId ? (
-                  <div className="flex items-center w-full px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors text-left">
-                    <Volume2 className="h-4 w-4 mr-2" />
-                    Unmute Track
-                  </div>
-                ) : (
-                  <div className="flex items-center w-full px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors text-left">
-                    <VolumeX className="h-4 w-4 mr-2" />
-                    Mute Track
-                  </div>
-                )}
-              </button>
-              <div className="h-px bg-border mx-1 my-1" />
-              <button
-                className="flex items-center w-full px-3 py-2 text-destructive hover:bg-destructive/10 transition-colors text-left"
-                onClick={() => {
-                  removeTrack(contextMenu.trackId);
-                  setContextMenu(null);
-                  toast.success("Track deleted");
-                }}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Track
-              </button>
-            </>
-          ) : (
-            // Clip context menu
-            <>
-              <button
-                className="flex items-center w-full px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors text-left"
-                onClick={() => {
-                  if (contextMenu.clipId) {
-                    const track = tracks.find(
-                      (t) => t.id === contextMenu.trackId
-                    );
-                    const clip = track?.clips.find(
-                      (c) => c.id === contextMenu.clipId
-                    );
-                    if (clip && track) {
-                      const splitTime = currentTime;
-                      const effectiveStart = clip.startTime;
-                      const effectiveEnd =
-                        clip.startTime +
-                        (clip.duration - clip.trimStart - clip.trimEnd);
-
-                      if (
-                        splitTime > effectiveStart &&
-                        splitTime < effectiveEnd
-                      ) {
-                        updateClipTrim(
-                          track.id,
-                          clip.id,
-                          clip.trimStart,
-                          clip.trimEnd + (effectiveEnd - splitTime)
-                        );
-                        useTimelineStore.getState().addClipToTrack(track.id, {
-                          mediaId: clip.mediaId,
-                          name: clip.name + " (split)",
-                          duration: clip.duration,
-                          startTime: splitTime,
-                          trimStart:
-                            clip.trimStart + (splitTime - effectiveStart),
-                          trimEnd: clip.trimEnd,
-                        });
-                        toast.success("Clip split successfully");
-                      } else {
-                        toast.error("Playhead must be within clip to split");
-                      }
-                    }
-                  }
-                  setContextMenu(null);
-                }}
-              >
-                <Scissors className="h-4 w-4 mr-2" />
-                Split at Playhead
-              </button>
-              <button
-                className="flex items-center w-full px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors text-left"
-                onClick={() => {
-                  if (contextMenu.clipId) {
-                    const track = tracks.find(
-                      (t) => t.id === contextMenu.trackId
-                    );
-                    const clip = track?.clips.find(
-                      (c) => c.id === contextMenu.clipId
-                    );
-                    if (clip && track) {
-                      useTimelineStore.getState().addClipToTrack(track.id, {
-                        mediaId: clip.mediaId,
-                        name: clip.name + " (copy)",
-                        duration: clip.duration,
-                        startTime:
-                          clip.startTime +
-                          (clip.duration - clip.trimStart - clip.trimEnd) +
-                          0.1,
-                        trimStart: clip.trimStart,
-                        trimEnd: clip.trimEnd,
-                      });
-                      toast.success("Clip duplicated");
-                    }
-                  }
-                  setContextMenu(null);
-                }}
-              >
-                <Copy className="h-4 w-4 mr-2" />
-                Duplicate Clip
-              </button>
-              <div className="h-px bg-border mx-1 my-1" />
-              <button
-                className="flex items-center w-full px-3 py-2 text-destructive hover:bg-destructive/10 transition-colors text-left"
-                onClick={() => {
-                  if (contextMenu.clipId) {
-                    removeClipFromTrack(
-                      contextMenu.trackId,
-                      contextMenu.clipId
-                    );
-                    toast.success("Clip deleted");
-                  }
-                  setContextMenu(null);
-                }}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Clip
-              </button>
-            </>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -1275,13 +1154,9 @@ export function Timeline() {
 function TimelineTrackContent({
   track,
   zoomLevel,
-  setContextMenu,
-  contextMenu,
 }: {
   track: TimelineTrack;
   zoomLevel: number;
-  setContextMenu: (menu: ContextMenuState | null) => void;
-  contextMenu: ContextMenuState | null;
 }) {
   const { mediaItems } = useMediaStore();
   const {
@@ -1430,12 +1305,6 @@ function TimelineTrackContent({
       }
     }
 
-    // Close context menu if it's open
-    if (contextMenu) {
-      setContextMenu(null);
-      return; // Don't handle selection when closing context menu
-    }
-
     // Skip selection logic for multi-selection (handled in mousedown)
     if (e.metaKey || e.ctrlKey || e.shiftKey) {
       return;
@@ -1453,18 +1322,6 @@ function TimelineTrackContent({
       // If clip is not selected, select it (replacing other selections)
       selectClip(track.id, clip.id, false);
     }
-  };
-
-  const handleClipContextMenu = (e: React.MouseEvent, clipId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({
-      type: "clip",
-      trackId: track.id,
-      clipId: clipId,
-      x: e.clientX,
-      y: e.clientY,
-    });
   };
 
   const handleTrackDragOver = (e: React.DragEvent) => {
@@ -1801,18 +1658,6 @@ function TimelineTrackContent({
   return (
     <div
       className="w-full h-full hover:bg-muted/20"
-      onContextMenu={(e) => {
-        e.preventDefault();
-        // Only show track menu if we didn't click on a clip
-        if (!(e.target as HTMLElement).closest(".timeline-clip")) {
-          setContextMenu({
-            type: "track",
-            trackId: track.id,
-            x: e.clientX,
-            y: e.clientY,
-          });
-        }
-      }}
       onClick={(e) => {
         // If clicking empty area (not on a clip), deselect all clips
         if (!(e.target as HTMLElement).closest(".timeline-clip")) {
@@ -1852,17 +1697,91 @@ function TimelineTrackContent({
                 (c) => c.trackId === track.id && c.clipId === clip.id
               );
 
+              const handleClipSplit = () => {
+                const { currentTime } = usePlaybackStore();
+                const { updateClipTrim, addClipToTrack } = useTimelineStore();
+                const splitTime = currentTime;
+                const effectiveStart = clip.startTime;
+                const effectiveEnd =
+                  clip.startTime +
+                  (clip.duration - clip.trimStart - clip.trimEnd);
+
+                if (splitTime > effectiveStart && splitTime < effectiveEnd) {
+                  updateClipTrim(
+                    track.id,
+                    clip.id,
+                    clip.trimStart,
+                    clip.trimEnd + (effectiveEnd - splitTime)
+                  );
+                  addClipToTrack(track.id, {
+                    mediaId: clip.mediaId,
+                    name: clip.name + " (split)",
+                    duration: clip.duration,
+                    startTime: splitTime,
+                    trimStart: clip.trimStart + (splitTime - effectiveStart),
+                    trimEnd: clip.trimEnd,
+                  });
+                  toast.success("Clip split successfully");
+                } else {
+                  toast.error("Playhead must be within clip to split");
+                }
+              };
+
+              const handleClipDuplicate = () => {
+                const { addClipToTrack } = useTimelineStore.getState();
+                addClipToTrack(track.id, {
+                  mediaId: clip.mediaId,
+                  name: clip.name + " (copy)",
+                  duration: clip.duration,
+                  startTime:
+                    clip.startTime +
+                    (clip.duration - clip.trimStart - clip.trimEnd) +
+                    0.1,
+                  trimStart: clip.trimStart,
+                  trimEnd: clip.trimEnd,
+                });
+                toast.success("Clip duplicated");
+              };
+
+              const handleClipDelete = () => {
+                const { removeClipFromTrack } = useTimelineStore.getState();
+                removeClipFromTrack(track.id, clip.id);
+                toast.success("Clip deleted");
+              };
+
               return (
-                <TimelineClip
-                  key={clip.id}
-                  clip={clip}
-                  track={track}
-                  zoomLevel={zoomLevel}
-                  isSelected={isSelected}
-                  onContextMenu={handleClipContextMenu}
-                  onClipMouseDown={handleClipMouseDown}
-                  onClipClick={handleClipClick}
-                />
+                <ContextMenu key={clip.id}>
+                  <ContextMenuTrigger asChild>
+                    <div>
+                      <TimelineClip
+                        clip={clip}
+                        track={track}
+                        zoomLevel={zoomLevel}
+                        isSelected={isSelected}
+                        onClipMouseDown={handleClipMouseDown}
+                        onClipClick={handleClipClick}
+                      />
+                    </div>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem onClick={handleClipSplit}>
+                      <Scissors className="h-4 w-4 mr-2" />
+                      Split at Playhead
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={handleClipDuplicate}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Duplicate Clip
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem
+                      onClick={handleClipDelete}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Clip
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               );
             })}
           </>
