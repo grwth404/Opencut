@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -127,6 +128,8 @@ export default function ProjectsPage() {
 }
 
 function ProjectCard({ project }: { project: TProject }) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
   const formatDuration = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
@@ -144,7 +147,11 @@ function ProjectCard({ project }: { project: TProject }) {
   return (
     <Link href={`/editor/${project.id}`} className="block group">
       <Card className="overflow-hidden bg-background border-none p-0">
-        <div className="relative aspect-square bg-muted opacity-100 group-hover:opacity-75 transition-opacity">
+        <div
+          className={`relative aspect-square bg-muted transition-opacity ${
+            isDropdownOpen ? "opacity-65" : "opacity-100 group-hover:opacity-65"
+          }`}
+        >
           {/* Thumbnail preview */}
           <div className="absolute inset-0">
             <Image
@@ -166,18 +173,29 @@ function ProjectCard({ project }: { project: TProject }) {
             <h3 className="font-medium text-sm leading-snug group-hover:text-foreground/90 transition-colors line-clamp-2">
               {project.name}
             </h3>
-            <DropdownMenu>
+            <DropdownMenu onOpenChange={setIsDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="text"
                   size="sm"
-                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-all shrink-0 ml-2"
+                  className={`size-6 p-0 transition-all shrink-0 ml-2 ${
+                    isDropdownOpen
+                      ? "opacity-100"
+                      : "opacity-0 group-hover:opacity-100"
+                  }`}
                   onClick={(e) => e.preventDefault()}
                 >
                   <MoreHorizontal />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent
+                align="end"
+                onCloseAutoFocus={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log("close");
+                }}
+              >
                 <DropdownMenuItem>Rename</DropdownMenuItem>
                 <DropdownMenuItem>Duplicate</DropdownMenuItem>
                 <DropdownMenuSeparator />
