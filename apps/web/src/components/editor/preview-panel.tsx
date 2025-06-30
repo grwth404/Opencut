@@ -117,6 +117,9 @@ export function PreviewPanel() {
 
   const activeClips = getActiveClips();
 
+  // Check if there are any clips in the timeline at all
+  const hasAnyClips = tracks.some((track) => track.clips.length > 0);
+
   // Render a clip
   const renderClip = (clipData: ActiveClip, index: number) => {
     const { clip, mediaItem } = clipData;
@@ -230,26 +233,26 @@ export function PreviewPanel() {
         ref={containerRef}
         className="flex-1 flex flex-col items-center justify-center p-3 min-h-0 min-w-0 gap-4"
       >
-        <div
-          ref={previewRef}
-          className="relative overflow-hidden rounded-sm bg-black border"
-          style={{
-            width: previewDimensions.width,
-            height: previewDimensions.height,
-          }}
-        >
-          {activeClips.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-              {tracks.length === 0
-                ? "No media added to timeline"
-                : "No clips at current time"}
-            </div>
-          ) : (
-            activeClips.map((clipData, index) => renderClip(clipData, index))
-          )}
-        </div>
+        {hasAnyClips && (
+          <div
+            ref={previewRef}
+            className="relative overflow-hidden rounded-sm bg-black border"
+            style={{
+              width: previewDimensions.width,
+              height: previewDimensions.height,
+            }}
+          >
+            {activeClips.length === 0 ? (
+              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                No clips at current time
+              </div>
+            ) : (
+              activeClips.map((clipData, index) => renderClip(clipData, index))
+            )}
+          </div>
+        )}
 
-        <PreviewToolbar />
+        {hasAnyClips && <PreviewToolbar />}
       </div>
     </div>
   );
