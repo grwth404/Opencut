@@ -24,6 +24,7 @@ import {
 import { Play, Pause, Volume2, VolumeX, Plus, Square } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { formatTimeCode } from "@/lib/time";
 
 interface ActiveClip {
   clip: TimelineClip;
@@ -236,7 +237,7 @@ export function PreviewPanel() {
 }
 
 function PreviewToolbar({ hasAnyClips }: { hasAnyClips: boolean }) {
-  const { isPlaying, toggle } = usePlaybackStore();
+  const { isPlaying, toggle, currentTime } = usePlaybackStore();
   const {
     canvasSize,
     canvasPresets,
@@ -244,7 +245,7 @@ function PreviewToolbar({ hasAnyClips }: { hasAnyClips: boolean }) {
     setCanvasSizeFromAspectRatio,
   } = useEditorStore();
   const { mediaItems } = useMediaStore();
-  const { tracks } = useTimelineStore();
+  const { tracks, getTotalDuration } = useTimelineStore();
 
   // Find the current preset based on canvas size
   const currentPreset = canvasPresets.find(
@@ -289,11 +290,12 @@ function PreviewToolbar({ hasAnyClips }: { hasAnyClips: boolean }) {
       <div>
         <p
           className={cn(
-            "text-xs text-muted-foreground",
+            "text-xs text-muted-foreground tabular-nums",
             !hasAnyClips && "opacity-50"
           )}
         >
-          00:00:00:00/00:00:00:00
+          {formatTimeCode(currentTime, "HH:MM:SS:CS")}/
+          {formatTimeCode(getTotalDuration(), "HH:MM:SS:CS")}
         </p>
       </div>
       <Button
