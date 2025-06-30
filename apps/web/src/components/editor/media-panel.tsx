@@ -10,6 +10,12 @@ import { toast } from "sonner";
 import { AspectRatio } from "../ui/aspect-ratio";
 import { Button } from "../ui/button";
 import { DragOverlay } from "../ui/drag-overlay";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "../ui/context-menu";
 
 // MediaPanel lets users add, view, and drag media (images, videos, audio) into the project.
 // You can upload files or drag them from your computer. Dragging from here to the timeline adds them to your video project.
@@ -131,23 +137,22 @@ export function MediaPanel() {
 
     if (item.type === "image") {
       return (
-        <img
-          src={item.url}
-          alt={item.name}
-          className="w-full h-full object-contain rounded cursor-grab active:cursor-grabbing"
-          loading="lazy"
-          {...baseDragProps}
-        />
+        <div className="w-full h-full flex items-center justify-center">
+          <img
+            src={item.url}
+            alt={item.name}
+            className="max-w-full max-h-full object-contain rounded"
+            loading="lazy"
+            {...baseDragProps}
+          />
+        </div>
       );
     }
 
     if (item.type === "video") {
       if (item.thumbnailUrl) {
         return (
-          <div
-            className="relative w-full h-full cursor-grab active:cursor-grabbing"
-            {...baseDragProps}
-          >
+          <div className="relative w-full h-full" {...baseDragProps}>
             <img
               src={item.thumbnailUrl}
               alt={item.name}
@@ -167,7 +172,7 @@ export function MediaPanel() {
       }
       return (
         <div
-          className="w-full h-full bg-muted/30 flex flex-col items-center justify-center text-muted-foreground rounded cursor-grab active:cursor-grabbing"
+          className="w-full h-full bg-muted/30 flex flex-col items-center justify-center text-muted-foreground rounded"
           {...baseDragProps}
         >
           <Video className="h-6 w-6 mb-1" />
@@ -184,7 +189,7 @@ export function MediaPanel() {
     if (item.type === "audio") {
       return (
         <div
-          className="w-full h-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex flex-col items-center justify-center text-muted-foreground rounded border border-green-500/20 cursor-grab active:cursor-grabbing"
+          className="w-full h-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex flex-col items-center justify-center text-muted-foreground rounded border border-green-500/20"
           {...baseDragProps}
         >
           <Music className="h-6 w-6 mb-1" />
@@ -200,7 +205,7 @@ export function MediaPanel() {
 
     return (
       <div
-        className="w-full h-full bg-muted/30 flex flex-col items-center justify-center text-muted-foreground rounded cursor-grab active:cursor-grabbing"
+        className="w-full h-full bg-muted/30 flex flex-col items-center justify-center text-muted-foreground rounded"
         {...baseDragProps}
       >
         <Image className="h-6 w-6" />
@@ -290,39 +295,45 @@ export function MediaPanel() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
+            <div
+              className="grid gap-2"
+              style={{
+                gridTemplateColumns: "repeat(auto-fill, 160px)",
+              }}
+            >
               {/* Render each media item as a draggable button */}
               {filteredMediaItems.map((item) => (
                 <div key={item.id} className="relative group">
-                  <Button
-                    variant="outline"
-                    className="flex flex-col gap-2 p-2 h-auto w-full relative"
-                  >
-                    <AspectRatio ratio={16 / 9} className="bg-accent">
-                      {renderPreview(item)}
-                    </AspectRatio>
-                    <span
-                      className="text-xs truncate px-1 max-w-full"
-                      aria-label={item.name}
-                      title={item.name}
-                    >
-                      {item.name.length > 8
-                        ? `${item.name.slice(0, 4)}...${item.name.slice(-3)}`
-                        : item.name}
-                    </span>
-                  </Button>
-
-                  {/* Show remove button on hover */}
-                  <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={(e) => handleRemove(e, item.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
+                  <ContextMenu>
+                    <ContextMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="flex flex-col gap-1 p-2 h-auto w-full relative border-none !bg-transparent cursor-default"
+                      >
+                        <AspectRatio ratio={16 / 9} className="bg-accent">
+                          {renderPreview(item)}
+                        </AspectRatio>
+                        <span
+                          className="text-[0.7rem] text-muted-foreground truncate w-full text-left"
+                          aria-label={item.name}
+                          title={item.name}
+                        >
+                          {item.name.length > 8
+                            ? `${item.name.slice(0, 4)}...${item.name.slice(-3)}`
+                            : item.name}
+                        </span>
+                      </Button>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem>Export clips</ContextMenuItem>
+                      <ContextMenuItem
+                        variant="destructive"
+                        onClick={(e) => handleRemove(e, item.id)}
+                      >
+                        Delete
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
                 </div>
               ))}
             </div>
