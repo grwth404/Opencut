@@ -134,7 +134,7 @@ export function MediaPanel() {
         <img
           src={item.url}
           alt={item.name}
-          className="w-full h-full object-cover rounded cursor-grab active:cursor-grabbing"
+          className="w-full h-full object-contain rounded cursor-grab active:cursor-grabbing"
           loading="lazy"
           {...baseDragProps}
         />
@@ -298,7 +298,7 @@ export function MediaPanel() {
                     variant="outline"
                     className="flex flex-col gap-2 p-2 h-auto w-full relative"
                   >
-                    <AspectRatio ratio={item.aspectRatio}>
+                    <AspectRatio ratio={16 / 9} className="bg-accent">
                       {renderPreview(item)}
                     </AspectRatio>
                     <span
