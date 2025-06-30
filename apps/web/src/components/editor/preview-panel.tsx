@@ -5,7 +5,11 @@ import {
   type TimelineClip,
   type TimelineTrack,
 } from "@/stores/timeline-store";
-import { useMediaStore, type MediaItem } from "@/stores/media-store";
+import {
+  useMediaStore,
+  type MediaItem,
+  getMediaAspectRatio,
+} from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useEditorStore } from "@/stores/editor-store";
 import { VideoPlayer } from "@/components/ui/video-player";
@@ -262,7 +266,7 @@ function PreviewToolbar({ hasAnyClips }: { hasAnyClips: boolean }) {
           mediaItem &&
           (mediaItem.type === "video" || mediaItem.type === "image")
         ) {
-          return mediaItem.aspectRatio || 16 / 9; // Default to 16:9 if aspectRatio not available
+          return getMediaAspectRatio(mediaItem);
         }
       }
     }

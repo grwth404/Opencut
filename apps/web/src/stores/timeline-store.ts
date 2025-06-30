@@ -1,8 +1,7 @@
 import { create } from "zustand";
 import type { TrackType } from "@/types/timeline";
 import { useEditorStore } from "./editor-store";
-import { useMediaStore } from "./media-store";
-import { toast } from "sonner";
+import { useMediaStore, getMediaAspectRatio } from "./media-store";
 
 // Helper function to manage clip naming with suffixes
 const getClipNameWithSuffix = (
@@ -232,7 +231,9 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
         (mediaItem.type === "image" || mediaItem.type === "video")
       ) {
         const editorStore = useEditorStore.getState();
-        editorStore.setCanvasSizeFromAspectRatio(mediaItem.aspectRatio);
+        editorStore.setCanvasSizeFromAspectRatio(
+          getMediaAspectRatio(mediaItem)
+        );
       }
     }
 
