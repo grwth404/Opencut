@@ -1,5 +1,8 @@
 import { create } from "zustand";
 import type { TrackType } from "@/types/timeline";
+import { useEditorStore } from "./editor-store";
+import { useMediaStore } from "./media-store";
+import { toast } from "sonner";
 
 // Helper function to manage clip naming with suffixes
 const getClipNameWithSuffix = (
@@ -199,6 +202,15 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
 
   addClipToTrack: (trackId, clipData) => {
     get().pushHistory();
+
+    // Check if this is the first clip being added to the timeline
+    const currentState = get();
+    const totalClipsInTimeline = currentState.tracks.reduce(
+      (total, track) => total + track.clips.length,
+      0
+    );
+    const isFirstClip = totalClipsInTimeline === 0;
+
     const newClip: TimelineClip = {
       ...clipData,
       id: crypto.randomUUID(),
@@ -206,6 +218,23 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
       trimStart: 0,
       trimEnd: 0,
     };
+
+    // If this is the first clip, automatically set the project canvas size
+    // to match the media's aspect ratio
+    if (isFirstClip && clipData.mediaId) {
+      const mediaStore = useMediaStore.getState();
+      const mediaItem = mediaStore.mediaItems.find(
+        (item) => item.id === clipData.mediaId
+      );
+
+      if (
+        mediaItem &&
+        (mediaItem.type === "image" || mediaItem.type === "video")
+      ) {
+        const editorStore = useEditorStore.getState();
+        editorStore.setCanvasSizeFromAspectRatio(mediaItem.aspectRatio);
+      }
+    }
 
     set((state) => ({
       tracks: state.tracks.map((track) =>

@@ -7,6 +7,7 @@ import {
 } from "@/stores/timeline-store";
 import { useMediaStore, type MediaItem } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
+import { useEditorStore } from "@/stores/editor-store";
 import { VideoPlayer } from "@/components/ui/video-player";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Volume2, VolumeX, Plus } from "lucide-react";
@@ -22,7 +23,7 @@ export function PreviewPanel() {
   const { tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
   const { currentTime, muted, toggleMute, volume } = usePlaybackStore();
-  const [canvasSize, setCanvasSize] = useState({ width: 1920, height: 1080 });
+  const { canvasSize, canvasPresets, setCanvasSize } = useEditorStore();
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [previewDimensions, setPreviewDimensions] = useState({
@@ -182,15 +183,6 @@ export function PreviewPanel() {
 
     return null;
   };
-
-  // Canvas presets
-  const canvasPresets = [
-    { name: "16:9 HD", width: 1920, height: 1080 },
-    { name: "16:9 4K", width: 3840, height: 2160 },
-    { name: "9:16 Mobile", width: 1080, height: 1920 },
-    { name: "1:1 Square", width: 1080, height: 1080 },
-    { name: "4:3 Standard", width: 1440, height: 1080 },
-  ];
 
   return (
     <div className="h-full w-full flex flex-col min-h-0 min-w-0">
