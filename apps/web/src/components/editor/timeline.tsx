@@ -908,6 +908,7 @@ export function Timeline() {
           <div className="flex-1 relative overflow-hidden">
             <ScrollArea className="w-full" ref={rulerScrollRef}>
               <div
+                ref={timelineRef}
                 className="relative h-12 bg-muted/30 cursor-pointer"
                 style={{
                   width: `${dynamicTimelineWidth}px`,
@@ -984,7 +985,7 @@ export function Timeline() {
 
                 {/* Playhead in ruler (scrubbable) */}
                 <div
-                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-ew-resize"
+                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-col-resize"
                   style={{ left: `${playheadPosition * 50 * zoomLevel}px` }}
                   onMouseDown={handlePlayheadMouseDown}
                 >
@@ -1118,7 +1119,7 @@ export function Timeline() {
                     {/* Playhead for tracks area (scrubbable) */}
                     {tracks.length > 0 && (
                       <div
-                        className="absolute top-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-ew-resize"
+                        className="absolute top-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-col"
                         style={{
                           left: `${playheadPosition * 50 * zoomLevel}px`,
                           height: `${tracks.length * 60}px`,
