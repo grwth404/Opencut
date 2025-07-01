@@ -732,14 +732,11 @@ export function Timeline() {
     const menuWidth = 160;
     const menuHeight = 200;
     const margin = 4;
-
-    // ADJUSTABLE VALUE: Change this to move menu up/down when it appears above cursor
-    const verticalOffset = 80; // Reduce this to bring menu closer to cursor when above
+    const verticalOffset = 80;
 
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    // Start with Windows-style default position
     let adjustedX = x + 2;
     let adjustedY = y + 2;
 
@@ -755,9 +752,8 @@ export function Timeline() {
       adjustedX = margin;
     }
 
-    // Vertical positioning with adjustable offset
+    // Vertical positioning
     if (adjustedY + menuHeight > viewportHeight - margin) {
-      // Instead of y - menuHeight - 2, use adjustable offset
       adjustedY = y - menuHeight + verticalOffset;
 
       if (adjustedY < margin) {
@@ -769,7 +765,6 @@ export function Timeline() {
       adjustedY = margin;
     }
 
-    // Final safety clamp
     adjustedX = Math.max(
       margin,
       Math.min(adjustedX, viewportWidth - menuWidth - margin)
