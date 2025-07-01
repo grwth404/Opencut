@@ -339,7 +339,6 @@ export function Timeline() {
           trimStart: 0,
           trimEnd: 0,
         });
-        toast.success(`Added ${mediaItem.name} to new ${trackType} track`);
       } catch (error) {
         // Show error if parsing fails
         console.error("Error parsing media item data:", error);
@@ -536,7 +535,6 @@ export function Timeline() {
         });
       }
     });
-    toast.success("Freeze frame added for selected clip(s)");
   };
   const handleSplitAndKeepLeft = () => {
     if (selectedClips.length === 0) {

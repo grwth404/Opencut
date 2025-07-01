@@ -528,8 +528,6 @@ export function TimelineTrackContent({
           trimStart: 0,
           trimEnd: 0,
         });
-
-        toast.success(`Added ${mediaItem.name} to ${track.name}`);
       }
     } catch (error) {
       console.error("Error handling drop:", error);
