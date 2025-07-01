@@ -20,7 +20,6 @@ interface EditorState {
 
 const DEFAULT_CANVAS_PRESETS: CanvasPreset[] = [
   { name: "16:9 HD", width: 1920, height: 1080 },
-  { name: "16:9 4K", width: 3840, height: 2160 },
   { name: "9:16 Mobile", width: 1080, height: 1920 },
   { name: "1:1 Square", width: 1080, height: 1080 },
   { name: "4:3 Standard", width: 1440, height: 1080 },
