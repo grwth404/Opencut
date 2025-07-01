@@ -98,6 +98,10 @@ export function Timeline() {
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubTime, setScrubTime] = useState<number | null>(null);
 
+  // Add new state for ruler drag detection
+  const [isDraggingRuler, setIsDraggingRuler] = useState(false);
+  const [hasDraggedRuler, setHasDraggedRuler] = useState(false);
+
   // Dynamic timeline width calculation based on playhead position and duration
   const dynamicTimelineWidth = Math.max(
     (duration || 0) * 50 * zoomLevel, // Base width from duration
@@ -385,24 +389,6 @@ export function Timeline() {
     }
   };
 
-  const handleSeekToPosition = (e: React.MouseEvent) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickedTime = clickX / (50 * zoomLevel);
-    const clampedTime = Math.max(0, Math.min(duration, clickedTime));
-
-    seek(clampedTime);
-  };
-
-  const handleTimelineAreaClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      clearSelectedClips();
-
-      // Calculate the clicked time position and seek to it
-      handleSeekToPosition(e);
-    }
-  };
-
   const handleWheel = (e: React.WheelEvent) => {
     // Only zoom if user is using pinch gesture (ctrlKey or metaKey is true)
     if (e.ctrlKey || e.metaKey) {
@@ -417,6 +403,27 @@ export function Timeline() {
   const handlePlayheadMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+      e.stopPropagation(); // Prevent ruler drag from triggering
+      setIsScrubbing(true);
+      handleScrub(e);
+    },
+    [duration, zoomLevel]
+  );
+
+  // Add new ruler mouse down handler
+  const handleRulerMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      // Only handle left mouse button
+      if (e.button !== 0) return;
+
+      // Don't interfere if clicking on the playhead itself
+      if ((e.target as HTMLElement).closest(".playhead")) return;
+
+      e.preventDefault();
+      setIsDraggingRuler(true);
+      setHasDraggedRuler(false);
+
+      // Start scrubbing immediately
       setIsScrubbing(true);
       handleScrub(e);
     },
@@ -438,11 +445,27 @@ export function Timeline() {
 
   useEffect(() => {
     if (!isScrubbing) return;
-    const onMouseMove = (e: MouseEvent) => handleScrub(e);
+    const onMouseMove = (e: MouseEvent) => {
+      handleScrub(e);
+      // Mark that we've dragged if ruler drag is active
+      if (isDraggingRuler) {
+        setHasDraggedRuler(true);
+      }
+    };
     const onMouseUp = (e: MouseEvent) => {
       setIsScrubbing(false);
       if (scrubTime !== null) seek(scrubTime); // finalize seek
       setScrubTime(null);
+
+      // Handle ruler click vs drag
+      if (isDraggingRuler) {
+        setIsDraggingRuler(false);
+        // If we didn't drag, treat it as a click-to-seek
+        if (!hasDraggedRuler) {
+          handleScrub(e);
+        }
+        setHasDraggedRuler(false);
+      }
     };
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
@@ -450,7 +473,14 @@ export function Timeline() {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, [isScrubbing, scrubTime, seek, handleScrub]);
+  }, [
+    isScrubbing,
+    scrubTime,
+    seek,
+    handleScrub,
+    isDraggingRuler,
+    hasDraggedRuler,
+  ]);
 
   const playheadPosition =
     isScrubbing && scrubTime !== null ? scrubTime : currentTime;
@@ -907,14 +937,13 @@ export function Timeline() {
             <ScrollArea className="w-full" ref={rulerScrollRef}>
               <div
                 ref={timelineRef}
-                className="relative h-12 bg-muted/30 cursor-pointer"
+                className={`relative h-12 bg-muted/30 select-none ${
+                  isDraggingRuler ? "cursor-grabbing" : "cursor-grab"
+                }`}
                 style={{
                   width: `${dynamicTimelineWidth}px`,
                 }}
-                onClick={(e) => {
-                  // Calculate the clicked time position and seek to it
-                  handleSeekToPosition(e);
-                }}
+                onMouseDown={handleRulerMouseDown}
               >
                 {/* Time markers */}
                 {(() => {
@@ -983,7 +1012,7 @@ export function Timeline() {
 
                 {/* Playhead in ruler (scrubbable) */}
                 <div
-                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-col-resize"
+                  className="playhead absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-col-resize"
                   style={{ left: `${playheadPosition * 50 * zoomLevel}px` }}
                   onMouseDown={handlePlayheadMouseDown}
                 >
@@ -1039,7 +1068,7 @@ export function Timeline() {
                   height: `${Math.max(200, Math.min(800, tracks.length * 60))}px`,
                   width: `${dynamicTimelineWidth}px`,
                 }}
-                onClick={handleTimelineAreaClick}
+                onClick={handleTimelineMouseDown}
                 onMouseDown={handleTimelineMouseDown}
               >
                 {tracks.length === 0 ? (
