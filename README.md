@@ -5,7 +5,7 @@
     </td>
     <td align="right">
       <h1>OpenCut <span style="font-size: 0.7em; font-weight: normal;">(prev AppCut)</span></h1>
-      <h3 style="margin-top: -11px;">A free, open-source video editor for web, desktop, and mobile.</h3>
+      <h3 style="margin-top: -10px;">A free, open-source video editor for web, desktop, and mobile.</h3>
     </td>
   </tr>
 </table>
@@ -110,17 +110,17 @@ Before you begin, ensure you have the following installed on your system:
     npm run dev
     ```
 
-The application will be available at *[http://localhost:3000](http://localhost:3000).*
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
 ## Contributing
 
-**Note**: We're currently moving at an extremely fast pace with rapid development and breaking changes. While we appreciate the interests, it's recommended to wait until the project stabilizes before contributing to avoid conflicts and wasted effort.
+**Note**: We're currently moving at an extremely fast pace with rapid development and breaking changes. While we appreciate the interest, it's recommended to wait until the project stabilizes before contributing to avoid conflicts and wasted effort.
 
 ## Visit [CONTRIBUTING.md](.github/CONTRIBUTING.md)
 
 We welcome contributions! Please see our [Contributing Guide](.github/CONTRIBUTING.md) for detailed setup instructions and development guidelines.
 
-*Quick start for contributors:*
+**Quick start for contributors:**
 
 - Fork the repo and clone locally
 - Follow the setup instructions in CONTRIBUTING.md
