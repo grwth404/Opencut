@@ -984,7 +984,7 @@ export function Timeline() {
 
                 {/* Playhead in ruler (scrubbable) */}
                 <div
-                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-auto z-10 cursor-ew-resize"
+                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-ew-resize"
                   style={{ left: `${playheadPosition * 50 * zoomLevel}px` }}
                   onMouseDown={handlePlayheadMouseDown}
                 >
@@ -1118,7 +1118,7 @@ export function Timeline() {
                     {/* Playhead for tracks area (scrubbable) */}
                     {tracks.length > 0 && (
                       <div
-                        className="absolute top-0 w-0.5 bg-red-500 pointer-events-auto z-20 cursor-ew-resize"
+                        className="absolute top-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-ew-resize"
                         style={{
                           left: `${playheadPosition * 50 * zoomLevel}px`,
                           height: `${tracks.length * 60}px`,
