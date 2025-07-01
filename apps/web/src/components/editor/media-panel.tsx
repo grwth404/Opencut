@@ -16,6 +16,14 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "../ui/context-menu";
+import { Input } from "../ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 // MediaPanel lets users add, view, and drag media (images, videos, audio) into the project.
 // You can upload files or drag them from your computer. Dragging from here to the timeline adds them to your video project.
@@ -237,20 +245,21 @@ export function MediaPanel() {
           {/* Button to add/upload media */}
           <div className="flex gap-2">
             {/* Search and filter controls */}
-            <select
-              value={mediaFilter}
-              onChange={(e) => setMediaFilter(e.target.value)}
-              className="px-2 py-1 text-xs border rounded bg-background"
-            >
-              <option value="all">All</option>
-              <option value="video">Video</option>
-              <option value="audio">Audio</option>
-              <option value="image">Image</option>
-            </select>
-            <input
+            <Select value={mediaFilter} onValueChange={setMediaFilter}>
+              <SelectTrigger className="w-[80px] h-7 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="video">Video</SelectItem>
+                <SelectItem value="audio">Audio</SelectItem>
+                <SelectItem value="image">Image</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
               type="text"
               placeholder="Search media..."
-              className="min-w-[60px] flex-1 px-2 py-1 text-xs border rounded bg-background"
+              className="min-w-[60px] flex-1 h-7 text-xs"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
