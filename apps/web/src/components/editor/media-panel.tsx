@@ -4,7 +4,7 @@ import { useDragDrop } from "@/hooks/use-drag-drop";
 import { processMediaFiles } from "@/lib/media-processing";
 import { useMediaStore, type MediaItem } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
-import { Image, Music, Plus, Trash2, Upload, Video } from "lucide-react";
+import { Image, Music, Plus, Upload, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AspectRatio } from "../ui/aspect-ratio";
