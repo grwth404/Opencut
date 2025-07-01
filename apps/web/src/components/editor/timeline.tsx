@@ -188,6 +188,14 @@ export function Timeline() {
     }
   };
 
+  // Add new click handler for deselection
+  const handleTimelineClick = (e: React.MouseEvent) => {
+    // If clicking empty area (not on a clip) and not starting marquee, deselect all clips
+    if (!(e.target as HTMLElement).closest(".timeline-clip")) {
+      clearSelectedClips();
+    }
+  };
+
   // Mouse move to update marquee
   useEffect(() => {
     if (!marquee || !marquee.active) return;
@@ -1068,7 +1076,7 @@ export function Timeline() {
                   height: `${Math.max(200, Math.min(800, tracks.length * 60))}px`,
                   width: `${dynamicTimelineWidth}px`,
                 }}
-                onClick={handleTimelineMouseDown}
+                onClick={handleTimelineClick}
                 onMouseDown={handleTimelineMouseDown}
               >
                 {tracks.length === 0 ? (
