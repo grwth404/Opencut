@@ -58,6 +58,19 @@ export function TimelineTrackContent({
     const handleMouseMove = (e: MouseEvent) => {
       if (!timelineRef.current) return;
 
+      // On first mouse move during drag, ensure the clip is selected
+      if (dragState.clipId && dragState.trackId) {
+        const isSelected = selectedClips.some(
+          (c) =>
+            c.trackId === dragState.trackId && c.clipId === dragState.clipId
+        );
+
+        if (!isSelected) {
+          // Select this clip (replacing other selections) since we're dragging it
+          selectClip(dragState.trackId, dragState.clipId, false);
+        }
+      }
+
       const timelineRect = timelineRef.current.getBoundingClientRect();
       const mouseX = e.clientX - timelineRect.left;
       const mouseTime = Math.max(0, mouseX / (50 * zoomLevel));
@@ -139,6 +152,7 @@ export function TimelineTrackContent({
 
   const handleClipMouseDown = (e: React.MouseEvent, clip: TypeTimelineClip) => {
     setMouseDownLocation({ x: e.clientX, y: e.clientY });
+
     // Handle multi-selection only in mousedown
     if (e.metaKey || e.ctrlKey || e.shiftKey) {
       selectClip(track.id, clip.id, true);
