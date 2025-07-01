@@ -153,12 +153,12 @@ export function TimelineTrackContent({
   const handleClipMouseDown = (e: React.MouseEvent, clip: TypeTimelineClip) => {
     setMouseDownLocation({ x: e.clientX, y: e.clientY });
 
-    // Check if it's a right-click (context menu) or if it's a left-click with modifiers
-    const isRightClick = e.button === 2 || e.type === "contextmenu";
+    // Detect right-click (button 2) and handle selection without starting drag
+    const isRightClick = e.button === 2;
     const isMultiSelect = e.metaKey || e.ctrlKey || e.shiftKey;
 
-    // Handle right-click selection
     if (isRightClick) {
+      // Handle right-click selection
       const isSelected = selectedClips.some(
         (c) => c.trackId === track.id && c.clipId === clip.id
       );
@@ -167,7 +167,7 @@ export function TimelineTrackContent({
       if (!isSelected) {
         selectClip(track.id, clip.id, isMultiSelect);
       }
-      // If clip is already selected, keep it selected (don't change selection)
+      // If clip is already selected, keep it selected
 
       // Don't start drag action for right-clicks
       return;
