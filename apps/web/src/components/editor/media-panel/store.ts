@@ -3,12 +3,12 @@ import {
   ArrowLeftRightIcon,
   SparklesIcon,
   StickerIcon,
-  TextIcon,
   MusicIcon,
   VideoIcon,
   BlendIcon,
   SlidersHorizontalIcon,
   LucideIcon,
+  TypeIcon,
 } from "lucide-react";
 import { create } from "zustand";
 
@@ -33,7 +33,7 @@ export const tabs: { [key in Tab]: { icon: LucideIcon; label: string } } = {
     label: "Audio",
   },
   text: {
-    icon: TextIcon,
+    icon: TypeIcon,
     label: "Text",
   },
   stickers: {
