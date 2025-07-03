@@ -7,7 +7,6 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { Image, Music, Plus, Upload, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Button } from "@/components/ui/button";
 import { DragOverlay } from "@/components/ui/drag-overlay";
 import {
@@ -24,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DraggableMediaItem } from "@/components/ui/draggable-item";
 
 export function MediaView() {
   const { mediaItems, addMediaItem, removeMediaItem } = useMediaStore();
@@ -98,19 +98,6 @@ export function MediaView() {
     return `${min}:${sec.toString().padStart(2, "0")}`;
   };
 
-  const startDrag = (e: React.DragEvent, item: MediaItem) => {
-    // When dragging a media item, set drag data for timeline to read
-    e.dataTransfer.setData(
-      "application/x-media-item",
-      JSON.stringify({
-        id: item.id,
-        type: item.type,
-        name: item.name,
-      })
-    );
-    e.dataTransfer.effectAllowed = "copy";
-  };
-
   const [filteredMediaItems, setFilteredMediaItems] = useState(mediaItems);
 
   useEffect(() => {
@@ -140,7 +127,7 @@ export function MediaView() {
           <img
             src={item.url}
             alt={item.name}
-            className="max-w-full max-h-full object-contain rounded"
+            className="max-w-full max-h-full object-contain"
             loading="lazy"
           />
         </div>
@@ -293,45 +280,30 @@ export function MediaView() {
             >
               {/* Render each media item as a draggable button */}
               {filteredMediaItems.map((item) => (
-                <div key={item.id} className="relative group">
-                  <ContextMenu>
-                    <ContextMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="flex flex-col gap-1 p-2 h-auto w-full relative border-none !bg-transparent cursor-default"
-                      >
-                        <AspectRatio
-                          ratio={16 / 9}
-                          className="bg-accent"
-                          draggable={true}
-                          onDragStart={(e: React.DragEvent) =>
-                            startDrag(e, item)
-                          }
-                        >
-                          {renderPreview(item)}
-                        </AspectRatio>
-                        <span
-                          className="text-[0.7rem] text-muted-foreground truncate w-full text-left"
-                          aria-label={item.name}
-                          title={item.name}
-                        >
-                          {item.name.length > 8
-                            ? `${item.name.slice(0, 4)}...${item.name.slice(-3)}`
-                            : item.name}
-                        </span>
-                      </Button>
-                    </ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem>Export clips</ContextMenuItem>
-                      <ContextMenuItem
-                        variant="destructive"
-                        onClick={(e) => handleRemove(e, item.id)}
-                      >
-                        Delete
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
-                </div>
+                <ContextMenu key={item.id}>
+                  <ContextMenuTrigger asChild>
+                    <DraggableMediaItem
+                      name={item.name}
+                      preview={renderPreview(item)}
+                      dragData={{
+                        id: item.id,
+                        type: item.type,
+                        name: item.name,
+                      }}
+                      showPlusOnDrag={false}
+                      rounded={false}
+                    />
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem>Export clips</ContextMenuItem>
+                    <ContextMenuItem
+                      variant="destructive"
+                      onClick={(e) => handleRemove(e, item.id)}
+                    >
+                      Delete
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               ))}
             </div>
           )}
