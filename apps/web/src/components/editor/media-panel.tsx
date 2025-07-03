@@ -4,7 +4,7 @@ import { useDragDrop } from "@/hooks/use-drag-drop";
 import { processMediaFiles } from "@/lib/media-processing";
 import { useMediaStore, type MediaItem } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
-import { Image, Music, Plus, Upload, Video } from "lucide-react";
+import { Image, Music, MusicIcon, Plus, TextIcon, Upload, Video, VideoIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AspectRatio } from "../ui/aspect-ratio";
@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { cn } from "@/lib/utils";
 
 // MediaPanel lets users add, view, and drag media (images, videos, audio) into the project.
 // You can upload files or drag them from your computer. Dragging from here to the timeline adds them to your video project.
@@ -137,12 +138,6 @@ export function MediaPanel() {
 
   const renderPreview = (item: MediaItem) => {
     // Render a preview for each media type (image, video, audio, unknown)
-    // Each preview is draggable to the timeline
-    const baseDragProps = {
-      draggable: true,
-      onDragStart: (e: React.DragEvent) => startDrag(e, item),
-    };
-
     if (item.type === "image") {
       return (
         <div className="w-full h-full flex items-center justify-center">
@@ -151,7 +146,6 @@ export function MediaPanel() {
             alt={item.name}
             className="max-w-full max-h-full object-contain rounded"
             loading="lazy"
-            {...baseDragProps}
           />
         </div>
       );
@@ -160,7 +154,7 @@ export function MediaPanel() {
     if (item.type === "video") {
       if (item.thumbnailUrl) {
         return (
-          <div className="relative w-full h-full" {...baseDragProps}>
+          <div className="relative w-full h-full">
             <img
               src={item.thumbnailUrl}
               alt={item.name}
@@ -179,10 +173,7 @@ export function MediaPanel() {
         );
       }
       return (
-        <div
-          className="w-full h-full bg-muted/30 flex flex-col items-center justify-center text-muted-foreground rounded"
-          {...baseDragProps}
-        >
+        <div className="w-full h-full bg-muted/30 flex flex-col items-center justify-center text-muted-foreground rounded">
           <Video className="h-6 w-6 mb-1" />
           <span className="text-xs">Video</span>
           {item.duration && (
@@ -196,10 +187,7 @@ export function MediaPanel() {
 
     if (item.type === "audio") {
       return (
-        <div
-          className="w-full h-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex flex-col items-center justify-center text-muted-foreground rounded border border-green-500/20"
-          {...baseDragProps}
-        >
+        <div className="w-full h-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex flex-col items-center justify-center text-muted-foreground rounded border border-green-500/20">
           <Music className="h-6 w-6 mb-1" />
           <span className="text-xs">Audio</span>
           {item.duration && (
@@ -212,10 +200,7 @@ export function MediaPanel() {
     }
 
     return (
-      <div
-        className="w-full h-full bg-muted/30 flex flex-col items-center justify-center text-muted-foreground rounded"
-        {...baseDragProps}
-      >
+      <div className="w-full h-full bg-muted/30 flex flex-col items-center justify-center text-muted-foreground rounded">
         <Image className="h-6 w-6" />
         <span className="text-xs mt-1">Unknown</span>
       </div>
@@ -235,13 +220,15 @@ export function MediaPanel() {
       />
 
       <div
-        className={`h-full flex flex-col transition-colors relative ${isDragOver ? "bg-accent/30" : ""}`}
+        className={`h-full flex flex-col gap-1 transition-colors relative ${isDragOver ? "bg-accent/30" : ""}`}
         {...dragProps}
       >
         {/* Show overlay when dragging files over the panel */}
         <DragOverlay isVisible={isDragOver} />
 
-        <div className="p-2 border-b">
+        <TabBar />
+
+        <div className="p-3 pb-2">
           {/* Button to add/upload media */}
           <div className="flex gap-2">
             {/* Search and filter controls */}
@@ -289,7 +276,7 @@ export function MediaPanel() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="flex-1 overflow-y-auto p-3 pt-0">
           {/* Show message if no media, otherwise show media grid */}
           {filteredMediaItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center h-full">
@@ -319,7 +306,14 @@ export function MediaPanel() {
                         variant="outline"
                         className="flex flex-col gap-1 p-2 h-auto w-full relative border-none !bg-transparent cursor-default"
                       >
-                        <AspectRatio ratio={16 / 9} className="bg-accent">
+                        <AspectRatio
+                          ratio={16 / 9}
+                          className="bg-accent"
+                          draggable={true}
+                          onDragStart={(e: React.DragEvent) =>
+                            startDrag(e, item)
+                          }
+                        >
                           {renderPreview(item)}
                         </AspectRatio>
                         <span
@@ -350,5 +344,46 @@ export function MediaPanel() {
         </div>
       </div>
     </>
+  );
+}
+
+type Tab = "media" | "audio" | "text";
+
+function TabBar() {
+  const [activeTab, setActiveTab] = useState<Tab>("media");
+
+  const tabs = [
+    {
+      icon: VideoIcon,
+      label: "Media",
+    },
+    {
+      icon: MusicIcon,
+      label: "Audio",
+    },
+    {
+      icon: TextIcon,
+      label: "Text",
+    },
+  ];
+
+  return (
+    <div className="bg-accent/50 h-12 px-4 flex justify-start items-center gap-6">
+      {tabs.map((tab) => (
+        <div
+          className={cn(
+            "flex flex-col gap-0.5 items-center cursor-pointer",
+            activeTab === tab.label.toLowerCase()
+              ? "text-primary"
+              : "text-muted-foreground"
+          )}
+          onClick={() => setActiveTab(tab.label.toLowerCase() as Tab)}
+          key={tab.label}
+        >
+          <tab.icon className="!size-5" />
+          <span className="text-xs">{tab.label}</span>
+        </div>
+      ))}
+    </div>
   );
 }
