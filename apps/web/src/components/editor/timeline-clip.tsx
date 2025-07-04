@@ -295,7 +295,7 @@ export function TimelineClip({
       <div
         className={`relative h-full rounded-[0.15rem] cursor-pointer overflow-hidden ${getTrackColor(
           track.type
-        )} ${isSelected ? "border-b-[0.5px] border-t-[0.5px] border-primary" : ""} ${
+        )} ${isSelected ? "border-b-[0.5px] border-t-[0.5px] border-foreground" : ""} ${
           isBeingDragged ? "z-50" : "z-10"
         }`}
         onClick={(e) => onClipClick && onClipClick(e, clip)}
