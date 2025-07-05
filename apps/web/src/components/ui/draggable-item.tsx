@@ -7,6 +7,11 @@ import { createPortal } from "react-dom";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Create the empty image once, outside the component
+const emptyImg = new Image();
+emptyImg.src =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=";
+
 export interface DraggableMediaItemProps {
   name: string;
   preview: ReactNode;
@@ -49,10 +54,6 @@ export function DraggableMediaItem({
   }, [isDragging]);
 
   const handleDragStart = (e: React.DragEvent) => {
-    // Hide the default ghost image
-    const emptyImg = new Image();
-    emptyImg.src =
-      "data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=";
     e.dataTransfer.setDragImage(emptyImg, 0, 0);
 
     // Set drag data
@@ -84,7 +85,8 @@ export function DraggableMediaItem({
             ratio={aspectRatio}
             className={cn(
               "bg-accent relative overflow-hidden",
-              rounded && "rounded-md"
+              rounded && "rounded-md",
+              "[&::-webkit-drag-ghost]:opacity-0" // Webkit-specific ghost hiding
             )}
             draggable={true}
             onDragStart={handleDragStart}
