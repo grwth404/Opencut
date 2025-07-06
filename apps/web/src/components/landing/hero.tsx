@@ -133,7 +133,7 @@ export function Hero({ signupCount }: HeroProps) {
             <Button
               type="submit"
               size="lg"
-              className="px-6 h-11 text-base"
+              className="px-6 h-11 text-base !bg-foreground"
               disabled={isSubmitting}
             >
               <span className="relative z-10">
