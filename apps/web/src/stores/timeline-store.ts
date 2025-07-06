@@ -1,10 +1,14 @@
 import { create } from "zustand";
-import type { TrackType } from "@/types/timeline";
+import type {
+  TrackType,
+  TimelineElement,
+  CreateTimelineElement,
+} from "@/types/timeline";
 import { useEditorStore } from "./editor-store";
 import { useMediaStore, getMediaAspectRatio } from "./media-store";
 
-// Helper function to manage clip naming with suffixes
-const getClipNameWithSuffix = (
+// Helper function to manage element naming with suffixes
+const getElementNameWithSuffix = (
   originalName: string,
   suffix: string
 ): string => {
@@ -18,21 +22,11 @@ const getClipNameWithSuffix = (
   return `${baseName} (${suffix})`;
 };
 
-export interface TimelineClip {
-  id: string;
-  mediaId: string;
-  name: string;
-  duration: number;
-  startTime: number;
-  trimStart: number;
-  trimEnd: number;
-}
-
 export interface TimelineTrack {
   id: string;
   name: string;
   type: TrackType;
-  clips: TimelineClip[];
+  elements: TimelineElement[];
   muted?: boolean;
 }
 
@@ -42,28 +36,30 @@ interface TimelineStore {
   redoStack: TimelineTrack[][];
 
   // Multi-selection
-  selectedClips: { trackId: string; clipId: string }[];
-  selectClip: (trackId: string, clipId: string, multi?: boolean) => void;
-  deselectClip: (trackId: string, clipId: string) => void;
-  clearSelectedClips: () => void;
-  setSelectedClips: (clips: { trackId: string; clipId: string }[]) => void;
+  selectedElements: { trackId: string; elementId: string }[];
+  selectElement: (trackId: string, elementId: string, multi?: boolean) => void;
+  deselectElement: (trackId: string, elementId: string) => void;
+  clearSelectedElements: () => void;
+  setSelectedElements: (
+    elements: { trackId: string; elementId: string }[]
+  ) => void;
 
   // Drag state
   dragState: {
     isDragging: boolean;
-    clipId: string | null;
+    elementId: string | null;
     trackId: string | null;
     startMouseX: number;
-    startClipTime: number;
+    startElementTime: number;
     clickOffsetTime: number;
     currentTime: number;
   };
   setDragState: (dragState: Partial<TimelineStore["dragState"]>) => void;
   startDrag: (
-    clipId: string,
+    elementId: string,
     trackId: string,
     startMouseX: number,
-    startClipTime: number,
+    startElementTime: number,
     clickOffsetTime: number
   ) => void;
   updateDragTime: (currentTime: number) => void;
@@ -71,44 +67,45 @@ interface TimelineStore {
 
   // Actions
   addTrack: (type: TrackType) => string;
+  insertTrackAt: (type: TrackType, index: number) => string;
   removeTrack: (trackId: string) => void;
-  addClipToTrack: (trackId: string, clip: Omit<TimelineClip, "id">) => void;
-  removeClipFromTrack: (trackId: string, clipId: string) => void;
-  moveClipToTrack: (
+  addElementToTrack: (trackId: string, element: CreateTimelineElement) => void;
+  removeElementFromTrack: (trackId: string, elementId: string) => void;
+  moveElementToTrack: (
     fromTrackId: string,
     toTrackId: string,
-    clipId: string
+    elementId: string
   ) => void;
-  updateClipTrim: (
+  updateElementTrim: (
     trackId: string,
-    clipId: string,
+    elementId: string,
     trimStart: number,
     trimEnd: number
   ) => void;
-  updateClipStartTime: (
+  updateElementStartTime: (
     trackId: string,
-    clipId: string,
+    elementId: string,
     startTime: number
   ) => void;
   toggleTrackMute: (trackId: string) => void;
 
-  // Split operations for clips
-  splitClip: (
+  // Split operations for elements
+  splitElement: (
     trackId: string,
-    clipId: string,
+    elementId: string,
     splitTime: number
   ) => string | null;
   splitAndKeepLeft: (
     trackId: string,
-    clipId: string,
+    elementId: string,
     splitTime: number
   ) => void;
   splitAndKeepRight: (
     trackId: string,
-    clipId: string,
+    elementId: string,
     splitTime: number
   ) => void;
-  separateAudio: (trackId: string, clipId: string) => string | null;
+  separateAudio: (trackId: string, elementId: string) => string | null;
 
   // Computed values
   getTotalDuration: () => number;
@@ -123,10 +120,10 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
   tracks: [],
   history: [],
   redoStack: [],
-  selectedClips: [],
+  selectedElements: [],
 
   pushHistory: () => {
-    const { tracks, history, redoStack } = get();
+    const { tracks, history } = get();
     set({
       history: [...history, JSON.parse(JSON.stringify(tracks))],
       redoStack: [],
@@ -144,51 +141,96 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     });
   },
 
-  selectClip: (trackId, clipId, multi = false) => {
+  selectElement: (trackId, elementId, multi = false) => {
     set((state) => {
-      const exists = state.selectedClips.some(
-        (c) => c.trackId === trackId && c.clipId === clipId
+      const exists = state.selectedElements.some(
+        (c) => c.trackId === trackId && c.elementId === elementId
       );
       if (multi) {
         return exists
           ? {
-              selectedClips: state.selectedClips.filter(
-                (c) => !(c.trackId === trackId && c.clipId === clipId)
+              selectedElements: state.selectedElements.filter(
+                (c) => !(c.trackId === trackId && c.elementId === elementId)
               ),
             }
-          : { selectedClips: [...state.selectedClips, { trackId, clipId }] };
+          : {
+              selectedElements: [
+                ...state.selectedElements,
+                { trackId, elementId },
+              ],
+            };
       } else {
-        return { selectedClips: [{ trackId, clipId }] };
+        return { selectedElements: [{ trackId, elementId }] };
       }
     });
   },
 
-  deselectClip: (trackId, clipId) => {
+  deselectElement: (trackId, elementId) => {
     set((state) => ({
-      selectedClips: state.selectedClips.filter(
-        (c) => !(c.trackId === trackId && c.clipId === clipId)
+      selectedElements: state.selectedElements.filter(
+        (c) => !(c.trackId === trackId && c.elementId === elementId)
       ),
     }));
   },
 
-  clearSelectedClips: () => {
-    set({ selectedClips: [] });
+  clearSelectedElements: () => {
+    set({ selectedElements: [] });
   },
 
-  setSelectedClips: (clips) => set({ selectedClips: clips }),
+  setSelectedElements: (elements) => set({ selectedElements: elements }),
 
   addTrack: (type) => {
     get().pushHistory();
+
+    // Generate proper track name based on type
+    const trackName =
+      type === "media"
+        ? "Media Track"
+        : type === "text"
+          ? "Text Track"
+          : type === "audio"
+            ? "Audio Track"
+            : "Track";
+
     const newTrack: TimelineTrack = {
       id: crypto.randomUUID(),
-      name: `${type.charAt(0).toUpperCase() + type.slice(1)} Track`,
+      name: trackName,
       type,
-      clips: [],
+      elements: [],
       muted: false,
     };
     set((state) => ({
       tracks: [...state.tracks, newTrack],
     }));
+    return newTrack.id;
+  },
+
+  insertTrackAt: (type, index) => {
+    get().pushHistory();
+
+    // Generate proper track name based on type
+    const trackName =
+      type === "media"
+        ? "Media Track"
+        : type === "text"
+          ? "Text Track"
+          : type === "audio"
+            ? "Audio Track"
+            : "Track";
+
+    const newTrack: TimelineTrack = {
+      id: crypto.randomUUID(),
+      name: trackName,
+      type,
+      elements: [],
+      muted: false,
+    };
+
+    set((state) => {
+      const newTracks = [...state.tracks];
+      newTracks.splice(index, 0, newTrack);
+      return { tracks: newTracks };
+    });
     return newTrack.id;
   },
 
@@ -199,31 +241,64 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     }));
   },
 
-  addClipToTrack: (trackId, clipData) => {
+  addElementToTrack: (trackId, elementData) => {
     get().pushHistory();
 
-    // Check if this is the first clip being added to the timeline
+    // Validate element type matches track type
+    const track = get().tracks.find((t) => t.id === trackId);
+    if (!track) {
+      console.error("Track not found:", trackId);
+      return;
+    }
+
+    // Validate element can be added to this track type
+    if (track.type === "media" && elementData.type !== "media") {
+      console.error("Media track only accepts media elements");
+      return;
+    }
+    if (track.type === "text" && elementData.type !== "text") {
+      console.error("Text track only accepts text elements");
+      return;
+    }
+    if (track.type === "audio" && elementData.type !== "media") {
+      console.error("Audio track only accepts media elements");
+      return;
+    }
+
+    // For media elements, validate mediaId exists
+    if (elementData.type === "media" && !elementData.mediaId) {
+      console.error("Media element must have mediaId");
+      return;
+    }
+
+    // For text elements, validate required text properties
+    if (elementData.type === "text" && !elementData.content) {
+      console.error("Text element must have content");
+      return;
+    }
+
+    // Check if this is the first element being added to the timeline
     const currentState = get();
-    const totalClipsInTimeline = currentState.tracks.reduce(
-      (total, track) => total + track.clips.length,
+    const totalElementsInTimeline = currentState.tracks.reduce(
+      (total, track) => total + track.elements.length,
       0
     );
-    const isFirstClip = totalClipsInTimeline === 0;
+    const isFirstElement = totalElementsInTimeline === 0;
 
-    const newClip: TimelineClip = {
-      ...clipData,
+    const newElement: TimelineElement = {
+      ...elementData,
       id: crypto.randomUUID(),
-      startTime: clipData.startTime || 0,
+      startTime: elementData.startTime || 0,
       trimStart: 0,
       trimEnd: 0,
-    };
+    } as TimelineElement; // Type assertion since we trust the caller passes valid data
 
-    // If this is the first clip, automatically set the project canvas size
+    // If this is the first element and it's a media element, automatically set the project canvas size
     // to match the media's aspect ratio
-    if (isFirstClip && clipData.mediaId) {
+    if (isFirstElement && newElement.type === "media") {
       const mediaStore = useMediaStore.getState();
       const mediaItem = mediaStore.mediaItems.find(
-        (item) => item.id === clipData.mediaId
+        (item) => item.id === newElement.mediaId
       );
 
       if (
@@ -240,13 +315,13 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     set((state) => ({
       tracks: state.tracks.map((track) =>
         track.id === trackId
-          ? { ...track, clips: [...track.clips, newClip] }
+          ? { ...track, elements: [...track.elements, newElement] }
           : track
       ),
     }));
   },
 
-  removeClipFromTrack: (trackId, clipId) => {
+  removeElementFromTrack: (trackId, elementId) => {
     get().pushHistory();
     set((state) => ({
       tracks: state.tracks
@@ -254,21 +329,25 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
           track.id === trackId
             ? {
                 ...track,
-                clips: track.clips.filter((clip) => clip.id !== clipId),
+                elements: track.elements.filter(
+                  (element) => element.id !== elementId
+                ),
               }
             : track
         )
-        .filter((track) => track.clips.length > 0),
+        .filter((track) => track.elements.length > 0),
     }));
   },
 
-  moveClipToTrack: (fromTrackId, toTrackId, clipId) => {
+  moveElementToTrack: (fromTrackId, toTrackId, elementId) => {
     get().pushHistory();
     set((state) => {
       const fromTrack = state.tracks.find((track) => track.id === fromTrackId);
-      const clipToMove = fromTrack?.clips.find((clip) => clip.id === clipId);
+      const elementToMove = fromTrack?.elements.find(
+        (element) => element.id === elementId
+      );
 
-      if (!clipToMove) return state;
+      if (!elementToMove) return state;
 
       return {
         tracks: state.tracks
@@ -276,30 +355,34 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
             if (track.id === fromTrackId) {
               return {
                 ...track,
-                clips: track.clips.filter((clip) => clip.id !== clipId),
+                elements: track.elements.filter(
+                  (element) => element.id !== elementId
+                ),
               };
             } else if (track.id === toTrackId) {
               return {
                 ...track,
-                clips: [...track.clips, clipToMove],
+                elements: [...track.elements, elementToMove],
               };
             }
             return track;
           })
-          .filter((track) => track.clips.length > 0),
+          .filter((track) => track.elements.length > 0),
       };
     });
   },
 
-  updateClipTrim: (trackId, clipId, trimStart, trimEnd) => {
+  updateElementTrim: (trackId, elementId, trimStart, trimEnd) => {
     get().pushHistory();
     set((state) => ({
       tracks: state.tracks.map((track) =>
         track.id === trackId
           ? {
               ...track,
-              clips: track.clips.map((clip) =>
-                clip.id === clipId ? { ...clip, trimStart, trimEnd } : clip
+              elements: track.elements.map((element) =>
+                element.id === elementId
+                  ? { ...element, trimStart, trimEnd }
+                  : element
               ),
             }
           : track
@@ -307,15 +390,15 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     }));
   },
 
-  updateClipStartTime: (trackId, clipId, startTime) => {
+  updateElementStartTime: (trackId, elementId, startTime) => {
     get().pushHistory();
     set((state) => ({
       tracks: state.tracks.map((track) =>
         track.id === trackId
           ? {
               ...track,
-              clips: track.clips.map((clip) =>
-                clip.id === clipId ? { ...clip, startTime } : clip
+              elements: track.elements.map((element) =>
+                element.id === elementId ? { ...element, startTime } : element
               ),
             }
           : track
@@ -332,47 +415,48 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     }));
   },
 
-  splitClip: (trackId, clipId, splitTime) => {
+  splitElement: (trackId, elementId, splitTime) => {
     const { tracks } = get();
     const track = tracks.find((t) => t.id === trackId);
-    const clip = track?.clips.find((c) => c.id === clipId);
+    const element = track?.elements.find((c) => c.id === elementId);
 
-    if (!clip) return null;
+    if (!element) return null;
 
-    const effectiveStart = clip.startTime;
+    const effectiveStart = element.startTime;
     const effectiveEnd =
-      clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+      element.startTime +
+      (element.duration - element.trimStart - element.trimEnd);
 
     if (splitTime <= effectiveStart || splitTime >= effectiveEnd) return null;
 
     get().pushHistory();
 
-    const relativeTime = splitTime - clip.startTime;
+    const relativeTime = splitTime - element.startTime;
     const firstDuration = relativeTime;
     const secondDuration =
-      clip.duration - clip.trimStart - clip.trimEnd - relativeTime;
+      element.duration - element.trimStart - element.trimEnd - relativeTime;
 
-    const secondClipId = crypto.randomUUID();
+    const secondElementId = crypto.randomUUID();
 
     set((state) => ({
       tracks: state.tracks.map((track) =>
         track.id === trackId
           ? {
               ...track,
-              clips: track.clips.flatMap((c) =>
-                c.id === clipId
+              elements: track.elements.flatMap((c) =>
+                c.id === elementId
                   ? [
                       {
                         ...c,
                         trimEnd: c.trimEnd + secondDuration,
-                        name: getClipNameWithSuffix(c.name, "left"),
+                        name: getElementNameWithSuffix(c.name, "left"),
                       },
                       {
                         ...c,
-                        id: secondClipId,
+                        id: secondElementId,
                         startTime: splitTime,
                         trimStart: c.trimStart + firstDuration,
-                        name: getClipNameWithSuffix(c.name, "right"),
+                        name: getElementNameWithSuffix(c.name, "right"),
                       },
                     ]
                   : [c]
@@ -382,40 +466,41 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
       ),
     }));
 
-    return secondClipId;
+    return secondElementId;
   },
 
-  // Split clip and keep only the left portion
-  splitAndKeepLeft: (trackId, clipId, splitTime) => {
+  // Split element and keep only the left portion
+  splitAndKeepLeft: (trackId, elementId, splitTime) => {
     const { tracks } = get();
     const track = tracks.find((t) => t.id === trackId);
-    const clip = track?.clips.find((c) => c.id === clipId);
+    const element = track?.elements.find((c) => c.id === elementId);
 
-    if (!clip) return;
+    if (!element) return;
 
-    const effectiveStart = clip.startTime;
+    const effectiveStart = element.startTime;
     const effectiveEnd =
-      clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+      element.startTime +
+      (element.duration - element.trimStart - element.trimEnd);
 
     if (splitTime <= effectiveStart || splitTime >= effectiveEnd) return;
 
     get().pushHistory();
 
-    const relativeTime = splitTime - clip.startTime;
+    const relativeTime = splitTime - element.startTime;
     const durationToRemove =
-      clip.duration - clip.trimStart - clip.trimEnd - relativeTime;
+      element.duration - element.trimStart - element.trimEnd - relativeTime;
 
     set((state) => ({
       tracks: state.tracks.map((track) =>
         track.id === trackId
           ? {
               ...track,
-              clips: track.clips.map((c) =>
-                c.id === clipId
+              elements: track.elements.map((c) =>
+                c.id === elementId
                   ? {
                       ...c,
                       trimEnd: c.trimEnd + durationToRemove,
-                      name: getClipNameWithSuffix(c.name, "left"),
+                      name: getElementNameWithSuffix(c.name, "left"),
                     }
                   : c
               ),
@@ -425,36 +510,37 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     }));
   },
 
-  // Split clip and keep only the right portion
-  splitAndKeepRight: (trackId, clipId, splitTime) => {
+  // Split element and keep only the right portion
+  splitAndKeepRight: (trackId, elementId, splitTime) => {
     const { tracks } = get();
     const track = tracks.find((t) => t.id === trackId);
-    const clip = track?.clips.find((c) => c.id === clipId);
+    const element = track?.elements.find((c) => c.id === elementId);
 
-    if (!clip) return;
+    if (!element) return;
 
-    const effectiveStart = clip.startTime;
+    const effectiveStart = element.startTime;
     const effectiveEnd =
-      clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+      element.startTime +
+      (element.duration - element.trimStart - element.trimEnd);
 
     if (splitTime <= effectiveStart || splitTime >= effectiveEnd) return;
 
     get().pushHistory();
 
-    const relativeTime = splitTime - clip.startTime;
+    const relativeTime = splitTime - element.startTime;
 
     set((state) => ({
       tracks: state.tracks.map((track) =>
         track.id === trackId
           ? {
               ...track,
-              clips: track.clips.map((c) =>
-                c.id === clipId
+              elements: track.elements.map((c) =>
+                c.id === elementId
                   ? {
                       ...c,
                       startTime: splitTime,
                       trimStart: c.trimStart + relativeTime,
-                      name: getClipNameWithSuffix(c.name, "right"),
+                      name: getElementNameWithSuffix(c.name, "right"),
                     }
                   : c
               ),
@@ -464,33 +550,33 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     }));
   },
 
-  // Extract audio from video clip to an audio track
-  separateAudio: (trackId, clipId) => {
+  // Extract audio from video element to an audio track
+  separateAudio: (trackId, elementId) => {
     const { tracks } = get();
     const track = tracks.find((t) => t.id === trackId);
-    const clip = track?.clips.find((c) => c.id === clipId);
+    const element = track?.elements.find((c) => c.id === elementId);
 
-    if (!clip || track?.type !== "video") return null;
+    if (!element || track?.type !== "media") return null;
 
     get().pushHistory();
 
     // Find existing audio track or prepare to create one
     const existingAudioTrack = tracks.find((t) => t.type === "audio");
-    const audioClipId = crypto.randomUUID();
+    const audioElementId = crypto.randomUUID();
 
     if (existingAudioTrack) {
-      // Add audio clip to existing audio track
+      // Add audio element to existing audio track
       set((state) => ({
         tracks: state.tracks.map((track) =>
           track.id === existingAudioTrack.id
             ? {
                 ...track,
-                clips: [
-                  ...track.clips,
+                elements: [
+                  ...track.elements,
                   {
-                    ...clip,
-                    id: audioClipId,
-                    name: getClipNameWithSuffix(clip.name, "audio"),
+                    ...element,
+                    id: audioElementId,
+                    name: getElementNameWithSuffix(element.name, "audio"),
                   },
                 ],
               }
@@ -498,16 +584,16 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
         ),
       }));
     } else {
-      // Create new audio track with the audio clip in a single atomic update
+      // Create new audio track with the audio element in a single atomic update
       const newAudioTrack: TimelineTrack = {
         id: crypto.randomUUID(),
         name: "Audio Track",
         type: "audio",
-        clips: [
+        elements: [
           {
-            ...clip,
-            id: audioClipId,
-            name: getClipNameWithSuffix(clip.name, "audio"),
+            ...element,
+            id: audioElementId,
+            name: getElementNameWithSuffix(element.name, "audio"),
           },
         ],
         muted: false,
@@ -518,7 +604,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
       }));
     }
 
-    return audioClipId;
+    return audioElementId;
   },
 
   getTotalDuration: () => {
@@ -526,10 +612,13 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     if (tracks.length === 0) return 0;
 
     const trackEndTimes = tracks.map((track) =>
-      track.clips.reduce((maxEnd, clip) => {
-        const clipEnd =
-          clip.startTime + clip.duration - clip.trimStart - clip.trimEnd;
-        return Math.max(maxEnd, clipEnd);
+      track.elements.reduce((maxEnd, element) => {
+        const elementEnd =
+          element.startTime +
+          element.duration -
+          element.trimStart -
+          element.trimEnd;
+        return Math.max(maxEnd, elementEnd);
       }, 0)
     );
 
@@ -545,10 +634,10 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
 
   dragState: {
     isDragging: false,
-    clipId: null,
+    elementId: null,
     trackId: null,
     startMouseX: 0,
-    startClipTime: 0,
+    startElementTime: 0,
     clickOffsetTime: 0,
     currentTime: 0,
   },
@@ -558,16 +647,22 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
       dragState: { ...state.dragState, ...dragState },
     })),
 
-  startDrag: (clipId, trackId, startMouseX, startClipTime, clickOffsetTime) => {
+  startDrag: (
+    elementId,
+    trackId,
+    startMouseX,
+    startElementTime,
+    clickOffsetTime
+  ) => {
     set({
       dragState: {
         isDragging: true,
-        clipId,
+        elementId,
         trackId,
         startMouseX,
-        startClipTime,
+        startElementTime,
         clickOffsetTime,
-        currentTime: startClipTime,
+        currentTime: startElementTime,
       },
     });
   },
@@ -585,10 +680,10 @@ export const useTimelineStore = create<TimelineStore>((set, get) => ({
     set({
       dragState: {
         isDragging: false,
-        clipId: null,
+        elementId: null,
         trackId: null,
         startMouseX: 0,
-        startClipTime: 0,
+        startElementTime: 0,
         clickOffsetTime: 0,
         currentTime: 0,
       },

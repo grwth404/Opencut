@@ -42,23 +42,22 @@ import {
   SelectValue,
 } from "../ui/select";
 import { TimelineTrackContent } from "./timeline-track";
+import type { DragData } from "@/types/timeline";
 
 export function Timeline() {
-  // Timeline shows all tracks (video, audio, effects) and their clips.
+  // Timeline shows all tracks (video, audio, effects) and their elements.
   // You can drag media here to add it to your project.
-  // Clips can be trimmed, deleted, and moved.
+  // elements can be trimmed, deleted, and moved.
   const {
     tracks,
     addTrack,
-    addClipToTrack,
-    removeTrack,
-    toggleTrackMute,
-    removeClipFromTrack,
+    addElementToTrack,
+    removeElementFromTrack,
     getTotalDuration,
-    selectedClips,
-    clearSelectedClips,
-    setSelectedClips,
-    splitClip,
+    selectedElements,
+    clearSelectedElements,
+    setSelectedElements,
+    splitElement,
     splitAndKeepLeft,
     splitAndKeepRight,
     separateAudio,
@@ -116,36 +115,28 @@ export function Timeline() {
   const lastRulerSync = useRef(0);
   const lastTracksSync = useRef(0);
 
-  // New refs for direct playhead DOM manipulation
-  const rulerPlayheadRef = useRef<HTMLDivElement>(null);
-  const tracksPlayheadRef = useRef<HTMLDivElement>(null);
-
-  // Refs to store initial mouse and scroll positions for drag calculations
-  const initialMouseXRef = useRef(0);
-  const initialTimelineScrollLeftRef = useRef(0);
-
   // Update timeline duration when tracks change
   useEffect(() => {
     const totalDuration = getTotalDuration();
     setDuration(Math.max(totalDuration, 10)); // Minimum 10 seconds for empty timeline
   }, [tracks, setDuration, getTotalDuration]);
 
-  // Keyboard event for deleting selected clips
+  // Keyboard event for deleting selected elements
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
         (e.key === "Delete" || e.key === "Backspace") &&
-        selectedClips.length > 0
+        selectedElements.length > 0
       ) {
-        selectedClips.forEach(({ trackId, clipId }) => {
-          removeClipFromTrack(trackId, clipId);
+        selectedElements.forEach(({ trackId, elementId }) => {
+          removeElementFromTrack(trackId, elementId);
         });
-        clearSelectedClips();
+        clearSelectedElements();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedClips, removeClipFromTrack, clearSelectedClips]);
+  }, [selectedElements, removeElementFromTrack, clearSelectedElements]);
 
   // Keyboard event for undo (Cmd+Z)
   useEffect(() => {
@@ -190,9 +181,9 @@ export function Timeline() {
 
   // Add new click handler for deselection
   const handleTimelineClick = (e: React.MouseEvent) => {
-    // If clicking empty area (not on a clip) and not starting marquee, deselect all clips
-    if (!(e.target as HTMLElement).closest(".timeline-clip")) {
-      clearSelectedClips();
+    // If clicking empty area (not on an element) and not starting marquee, deselect all elements
+    if (!(e.target as HTMLElement).closest(".timeline-element")) {
+      clearSelectedElements();
     }
   };
 
@@ -218,7 +209,7 @@ export function Timeline() {
     };
   }, [marquee]);
 
-  // On marquee end, select clips in box
+  // On marquee end, select elements in box
   useEffect(() => {
     if (!marquee || marquee.active) return;
     const timeline = timelineRef.current;
@@ -240,56 +231,54 @@ export function Timeline() {
     const bx2 = clamp(x2, 0, rect.width);
     const by1 = clamp(y1, 0, rect.height);
     const by2 = clamp(y2, 0, rect.height);
-    let newSelection: { trackId: string; clipId: string }[] = [];
+    let newSelection: { trackId: string; elementId: string }[] = [];
     tracks.forEach((track, trackIdx) => {
-      track.clips.forEach((clip) => {
-        const effectiveDuration = clip.duration - clip.trimStart - clip.trimEnd;
-        const clipWidth = Math.max(80, effectiveDuration * 50 * zoomLevel);
-        const clipLeft = clip.startTime * 50 * zoomLevel;
+      track.elements.forEach((element) => {
+        const clipLeft = element.startTime * 50 * zoomLevel;
         const clipTop = trackIdx * 60;
         const clipBottom = clipTop + 60;
-        const clipRight = clipLeft + 60; // Set a fixed width for time display
+        const clipRight = clipLeft + 60;
         if (
           bx1 < clipRight &&
           bx2 > clipLeft &&
           by1 < clipBottom &&
           by2 > clipTop
         ) {
-          newSelection.push({ trackId: track.id, clipId: clip.id });
+          newSelection.push({ trackId: track.id, elementId: element.id });
         }
       });
     });
     if (newSelection.length > 0) {
       if (marquee.additive) {
         const selectedSet = new Set(
-          selectedClips.map((c) => c.trackId + ":" + c.clipId)
+          selectedElements.map((c) => c.trackId + ":" + c.elementId)
         );
         newSelection = [
-          ...selectedClips,
+          ...selectedElements,
           ...newSelection.filter(
-            (c) => !selectedSet.has(c.trackId + ":" + c.clipId)
+            (c) => !selectedSet.has(c.trackId + ":" + c.elementId)
           ),
         ];
       }
-      setSelectedClips(newSelection);
+      setSelectedElements(newSelection);
     } else if (!marquee.additive) {
-      clearSelectedClips();
+      clearSelectedElements();
     }
     setMarquee(null);
   }, [
     marquee,
     tracks,
     zoomLevel,
-    selectedClips,
-    setSelectedClips,
-    clearSelectedClips,
+    selectedElements,
+    setSelectedElements,
+    clearSelectedElements,
   ]);
 
   const handleDragEnter = (e: React.DragEvent) => {
     // When something is dragged over the timeline, show overlay
     e.preventDefault();
-    // Don't show overlay for timeline clips - they're handled by tracks
-    if (e.dataTransfer.types.includes("application/x-timeline-clip")) {
+    // Don't show overlay for timeline elements - they're handled by tracks
+    if (e.dataTransfer.types.includes("application/x-timeline-element")) {
       return;
     }
     dragCounterRef.current += 1;
@@ -305,8 +294,8 @@ export function Timeline() {
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
 
-    // Don't update state for timeline clips - they're handled by tracks
-    if (e.dataTransfer.types.includes("application/x-timeline-clip")) {
+    // Don't update state for timeline elements - they're handled by tracks
+    if (e.dataTransfer.types.includes("application/x-timeline-element")) {
       return;
     }
 
@@ -317,44 +306,74 @@ export function Timeline() {
   };
 
   const handleDrop = async (e: React.DragEvent) => {
-    // When media is dropped, add it as a new track/clip
+    // When media is dropped, add it as a new track/element
     e.preventDefault();
     setIsDragOver(false);
     dragCounterRef.current = 0;
 
-    // Ignore timeline clip drags - they're handled by track-specific handlers
-    const hasTimelineClip = e.dataTransfer.types.includes(
-      "application/x-timeline-clip"
+    // Ignore timeline element drags - they're handled by track-specific handlers
+    const hasTimelineElement = e.dataTransfer.types.includes(
+      "application/x-timeline-element"
     );
-    if (hasTimelineClip) {
+    if (hasTimelineElement) {
       return;
     }
 
-    const mediaItemData = e.dataTransfer.getData("application/x-media-item");
-    if (mediaItemData) {
-      // Handle media item drops by creating new tracks
+    const itemData = e.dataTransfer.getData("application/x-media-item");
+    if (itemData) {
       try {
-        const { id, type } = JSON.parse(mediaItemData);
-        const mediaItem = mediaItems.find((item) => item.id === id);
-        if (!mediaItem) {
-          toast.error("Media item not found");
-          return;
+        const dragData: DragData = JSON.parse(itemData);
+
+        if (dragData.type === "text") {
+          // Always create new text track to avoid overlaps
+          const newTrackId = addTrack("text");
+
+          addElementToTrack(newTrackId, {
+            type: "text",
+            name: dragData.name || "Text",
+            content: dragData.content || "Default Text",
+            duration: 5,
+            startTime: 0,
+            trimStart: 0,
+            trimEnd: 0,
+            fontSize: 48,
+            fontFamily: "Arial",
+            color: "#ffffff",
+            backgroundColor: "transparent",
+            textAlign: "center",
+            fontWeight: "normal",
+            fontStyle: "normal",
+            textDecoration: "none",
+            x: 0,
+            y: 0,
+            rotation: 0,
+            opacity: 1,
+          });
+        } else {
+          // Handle media items
+          const mediaItem = mediaItems.find((item) => item.id === dragData.id);
+          if (!mediaItem) {
+            toast.error("Media item not found");
+            return;
+          }
+
+          const trackType = dragData.type === "audio" ? "audio" : "media";
+          let targetTrack = tracks.find((t) => t.type === trackType);
+          const newTrackId = targetTrack ? targetTrack.id : addTrack(trackType);
+
+          addElementToTrack(newTrackId, {
+            type: "media",
+            mediaId: mediaItem.id,
+            name: mediaItem.name,
+            duration: mediaItem.duration || 5,
+            startTime: 0,
+            trimStart: 0,
+            trimEnd: 0,
+          });
         }
-        // Add to video or audio track depending on type
-        const trackType = type === "audio" ? "audio" : "video";
-        const newTrackId = addTrack(trackType);
-        addClipToTrack(newTrackId, {
-          mediaId: mediaItem.id,
-          name: mediaItem.name,
-          duration: mediaItem.duration || 5,
-          startTime: 0,
-          trimStart: 0,
-          trimEnd: 0,
-        });
       } catch (error) {
-        // Show error if parsing fails
-        console.error("Error parsing media item data:", error);
-        toast.error("Failed to add media to timeline");
+        console.error("Error parsing dropped item data:", error);
+        toast.error("Failed to add item to timeline");
       }
     } else if (e.dataTransfer.files?.length > 0) {
       // Handle file drops by creating new tracks
@@ -374,9 +393,10 @@ export function Timeline() {
           );
           if (addedItem) {
             const trackType =
-              processedItem.type === "audio" ? "audio" : "video";
+              processedItem.type === "audio" ? "audio" : "media";
             const newTrackId = addTrack(trackType);
-            addClipToTrack(newTrackId, {
+            addElementToTrack(newTrackId, {
+              type: "media",
               mediaId: addedItem.id,
               name: addedItem.name,
               duration: addedItem.duration || 5,
@@ -502,175 +522,134 @@ export function Timeline() {
 
   // Action handlers for toolbar
   const handleSplitSelected = () => {
-    if (selectedClips.length === 0) {
-      toast.error("No clips selected");
+    if (selectedElements.length === 0) {
+      toast.error("No elements selected");
       return;
     }
     let splitCount = 0;
-    selectedClips.forEach(({ trackId, clipId }) => {
+    selectedElements.forEach(({ trackId, elementId }) => {
       const track = tracks.find((t) => t.id === trackId);
-      const clip = track?.clips.find((c) => c.id === clipId);
-      if (clip && track) {
-        const effectiveStart = clip.startTime;
+      const element = track?.elements.find((c) => c.id === elementId);
+      if (element && track) {
+        const effectiveStart = element.startTime;
         const effectiveEnd =
-          clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+          element.startTime +
+          (element.duration - element.trimStart - element.trimEnd);
 
         if (currentTime > effectiveStart && currentTime < effectiveEnd) {
-          const newClipId = splitClip(trackId, clipId, currentTime);
-          if (newClipId) splitCount++;
+          const newElementId = splitElement(trackId, elementId, currentTime);
+          if (newElementId) splitCount++;
         }
       }
     });
-    if (splitCount > 0) {
-      toast.success(`Split ${splitCount} clip(s) at playhead`);
-    } else {
-      toast.error("Playhead must be within selected clips to split");
+    if (splitCount === 0) {
+      toast.error("Playhead must be within selected elements to split");
     }
   };
 
   const handleDuplicateSelected = () => {
-    if (selectedClips.length === 0) {
-      toast.error("No clips selected");
+    if (selectedElements.length === 0) {
+      toast.error("No elements selected");
       return;
     }
-    selectedClips.forEach(({ trackId, clipId }) => {
+    const canDuplicate = selectedElements.length === 1;
+    if (!canDuplicate) return;
+
+    const newSelections: { trackId: string; elementId: string }[] = [];
+
+    selectedElements.forEach(({ trackId, elementId }) => {
       const track = tracks.find((t) => t.id === trackId);
-      const clip = track?.clips.find((c) => c.id === clipId);
-      if (clip && track) {
-        addClipToTrack(track.id, {
-          mediaId: clip.mediaId,
-          name: clip.name + " (copy)",
-          duration: clip.duration,
-          startTime:
-            clip.startTime +
-            (clip.duration - clip.trimStart - clip.trimEnd) +
-            0.1,
-          trimStart: clip.trimStart,
-          trimEnd: clip.trimEnd,
+      const element = track?.elements.find((el) => el.id === elementId);
+
+      if (element) {
+        const newStartTime =
+          element.startTime +
+          (element.duration - element.trimStart - element.trimEnd) +
+          0.1;
+
+        // Create element without id (will be generated by store)
+        const { id, ...elementWithoutId } = element;
+
+        addElementToTrack(trackId, {
+          ...elementWithoutId,
+          startTime: newStartTime,
         });
+
+        // We can't predict the new id, so just clear selection for now
+        // TODO: addElementToTrack could return the new element id
       }
     });
-    toast.success("Duplicated selected clip(s)");
+
+    clearSelectedElements();
   };
 
   const handleFreezeSelected = () => {
-    if (selectedClips.length === 0) {
-      toast.error("No clips selected");
-      return;
-    }
-    selectedClips.forEach(({ trackId, clipId }) => {
-      const track = tracks.find((t) => t.id === trackId);
-      const clip = track?.clips.find((c) => c.id === clipId);
-      if (clip && track) {
-        // Add a new freeze frame clip at the playhead
-        addClipToTrack(track.id, {
-          mediaId: clip.mediaId,
-          name: clip.name + " (freeze)",
-          duration: 1, // 1 second freeze frame
-          startTime: currentTime,
-          trimStart: 0,
-          trimEnd: clip.duration - 1,
-        });
-      }
-    });
+    toast.info("Freeze frame functionality coming soon!");
   };
+
   const handleSplitAndKeepLeft = () => {
-    if (selectedClips.length === 0) {
-      toast.error("No clips selected");
+    if (selectedElements.length !== 1) {
+      toast.error("Select exactly one element");
       return;
     }
-
-    let splitCount = 0;
-    selectedClips.forEach(({ trackId, clipId }) => {
-      const track = tracks.find((t) => t.id === trackId);
-      const clip = track?.clips.find((c) => c.id === clipId);
-      if (clip && track) {
-        const effectiveStart = clip.startTime;
-        const effectiveEnd =
-          clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
-
-        if (currentTime > effectiveStart && currentTime < effectiveEnd) {
-          splitAndKeepLeft(trackId, clipId, currentTime);
-          splitCount++;
-        }
-      }
-    });
-
-    if (splitCount > 0) {
-      toast.success(`Split and kept left portion of ${splitCount} clip(s)`);
-    } else {
-      toast.error("Playhead must be within selected clips");
+    const { trackId, elementId } = selectedElements[0];
+    const track = tracks.find((t) => t.id === trackId);
+    const element = track?.elements.find((c) => c.id === elementId);
+    if (!element) return;
+    const effectiveStart = element.startTime;
+    const effectiveEnd =
+      element.startTime +
+      (element.duration - element.trimStart - element.trimEnd);
+    if (currentTime <= effectiveStart || currentTime >= effectiveEnd) {
+      toast.error("Playhead must be within selected element");
+      return;
     }
+    splitAndKeepLeft(trackId, elementId, currentTime);
   };
 
   const handleSplitAndKeepRight = () => {
-    if (selectedClips.length === 0) {
-      toast.error("No clips selected");
+    if (selectedElements.length !== 1) {
+      toast.error("Select exactly one element");
       return;
     }
-
-    let splitCount = 0;
-    selectedClips.forEach(({ trackId, clipId }) => {
-      const track = tracks.find((t) => t.id === trackId);
-      const clip = track?.clips.find((c) => c.id === clipId);
-      if (clip && track) {
-        const effectiveStart = clip.startTime;
-        const effectiveEnd =
-          clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
-
-        if (currentTime > effectiveStart && currentTime < effectiveEnd) {
-          splitAndKeepRight(trackId, clipId, currentTime);
-          splitCount++;
-        }
-      }
-    });
-
-    if (splitCount > 0) {
-      toast.success(`Split and kept right portion of ${splitCount} clip(s)`);
-    } else {
-      toast.error("Playhead must be within selected clips");
+    const { trackId, elementId } = selectedElements[0];
+    const track = tracks.find((t) => t.id === trackId);
+    const element = track?.elements.find((c) => c.id === elementId);
+    if (!element) return;
+    const effectiveStart = element.startTime;
+    const effectiveEnd =
+      element.startTime +
+      (element.duration - element.trimStart - element.trimEnd);
+    if (currentTime <= effectiveStart || currentTime >= effectiveEnd) {
+      toast.error("Playhead must be within selected element");
+      return;
     }
+    splitAndKeepRight(trackId, elementId, currentTime);
   };
 
   const handleSeparateAudio = () => {
-    if (selectedClips.length === 0) {
-      toast.error("No clips selected");
+    if (selectedElements.length !== 1) {
+      toast.error("Select exactly one media element to separate audio");
       return;
     }
-
-    let separatedCount = 0;
-    selectedClips.forEach(({ trackId, clipId }) => {
-      const track = tracks.find((t) => t.id === trackId);
-      const clip = track?.clips.find((c) => c.id === clipId);
-      const mediaItem = mediaItems.find((item) => item.id === clip?.mediaId);
-
-      if (
-        clip &&
-        track &&
-        mediaItem?.type === "video" &&
-        track.type === "video"
-      ) {
-        const audioClipId = separateAudio(trackId, clipId);
-        if (audioClipId) separatedCount++;
-      }
-    });
-
-    if (separatedCount > 0) {
-      toast.success(`Separated audio from ${separatedCount} video clip(s)`);
-    } else {
-      toast.error("Select video clips to separate audio");
+    const { trackId, elementId } = selectedElements[0];
+    const track = tracks.find((t) => t.id === trackId);
+    if (!track || track.type !== "media") {
+      toast.error("Select a media element to separate audio");
+      return;
     }
+    separateAudio(trackId, elementId);
   };
+
   const handleDeleteSelected = () => {
-    if (selectedClips.length === 0) {
-      toast.error("No clips selected");
+    if (selectedElements.length === 0) {
+      toast.error("No elements selected");
       return;
     }
-    selectedClips.forEach(({ trackId, clipId }) => {
-      removeClipFromTrack(trackId, clipId);
+    selectedElements.forEach(({ trackId, elementId }) => {
+      removeElementFromTrack(trackId, elementId);
     });
-    clearSelectedClips();
-    toast.success("Deleted selected clip(s)");
+    clearSelectedElements();
   };
 
   // Prevent explorer zooming in/out when in timeline
@@ -754,7 +733,7 @@ export function Timeline() {
 
   return (
     <div
-      className={`h-full flex flex-col transition-colors duration-200 relative ${isDragOver ? "bg-accent/30 border-accent" : ""}`}
+      className={`h-full flex flex-col transition-colors duration-200 relative`}
       {...dragProps}
       onMouseEnter={() => setIsInTimeline(true)}
       onMouseLeave={() => setIsInTimeline(false)}
@@ -783,9 +762,7 @@ export function Timeline() {
               {isPlaying ? "Pause (Space)" : "Play (Space)"}
             </TooltipContent>
           </Tooltip>
-
           <div className="w-px h-6 bg-border mx-1" />
-
           {/* Time Display */}
           <div
             className="text-xs text-muted-foreground font-mono px-2"
@@ -793,7 +770,6 @@ export function Timeline() {
           >
             {currentTime.toFixed(1)}s / {duration.toFixed(1)}s
           </div>
-
           {/* Test Clip Button - for debugging */}
           {tracks.length === 0 && (
             <>
@@ -804,8 +780,9 @@ export function Timeline() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const trackId = addTrack("video");
-                      addClipToTrack(trackId, {
+                      const trackId = addTrack("media");
+                      addElementToTrack(trackId, {
+                        type: "media",
                         mediaId: "test",
                         name: "Test Clip",
                         duration: 5,
@@ -823,18 +800,15 @@ export function Timeline() {
               </Tooltip>
             </>
           )}
-
           <div className="w-px h-6 bg-border mx-1" />
-
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="text" size="icon" onClick={handleSplitSelected}>
                 <Scissors className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Split clip (Ctrl+S)</TooltipContent>
+            <TooltipContent>Split element (Ctrl+S)</TooltipContent>
           </Tooltip>
-
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -847,7 +821,6 @@ export function Timeline() {
             </TooltipTrigger>
             <TooltipContent>Split and keep left (Ctrl+Q)</TooltipContent>
           </Tooltip>
-
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -860,7 +833,6 @@ export function Timeline() {
             </TooltipTrigger>
             <TooltipContent>Split and keep right (Ctrl+W)</TooltipContent>
           </Tooltip>
-
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="text" size="icon" onClick={handleSeparateAudio}>
@@ -869,7 +841,6 @@ export function Timeline() {
             </TooltipTrigger>
             <TooltipContent>Separate audio (Ctrl+D)</TooltipContent>
           </Tooltip>
-
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -880,9 +851,8 @@ export function Timeline() {
                 <Copy className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Duplicate clip (Ctrl+D)</TooltipContent>
+            <TooltipContent>Duplicate element (Ctrl+D)</TooltipContent>
           </Tooltip>
-
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="text" size="icon" onClick={handleFreezeSelected}>
@@ -891,19 +861,15 @@ export function Timeline() {
             </TooltipTrigger>
             <TooltipContent>Freeze frame (F)</TooltipContent>
           </Tooltip>
-
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="text" size="icon" onClick={handleDeleteSelected}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Delete clip (Delete)</TooltipContent>
+            <TooltipContent>Delete element (Delete)</TooltipContent>
           </Tooltip>
-
-          <div className="w-px h-6 bg-border mx-1" />
-
-          {/* Speed Control */}
+          <div className="w-px h-6 bg-border mx-1" />c{/* Speed Control */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Select
@@ -935,9 +901,6 @@ export function Timeline() {
             <span className="text-sm font-medium text-muted-foreground">
               Tracks
             </span>
-            <div className="text-xs text-muted-foreground">
-              {zoomLevel.toFixed(1)}x
-            </div>
           </div>
 
           {/* Timeline Ruler */}
@@ -1045,7 +1008,7 @@ export function Timeline() {
                     <div className="flex items-center flex-1 min-w-0">
                       <div
                         className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                          track.type === "video"
+                          track.type === "media"
                             ? "bg-blue-500"
                             : track.type === "audio"
                               ? "bg-green-500"
@@ -1080,16 +1043,7 @@ export function Timeline() {
                 onMouseDown={handleTimelineMouseDown}
               >
                 {tracks.length === 0 ? (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4 mx-auto">
-                        <SplitSquareHorizontal className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Drop media here to start
-                      </p>
-                    </div>
-                  </div>
+                  <div></div>
                 ) : (
                   <>
                     {tracks.map((track, index) => (
@@ -1102,13 +1056,13 @@ export function Timeline() {
                               height: "60px",
                             }}
                             onClick={(e) => {
-                              // If clicking empty area (not on a clip), deselect all clips
+                              // If clicking empty area (not on a element), deselect all elements
                               if (
                                 !(e.target as HTMLElement).closest(
-                                  ".timeline-clip"
+                                  ".timeline-element"
                                 )
                               ) {
-                                clearSelectedClips();
+                                clearSelectedElements();
                               }
                             }}
                           >
@@ -1119,33 +1073,8 @@ export function Timeline() {
                           </div>
                         </ContextMenuTrigger>
                         <ContextMenuContent>
-                          <ContextMenuItem
-                            onClick={() => {
-                              toggleTrackMute(track.id);
-                            }}
-                          >
-                            {track.muted ? (
-                              <>
-                                <Volume2 className="h-4 w-4 mr-2" />
-                                Unmute Track
-                              </>
-                            ) : (
-                              <>
-                                <VolumeX className="h-4 w-4 mr-2" />
-                                Mute Track
-                              </>
-                            )}
-                          </ContextMenuItem>
-                          <ContextMenuSeparator />
-                          <ContextMenuItem
-                            onClick={() => {
-                              removeTrack(track.id);
-                              toast.success("Track deleted");
-                            }}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Track
+                          <ContextMenuItem>
+                            Track settings (soon)
                           </ContextMenuItem>
                         </ContextMenuContent>
                       </ContextMenu>
@@ -1163,15 +1092,6 @@ export function Timeline() {
                       />
                     )}
                   </>
-                )}
-                {isDragOver && (
-                  <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none backdrop-blur-lg">
-                    <div>
-                      {isProcessing
-                        ? `Processing ${progress}%`
-                        : "Drop media here to add to timeline"}
-                    </div>
-                  </div>
                 )}
               </div>
             </ScrollArea>

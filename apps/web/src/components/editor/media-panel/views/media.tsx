@@ -73,18 +73,22 @@ export function MediaView() {
     // Remove a media item from the store
     e.stopPropagation();
 
-    // Remove tracks automatically when delete media
+    // Remove elements automatically when delete media
     const { tracks, removeTrack } = useTimelineStore.getState();
     tracks.forEach((track) => {
-      const clipsToRemove = track.clips.filter((clip) => clip.mediaId === id);
-      clipsToRemove.forEach((clip) => {
-        useTimelineStore.getState().removeClipFromTrack(track.id, clip.id);
+      const elementsToRemove = track.elements.filter(
+        (element) => element.type === "media" && element.mediaId === id
+      );
+      elementsToRemove.forEach((element) => {
+        useTimelineStore
+          .getState()
+          .removeElementFromTrack(track.id, element.id);
       });
-      // Only remove track if it becomes empty and has no other clips
+      // Only remove track if it becomes empty and has no other elements
       const updatedTrack = useTimelineStore
         .getState()
         .tracks.find((t) => t.id === track.id);
-      if (updatedTrack && updatedTrack.clips.length === 0) {
+      if (updatedTrack && updatedTrack.elements.length === 0) {
         removeTrack(track.id);
       }
     });

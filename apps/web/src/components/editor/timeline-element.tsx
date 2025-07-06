@@ -10,13 +10,14 @@ import {
   Music,
   ChevronRight,
   ChevronLeft,
+  Type,
 } from "lucide-react";
 import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import AudioWaveform from "./audio-waveform";
 import { toast } from "sonner";
-import { TimelineClipProps, ResizeState } from "@/types/timeline";
+import { TimelineElementProps, ResizeState, TrackType } from "@/types/timeline";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,23 +28,21 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "../ui/dropdown-menu";
-import { isDragging } from "motion/react";
 
-export function TimelineClip({
-  clip,
+export function TimelineElement({
+  element,
   track,
   zoomLevel,
   isSelected,
-  onClipMouseDown,
-  onClipClick,
-}: TimelineClipProps) {
+  onElementMouseDown,
+  onElementClick,
+}: TimelineElementProps) {
   const { mediaItems } = useMediaStore();
   const {
-    updateClipTrim,
-    addClipToTrack,
-    removeClipFromTrack,
+    updateElementTrim,
+    removeElementFromTrack,
     dragState,
-    splitClip,
+    splitElement,
     splitAndKeepLeft,
     splitAndKeepRight,
     separateAudio,
@@ -51,47 +50,48 @@ export function TimelineClip({
   const { currentTime } = usePlaybackStore();
 
   const [resizing, setResizing] = useState<ResizeState | null>(null);
-  const [clipMenuOpen, setClipMenuOpen] = useState(false);
+  const [elementMenuOpen, setElementMenuOpen] = useState(false);
 
-  const effectiveDuration = clip.duration - clip.trimStart - clip.trimEnd;
-  const clipWidth = Math.max(80, effectiveDuration * 50 * zoomLevel);
+  const effectiveDuration =
+    element.duration - element.trimStart - element.trimEnd;
+  const elementWidth = Math.max(80, effectiveDuration * 50 * zoomLevel);
 
   // Use real-time position during drag, otherwise use stored position
-  const isBeingDragged = dragState.clipId === clip.id;
-  const clipStartTime =
+  const isBeingDragged = dragState.elementId === element.id;
+  const elementStartTime =
     isBeingDragged && dragState.isDragging
       ? dragState.currentTime
-      : clip.startTime;
-  const clipLeft = clipStartTime * 50 * zoomLevel;
+      : element.startTime;
+  const elementLeft = elementStartTime * 50 * zoomLevel;
 
-  const getTrackColor = (type: string) => {
+  const getTrackColor = (type: TrackType) => {
     switch (type) {
-      case "video":
+      case "media":
         return "bg-blue-500/20 border-blue-500/30";
+      case "text":
+        return "bg-purple-500/20 border-purple-500/30";
       case "audio":
         return "bg-green-500/20 border-green-500/30";
-      case "effects":
-        return "bg-purple-500/20 border-purple-500/30";
       default:
         return "bg-gray-500/20 border-gray-500/30";
     }
   };
 
-  // Resize handles for trimming clips
+  // Resize handles for trimming elements
   const handleResizeStart = (
     e: React.MouseEvent,
-    clipId: string,
+    elementId: string,
     side: "left" | "right"
   ) => {
     e.stopPropagation();
     e.preventDefault();
 
     setResizing({
-      clipId,
+      elementId,
       side,
       startX: e.clientX,
-      initialTrimStart: clip.trimStart,
-      initialTrimEnd: clip.trimEnd,
+      initialTrimStart: element.trimStart,
+      initialTrimEnd: element.trimEnd,
     });
   };
 
@@ -105,20 +105,20 @@ export function TimelineClip({
       const newTrimStart = Math.max(
         0,
         Math.min(
-          clip.duration - clip.trimEnd - 0.1,
+          element.duration - element.trimEnd - 0.1,
           resizing.initialTrimStart + deltaTime
         )
       );
-      updateClipTrim(track.id, clip.id, newTrimStart, clip.trimEnd);
+      updateElementTrim(track.id, element.id, newTrimStart, element.trimEnd);
     } else {
       const newTrimEnd = Math.max(
         0,
         Math.min(
-          clip.duration - clip.trimStart - 0.1,
+          element.duration - element.trimStart - 0.1,
           resizing.initialTrimEnd - deltaTime
         )
       );
-      updateClipTrim(track.id, clip.id, clip.trimStart, newTrimEnd);
+      updateElementTrim(track.id, element.id, element.trimStart, newTrimEnd);
     }
   };
 
@@ -130,96 +130,111 @@ export function TimelineClip({
     setResizing(null);
   };
 
-  const handleDeleteClip = () => {
-    removeClipFromTrack(track.id, clip.id);
-    setClipMenuOpen(false);
-    toast.success("Clip deleted");
+  const handleDeleteElement = () => {
+    removeElementFromTrack(track.id, element.id);
+    setElementMenuOpen(false);
   };
 
-  const handleSplitClip = () => {
-    const effectiveStart = clip.startTime;
+  const handleSplitElement = () => {
+    const effectiveStart = element.startTime;
     const effectiveEnd =
-      clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+      element.startTime +
+      (element.duration - element.trimStart - element.trimEnd);
 
     if (currentTime <= effectiveStart || currentTime >= effectiveEnd) {
-      toast.error("Playhead must be within clip to split");
+      toast.error("Playhead must be within element to split");
       return;
     }
 
-    const secondClipId = splitClip(track.id, clip.id, currentTime);
-    if (secondClipId) {
-      toast.success("Clip split successfully");
-    } else {
-      toast.error("Failed to split clip");
+    const secondElementId = splitElement(track.id, element.id, currentTime);
+    if (!secondElementId) {
+      toast.error("Failed to split element");
     }
-    setClipMenuOpen(false);
+    setElementMenuOpen(false);
   };
 
   const handleSplitAndKeepLeft = () => {
-    const effectiveStart = clip.startTime;
+    const effectiveStart = element.startTime;
     const effectiveEnd =
-      clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+      element.startTime +
+      (element.duration - element.trimStart - element.trimEnd);
 
     if (currentTime <= effectiveStart || currentTime >= effectiveEnd) {
-      toast.error("Playhead must be within clip");
+      toast.error("Playhead must be within element");
       return;
     }
 
-    splitAndKeepLeft(track.id, clip.id, currentTime);
-    toast.success("Split and kept left portion");
-    setClipMenuOpen(false);
+    splitAndKeepLeft(track.id, element.id, currentTime);
+    setElementMenuOpen(false);
   };
 
   const handleSplitAndKeepRight = () => {
-    const effectiveStart = clip.startTime;
+    const effectiveStart = element.startTime;
     const effectiveEnd =
-      clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+      element.startTime +
+      (element.duration - element.trimStart - element.trimEnd);
 
     if (currentTime <= effectiveStart || currentTime >= effectiveEnd) {
-      toast.error("Playhead must be within clip");
+      toast.error("Playhead must be within element");
       return;
     }
 
-    splitAndKeepRight(track.id, clip.id, currentTime);
-    toast.success("Split and kept right portion");
-    setClipMenuOpen(false);
+    splitAndKeepRight(track.id, element.id, currentTime);
+    setElementMenuOpen(false);
   };
 
   const handleSeparateAudio = () => {
-    const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
-
-    if (!mediaItem || mediaItem.type !== "video") {
-      toast.error("Audio separation only available for video clips");
+    if (element.type !== "media") {
+      toast.error("Audio separation only available for media elements");
       return;
     }
 
-    const audioClipId = separateAudio(track.id, clip.id);
-    if (audioClipId) {
-      toast.success("Audio separated to audio track");
-    } else {
+    const mediaItem = mediaItems.find((item) => item.id === element.mediaId);
+    if (!mediaItem || mediaItem.type !== "video") {
+      toast.error("Audio separation only available for video elements");
+      return;
+    }
+
+    const audioElementId = separateAudio(track.id, element.id);
+    if (!audioElementId) {
       toast.error("Failed to separate audio");
     }
-    setClipMenuOpen(false);
+    setElementMenuOpen(false);
   };
 
   const canSplitAtPlayhead = () => {
-    const effectiveStart = clip.startTime;
+    const effectiveStart = element.startTime;
     const effectiveEnd =
-      clip.startTime + (clip.duration - clip.trimStart - clip.trimEnd);
+      element.startTime +
+      (element.duration - element.trimStart - element.trimEnd);
     return currentTime > effectiveStart && currentTime < effectiveEnd;
   };
 
   const canSeparateAudio = () => {
-    const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
-    return mediaItem?.type === "video" && track.type === "video";
+    if (element.type !== "media") return false;
+    const mediaItem = mediaItems.find((item) => item.id === element.mediaId);
+    return mediaItem?.type === "video" && track.type === "media";
   };
 
-  const renderClipContent = () => {
-    const mediaItem = mediaItems.find((item) => item.id === clip.mediaId);
+  const renderElementContent = () => {
+    if (element.type === "text") {
+      return (
+        <div className="w-full h-full flex items-center justify-center px-2">
+          <Type className="h-4 w-4 mr-2 text-purple-400 flex-shrink-0" />
+          <span className="text-xs text-foreground/80 truncate">
+            {element.content}
+          </span>
+        </div>
+      );
+    }
 
+    // Render media element ->
+    const mediaItem = mediaItems.find((item) => item.id === element.mediaId);
     if (!mediaItem) {
       return (
-        <span className="text-xs text-foreground/80 truncate">{clip.name}</span>
+        <span className="text-xs text-foreground/80 truncate">
+          {element.name}
+        </span>
       );
     }
 
@@ -248,18 +263,19 @@ export function TimelineClip({
             />
           </div>
           <span className="text-xs text-foreground/80 truncate flex-1">
-            {clip.name}
+            {element.name}
           </span>
         </div>
       );
     }
 
+    // Render audio element ->
     if (mediaItem.type === "audio") {
       return (
         <div className="w-full h-full flex items-center gap-2">
           <div className="flex-1 min-w-0">
             <AudioWaveform
-              audioUrl={mediaItem.url}
+              audioUrl={mediaItem.url || ""}
               height={24}
               className="w-full"
             />
@@ -269,24 +285,26 @@ export function TimelineClip({
     }
 
     return (
-      <span className="text-xs text-foreground/80 truncate">{clip.name}</span>
+      <span className="text-xs text-foreground/80 truncate">
+        {element.name}
+      </span>
     );
   };
 
-  const handleClipMouseDown = (e: React.MouseEvent) => {
-    if (onClipMouseDown) {
-      onClipMouseDown(e, clip);
+  const handleElementMouseDown = (e: React.MouseEvent) => {
+    if (onElementMouseDown) {
+      onElementMouseDown(e, element);
     }
   };
 
   return (
     <div
-      className={`absolute top-0 h-full select-none transition-all duration-75${
+      className={`absolute top-0 h-full select-none timeline-element ${
         isBeingDragged ? "z-50" : "z-10"
       }`}
       style={{
-        left: `${clipLeft}px`,
-        width: `${clipWidth}px`,
+        left: `${elementLeft}px`,
+        width: `${elementWidth}px`,
       }}
       onMouseMove={resizing ? handleResizeMove : undefined}
       onMouseUp={resizing ? handleResizeEnd : undefined}
@@ -298,29 +316,34 @@ export function TimelineClip({
         )} ${isSelected ? "border-b-[0.5px] border-t-[0.5px] border-foreground" : ""} ${
           isBeingDragged ? "z-50" : "z-10"
         }`}
-        onClick={(e) => onClipClick && onClipClick(e, clip)}
-        onMouseDown={handleClipMouseDown}
-        onContextMenu={(e) => onClipMouseDown && onClipMouseDown(e, clip)}
+        onClick={(e) => onElementClick && onElementClick(e, element)}
+        onMouseDown={handleElementMouseDown}
+        onContextMenu={(e) =>
+          onElementMouseDown && onElementMouseDown(e, element)
+        }
       >
         <div className="absolute inset-1 flex items-center p-1">
-          {renderClipContent()}
+          {renderElementContent()}
         </div>
 
         {isSelected && (
           <>
             <div
               className="absolute left-0 top-0 bottom-0 w-1 cursor-w-resize bg-foreground z-50"
-              onMouseDown={(e) => handleResizeStart(e, clip.id, "left")}
+              onMouseDown={(e) => handleResizeStart(e, element.id, "left")}
             />
             <div
               className="absolute right-0 top-0 bottom-0 w-1 cursor-e-resize bg-foreground z-50"
-              onMouseDown={(e) => handleResizeStart(e, clip.id, "right")}
+              onMouseDown={(e) => handleResizeStart(e, element.id, "right")}
             />
           </>
         )}
 
         <div className="absolute top-1 right-1">
-          <DropdownMenu open={clipMenuOpen} onOpenChange={setClipMenuOpen}>
+          <DropdownMenu
+            open={elementMenuOpen}
+            onOpenChange={setElementMenuOpen}
+          >
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
@@ -328,21 +351,21 @@ export function TimelineClip({
                 className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setClipMenuOpen(true);
+                  setElementMenuOpen(true);
                 }}
               >
                 <MoreVertical className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              {/* Split operations - only available when playhead is within clip */}
+              {/* Split operations - only available when playhead is within element */}
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger disabled={!canSplitAtPlayhead()}>
                   <Scissors className="mr-2 h-4 w-4" />
                   Split
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
-                  <DropdownMenuItem onClick={handleSplitClip}>
+                  <DropdownMenuItem onClick={handleSplitElement}>
                     <SplitSquareHorizontal className="mr-2 h-4 w-4" />
                     Split at Playhead
                   </DropdownMenuItem>
@@ -357,7 +380,7 @@ export function TimelineClip({
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
 
-              {/* Audio separation - only available for video clips */}
+              {/* Audio separation - only available for video elements */}
               {canSeparateAudio() && (
                 <>
                   <DropdownMenuSeparator />
@@ -370,11 +393,11 @@ export function TimelineClip({
 
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={handleDeleteClip}
+                onClick={handleDeleteElement}
                 className="text-destructive"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete Clip
+                Delete {element.type === "text" ? "text" : "clip"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

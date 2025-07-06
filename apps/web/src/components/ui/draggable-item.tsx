@@ -7,11 +7,6 @@ import { createPortal } from "react-dom";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Create the empty image once, outside the component
-const emptyImg = new Image();
-emptyImg.src =
-  "data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=";
-
 export interface DraggableMediaItemProps {
   name: string;
   preview: ReactNode;
@@ -38,6 +33,10 @@ export function DraggableMediaItem({
   const [isDragging, setIsDragging] = useState(false);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   const dragRef = useRef<HTMLDivElement>(null);
+
+  const emptyImg = new window.Image();
+  emptyImg.src =
+    "data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=";
 
   useEffect(() => {
     if (!isDragging) return;
@@ -76,10 +75,9 @@ export function DraggableMediaItem({
 
   return (
     <>
-      <div ref={dragRef} className="relative group">
-        <Button
-          variant="outline"
-          className={`flex flex-col gap-1 p-0 h-auto w-full relative border-none !bg-transparent cursor-default ${className}`}
+      <div ref={dragRef} className="relative group w-28 h-28">
+        <div
+          className={`flex flex-col gap-1 p-0 h-auto w-full relative cursor-default ${className}`}
         >
           <AspectRatio
             ratio={aspectRatio}
@@ -108,7 +106,7 @@ export function DraggableMediaItem({
                 : name}
             </span>
           )}
-        </Button>
+        </div>
       </div>
 
       {/* Custom drag preview */}
