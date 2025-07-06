@@ -1,10 +1,7 @@
 "use client";
 
-import {
-  useTimelineStore,
-  type TimelineTrack,
-} from "@/stores/timeline-store";
-import { TimelineElement } from "@/types/timeline";
+import { useTimelineStore } from "@/stores/timeline-store";
+import { TimelineElement, TimelineTrack } from "@/types/timeline";
 import {
   useMediaStore,
   type MediaItem,
@@ -112,16 +109,19 @@ export function PreviewPanel() {
       track.elements.forEach((element) => {
         const elementStart = element.startTime;
         const elementEnd =
-          element.startTime + (element.duration - element.trimStart - element.trimEnd);
+          element.startTime +
+          (element.duration - element.trimStart - element.trimEnd);
 
         if (currentTime >= elementStart && currentTime < elementEnd) {
           let mediaItem = null;
-          
+
           // Only get media item for media elements
           if (element.type === "media") {
-            mediaItem = element.mediaId === "test"
-              ? null // Test elements don't have a real media item
-              : mediaItems.find((item) => item.id === element.mediaId) || null;
+            mediaItem =
+              element.mediaId === "test"
+                ? null // Test elements don't have a real media item
+                : mediaItems.find((item) => item.id === element.mediaId) ||
+                  null;
           }
 
           activeElements.push({ element, track, mediaItem });
@@ -165,9 +165,9 @@ export function PreviewPanel() {
               fontWeight: element.fontWeight,
               fontStyle: element.fontStyle,
               textDecoration: element.textDecoration,
-              padding: '4px 8px',
-              borderRadius: '2px',
-              whiteSpace: 'pre-wrap',
+              padding: "4px 8px",
+              borderRadius: "2px",
+              whiteSpace: "pre-wrap",
             }}
           >
             {element.content}
@@ -262,7 +262,9 @@ export function PreviewPanel() {
                 No elements at current time
               </div>
             ) : (
-              activeElements.map((elementData, index) => renderElement(elementData, index))
+              activeElements.map((elementData, index) =>
+                renderElement(elementData, index)
+              )
             )}
           </div>
         ) : (
@@ -305,7 +307,9 @@ function PreviewToolbar({ hasAnyElements }: { hasAnyElements: boolean }) {
     for (const track of tracks) {
       for (const element of track.elements) {
         if (element.type === "media") {
-          const mediaItem = mediaItems.find((item) => item.id === element.mediaId);
+          const mediaItem = mediaItems.find(
+            (item) => item.id === element.mediaId
+          );
           if (
             mediaItem &&
             (mediaItem.type === "video" || mediaItem.type === "image")

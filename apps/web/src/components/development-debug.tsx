@@ -1,7 +1,8 @@
 "use client";
 
-import { useTimelineStore, type TimelineTrack } from "@/stores/timeline-store";
+import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore, type MediaItem } from "@/stores/media-store";
+import { TimelineTrack } from "@/types/timeline";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";

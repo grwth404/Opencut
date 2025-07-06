@@ -1,5 +1,4 @@
 import { MediaType } from "@/stores/media-store";
-import { TimelineTrack } from "@/stores/timeline-store";
 
 export type TrackType = "media" | "text" | "audio";
 
@@ -77,3 +76,50 @@ export interface TextItemDragData {
 }
 
 export type DragData = MediaItemDragData | TextItemDragData;
+
+export interface TimelineTrack {
+  id: string;
+  name: string;
+  type: TrackType;
+  elements: TimelineElement[];
+  muted?: boolean;
+  isMain?: boolean;
+}
+
+export function sortTracksByOrder(tracks: TimelineTrack[]): TimelineTrack[] {
+  return [...tracks].sort((a, b) => {
+    // Audio tracks always go to bottom
+    if (a.type === "audio" && b.type !== "audio") return 1;
+    if (b.type === "audio" && a.type !== "audio") return -1;
+
+    // Main track goes above audio but below other tracks
+    if (a.isMain && !b.isMain && b.type !== "audio") return 1;
+    if (b.isMain && !a.isMain && a.type !== "audio") return -1;
+
+    // Within same category, maintain creation order
+    return 0;
+  });
+}
+
+export function getMainTrack(tracks: TimelineTrack[]): TimelineTrack | null {
+  return tracks.find((track) => track.isMain) || null;
+}
+
+export function ensureMainTrack(tracks: TimelineTrack[]): TimelineTrack[] {
+  const hasMainTrack = tracks.some((track) => track.isMain);
+
+  if (!hasMainTrack) {
+    // Create main track if it doesn't exist
+    const mainTrack: TimelineTrack = {
+      id: crypto.randomUUID(),
+      name: "Main Track",
+      type: "media",
+      elements: [],
+      muted: false,
+      isMain: true,
+    };
+    return [mainTrack, ...tracks];
+  }
+
+  return tracks;
+}
