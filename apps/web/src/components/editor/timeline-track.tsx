@@ -13,11 +13,12 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "../ui/context-menu";
-import { 
+import {
   TimelineTrack,
   sortTracksByOrder,
   ensureMainTrack,
-  getMainTrack 
+  getMainTrack,
+  canElementGoOnTrack,
 } from "@/types/timeline";
 import { usePlaybackStore } from "@/stores/playback-store";
 import type {
@@ -572,7 +573,9 @@ export function TimelineTrackContent({
               // dropPosition === "on" but track is not text type
               // Insert above main track if main track exists, otherwise at top
               if (mainTrack) {
-                const mainTrackIndex = tracks.findIndex(t => t.id === mainTrack.id);
+                const mainTrackIndex = tracks.findIndex(
+                  (t) => t.id === mainTrack.id
+                );
                 insertIndex = mainTrackIndex;
               } else {
                 insertIndex = 0; // Top of timeline
@@ -648,9 +651,11 @@ export function TimelineTrackContent({
           const isVideoOrImage =
             dragData.type === "video" || dragData.type === "image";
           const isAudio = dragData.type === "audio";
-          const isCompatible =
-            (track.type === "media" && isVideoOrImage) ||
-            (track.type === "audio" && isAudio);
+          const isCompatible = isVideoOrImage
+            ? canElementGoOnTrack("media", track.type)
+            : isAudio
+              ? canElementGoOnTrack("media", track.type)
+              : false;
 
           let targetTrack = tracks.find((t) => t.id === targetTrackId);
 
@@ -662,7 +667,7 @@ export function TimelineTrackContent({
               if (isVideoOrImage) {
                 // For video/image, check if we need a main track or additional media track
                 const mainTrack = getMainTrack(tracks);
-                
+
                 if (!mainTrack) {
                   // No main track exists, create it
                   const updatedTracks = ensureMainTrack(tracks);
@@ -672,22 +677,32 @@ export function TimelineTrackContent({
                     targetTrack = newMainTrack;
                   } else {
                     // Main track was created but somehow has elements, create new media track
-                    const mainTrackIndex = updatedTracks.findIndex(t => t.id === newMainTrack?.id);
+                    const mainTrackIndex = updatedTracks.findIndex(
+                      (t) => t.id === newMainTrack?.id
+                    );
                     targetTrackId = insertTrackAt("media", mainTrackIndex);
-                    const updatedTracksAfterInsert = useTimelineStore.getState().tracks;
-                    const newTargetTrack = updatedTracksAfterInsert.find(t => t.id === targetTrackId);
+                    const updatedTracksAfterInsert =
+                      useTimelineStore.getState().tracks;
+                    const newTargetTrack = updatedTracksAfterInsert.find(
+                      (t) => t.id === targetTrackId
+                    );
                     if (!newTargetTrack) return;
                     targetTrack = newTargetTrack;
                   }
-                } else if (mainTrack.elements.length === 0 && dropPosition === "on") {
+                } else if (
+                  mainTrack.elements.length === 0 &&
+                  dropPosition === "on"
+                ) {
                   // Main track exists and is empty, use it
                   targetTrackId = mainTrack.id;
                   targetTrack = mainTrack;
                 } else {
                   // Create new media track above main track
-                  const mainTrackIndex = tracks.findIndex(t => t.id === mainTrack.id);
+                  const mainTrackIndex = tracks.findIndex(
+                    (t) => t.id === mainTrack.id
+                  );
                   let insertIndex: number;
-                  
+
                   if (dropPosition === "above") {
                     insertIndex = currentTrackIndex;
                   } else if (dropPosition === "below") {
@@ -696,10 +711,12 @@ export function TimelineTrackContent({
                     // Insert above main track
                     insertIndex = mainTrackIndex;
                   }
-                  
+
                   targetTrackId = insertTrackAt("media", insertIndex);
                   const updatedTracks = useTimelineStore.getState().tracks;
-                  const newTargetTrack = updatedTracks.find(t => t.id === targetTrackId);
+                  const newTargetTrack = updatedTracks.find(
+                    (t) => t.id === targetTrackId
+                  );
                   if (!newTargetTrack) return;
                   targetTrack = newTargetTrack;
                 }
@@ -707,7 +724,7 @@ export function TimelineTrackContent({
                 // Audio tracks go at the bottom
                 const mainTrack = getMainTrack(tracks);
                 let insertIndex: number;
-                
+
                 if (dropPosition === "above") {
                   insertIndex = currentTrackIndex;
                 } else if (dropPosition === "below") {
@@ -715,16 +732,20 @@ export function TimelineTrackContent({
                 } else {
                   // Insert after main track (bottom area)
                   if (mainTrack) {
-                    const mainTrackIndex = tracks.findIndex(t => t.id === mainTrack.id);
+                    const mainTrackIndex = tracks.findIndex(
+                      (t) => t.id === mainTrack.id
+                    );
                     insertIndex = mainTrackIndex + 1;
                   } else {
                     insertIndex = tracks.length; // Bottom of timeline
                   }
                 }
-                
+
                 targetTrackId = insertTrackAt("audio", insertIndex);
                 const updatedTracks = useTimelineStore.getState().tracks;
-                const newTargetTrack = updatedTracks.find(t => t.id === targetTrackId);
+                const newTargetTrack = updatedTracks.find(
+                  (t) => t.id === targetTrackId
+                );
                 if (!newTargetTrack) return;
                 targetTrack = newTargetTrack;
               }
@@ -805,7 +826,7 @@ export function TimelineTrackContent({
               ? wouldOverlap
                 ? "Cannot drop - would overlap"
                 : "Drop element here"
-              : "Drop media here"}
+              : ""}
           </div>
         ) : (
           <>

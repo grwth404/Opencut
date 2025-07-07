@@ -123,3 +123,34 @@ export function ensureMainTrack(tracks: TimelineTrack[]): TimelineTrack[] {
 
   return tracks;
 }
+
+// Timeline validation utilities
+export function canElementGoOnTrack(
+  elementType: "text" | "media",
+  trackType: TrackType
+): boolean {
+  if (elementType === "text") {
+    return trackType === "text";
+  } else if (elementType === "media") {
+    return trackType === "media" || trackType === "audio";
+  }
+  return false;
+}
+
+export function validateElementTrackCompatibility(
+  element: { type: "text" | "media" },
+  track: { type: TrackType }
+): { isValid: boolean; errorMessage?: string } {
+  const isValid = canElementGoOnTrack(element.type, track.type);
+
+  if (!isValid) {
+    const errorMessage =
+      element.type === "text"
+        ? "Text elements can only be placed on text tracks"
+        : "Media elements can only be placed on media or audio tracks";
+
+    return { isValid: false, errorMessage };
+  }
+
+  return { isValid: true };
+}

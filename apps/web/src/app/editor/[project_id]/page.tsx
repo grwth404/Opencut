@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useParams } from "next/navigation";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -28,15 +29,27 @@ export default function Editor() {
     setTimeline,
   } = usePanelStore();
 
-  const { activeProject, createNewProject } = useProjectStore();
+  const { activeProject, loadProject, createNewProject } = useProjectStore();
+  const params = useParams();
+  const projectId = params.project_id as string;
 
   usePlaybackControls();
 
   useEffect(() => {
-    if (!activeProject) {
-      createNewProject("Untitled Project");
-    }
-  }, [activeProject, createNewProject]);
+    const initializeProject = async () => {
+      if (projectId && (!activeProject || activeProject.id !== projectId)) {
+        try {
+          await loadProject(projectId);
+        } catch (error) {
+          console.error("Failed to load project:", error);
+          // If project doesn't exist, create a new one
+          await createNewProject("Untitled Project");
+        }
+      }
+    };
+
+    initializeProject();
+  }, [projectId, activeProject, loadProject, createNewProject]);
 
   return (
     <EditorProvider>

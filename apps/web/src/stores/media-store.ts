@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { storageService } from "@/lib/storage/storage-service";
+import { useProjectStore } from "./project-store";
 
 export type MediaType = "image" | "video" | "audio";
 
@@ -26,11 +27,15 @@ interface MediaStore {
   mediaItems: MediaItem[];
   isLoading: boolean;
 
-  // Actions
-  addMediaItem: (item: Omit<MediaItem, "id">) => Promise<void>;
-  removeMediaItem: (id: string) => Promise<void>;
-  loadAllMedia: () => Promise<void>;
-  clearAllMedia: () => Promise<void>;
+  // Actions - now require projectId
+  addMediaItem: (
+    projectId: string,
+    item: Omit<MediaItem, "id">
+  ) => Promise<void>;
+  removeMediaItem: (projectId: string, id: string) => Promise<void>;
+  loadProjectMedia: (projectId: string) => Promise<void>;
+  clearProjectMedia: (projectId: string) => Promise<void>;
+  clearAllMedia: () => void; // Clear local state only
 }
 
 // Helper function to determine file type
@@ -153,7 +158,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
   mediaItems: [],
   isLoading: false,
 
-  addMediaItem: async (item) => {
+  addMediaItem: async (projectId, item) => {
     const newItem: MediaItem = {
       ...item,
       id: crypto.randomUUID(),
@@ -166,7 +171,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
 
     // Save to persistent storage in background
     try {
-      await storageService.saveMediaItem(newItem);
+      await storageService.saveMediaItem(projectId, newItem);
     } catch (error) {
       console.error("Failed to save media item:", error);
       // Remove from local state if save failed
@@ -176,7 +181,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
     }
   },
 
-  removeMediaItem: async (id: string) => {
+  removeMediaItem: async (projectId, id: string) => {
     const state = get();
     const item = state.mediaItems.find((media) => media.id === id);
 
@@ -195,17 +200,17 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
 
     // Remove from persistent storage
     try {
-      await storageService.deleteMediaItem(id);
+      await storageService.deleteMediaItem(projectId, id);
     } catch (error) {
       console.error("Failed to delete media item:", error);
     }
   },
 
-  loadAllMedia: async () => {
+  loadProjectMedia: async (projectId) => {
     set({ isLoading: true });
 
     try {
-      const mediaItems = await storageService.loadAllMediaItems();
+      const mediaItems = await storageService.loadAllMediaItems(projectId);
       set({ mediaItems });
     } catch (error) {
       console.error("Failed to load media items:", error);
@@ -214,7 +219,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
     }
   },
 
-  clearAllMedia: async () => {
+  clearProjectMedia: async (projectId) => {
     const state = get();
 
     // Cleanup all object URLs
@@ -234,10 +239,27 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
     try {
       const mediaIds = state.mediaItems.map((item) => item.id);
       await Promise.all(
-        mediaIds.map((id) => storageService.deleteMediaItem(id))
+        mediaIds.map((id) => storageService.deleteMediaItem(projectId, id))
       );
     } catch (error) {
       console.error("Failed to clear media items from storage:", error);
     }
+  },
+
+  clearAllMedia: () => {
+    const state = get();
+
+    // Cleanup all object URLs
+    state.mediaItems.forEach((item) => {
+      if (item.url) {
+        URL.revokeObjectURL(item.url);
+      }
+      if (item.thumbnailUrl) {
+        URL.revokeObjectURL(item.thumbnailUrl);
+      }
+    });
+
+    // Clear local state
+    set({ mediaItems: [] });
   },
 }));

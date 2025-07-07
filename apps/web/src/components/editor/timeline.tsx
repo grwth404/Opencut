@@ -31,6 +31,7 @@ import {
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
+import { useProjectStore } from "@/stores/project-store";
 import { processMediaFiles } from "@/lib/media-processing";
 import { toast } from "sonner";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -65,6 +66,7 @@ export function Timeline() {
     redo,
   } = useTimelineStore();
   const { mediaItems, addMediaItem } = useMediaStore();
+  const { activeProject } = useProjectStore();
   const {
     currentTime,
     duration,
@@ -377,6 +379,11 @@ export function Timeline() {
       }
     } else if (e.dataTransfer.files?.length > 0) {
       // Handle file drops by creating new tracks
+      if (!activeProject) {
+        toast.error("No active project");
+        return;
+      }
+
       setIsProcessing(true);
       setProgress(0);
       try {
@@ -385,7 +392,7 @@ export function Timeline() {
           (p) => setProgress(p)
         );
         for (const processedItem of processedItems) {
-          await addMediaItem(processedItem);
+          await addMediaItem(activeProject.id, processedItem);
           const currentMediaItems = useMediaStore.getState().mediaItems;
           const addedItem = currentMediaItems.find(
             (item) =>

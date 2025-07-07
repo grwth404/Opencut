@@ -6,9 +6,12 @@ import {
   TimelineTrack,
   sortTracksByOrder,
   ensureMainTrack,
+  validateElementTrackCompatibility,
 } from "@/types/timeline";
 import { useEditorStore } from "./editor-store";
 import { useMediaStore, getMediaAspectRatio } from "./media-store";
+import { storageService } from "@/lib/storage/storage-service";
+import { useProjectStore } from "./project-store";
 
 // Helper function to manage element naming with suffixes
 const getElementNameWithSuffix = (
@@ -116,6 +119,11 @@ interface TimelineStore {
   undo: () => void;
   redo: () => void;
   pushHistory: () => void;
+
+  // Persistence actions
+  loadProjectTimeline: (projectId: string) => Promise<void>;
+  saveProjectTimeline: (projectId: string) => Promise<void>;
+  clearTimeline: () => void;
 }
 
 export const useTimelineStore = create<TimelineStore>((set, get) => {
@@ -127,6 +135,25 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       _tracks: tracksWithMain,
       tracks: sortedTracks,
     });
+  };
+
+  // Helper to auto-save timeline changes
+  const autoSaveTimeline = async () => {
+    const activeProject = useProjectStore.getState().activeProject;
+    if (activeProject) {
+      try {
+        await storageService.saveTimeline(activeProject.id, get()._tracks);
+      } catch (error) {
+        console.error("Failed to auto-save timeline:", error);
+      }
+    }
+  };
+
+  // Helper to update tracks and auto-save
+  const updateTracksAndSave = (newTracks: TimelineTrack[]) => {
+    updateTracks(newTracks);
+    // Auto-save in background
+    setTimeout(autoSaveTimeline, 100);
   };
 
   // Initialize with proper track ordering
@@ -158,7 +185,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       const { history, redoStack, _tracks } = get();
       if (history.length === 0) return;
       const prev = history[history.length - 1];
-      updateTracks(prev);
+      updateTracksAndSave(prev);
       set({
         history: history.slice(0, -1),
         redoStack: [...redoStack, JSON.parse(JSON.stringify(_tracks))],
@@ -224,7 +251,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
         muted: false,
       };
 
-      updateTracks([...get()._tracks, newTrack]);
+      updateTracksAndSave([...get()._tracks, newTrack]);
       return newTrack.id;
     },
 
@@ -251,13 +278,13 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
       const newTracks = [...get()._tracks];
       newTracks.splice(index, 0, newTrack);
-      updateTracks(newTracks);
+      updateTracksAndSave(newTracks);
       return newTrack.id;
     },
 
     removeTrack: (trackId) => {
       get().pushHistory();
-      updateTracks(get()._tracks.filter((track) => track.id !== trackId));
+      updateTracksAndSave(get()._tracks.filter((track) => track.id !== trackId));
     },
 
     addElementToTrack: (trackId, elementData) => {
@@ -270,17 +297,10 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
         return;
       }
 
-      // Validate element can be added to this track type
-      if (track.type === "media" && elementData.type !== "media") {
-        console.error("Media track only accepts media elements");
-        return;
-      }
-      if (track.type === "text" && elementData.type !== "text") {
-        console.error("Text track only accepts text elements");
-        return;
-      }
-      if (track.type === "audio" && elementData.type !== "media") {
-        console.error("Audio track only accepts media elements");
+      // Use utility function for validation
+      const validation = validateElementTrackCompatibility(elementData, track);
+      if (!validation.isValid) {
+        console.error(validation.errorMessage);
         return;
       }
 
@@ -331,7 +351,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
         }
       }
 
-      updateTracks(
+      updateTracksAndSave(
         get()._tracks.map((track) =>
           track.id === trackId
             ? { ...track, elements: [...track.elements, newElement] }
@@ -342,7 +362,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
     removeElementFromTrack: (trackId, elementId) => {
       get().pushHistory();
-      updateTracks(
+      updateTracksAndSave(
         get()
           ._tracks.map((track) =>
             track.id === trackId
@@ -362,11 +382,22 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       get().pushHistory();
 
       const fromTrack = get()._tracks.find((track) => track.id === fromTrackId);
+      const toTrack = get()._tracks.find((track) => track.id === toTrackId);
       const elementToMove = fromTrack?.elements.find(
         (element) => element.id === elementId
       );
 
-      if (!elementToMove) return;
+      if (!elementToMove || !toTrack) return;
+
+      // Validate element type compatibility with target track
+      const validation = validateElementTrackCompatibility(
+        elementToMove,
+        toTrack
+      );
+      if (!validation.isValid) {
+        console.error(validation.errorMessage);
+        return;
+      }
 
       const newTracks = get()
         ._tracks.map((track) => {
@@ -387,12 +418,12 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
         })
         .filter((track) => track.elements.length > 0);
 
-      updateTracks(newTracks);
+      updateTracksAndSave(newTracks);
     },
 
     updateElementTrim: (trackId, elementId, trimStart, trimEnd) => {
       get().pushHistory();
-      updateTracks(
+      updateTracksAndSave(
         get()._tracks.map((track) =>
           track.id === trackId
             ? {
@@ -410,7 +441,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
     updateElementStartTime: (trackId, elementId, startTime) => {
       get().pushHistory();
-      updateTracks(
+      updateTracksAndSave(
         get()._tracks.map((track) =>
           track.id === trackId
             ? {
@@ -426,7 +457,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
     toggleTrackMute: (trackId) => {
       get().pushHistory();
-      updateTracks(
+      updateTracksAndSave(
         get()._tracks.map((track) =>
           track.id === trackId ? { ...track, muted: !track.muted } : track
         )
@@ -456,7 +487,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
       const secondElementId = crypto.randomUUID();
 
-      updateTracks(
+      updateTracksAndSave(
         get()._tracks.map((track) =>
           track.id === trackId
             ? {
@@ -508,7 +539,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       const durationToRemove =
         element.duration - element.trimStart - element.trimEnd - relativeTime;
 
-      updateTracks(
+      updateTracksAndSave(
         get()._tracks.map((track) =>
           track.id === trackId
             ? {
@@ -547,7 +578,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
       const relativeTime = splitTime - element.startTime;
 
-      updateTracks(
+      updateTracksAndSave(
         get()._tracks.map((track) =>
           track.id === trackId
             ? {
@@ -584,7 +615,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
       if (existingAudioTrack) {
         // Add audio element to existing audio track
-        updateTracks(
+        updateTracksAndSave(
           get()._tracks.map((track) =>
             track.id === existingAudioTrack.id
               ? {
@@ -617,7 +648,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
           muted: false,
         };
 
-        updateTracks([...get()._tracks, newAudioTrack]);
+        updateTracksAndSave([...get()._tracks, newAudioTrack]);
       }
 
       return audioElementId;
@@ -645,7 +676,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       const { redoStack } = get();
       if (redoStack.length === 0) return;
       const next = redoStack[redoStack.length - 1];
-      updateTracks(next);
+      updateTracksAndSave(next);
       set({ redoStack: redoStack.slice(0, -1) });
     },
 
@@ -705,6 +736,42 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
           currentTime: 0,
         },
       });
+    },
+
+    // Persistence methods
+    loadProjectTimeline: async (projectId) => {
+      try {
+        const tracks = await storageService.loadTimeline(projectId);
+        if (tracks) {
+          updateTracks(tracks);
+        } else {
+          // No timeline saved yet, initialize with default
+          const defaultTracks = ensureMainTrack([]);
+          updateTracks(defaultTracks);
+        }
+        // Clear history when loading a project
+        set({ history: [], redoStack: [] });
+      } catch (error) {
+        console.error("Failed to load timeline:", error);
+        // Initialize with default on error
+        const defaultTracks = ensureMainTrack([]);
+        updateTracks(defaultTracks);
+        set({ history: [], redoStack: [] });
+      }
+    },
+
+    saveProjectTimeline: async (projectId) => {
+      try {
+        await storageService.saveTimeline(projectId, get()._tracks);
+      } catch (error) {
+        console.error("Failed to save timeline:", error);
+      }
+    },
+
+    clearTimeline: () => {
+      const defaultTracks = ensureMainTrack([]);
+      updateTracks(defaultTracks);
+      set({ history: [], redoStack: [], selectedElements: [] });
     },
   };
 });
