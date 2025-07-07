@@ -17,7 +17,8 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import AudioWaveform from "./audio-waveform";
 import { toast } from "sonner";
-import { TimelineElementProps, ResizeState, TrackType } from "@/types/timeline";
+import { TimelineElementProps, TrackType } from "@/types/timeline";
+import { useTimelineElementResize } from "@/hooks/use-timeline-element-resize";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,8 +50,20 @@ export function TimelineElement({
   } = useTimelineStore();
   const { currentTime } = usePlaybackStore();
 
-  const [resizing, setResizing] = useState<ResizeState | null>(null);
   const [elementMenuOpen, setElementMenuOpen] = useState(false);
+
+  const {
+    resizing,
+    isResizing,
+    handleResizeStart,
+    handleResizeMove,
+    handleResizeEnd,
+  } = useTimelineElementResize({
+    element,
+    track,
+    zoomLevel,
+    onUpdateTrim: updateElementTrim,
+  });
 
   const effectiveDuration =
     element.duration - element.trimStart - element.trimEnd;
@@ -75,59 +88,6 @@ export function TimelineElement({
       default:
         return "bg-gray-500/20 border-gray-500/30";
     }
-  };
-
-  // Resize handles for trimming elements
-  const handleResizeStart = (
-    e: React.MouseEvent,
-    elementId: string,
-    side: "left" | "right"
-  ) => {
-    e.stopPropagation();
-    e.preventDefault();
-
-    setResizing({
-      elementId,
-      side,
-      startX: e.clientX,
-      initialTrimStart: element.trimStart,
-      initialTrimEnd: element.trimEnd,
-    });
-  };
-
-  const updateTrimFromMouseMove = (e: { clientX: number }) => {
-    if (!resizing) return;
-
-    const deltaX = e.clientX - resizing.startX;
-    const deltaTime = deltaX / (50 * zoomLevel);
-
-    if (resizing.side === "left") {
-      const newTrimStart = Math.max(
-        0,
-        Math.min(
-          element.duration - element.trimEnd - 0.1,
-          resizing.initialTrimStart + deltaTime
-        )
-      );
-      updateElementTrim(track.id, element.id, newTrimStart, element.trimEnd);
-    } else {
-      const newTrimEnd = Math.max(
-        0,
-        Math.min(
-          element.duration - element.trimStart - 0.1,
-          resizing.initialTrimEnd - deltaTime
-        )
-      );
-      updateElementTrim(track.id, element.id, element.trimStart, newTrimEnd);
-    }
-  };
-
-  const handleResizeMove = (e: React.MouseEvent) => {
-    updateTrimFromMouseMove(e);
-  };
-
-  const handleResizeEnd = () => {
-    setResizing(null);
   };
 
   const handleDeleteElement = () => {
