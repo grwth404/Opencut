@@ -20,6 +20,10 @@ import { toast } from "sonner";
 import { TimelineElementProps, TrackType } from "@/types/timeline";
 import { useTimelineElementResize } from "@/hooks/use-timeline-element-resize";
 import {
+  getTrackElementClasses,
+  TIMELINE_CONSTANTS,
+} from "@/lib/timeline-constants";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -67,7 +71,10 @@ export function TimelineElement({
 
   const effectiveDuration =
     element.duration - element.trimStart - element.trimEnd;
-  const elementWidth = Math.max(80, effectiveDuration * 50 * zoomLevel);
+  const elementWidth = Math.max(
+    TIMELINE_CONSTANTS.ELEMENT_MIN_WIDTH,
+    effectiveDuration * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel
+  );
 
   // Use real-time position during drag, otherwise use stored position
   const isBeingDragged = dragState.elementId === element.id;
@@ -76,19 +83,6 @@ export function TimelineElement({
       ? dragState.currentTime
       : element.startTime;
   const elementLeft = elementStartTime * 50 * zoomLevel;
-
-  const getTrackColor = (type: TrackType) => {
-    switch (type) {
-      case "media":
-        return "bg-blue-500/20 border-blue-500/30";
-      case "text":
-        return "bg-purple-500/20 border-purple-500/30";
-      case "audio":
-        return "bg-green-500/20 border-green-500/30";
-      default:
-        return "bg-gray-500/20 border-gray-500/30";
-    }
-  };
 
   const handleDeleteElement = () => {
     removeElementFromTrack(track.id, element.id);
@@ -271,7 +265,7 @@ export function TimelineElement({
       onMouseLeave={resizing ? handleResizeEnd : undefined}
     >
       <div
-        className={`relative h-full rounded-[0.15rem] cursor-pointer overflow-hidden ${getTrackColor(
+        className={`relative h-full rounded-[0.15rem] cursor-pointer overflow-hidden ${getTrackElementClasses(
           track.type
         )} ${isSelected ? "border-b-[0.5px] border-t-[0.5px] border-foreground" : ""} ${
           isBeingDragged ? "z-50" : "z-10"

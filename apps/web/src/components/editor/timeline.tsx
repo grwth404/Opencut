@@ -44,6 +44,10 @@ import {
 } from "../ui/select";
 import { TimelineTrackContent } from "./timeline-track";
 import type { DragData } from "@/types/timeline";
+import {
+  getTrackLabelColor,
+  TIMELINE_CONSTANTS,
+} from "@/lib/timeline-constants";
 
 export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their elements.
@@ -105,8 +109,8 @@ export function Timeline() {
 
   // Dynamic timeline width calculation based on playhead position and duration
   const dynamicTimelineWidth = Math.max(
-    (duration || 0) * 50 * zoomLevel, // Base width from duration
-    (currentTime + 30) * 50 * zoomLevel, // Width to show current time + 30 seconds buffer
+    (duration || 0) * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel, // Base width from duration
+    (currentTime + 30) * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel, // Width to show current time + 30 seconds buffer
     timelineRef.current?.clientWidth || 1000 // Minimum width
   );
 
@@ -236,10 +240,11 @@ export function Timeline() {
     let newSelection: { trackId: string; elementId: string }[] = [];
     tracks.forEach((track, trackIdx) => {
       track.elements.forEach((element) => {
-        const clipLeft = element.startTime * 50 * zoomLevel;
-        const clipTop = trackIdx * 60;
-        const clipBottom = clipTop + 60;
-        const clipRight = clipLeft + 60;
+        const clipLeft =
+          element.startTime * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
+        const clipTop = trackIdx * TIMELINE_CONSTANTS.TRACK_HEIGHT;
+        const clipBottom = clipTop + TIMELINE_CONSTANTS.TRACK_HEIGHT;
+        const clipRight = clipLeft + TIMELINE_CONSTANTS.TRACK_HEIGHT;
         if (
           bx1 < clipRight &&
           bx2 > clipLeft &&
@@ -334,7 +339,7 @@ export function Timeline() {
             type: "text",
             name: dragData.name || "Text",
             content: dragData.content || "Default Text",
-            duration: 5,
+            duration: TIMELINE_CONSTANTS.DEFAULT_TEXT_DURATION,
             startTime: 0,
             trimStart: 0,
             trimEnd: 0,
@@ -721,7 +726,8 @@ export function Timeline() {
       "[data-radix-scroll-area-viewport]"
     ) as HTMLElement;
     if (!rulerViewport || !tracksViewport) return;
-    const playheadPx = playheadPosition * 50 * zoomLevel;
+    const playheadPx =
+      playheadPosition * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
     const viewportWidth = rulerViewport.clientWidth;
     const scrollMin = 0;
     const scrollMax = rulerViewport.scrollWidth - viewportWidth;
@@ -792,7 +798,7 @@ export function Timeline() {
                         type: "media",
                         mediaId: "test",
                         name: "Test Clip",
-                        duration: 5,
+                        duration: TIMELINE_CONSTANTS.DEFAULT_TEXT_DURATION,
                         startTime: 0,
                         trimStart: 0,
                         trimEnd: 0,
@@ -927,7 +933,8 @@ export function Timeline() {
                 {(() => {
                   // Calculate appropriate time interval based on zoom level
                   const getTimeInterval = (zoom: number) => {
-                    const pixelsPerSecond = 50 * zoom;
+                    const pixelsPerSecond =
+                      TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoom;
                     if (pixelsPerSecond >= 200) return 0.1; // Every 0.1s when very zoomed in
                     if (pixelsPerSecond >= 100) return 0.5; // Every 0.5s when zoomed in
                     if (pixelsPerSecond >= 50) return 1; // Every 1s at normal zoom
@@ -955,7 +962,9 @@ export function Timeline() {
                             ? "border-l border-muted-foreground/40"
                             : "border-l border-muted-foreground/20"
                         }`}
-                        style={{ left: `${time * 50 * zoomLevel}px` }}
+                        style={{
+                          left: `${time * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel}px`,
+                        }}
                       >
                         <span
                           className={`absolute top-1 left-1 text-xs ${
@@ -991,7 +1000,9 @@ export function Timeline() {
                 {/* Playhead in ruler (scrubbable) */}
                 <div
                   className="playhead absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-col-resize"
-                  style={{ left: `${playheadPosition * 50 * zoomLevel}px` }}
+                  style={{
+                    left: `${playheadPosition * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel}px`,
+                  }}
                   onMouseDown={handlePlayheadMouseDown}
                 >
                   <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm" />
@@ -1014,13 +1025,7 @@ export function Timeline() {
                   >
                     <div className="flex items-center flex-1 min-w-0">
                       <div
-                        className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                          track.type === "media"
-                            ? "bg-blue-500"
-                            : track.type === "audio"
-                              ? "bg-green-500"
-                              : "bg-purple-500"
-                        }`}
+                        className={`w-3 h-3 rounded-full flex-shrink-0 ${getTrackLabelColor(track.type)}`}
                       />
                       <span className="ml-2 text-sm font-medium truncate">
                         {track.name}
@@ -1043,7 +1048,7 @@ export function Timeline() {
               <div
                 className="relative flex-1"
                 style={{
-                  height: `${Math.max(200, Math.min(800, tracks.length * 60))}px`,
+                  height: `${Math.max(200, Math.min(800, tracks.length * TIMELINE_CONSTANTS.TRACK_HEIGHT))}px`,
                   width: `${dynamicTimelineWidth}px`,
                 }}
                 onClick={handleTimelineClick}
@@ -1059,8 +1064,8 @@ export function Timeline() {
                           <div
                             className="absolute left-0 right-0 border-b border-muted/30"
                             style={{
-                              top: `${index * 60}px`,
-                              height: "60px",
+                              top: `${index * TIMELINE_CONSTANTS.TRACK_HEIGHT}px`,
+                              height: `${TIMELINE_CONSTANTS.TRACK_HEIGHT}px`,
                             }}
                             onClick={(e) => {
                               // If clicking empty area (not on a element), deselect all elements
@@ -1092,8 +1097,8 @@ export function Timeline() {
                       <div
                         className="absolute top-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-col"
                         style={{
-                          left: `${playheadPosition * 50 * zoomLevel}px`,
-                          height: `${tracks.length * 60}px`,
+                          left: `${playheadPosition * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel}px`,
+                          height: `${tracks.length * TIMELINE_CONSTANTS.TRACK_HEIGHT}px`,
                         }}
                         onMouseDown={handlePlayheadMouseDown}
                       />

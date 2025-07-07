@@ -25,6 +25,7 @@ import type {
   TimelineElement as TimelineElementType,
   DragData,
 } from "@/types/timeline";
+import { TIMELINE_CONSTANTS } from "@/lib/timeline-constants";
 
 export function TimelineTrackContent({
   track,
@@ -82,7 +83,10 @@ export function TimelineTrackContent({
 
       const timelineRect = timelineRef.current.getBoundingClientRect();
       const mouseX = e.clientX - timelineRect.left;
-      const mouseTime = Math.max(0, mouseX / (50 * zoomLevel));
+      const mouseTime = Math.max(
+        0,
+        mouseX / (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel)
+      );
       const adjustedTime = Math.max(0, mouseTime - dragState.clickOffsetTime);
       const snappedTime = Math.round(adjustedTime * 10) / 10;
 
@@ -212,7 +216,8 @@ export function TimelineTrackContent({
     const elementElement = e.currentTarget as HTMLElement;
     const elementRect = elementElement.getBoundingClientRect();
     const clickOffsetX = e.clientX - elementRect.left;
-    const clickOffsetTime = clickOffsetX / (50 * zoomLevel);
+    const clickOffsetTime =
+      clickOffsetX / (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel);
 
     startDragAction(
       element.id,
@@ -278,7 +283,7 @@ export function TimelineTrackContent({
     if (trackContainer) {
       const rect = trackContainer.getBoundingClientRect();
       const mouseX = Math.max(0, e.clientX - rect.left);
-      dropTime = mouseX / (50 * zoomLevel);
+      dropTime = mouseX / (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel);
     }
 
     // Check for potential overlaps and show appropriate feedback
@@ -453,11 +458,11 @@ export function TimelineTrackContent({
     const rect = trackContainer.getBoundingClientRect();
     const mouseX = Math.max(0, e.clientX - rect.left);
     const mouseY = e.clientY - rect.top; // Get Y position relative to this track
-    const newStartTime = mouseX / (50 * zoomLevel);
+    const newStartTime =
+      mouseX / (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel);
     const snappedTime = Math.round(newStartTime * 10) / 10;
 
     // Calculate drop position relative to tracks
-    const TRACK_HEIGHT = 60;
     const currentTrackIndex = tracks.findIndex((t) => t.id === track.id);
 
     // Determine drop zone within the track (top 20px, middle 20px, bottom 20px)
@@ -619,7 +624,7 @@ export function TimelineTrackContent({
             type: "text",
             name: dragData.name || "Text",
             content: dragData.content || "Default Text",
-            duration: 5,
+            duration: TIMELINE_CONSTANTS.DEFAULT_TEXT_DURATION,
             startTime: snappedTime,
             trimStart: 0,
             trimEnd: 0,
