@@ -267,12 +267,9 @@ export function PreviewPanel() {
               )
             )}
           </div>
-        ) : (
-          <>
-            {/* Empty div so toolbar stays at the bottom */}
-            <div className="w-full h-full"></div>
-          </>
-        )}
+        ) : null}
+
+        <div className="flex-1"></div>
 
         <PreviewToolbar hasAnyElements={hasAnyElements} />
       </div>
