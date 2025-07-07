@@ -173,8 +173,7 @@ export function TimelineElement({
   const renderElementContent = () => {
     if (element.type === "text") {
       return (
-        <div className="w-full h-full flex items-center justify-center px-2">
-          <Type className="h-4 w-4 mr-2 text-purple-400 flex-shrink-0" />
+        <div className="w-full h-full flex items-center justify-center">
           <span className="text-xs text-foreground/80 truncate">
             {element.content}
           </span>
@@ -195,12 +194,14 @@ export function TimelineElement({
     if (mediaItem.type === "image") {
       return (
         <div className="w-full h-full flex items-center justify-center">
-          <img
-            src={mediaItem.url}
-            alt={mediaItem.name}
-            className="w-full h-full object-cover"
-            draggable={false}
-          />
+          <div className="bg-[#004D52] py-3 w-full h-full">
+            <img
+              src={mediaItem.url}
+              alt={mediaItem.name}
+              className="w-full h-full object-cover"
+              draggable={false}
+            />
+          </div>
         </div>
       );
     }
@@ -276,7 +277,7 @@ export function TimelineElement({
           onElementMouseDown && onElementMouseDown(e, element)
         }
       >
-        <div className="absolute inset-1 flex items-center p-1">
+        <div className="absolute inset-0 flex items-center h-full">
           {renderElementContent()}
         </div>
 

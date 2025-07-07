@@ -46,6 +46,9 @@ import { TimelineTrackContent } from "./timeline-track";
 import type { DragData } from "@/types/timeline";
 import {
   getTrackLabelColor,
+  getTrackHeight,
+  getCumulativeHeightBefore,
+  getTotalTracksHeight,
   TIMELINE_CONSTANTS,
 } from "@/lib/timeline-constants";
 
@@ -242,9 +245,9 @@ export function Timeline() {
       track.elements.forEach((element) => {
         const clipLeft =
           element.startTime * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
-        const clipTop = trackIdx * TIMELINE_CONSTANTS.TRACK_HEIGHT;
-        const clipBottom = clipTop + TIMELINE_CONSTANTS.TRACK_HEIGHT;
-        const clipRight = clipLeft + TIMELINE_CONSTANTS.TRACK_HEIGHT;
+        const clipTop = getCumulativeHeightBefore(tracks, trackIdx);
+        const clipBottom = clipTop + getTrackHeight(track.type);
+        const clipRight = clipLeft + getTrackHeight(track.type);
         if (
           bx1 < clipRight &&
           bx2 > clipLeft &&
@@ -1021,7 +1024,8 @@ export function Timeline() {
                 {tracks.map((track) => (
                   <div
                     key={track.id}
-                    className="h-[60px] flex items-center px-3 border-b border-muted/30 bg-background group"
+                    className="flex items-center px-3 border-b border-muted/30 bg-background group"
+                    style={{ height: `${getTrackHeight(track.type)}px` }}
                   >
                     <div className="flex items-center flex-1 min-w-0">
                       <div
@@ -1048,7 +1052,7 @@ export function Timeline() {
               <div
                 className="relative flex-1"
                 style={{
-                  height: `${Math.max(200, Math.min(800, tracks.length * TIMELINE_CONSTANTS.TRACK_HEIGHT))}px`,
+                  height: `${Math.max(200, Math.min(800, getTotalTracksHeight(tracks)))}px`,
                   width: `${dynamicTimelineWidth}px`,
                 }}
                 onClick={handleTimelineClick}
@@ -1064,8 +1068,8 @@ export function Timeline() {
                           <div
                             className="absolute left-0 right-0 border-b border-muted/30"
                             style={{
-                              top: `${index * TIMELINE_CONSTANTS.TRACK_HEIGHT}px`,
-                              height: `${TIMELINE_CONSTANTS.TRACK_HEIGHT}px`,
+                              top: `${getCumulativeHeightBefore(tracks, index)}px`,
+                              height: `${getTrackHeight(track.type)}px`,
                             }}
                             onClick={(e) => {
                               // If clicking empty area (not on a element), deselect all elements
@@ -1098,7 +1102,7 @@ export function Timeline() {
                         className="absolute top-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-col"
                         style={{
                           left: `${playheadPosition * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel}px`,
-                          height: `${tracks.length * TIMELINE_CONSTANTS.TRACK_HEIGHT}px`,
+                          height: `${getTotalTracksHeight(tracks)}px`,
                         }}
                         onMouseDown={handlePlayheadMouseDown}
                       />
