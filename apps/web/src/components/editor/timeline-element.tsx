@@ -45,6 +45,7 @@ export function TimelineElement({
   const { mediaItems } = useMediaStore();
   const {
     updateElementTrim,
+    updateElementDuration,
     removeElementFromTrack,
     dragState,
     splitElement,
@@ -67,6 +68,7 @@ export function TimelineElement({
     track,
     zoomLevel,
     onUpdateTrim: updateElementTrim,
+    onUpdateDuration: updateElementDuration,
   });
 
   const effectiveDuration =
