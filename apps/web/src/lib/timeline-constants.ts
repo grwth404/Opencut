@@ -49,16 +49,23 @@ export function getCumulativeHeightBefore(
   tracks: Array<{ type: TrackType }>,
   trackIndex: number
 ): number {
+  const GAP = 4; // 4px gap between tracks (equivalent to Tailwind's gap-1)
   return tracks
     .slice(0, trackIndex)
-    .reduce((sum, track) => sum + getTrackHeight(track.type), 0);
+    .reduce((sum, track) => sum + getTrackHeight(track.type) + GAP, 0);
 }
 
 // Calculate total height of all tracks
 export function getTotalTracksHeight(
   tracks: Array<{ type: TrackType }>
 ): number {
-  return tracks.reduce((sum, track) => sum + getTrackHeight(track.type), 0);
+  const GAP = 4; // 4px gap between tracks (equivalent to Tailwind's gap-1)
+  const tracksHeight = tracks.reduce(
+    (sum, track) => sum + getTrackHeight(track.type),
+    0
+  );
+  const gapsHeight = Math.max(0, tracks.length - 1) * GAP; // n-1 gaps for n tracks
+  return tracksHeight + gapsHeight;
 }
 
 // Other timeline constants

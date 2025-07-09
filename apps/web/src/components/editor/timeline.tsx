@@ -999,11 +999,11 @@ export function Timeline() {
           {/* Track Labels */}
           {tracks.length > 0 && (
             <div className="w-48 flex-shrink-0 border-r bg-panel-accent overflow-y-auto">
-              <div className="flex flex-col">
+              <div className="flex flex-col gap-1">
                 {tracks.map((track) => (
                   <div
                     key={track.id}
-                    className="flex items-center px-3 border-b border-muted/30 group"
+                    className="flex items-center px-3 border-b border-muted/30 group bg-foreground/5"
                     style={{ height: `${getTrackHeight(track.type)}px` }}
                   >
                     <div className="flex items-center flex-1 min-w-0">
@@ -1043,7 +1043,7 @@ export function Timeline() {
                       <ContextMenu key={track.id}>
                         <ContextMenuTrigger asChild>
                           <div
-                            className="absolute left-0 right-0 border-b border-muted/30"
+                            className="absolute left-0 right-0 border-b border-muted/30 py-[0.05rem]"
                             style={{
                               top: `${getCumulativeHeightBefore(tracks, index)}px`,
                               height: `${getTrackHeight(track.type)}px`,
