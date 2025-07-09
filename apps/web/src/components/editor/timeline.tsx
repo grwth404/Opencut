@@ -139,6 +139,22 @@ export function Timeline() {
   // Keyboard event for deleting selected elements
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger when typing in input fields or textareas
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      // Only trigger when timeline is focused or mouse is over timeline
+      if (
+        !isInTimeline &&
+        !timelineRef.current?.contains(document.activeElement)
+      ) {
+        return;
+      }
+
       if (
         (e.key === "Delete" || e.key === "Backspace") &&
         selectedElements.length > 0
@@ -151,7 +167,12 @@ export function Timeline() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedElements, removeElementFromTrack, clearSelectedElements]);
+  }, [
+    selectedElements,
+    removeElementFromTrack,
+    clearSelectedElements,
+    isInTimeline,
+  ]);
 
   // Keyboard event for undo (Cmd+Z)
   useEffect(() => {
