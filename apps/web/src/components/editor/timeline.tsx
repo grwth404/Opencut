@@ -885,7 +885,8 @@ export function Timeline() {
             </TooltipTrigger>
             <TooltipContent>Delete element (Delete)</TooltipContent>
           </Tooltip>
-          <div className="w-px h-6 bg-border mx-1" />c{/* Speed Control */}
+          <div className="w-px h-6 bg-border mx-1" />
+          {/* Speed Control */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Select
