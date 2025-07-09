@@ -90,6 +90,7 @@ export function Timeline() {
   const [progress, setProgress] = useState(0);
   const dragCounterRef = useRef(0);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const rulerRef = useRef<HTMLDivElement>(null);
   const [isInTimeline, setIsInTimeline] = useState(false);
 
   // Timeline zoom functionality
@@ -471,9 +472,9 @@ export function Timeline() {
 
   const handleScrub = useCallback(
     (e: MouseEvent | React.MouseEvent) => {
-      const timeline = timelineRef.current;
-      if (!timeline) return;
-      const rect = timeline.getBoundingClientRect();
+      const ruler = rulerRef.current;
+      if (!ruler) return;
+      const rect = ruler.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const time = Math.max(0, Math.min(duration, x / (50 * zoomLevel)));
       setScrubTime(time);
@@ -729,7 +730,6 @@ export function Timeline() {
       {...dragProps}
       onMouseEnter={() => setIsInTimeline(true)}
       onMouseLeave={() => setIsInTimeline(false)}
-      onWheel={handleWheel}
     >
       {/* Toolbar */}
       <div className="border-b flex items-center px-2 py-1 gap-1">
@@ -886,7 +886,7 @@ export function Timeline() {
       </div>
 
       {/* Timeline Container */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden" ref={timelineRef}>
         {/* Timeline Header with Ruler */}
         <div className="flex border-b bg-panel-accent sticky top-0 z-10">
           {/* Track Labels Header */}
@@ -897,10 +897,13 @@ export function Timeline() {
           </div>
 
           {/* Timeline Ruler */}
-          <div className="flex-1 relative overflow-hidden">
+          <div
+            className="flex-1 relative overflow-hidden"
+            onWheel={handleWheel}
+          >
             <ScrollArea className="w-full" ref={rulerScrollRef}>
               <div
-                ref={timelineRef}
+                ref={rulerRef}
                 className={`relative h-12 bg-muted/30 select-none ${
                   isDraggingRuler ? "cursor-grabbing" : "cursor-grab"
                 }`}
@@ -1024,7 +1027,10 @@ export function Timeline() {
           )}
 
           {/* Timeline Tracks Content */}
-          <div className="flex-1 relative overflow-hidden">
+          <div
+            className="flex-1 relative overflow-hidden"
+            onWheel={handleWheel}
+          >
             <ScrollArea className="w-full h-full" ref={tracksScrollRef}>
               <div
                 className="relative flex-1"
