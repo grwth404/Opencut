@@ -10,10 +10,11 @@ import {
   Snowflake,
   Copy,
   SplitSquareHorizontal,
-  Volume2,
-  VolumeX,
   Pause,
   Play,
+  Video,
+  Music,
+  TypeIcon,
 } from "lucide-react";
 import {
   Tooltip,
@@ -25,7 +26,6 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
-  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "../ui/context-menu";
 import { useTimelineStore } from "@/stores/timeline-store";
@@ -44,9 +44,8 @@ import {
   SelectValue,
 } from "../ui/select";
 import { TimelineTrackContent } from "./timeline-track";
-import type { DragData } from "@/types/timeline";
+import type { DragData, TimelineTrack } from "@/types/timeline";
 import {
-  getTrackLabelColor,
   getTrackHeight,
   getCumulativeHeightBefore,
   getTotalTracksHeight,
@@ -1008,12 +1007,7 @@ export function Timeline() {
                     style={{ height: `${getTrackHeight(track.type)}px` }}
                   >
                     <div className="flex items-center flex-1 min-w-0">
-                      <div
-                        className={`w-3 h-3 rounded-full flex-shrink-0 ${getTrackLabelColor(track.type)}`}
-                      />
-                      <span className="ml-2 text-sm font-medium truncate">
-                        {track.name}
-                      </span>
+                      <TrackIcon track={track} />
                     </div>
                     {track.muted && (
                       <span className="ml-2 text-xs text-red-500 font-semibold flex-shrink-0">
@@ -1098,5 +1092,21 @@ export function Timeline() {
         </div>
       </div>
     </div>
+  );
+}
+
+function TrackIcon({ track }: { track: TimelineTrack }) {
+  return (
+    <>
+      {track.type === "media" && (
+        <Video className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+      )}
+      {track.type === "text" && (
+        <TypeIcon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+      )}
+      {track.type === "audio" && (
+        <Music className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+      )}
+    </>
   );
 }

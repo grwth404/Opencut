@@ -32,10 +32,6 @@ export function getTrackElementClasses(type: TrackType) {
   return `${colors.background} ${colors.border}`;
 }
 
-export function getTrackLabelColor(type: TrackType) {
-  return getTrackColors(type).solid;
-}
-
 // Track height definitions
 export const TRACK_HEIGHTS: Record<TrackType, number> = {
   media: 65,
