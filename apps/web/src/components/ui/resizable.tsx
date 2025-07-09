@@ -29,12 +29,11 @@ const ResizableHandle = ({
 }) => (
   <ResizablePrimitive.PanelResizeHandle
     className={cn(
-      "hidden",
+      "relative w-0 bg-transparent cursor-col-resize data-[panel-group-direction=vertical]:h-0 data-[panel-group-direction=vertical]:cursor-row-resize",
       className
     )}
     {...props}
-  >
-  </ResizablePrimitive.PanelResizeHandle>
+  />
 );
 
 export { ResizablePanelGroup, ResizablePanel, ResizableHandle };
