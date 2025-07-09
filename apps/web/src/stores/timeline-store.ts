@@ -4,6 +4,7 @@ import {
   TimelineElement,
   CreateTimelineElement,
   TimelineTrack,
+  TextElement,
   sortTracksByOrder,
   ensureMainTrack,
   validateElementTrackCompatibility,
@@ -136,6 +137,28 @@ interface TimelineStore {
   loadProjectTimeline: (projectId: string) => Promise<void>;
   saveProjectTimeline: (projectId: string) => Promise<void>;
   clearTimeline: () => void;
+  updateTextElement: (
+    trackId: string,
+    elementId: string,
+    updates: Partial<
+      Pick<
+        TextElement,
+        | "content"
+        | "fontSize"
+        | "fontFamily"
+        | "color"
+        | "backgroundColor"
+        | "textAlign"
+        | "fontWeight"
+        | "fontStyle"
+        | "textDecoration"
+        | "x"
+        | "y"
+        | "rotation"
+        | "opacity"
+      >
+    >
+  ) => void;
 }
 
 export const useTimelineStore = create<TimelineStore>((set, get) => {
@@ -490,6 +513,24 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       updateTracksAndSave(
         get()._tracks.map((track) =>
           track.id === trackId ? { ...track, muted: !track.muted } : track
+        )
+      );
+    },
+
+    updateTextElement: (trackId, elementId, updates) => {
+      get().pushHistory();
+      updateTracksAndSave(
+        get()._tracks.map((track) =>
+          track.id === trackId
+            ? {
+                ...track,
+                elements: track.elements.map((element) =>
+                  element.id === elementId && element.type === "text"
+                    ? { ...element, ...updates }
+                    : element
+                ),
+              }
+            : track
         )
       );
     },
