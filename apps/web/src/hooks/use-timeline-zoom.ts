@@ -21,7 +21,7 @@ export function useTimelineZoom({
     // Only zoom if user is using pinch gesture (ctrlKey or metaKey is true)
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.05 : 0.05;
+      const delta = e.deltaY > 0 ? -0.15 : 0.15;
       setZoomLevel((prev) => Math.max(0.1, Math.min(10, prev + delta)));
     }
     // Otherwise, allow normal scrolling
