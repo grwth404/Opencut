@@ -10,7 +10,7 @@ export function PropertiesPanel() {
   const { getDisplayName, canvasSize } = useAspectRatio();
 
   return (
-    <ScrollArea className="h-full">
+    <ScrollArea className="h-full bg-panel rounded-sm">
       <div className="space-y-4 p-5">
         {/* Media Properties */}
         <div className="flex flex-col gap-3">

@@ -230,10 +230,10 @@ export function PreviewPanel() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col min-h-0 min-w-0">
+    <div className="h-full w-full flex flex-col min-h-0 min-w-0 bg-panel rounded-sm">
       <div
         ref={containerRef}
-        className="flex-1 flex flex-col items-start justify-center p-3 min-h-0 min-w-0"
+        className="flex-1 flex flex-col items-center justify-center p-3 min-h-0 min-w-0"
       >
         <div className="flex-1"></div>
         {hasAnyElements ? (
@@ -289,7 +289,7 @@ function PreviewToolbar({ hasAnyElements }: { hasAnyElements: boolean }) {
   return (
     <div
       data-toolbar
-      className="flex items-end justify-between gap-2 p-1 pt-2 bg-background-500 w-full"
+      className="flex items-end justify-between gap-2 p-1 pt-2 w-full"
     >
       <div>
         <p
@@ -307,6 +307,7 @@ function PreviewToolbar({ hasAnyElements }: { hasAnyElements: boolean }) {
         size="icon"
         onClick={toggle}
         disabled={!hasAnyElements}
+        className="h-auto p-0"
       >
         {isPlaying ? (
           <Pause className="h-3 w-3" />
@@ -319,7 +320,7 @@ function PreviewToolbar({ hasAnyElements }: { hasAnyElements: boolean }) {
           <DropdownMenuTrigger asChild>
             <Button
               size="sm"
-              className="!bg-background text-foreground/85 text-xs h-auto rounded-none border border-muted-foreground px-0.5 py-0 font-light"
+              className="!bg-panel-accent text-foreground/85 text-xs h-auto rounded-none border border-muted-foreground px-0.5 py-0 font-light"
               disabled={!hasAnyElements}
             >
               {getDisplayName()}
