@@ -249,7 +249,7 @@ export function TimelineElement({
   const renderElementContent = () => {
     if (element.type === "text") {
       return (
-        <div className="w-full h-full flex items-center justify-center">
+        <div className="w-full h-full flex items-center justify-start pl-2">
           <span className="text-xs text-foreground/80 truncate">
             {element.content}
           </span>
