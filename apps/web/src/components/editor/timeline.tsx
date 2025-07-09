@@ -32,6 +32,7 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useProjectStore } from "@/stores/project-store";
+import { useTimelineZoom } from "@/hooks/use-timeline-zoom";
 import { processMediaFiles } from "@/lib/media-processing";
 import { toast } from "sonner";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -87,10 +88,15 @@ export function Timeline() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [zoomLevel, setZoomLevel] = useState(1);
   const dragCounterRef = useRef(0);
   const timelineRef = useRef<HTMLDivElement>(null);
   const [isInTimeline, setIsInTimeline] = useState(false);
+
+  // Timeline zoom functionality
+  const { zoomLevel, setZoomLevel, handleWheel } = useTimelineZoom({
+    containerRef: timelineRef,
+    isInTimeline,
+  });
 
   // Marquee selection state
   const [marquee, setMarquee] = useState<{
@@ -432,16 +438,6 @@ export function Timeline() {
     }
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    // Only zoom if user is using pinch gesture (ctrlKey or metaKey is true)
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.05 : 0.05;
-      setZoomLevel((prev) => Math.max(0.1, Math.min(10, prev + delta)));
-    }
-    // Otherwise, allow normal scrolling
-  };
-
   // --- Playhead Scrubbing Handlers ---
   const handlePlayheadMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -666,26 +662,6 @@ export function Timeline() {
     });
     clearSelectedElements();
   };
-
-  // Prevent explorer zooming in/out when in timeline
-  useEffect(() => {
-    const preventZoom = (e: WheelEvent) => {
-      // if (isInTimeline && (e.ctrlKey || e.metaKey)) {
-      if (
-        isInTimeline &&
-        (e.ctrlKey || e.metaKey) &&
-        timelineRef.current?.contains(e.target as Node)
-      ) {
-        e.preventDefault();
-      }
-    };
-
-    document.addEventListener("wheel", preventZoom, { passive: false });
-
-    return () => {
-      document.removeEventListener("wheel", preventZoom);
-    };
-  }, [isInTimeline]);
 
   // --- Scroll synchronization effect ---
   useEffect(() => {
