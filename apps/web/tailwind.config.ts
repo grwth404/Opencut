@@ -6,6 +6,7 @@ export default {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/lib/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/constants/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
@@ -14,6 +15,7 @@ export default {
       },
       fontSize: {
         base: "0.95rem",
+        xs: "0.85rem",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "sans-serif"],
