@@ -44,6 +44,11 @@ import {
   SelectValue,
 } from "../ui/select";
 import { TimelineTrackContent } from "./timeline-track";
+import {
+  TimelinePlayhead,
+  TimelinePlayheadTracks,
+  useTimelinePlayheadRuler,
+} from "./timeline-playhead";
 import type { DragData, TimelineTrack } from "@/types/timeline";
 import {
   getTrackHeight,
@@ -109,14 +114,6 @@ export function Timeline() {
     additive: boolean;
   } | null>(null);
 
-  // Playhead scrubbing state
-  const [isScrubbing, setIsScrubbing] = useState(false);
-  const [scrubTime, setScrubTime] = useState<number | null>(null);
-
-  // Add new state for ruler drag detection
-  const [isDraggingRuler, setIsDraggingRuler] = useState(false);
-  const [hasDraggedRuler, setHasDraggedRuler] = useState(false);
-
   // Dynamic timeline width calculation based on playhead position and duration
   const dynamicTimelineWidth = Math.max(
     (duration || 0) * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel, // Base width from duration
@@ -130,6 +127,17 @@ export function Timeline() {
   const isUpdatingRef = useRef(false);
   const lastRulerSync = useRef(0);
   const lastTracksSync = useRef(0);
+
+  // Timeline playhead ruler handlers
+  const { handleRulerMouseDown, isDraggingRuler } = useTimelinePlayheadRuler({
+    currentTime,
+    duration,
+    zoomLevel,
+    seek,
+    rulerRef,
+    rulerScrollRef,
+    tracksScrollRef,
+  });
 
   // Update timeline duration when tracks change
   useEffect(() => {
@@ -460,92 +468,6 @@ export function Timeline() {
     }
   };
 
-  // --- Playhead Scrubbing Handlers ---
-  const handlePlayheadMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation(); // Prevent ruler drag from triggering
-      setIsScrubbing(true);
-      handleScrub(e);
-    },
-    [duration, zoomLevel]
-  );
-
-  // Add new ruler mouse down handler
-  const handleRulerMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      // Only handle left mouse button
-      if (e.button !== 0) return;
-
-      // Don't interfere if clicking on the playhead itself
-      if ((e.target as HTMLElement).closest(".playhead")) return;
-
-      e.preventDefault();
-      setIsDraggingRuler(true);
-      setHasDraggedRuler(false);
-
-      // Start scrubbing immediately
-      setIsScrubbing(true);
-      handleScrub(e);
-    },
-    [duration, zoomLevel]
-  );
-
-  const handleScrub = useCallback(
-    (e: MouseEvent | React.MouseEvent) => {
-      const ruler = rulerRef.current;
-      if (!ruler) return;
-      const rect = ruler.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const time = Math.max(0, Math.min(duration, x / (50 * zoomLevel)));
-      setScrubTime(time);
-      seek(time); // update video preview in real time
-    },
-    [duration, zoomLevel, seek]
-  );
-
-  useEffect(() => {
-    if (!isScrubbing) return;
-    const onMouseMove = (e: MouseEvent) => {
-      handleScrub(e);
-      // Mark that we've dragged if ruler drag is active
-      if (isDraggingRuler) {
-        setHasDraggedRuler(true);
-      }
-    };
-    const onMouseUp = (e: MouseEvent) => {
-      setIsScrubbing(false);
-      if (scrubTime !== null) seek(scrubTime); // finalize seek
-      setScrubTime(null);
-
-      // Handle ruler click vs drag
-      if (isDraggingRuler) {
-        setIsDraggingRuler(false);
-        // If we didn't drag, treat it as a click-to-seek
-        if (!hasDraggedRuler) {
-          handleScrub(e);
-        }
-        setHasDraggedRuler(false);
-      }
-    };
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-  }, [
-    isScrubbing,
-    scrubTime,
-    seek,
-    handleScrub,
-    isDraggingRuler,
-    hasDraggedRuler,
-  ]);
-
-  const playheadPosition =
-    isScrubbing && scrubTime !== null ? scrubTime : currentTime;
-
   const dragProps = {
     onDragEnter: handleDragEnter,
     onDragOver: handleDragOver,
@@ -717,33 +639,6 @@ export function Timeline() {
       tracksViewport.removeEventListener("scroll", handleTracksScroll);
     };
   }, []);
-
-  // --- Playhead auto-scroll effect ---
-  useEffect(() => {
-    const rulerViewport = rulerScrollRef.current?.querySelector(
-      "[data-radix-scroll-area-viewport]"
-    ) as HTMLElement;
-    const tracksViewport = tracksScrollRef.current?.querySelector(
-      "[data-radix-scroll-area-viewport]"
-    ) as HTMLElement;
-    if (!rulerViewport || !tracksViewport) return;
-    const playheadPx =
-      playheadPosition * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
-    const viewportWidth = rulerViewport.clientWidth;
-    const scrollMin = 0;
-    const scrollMax = rulerViewport.scrollWidth - viewportWidth;
-    // Center the playhead if it's not visible (100px buffer)
-    const desiredScroll = Math.max(
-      scrollMin,
-      Math.min(scrollMax, playheadPx - viewportWidth / 2)
-    );
-    if (
-      playheadPx < rulerViewport.scrollLeft + 100 ||
-      playheadPx > rulerViewport.scrollLeft + viewportWidth - 100
-    ) {
-      rulerViewport.scrollLeft = tracksViewport.scrollLeft = desiredScroll;
-    }
-  }, [playheadPosition, duration, zoomLevel]);
 
   return (
     <div
@@ -1002,16 +897,17 @@ export function Timeline() {
                   }).filter(Boolean);
                 })()}
 
-                {/* Playhead in ruler (scrubbable) */}
-                <div
-                  className="playhead absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-col-resize"
-                  style={{
-                    left: `${playheadPosition * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel}px`,
-                  }}
-                  onMouseDown={handlePlayheadMouseDown}
-                >
-                  <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm" />
-                </div>
+                {/* Playhead in ruler */}
+                <TimelinePlayhead
+                  currentTime={currentTime}
+                  duration={duration}
+                  zoomLevel={zoomLevel}
+                  tracks={tracks}
+                  seek={seek}
+                  rulerRef={rulerRef}
+                  rulerScrollRef={rulerScrollRef}
+                  tracksScrollRef={tracksScrollRef}
+                />
               </div>
             </ScrollArea>
           </div>
@@ -1101,17 +997,17 @@ export function Timeline() {
                       </ContextMenu>
                     ))}
 
-                    {/* Playhead for tracks area (scrubbable) */}
-                    {tracks.length > 0 && (
-                      <div
-                        className="absolute top-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-col-resize"
-                        style={{
-                          left: `${playheadPosition * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel}px`,
-                          height: `${getTotalTracksHeight(tracks)}px`,
-                        }}
-                        onMouseDown={handlePlayheadMouseDown}
-                      />
-                    )}
+                    {/* Playhead for tracks area */}
+                    <TimelinePlayheadTracks
+                      currentTime={currentTime}
+                      duration={duration}
+                      zoomLevel={zoomLevel}
+                      tracks={tracks}
+                      seek={seek}
+                      rulerRef={rulerRef}
+                      rulerScrollRef={rulerScrollRef}
+                      tracksScrollRef={tracksScrollRef}
+                    />
                   </>
                 )}
               </div>
