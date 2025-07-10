@@ -306,12 +306,15 @@ function PreviewToolbar({ hasAnyElements }: { hasAnyElements: boolean }) {
       <div>
         <p
           className={cn(
-            "text-xs text-muted-foreground tabular-nums",
+            "text-[0.75rem] text-muted-foreground tabular-num flex items-center gap-1",
             !hasAnyElements && "opacity-50"
           )}
         >
-          {formatTimeCode(currentTime, "HH:MM:SS:CS")}/
-          {formatTimeCode(getTotalDuration(), "HH:MM:SS:CS")}
+          <span className="text-primary">
+            {formatTimeCode(currentTime, "HH:MM:SS:CS")}
+          </span>
+          <span className="opacity-50">/</span>
+          <span>{formatTimeCode(getTotalDuration(), "HH:MM:SS:CS")}</span>
         </p>
       </div>
       <Button
