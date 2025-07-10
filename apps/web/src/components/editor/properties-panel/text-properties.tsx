@@ -10,6 +10,8 @@ import {
 import { FONT_OPTIONS, FontFamily } from "@/constants/font-constants";
 import { TextElement } from "@/types/timeline";
 import { useTimelineStore } from "@/stores/timeline-store";
+import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 
 export function TextProperties({
   element,
@@ -49,6 +51,34 @@ export function TextProperties({
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label className="text-xs">Font size</Label>
+        <div className="flex items-center  gap-2">
+          <Slider
+            defaultValue={[element.fontSize]}
+            min={8}
+            max={200}
+            step={1}
+            onValueChange={([value]) =>
+              updateTextElement(trackId, element.id, { fontSize: value })
+            }
+            className="w-full"
+          />
+          <Input
+            type="number"
+            value={element.fontSize}
+            onChange={(e) =>
+              updateTextElement(trackId, element.id, {
+                fontSize: parseInt(e.target.value),
+              })
+            }
+            className="w-12 !text-xs h-7 rounded-sm text-center
+             [appearance:textfield]
+             [&::-webkit-outer-spin-button]:appearance-none
+             [&::-webkit-inner-spin-button]:appearance-none"
+          />
+        </div>
       </div>
     </div>
   );
