@@ -46,7 +46,6 @@ import {
 import { TimelineTrackContent } from "./timeline-track";
 import {
   TimelinePlayhead,
-  TimelinePlayheadTracks,
   useTimelinePlayheadRuler,
 } from "./timeline-playhead";
 import type { DragData, TimelineTrack } from "@/types/timeline";
@@ -124,6 +123,7 @@ export function Timeline() {
   // Scroll synchronization and auto-scroll to playhead
   const rulerScrollRef = useRef<HTMLDivElement>(null);
   const tracksScrollRef = useRef<HTMLDivElement>(null);
+  const trackLabelsRef = useRef<HTMLDivElement>(null);
   const isUpdatingRef = useRef(false);
   const lastRulerSync = useRef(0);
   const lastTracksSync = useRef(0);
@@ -138,6 +138,77 @@ export function Timeline() {
     rulerScrollRef,
     tracksScrollRef,
   });
+
+  // Timeline content click to seek handler
+  const handleTimelineContentClick = useCallback(
+    (e: React.MouseEvent) => {
+      // Don't seek if clicking on timeline elements, but still deselect
+      if ((e.target as HTMLElement).closest(".timeline-element")) {
+        return;
+      }
+
+      // Don't seek if clicking on playhead
+      if ((e.target as HTMLElement).closest(".playhead")) {
+        return;
+      }
+
+      // Don't seek if clicking on track labels
+      if ((e.target as HTMLElement).closest("[data-track-labels]")) {
+        clearSelectedElements();
+        return;
+      }
+
+      // Clear selected elements when clicking empty timeline area
+      clearSelectedElements();
+
+      // Determine if we're clicking in ruler or tracks area
+      const isRulerClick = (e.target as HTMLElement).closest(
+        "[data-ruler-area]"
+      );
+
+      let mouseX: number;
+      let scrollLeft = 0;
+
+      if (isRulerClick) {
+        // Calculate based on ruler position
+        const rulerContent = rulerScrollRef.current?.querySelector(
+          "[data-radix-scroll-area-viewport]"
+        ) as HTMLElement;
+        if (!rulerContent) return;
+        const rect = rulerContent.getBoundingClientRect();
+        mouseX = e.clientX - rect.left;
+        scrollLeft = rulerContent.scrollLeft;
+      } else {
+        // Calculate based on tracks content position
+        const tracksContent = tracksScrollRef.current?.querySelector(
+          "[data-radix-scroll-area-viewport]"
+        ) as HTMLElement;
+        if (!tracksContent) return;
+        const rect = tracksContent.getBoundingClientRect();
+        mouseX = e.clientX - rect.left;
+        scrollLeft = tracksContent.scrollLeft;
+      }
+
+      const time = Math.max(
+        0,
+        Math.min(
+          duration,
+          (mouseX + scrollLeft) /
+            (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel)
+        )
+      );
+
+      seek(time);
+    },
+    [
+      duration,
+      zoomLevel,
+      seek,
+      rulerScrollRef,
+      tracksScrollRef,
+      clearSelectedElements,
+    ]
+  );
 
   // Update timeline duration when tracks change
   useEffect(() => {
@@ -221,14 +292,6 @@ export function Timeline() {
         active: true,
         additive: e.metaKey || e.ctrlKey || e.shiftKey,
       });
-    }
-  };
-
-  // Add new click handler for deselection
-  const handleTimelineClick = (e: React.MouseEvent) => {
-    // If clicking empty area (not on an element) and not starting marquee, deselect all elements
-    if (!(e.target as HTMLElement).closest(".timeline-element")) {
-      clearSelectedElements();
     }
   };
 
@@ -802,7 +865,22 @@ export function Timeline() {
       </div>
 
       {/* Timeline Container */}
-      <div className="flex-1 flex flex-col overflow-hidden" ref={timelineRef}>
+      <div
+        className="flex-1 flex flex-col overflow-hidden relative"
+        ref={timelineRef}
+      >
+        <TimelinePlayhead
+          currentTime={currentTime}
+          duration={duration}
+          zoomLevel={zoomLevel}
+          tracks={tracks}
+          seek={seek}
+          rulerRef={rulerRef}
+          rulerScrollRef={rulerScrollRef}
+          tracksScrollRef={tracksScrollRef}
+          trackLabelsRef={trackLabelsRef}
+          timelineRef={timelineRef}
+        />
         {/* Timeline Header with Ruler */}
         <div className="flex bg-panel sticky top-0 z-10">
           {/* Track Labels Header */}
@@ -817,17 +895,16 @@ export function Timeline() {
           <div
             className="flex-1 relative overflow-hidden h-4"
             onWheel={handleWheel}
+            onClick={handleTimelineContentClick}
+            data-ruler-area
           >
             <ScrollArea className="w-full" ref={rulerScrollRef}>
               <div
                 ref={rulerRef}
-                className={`relative h-4 select-none ${
-                  isDraggingRuler ? "cursor-grabbing" : "cursor-grab"
-                }`}
+                className="relative h-4 select-none cursor-pointer"
                 style={{
                   width: `${dynamicTimelineWidth}px`,
                 }}
-                onMouseDown={handleRulerMouseDown}
               >
                 {/* Time markers */}
                 {(() => {
@@ -896,18 +973,6 @@ export function Timeline() {
                     );
                   }).filter(Boolean);
                 })()}
-
-                {/* Playhead in ruler */}
-                <TimelinePlayhead
-                  currentTime={currentTime}
-                  duration={duration}
-                  zoomLevel={zoomLevel}
-                  tracks={tracks}
-                  seek={seek}
-                  rulerRef={rulerRef}
-                  rulerScrollRef={rulerScrollRef}
-                  tracksScrollRef={tracksScrollRef}
-                />
               </div>
             </ScrollArea>
           </div>
@@ -917,7 +982,11 @@ export function Timeline() {
         <div className="flex-1 flex overflow-hidden">
           {/* Track Labels */}
           {tracks.length > 0 && (
-            <div className="w-48 flex-shrink-0 border-r bg-panel-accent overflow-y-auto">
+            <div
+              ref={trackLabelsRef}
+              className="w-48 flex-shrink-0 border-r bg-panel-accent overflow-y-auto"
+              data-track-labels
+            >
               <div className="flex flex-col gap-1">
                 {tracks.map((track) => (
                   <div
@@ -943,6 +1012,7 @@ export function Timeline() {
           <div
             className="flex-1 relative overflow-hidden"
             onWheel={handleWheel}
+            onClick={handleTimelineContentClick}
           >
             <ScrollArea className="w-full h-full" ref={tracksScrollRef}>
               <div
@@ -951,7 +1021,6 @@ export function Timeline() {
                   height: `${Math.max(200, Math.min(800, getTotalTracksHeight(tracks)))}px`,
                   width: `${dynamicTimelineWidth}px`,
                 }}
-                onClick={handleTimelineClick}
                 onMouseDown={handleTimelineMouseDown}
               >
                 {tracks.length === 0 ? (
@@ -996,18 +1065,6 @@ export function Timeline() {
                         </ContextMenuContent>
                       </ContextMenu>
                     ))}
-
-                    {/* Playhead for tracks area */}
-                    <TimelinePlayheadTracks
-                      currentTime={currentTime}
-                      duration={duration}
-                      zoomLevel={zoomLevel}
-                      tracks={tracks}
-                      seek={seek}
-                      rulerRef={rulerRef}
-                      rulerScrollRef={rulerScrollRef}
-                      tracksScrollRef={tracksScrollRef}
-                    />
                   </>
                 )}
               </div>
