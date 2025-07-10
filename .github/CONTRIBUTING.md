@@ -10,6 +10,8 @@ Thank you for your interest in contributing to OpenCut! This document provides g
 4. Install dependencies: `bun install`
 5. Start the development server: `bun run dev`
 
+**Note:** If you see an error like `Unsupported URL Type "workspace:*"` when using `npm install`, use **bun** or **pnpm** instead.
+
 ## Development Setup
 
 ### Prerequisites
