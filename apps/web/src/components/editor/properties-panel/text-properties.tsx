@@ -1,5 +1,4 @@
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -12,6 +11,11 @@ import { TextElement } from "@/types/timeline";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
+import {
+  PropertyItem,
+  PropertyItemLabel,
+  PropertyItemValue,
+} from "./property-item";
 
 export function TextProperties({
   element,
@@ -32,54 +36,58 @@ export function TextProperties({
           updateTextElement(trackId, element.id, { content: e.target.value })
         }
       />
-      <div className="flex items-center justify-between gap-6">
-        <Label className="text-xs">Font</Label>
-        <Select
-          defaultValue={element.fontFamily}
-          onValueChange={(value: FontFamily) =>
-            updateTextElement(trackId, element.id, { fontFamily: value })
-          }
-        >
-          <SelectTrigger className="w-full text-xs">
-            <SelectValue placeholder="Select a font" />
-          </SelectTrigger>
-          <SelectContent>
-            {FONT_OPTIONS.map((font) => (
-              <SelectItem key={font.value} value={font.value}>
-                {font.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="flex flex-col gap-1">
-        <Label className="text-xs">Font size</Label>
-        <div className="flex items-center gap-2">
-          <Slider
-            defaultValue={[element.fontSize]}
-            min={8}
-            max={200}
-            step={1}
-            onValueChange={([value]) =>
-              updateTextElement(trackId, element.id, { fontSize: value })
+      <PropertyItem direction="row">
+        <PropertyItemLabel>Font</PropertyItemLabel>
+        <PropertyItemValue>
+          <Select
+            defaultValue={element.fontFamily}
+            onValueChange={(value: FontFamily) =>
+              updateTextElement(trackId, element.id, { fontFamily: value })
             }
-            className="w-full"
-          />
-          <Input
-            type="number"
-            value={element.fontSize}
-            onChange={(e) =>
-              updateTextElement(trackId, element.id, {
-                fontSize: parseInt(e.target.value),
-              })
-            }
-            className="w-12 !text-xs h-7 rounded-sm text-center
-             [appearance:textfield]
-             [&::-webkit-outer-spin-button]:appearance-none
-             [&::-webkit-inner-spin-button]:appearance-none"
-          />
-        </div>
-      </div>
+          >
+            <SelectTrigger className="w-full text-xs">
+              <SelectValue placeholder="Select a font" />
+            </SelectTrigger>
+            <SelectContent>
+              {FONT_OPTIONS.map((font) => (
+                <SelectItem key={font.value} value={font.value}>
+                  {font.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </PropertyItemValue>
+      </PropertyItem>
+      <PropertyItem direction="column">
+        <PropertyItemLabel>Font size</PropertyItemLabel>
+        <PropertyItemValue>
+          <div className="flex items-center gap-2">
+            <Slider
+              defaultValue={[element.fontSize]}
+              min={8}
+              max={200}
+              step={1}
+              onValueChange={([value]) =>
+                updateTextElement(trackId, element.id, { fontSize: value })
+              }
+              className="w-full"
+            />
+            <Input
+              type="number"
+              value={element.fontSize}
+              onChange={(e) =>
+                updateTextElement(trackId, element.id, {
+                  fontSize: parseInt(e.target.value),
+                })
+              }
+              className="w-12 !text-xs h-7 rounded-sm text-center
+               [appearance:textfield]
+               [&::-webkit-outer-spin-button]:appearance-none
+               [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
+        </PropertyItemValue>
+      </PropertyItem>
     </div>
   );
 }
