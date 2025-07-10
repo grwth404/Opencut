@@ -58,7 +58,10 @@ export default function Editor() {
       <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
         <EditorHeader />
         <div className="flex-1 min-h-0 min-w-0">
-          <ResizablePanelGroup direction="vertical" className="h-full w-full gap-1">
+          <ResizablePanelGroup
+            direction="vertical"
+            className="h-full w-full gap-1"
+          >
             <ResizablePanel
               defaultSize={mainContent}
               minSize={30}
