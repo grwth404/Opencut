@@ -124,6 +124,7 @@ export function Timeline() {
   const rulerScrollRef = useRef<HTMLDivElement>(null);
   const tracksScrollRef = useRef<HTMLDivElement>(null);
   const trackLabelsRef = useRef<HTMLDivElement>(null);
+  const playheadRef = useRef<HTMLDivElement>(null);
   const isUpdatingRef = useRef(false);
   const lastRulerSync = useRef(0);
   const lastTracksSync = useRef(0);
@@ -137,6 +138,7 @@ export function Timeline() {
     rulerRef,
     rulerScrollRef,
     tracksScrollRef,
+    playheadRef,
   });
 
   // Timeline content click to seek handler
@@ -148,7 +150,7 @@ export function Timeline() {
       }
 
       // Don't seek if clicking on playhead
-      if ((e.target as HTMLElement).closest(".playhead")) {
+      if (playheadRef.current?.contains(e.target as Node)) {
         return;
       }
 
@@ -880,6 +882,7 @@ export function Timeline() {
           tracksScrollRef={tracksScrollRef}
           trackLabelsRef={trackLabelsRef}
           timelineRef={timelineRef}
+          playheadRef={playheadRef}
         />
         {/* Timeline Header with Ruler */}
         <div className="flex bg-panel sticky top-0 z-10">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { TimelineTrack } from "@/types/timeline";
 import {
   TIMELINE_CONSTANTS,
@@ -18,6 +19,7 @@ interface TimelinePlayheadProps {
   tracksScrollRef: React.RefObject<HTMLDivElement>;
   trackLabelsRef?: React.RefObject<HTMLDivElement>;
   timelineRef: React.RefObject<HTMLDivElement>;
+  playheadRef?: React.RefObject<HTMLDivElement>;
 }
 
 export function TimelinePlayhead({
@@ -31,7 +33,10 @@ export function TimelinePlayhead({
   tracksScrollRef,
   trackLabelsRef,
   timelineRef,
+  playheadRef: externalPlayheadRef,
 }: TimelinePlayheadProps) {
+  const internalPlayheadRef = useRef<HTMLDivElement>(null);
+  const playheadRef = externalPlayheadRef || internalPlayheadRef;
   const { playheadPosition, handlePlayheadMouseDown } = useTimelinePlayhead({
     currentTime,
     duration,
@@ -40,6 +45,7 @@ export function TimelinePlayhead({
     rulerRef,
     rulerScrollRef,
     tracksScrollRef,
+    playheadRef,
   });
 
   // Use timeline container height minus a few pixels for breathing room
@@ -57,7 +63,8 @@ export function TimelinePlayhead({
 
   return (
     <div
-      className="playhead absolute pointer-events-auto z-[100]"
+      ref={playheadRef}
+      className="absolute pointer-events-auto z-[100]"
       style={{
         left: `${leftPosition}px`,
         top: 0,
@@ -84,6 +91,7 @@ export function useTimelinePlayheadRuler({
   rulerRef,
   rulerScrollRef,
   tracksScrollRef,
+  playheadRef,
 }: Omit<TimelinePlayheadProps, "tracks" | "trackLabelsRef" | "timelineRef">) {
   const { handleRulerMouseDown, isDraggingRuler } = useTimelinePlayhead({
     currentTime,
@@ -93,6 +101,7 @@ export function useTimelinePlayheadRuler({
     rulerRef,
     rulerScrollRef,
     tracksScrollRef,
+    playheadRef,
   });
 
   return { handleRulerMouseDown, isDraggingRuler };

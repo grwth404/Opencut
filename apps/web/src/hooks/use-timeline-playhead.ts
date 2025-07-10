@@ -8,6 +8,7 @@ interface UseTimelinePlayheadProps {
   rulerRef: React.RefObject<HTMLDivElement>;
   rulerScrollRef: React.RefObject<HTMLDivElement>;
   tracksScrollRef: React.RefObject<HTMLDivElement>;
+  playheadRef?: React.RefObject<HTMLDivElement>;
 }
 
 export function useTimelinePlayhead({
@@ -18,6 +19,7 @@ export function useTimelinePlayhead({
   rulerRef,
   rulerScrollRef,
   tracksScrollRef,
+  playheadRef,
 }: UseTimelinePlayheadProps) {
   // Playhead scrubbing state
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -48,7 +50,7 @@ export function useTimelinePlayhead({
       if (e.button !== 0) return;
 
       // Don't interfere if clicking on the playhead itself
-      if ((e.target as HTMLElement).closest(".playhead")) return;
+      if (playheadRef?.current?.contains(e.target as Node)) return;
 
       e.preventDefault();
       setIsDraggingRuler(true);
