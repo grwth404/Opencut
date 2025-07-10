@@ -909,23 +909,24 @@ export function Timeline() {
       {/* Timeline Container */}
       <div className="flex-1 flex flex-col overflow-hidden" ref={timelineRef}>
         {/* Timeline Header with Ruler */}
-        <div className="flex border-b bg-panel-accent sticky top-0 z-10">
+        <div className="flex bg-panel sticky top-0 z-10">
           {/* Track Labels Header */}
           <div className="w-48 flex-shrink-0 bg-muted/30 border-r flex items-center justify-between px-3 py-2">
-            <span className="text-sm font-medium text-muted-foreground">
-              Tracks
+            {/* Empty space */}
+            <span className="text-sm font-medium text-muted-foreground opacity-0">
+              .
             </span>
           </div>
 
           {/* Timeline Ruler */}
           <div
-            className="flex-1 relative overflow-hidden"
+            className="flex-1 relative overflow-hidden h-4"
             onWheel={handleWheel}
           >
             <ScrollArea className="w-full" ref={rulerScrollRef}>
               <div
                 ref={rulerRef}
-                className={`relative h-12 bg-muted/30 select-none ${
+                className={`relative h-4 select-none ${
                   isDraggingRuler ? "cursor-grabbing" : "cursor-grab"
                 }`}
                 style={{
@@ -971,7 +972,7 @@ export function Timeline() {
                         }}
                       >
                         <span
-                          className={`absolute top-1 left-1 text-xs ${
+                          className={`absolute top-1 left-1 text-[0.6rem] ${
                             isMainMarker
                               ? "text-muted-foreground font-medium"
                               : "text-muted-foreground/70"
@@ -1103,7 +1104,7 @@ export function Timeline() {
                     {/* Playhead for tracks area (scrubbable) */}
                     {tracks.length > 0 && (
                       <div
-                        className="absolute top-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-col"
+                        className="absolute top-0 w-0.5 bg-red-500 pointer-events-auto z-50 cursor-col-resize"
                         style={{
                           left: `${playheadPosition * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel}px`,
                           height: `${getTotalTracksHeight(tracks)}px`,
