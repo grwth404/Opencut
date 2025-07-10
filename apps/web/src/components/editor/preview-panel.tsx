@@ -145,6 +145,8 @@ export function PreviewPanel() {
       const fontClassName =
         FONT_CLASS_MAP[element.fontFamily as keyof typeof FONT_CLASS_MAP] || "";
 
+      const scaleRatio = previewDimensions.width / canvasSize.width;
+
       return (
         <div
           key={element.id}
@@ -152,7 +154,7 @@ export function PreviewPanel() {
           style={{
             left: `${50 + (element.x / canvasSize.width) * 100}%`,
             top: `${50 + (element.y / canvasSize.height) * 100}%`,
-            transform: `translate(-50%, -50%) rotate(${element.rotation}deg)`,
+            transform: `translate(-50%, -50%) rotate(${element.rotation}deg) scale(${scaleRatio})`,
             opacity: element.opacity,
             zIndex: 100 + index, // Text elements on top
           }}
@@ -169,7 +171,7 @@ export function PreviewPanel() {
               textDecoration: element.textDecoration,
               padding: "4px 8px",
               borderRadius: "2px",
-              whiteSpace: "pre-wrap",
+              whiteSpace: "nowrap",
               // Fallback for system fonts that don't have classes
               ...(fontClassName === "" && { fontFamily: element.fontFamily }),
             }}
