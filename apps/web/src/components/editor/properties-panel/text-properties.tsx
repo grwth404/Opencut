@@ -1,12 +1,6 @@
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { FONT_OPTIONS, FontFamily } from "@/constants/font-constants";
+import { FontPicker } from "@/components/ui/font-picker";
+import { FontFamily } from "@/constants/font-constants";
 import { TextElement } from "@/types/timeline";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { Slider } from "@/components/ui/slider";
@@ -39,23 +33,12 @@ export function TextProperties({
       <PropertyItem direction="row">
         <PropertyItemLabel>Font</PropertyItemLabel>
         <PropertyItemValue>
-          <Select
+          <FontPicker
             defaultValue={element.fontFamily}
             onValueChange={(value: FontFamily) =>
               updateTextElement(trackId, element.id, { fontFamily: value })
             }
-          >
-            <SelectTrigger className="w-full text-xs">
-              <SelectValue placeholder="Select a font" />
-            </SelectTrigger>
-            <SelectContent>
-              {FONT_OPTIONS.map((font) => (
-                <SelectItem key={font.value} value={font.value}>
-                  {font.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
         </PropertyItemValue>
       </PropertyItem>
       <PropertyItem direction="column">
