@@ -15,7 +15,7 @@ export default {
       },
       fontSize: {
         base: "0.95rem",
-        xs: "0.85rem",
+        xs: "0.80rem",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "sans-serif"],
