@@ -48,7 +48,7 @@ export function TextProperties({
             <Slider
               defaultValue={[element.fontSize]}
               min={8}
-              max={200}
+              max={300}
               step={1}
               onValueChange={([value]) =>
                 updateTextElement(trackId, element.id, { fontSize: value })
