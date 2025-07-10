@@ -35,7 +35,7 @@ export function PropertiesPanel() {
       <Textarea
         placeholder="Name"
         defaultValue={element.content}
-        className="min-h-[4.5rem]"
+        className="min-h-[4.5rem] resize-none"
         onChange={(e) =>
           updateTextElement(trackId, element.id, { content: e.target.value })
         }
