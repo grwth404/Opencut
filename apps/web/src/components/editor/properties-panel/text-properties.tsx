@@ -52,9 +52,9 @@ export function TextProperties({
           </SelectContent>
         </Select>
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1">
         <Label className="text-xs">Font size</Label>
-        <div className="flex items-center  gap-2">
+        <div className="flex items-center gap-2">
           <Slider
             defaultValue={[element.fontSize]}
             min={8}
