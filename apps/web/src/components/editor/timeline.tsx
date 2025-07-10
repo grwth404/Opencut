@@ -901,10 +901,11 @@ export function Timeline() {
             <ScrollArea className="w-full" ref={rulerScrollRef}>
               <div
                 ref={rulerRef}
-                className="relative h-4 select-none cursor-pointer"
+                className="relative h-4 select-none cursor-default"
                 style={{
                   width: `${dynamicTimelineWidth}px`,
                 }}
+                onMouseDown={handleRulerMouseDown}
               >
                 {/* Time markers */}
                 {(() => {
