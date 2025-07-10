@@ -8,6 +8,13 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { Textarea } from "../ui/textarea";
 import { MediaElement, TextElement } from "@/types/timeline";
 import { useMediaStore } from "@/stores/media-store";
+import {
+  Select,
+  SelectContent,
+  SelectTrigger,
+  SelectValue,
+  SelectItem,
+} from "../ui/select";
 
 export function PropertiesPanel() {
   const { activeProject } = useProjectStore();
@@ -31,7 +38,7 @@ export function PropertiesPanel() {
   );
 
   const TextProperties = (element: TextElement, trackId: string) => (
-    <div className="space-y-4 p-5">
+    <div className="space-y-6 p-5">
       <Textarea
         placeholder="Name"
         defaultValue={element.content}
@@ -40,6 +47,19 @@ export function PropertiesPanel() {
           updateTextElement(trackId, element.id, { content: e.target.value })
         }
       />
+      <div className="flex items-center justify-between gap-6">
+        <Label className="text-xs">Font</Label>
+        <Select>
+          <SelectTrigger className="w-full text-xs">
+            <SelectValue placeholder="Select a font" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Arial">Arial</SelectItem>
+            <SelectItem value="Helvetica">Helvetica</SelectItem>
+            <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 

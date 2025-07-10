@@ -88,65 +88,115 @@ export function TimelineTrackContent({
     const handleMouseUp = (e: MouseEvent) => {
       if (!dragState.elementId || !dragState.trackId) return;
 
-      // Check if the mouse is actually over this track
+      // If this track initiated the drag, we should handle the mouse up regardless of where it occurs
+      const isTrackThatStartedDrag = dragState.trackId === track.id;
+
       const timelineRect = timelineRef.current?.getBoundingClientRect();
-      if (!timelineRect) return;
+      if (!timelineRect) {
+        if (isTrackThatStartedDrag) {
+          updateElementStartTime(
+            track.id,
+            dragState.elementId,
+            dragState.currentTime
+          );
+          endDragAction();
+        }
+        return;
+      }
 
       const isMouseOverThisTrack =
         e.clientY >= timelineRect.top && e.clientY <= timelineRect.bottom;
 
-      // Only handle if mouse is over this track
-      if (!isMouseOverThisTrack) return;
+      if (!isMouseOverThisTrack && !isTrackThatStartedDrag) return;
 
       const finalTime = dragState.currentTime;
 
-      // Check for overlaps and update position
-      const sourceTrack = tracks.find((t) => t.id === dragState.trackId);
-      const movingElement = sourceTrack?.elements.find(
-        (c) => c.id === dragState.elementId
-      );
+      if (isMouseOverThisTrack) {
+        const sourceTrack = tracks.find((t) => t.id === dragState.trackId);
+        const movingElement = sourceTrack?.elements.find(
+          (c) => c.id === dragState.elementId
+        );
 
-      if (movingElement) {
-        const movingElementDuration =
-          movingElement.duration -
-          movingElement.trimStart -
-          movingElement.trimEnd;
-        const movingElementEnd = finalTime + movingElementDuration;
+        if (movingElement) {
+          const movingElementDuration =
+            movingElement.duration -
+            movingElement.trimStart -
+            movingElement.trimEnd;
+          const movingElementEnd = finalTime + movingElementDuration;
 
-        const targetTrack = tracks.find((t) => t.id === track.id);
-        const hasOverlap = targetTrack?.elements.some((existingElement) => {
-          if (
-            dragState.trackId === track.id &&
-            existingElement.id === dragState.elementId
-          ) {
-            return false;
+          const targetTrack = tracks.find((t) => t.id === track.id);
+          const hasOverlap = targetTrack?.elements.some((existingElement) => {
+            if (
+              dragState.trackId === track.id &&
+              existingElement.id === dragState.elementId
+            ) {
+              return false;
+            }
+            const existingStart = existingElement.startTime;
+            const existingEnd =
+              existingElement.startTime +
+              (existingElement.duration -
+                existingElement.trimStart -
+                existingElement.trimEnd);
+            return finalTime < existingEnd && movingElementEnd > existingStart;
+          });
+
+          if (!hasOverlap) {
+            if (dragState.trackId === track.id) {
+              updateElementStartTime(track.id, dragState.elementId, finalTime);
+            } else {
+              moveElementToTrack(
+                dragState.trackId,
+                track.id,
+                dragState.elementId
+              );
+              requestAnimationFrame(() => {
+                updateElementStartTime(
+                  track.id,
+                  dragState.elementId!,
+                  finalTime
+                );
+              });
+            }
           }
-          const existingStart = existingElement.startTime;
-          const existingEnd =
-            existingElement.startTime +
-            (existingElement.duration -
-              existingElement.trimStart -
-              existingElement.trimEnd);
-          return finalTime < existingEnd && movingElementEnd > existingStart;
-        });
+        }
+      } else if (isTrackThatStartedDrag) {
+        // Mouse is not over this track, but this track started the drag
+        // This means user released over ruler/outside - update position within same track
+        const sourceTrack = tracks.find((t) => t.id === dragState.trackId);
+        const movingElement = sourceTrack?.elements.find(
+          (c) => c.id === dragState.elementId
+        );
 
-        if (!hasOverlap) {
-          if (dragState.trackId === track.id) {
+        if (movingElement) {
+          const movingElementDuration =
+            movingElement.duration -
+            movingElement.trimStart -
+            movingElement.trimEnd;
+          const movingElementEnd = finalTime + movingElementDuration;
+
+          const hasOverlap = track.elements.some((existingElement) => {
+            if (existingElement.id === dragState.elementId) {
+              return false;
+            }
+            const existingStart = existingElement.startTime;
+            const existingEnd =
+              existingElement.startTime +
+              (existingElement.duration -
+                existingElement.trimStart -
+                existingElement.trimEnd);
+            return finalTime < existingEnd && movingElementEnd > existingStart;
+          });
+
+          if (!hasOverlap) {
             updateElementStartTime(track.id, dragState.elementId, finalTime);
-          } else {
-            moveElementToTrack(
-              dragState.trackId,
-              track.id,
-              dragState.elementId
-            );
-            requestAnimationFrame(() => {
-              updateElementStartTime(track.id, dragState.elementId!, finalTime);
-            });
           }
         }
       }
 
-      endDragAction();
+      if (isTrackThatStartedDrag) {
+        endDragAction();
+      }
     };
 
     document.addEventListener("mousemove", handleMouseMove);
