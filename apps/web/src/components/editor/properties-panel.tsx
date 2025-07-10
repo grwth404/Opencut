@@ -15,6 +15,7 @@ import {
   SelectValue,
   SelectItem,
 } from "../ui/select";
+import { FONT_OPTIONS, type FontFamily } from "@/constants/font-constants";
 
 export function PropertiesPanel() {
   const { activeProject } = useProjectStore();
@@ -49,14 +50,21 @@ export function PropertiesPanel() {
       />
       <div className="flex items-center justify-between gap-6">
         <Label className="text-xs">Font</Label>
-        <Select>
+        <Select
+          defaultValue={element.fontFamily}
+          onValueChange={(value: FontFamily) =>
+            updateTextElement(trackId, element.id, { fontFamily: value })
+          }
+        >
           <SelectTrigger className="w-full text-xs">
             <SelectValue placeholder="Select a font" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Arial">Arial</SelectItem>
-            <SelectItem value="Helvetica">Helvetica</SelectItem>
-            <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+            {FONT_OPTIONS.map((font) => (
+              <SelectItem key={font.value} value={font.value}>
+                {font.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

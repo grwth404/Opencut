@@ -17,7 +17,7 @@ import type {
   TimelineElement as TimelineElementType,
   DragData,
 } from "@/types/timeline";
-import { TIMELINE_CONSTANTS } from "@/lib/timeline-constants";
+import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 
 export function TimelineTrackContent({
   track,

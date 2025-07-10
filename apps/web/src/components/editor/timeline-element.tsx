@@ -24,7 +24,7 @@ import { useTimelineElementResize } from "@/hooks/use-timeline-element-resize";
 import {
   getTrackElementClasses,
   TIMELINE_CONSTANTS,
-} from "@/lib/timeline-constants";
+} from "@/constants/timeline-constants";
 import {
   DropdownMenu,
   DropdownMenuContent,

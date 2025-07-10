@@ -20,6 +20,7 @@ import { Play, Pause } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { formatTimeCode } from "@/lib/time";
+import { FONT_CLASS_MAP } from "@/lib/font-config";
 
 interface ActiveElement {
   element: TimelineElement;
@@ -141,6 +142,9 @@ export function PreviewPanel() {
 
     // Text elements
     if (element.type === "text") {
+      const fontClassName =
+        FONT_CLASS_MAP[element.fontFamily as keyof typeof FONT_CLASS_MAP] || "";
+
       return (
         <div
           key={element.id}
@@ -154,9 +158,9 @@ export function PreviewPanel() {
           }}
         >
           <div
+            className={fontClassName}
             style={{
               fontSize: `${element.fontSize}px`,
-              fontFamily: element.fontFamily,
               color: element.color,
               backgroundColor: element.backgroundColor,
               textAlign: element.textAlign,
@@ -166,6 +170,8 @@ export function PreviewPanel() {
               padding: "4px 8px",
               borderRadius: "2px",
               whiteSpace: "pre-wrap",
+              // Fallback for system fonts that don't have classes
+              ...(fontClassName === "" && { fontFamily: element.fontFamily }),
             }}
           >
             {element.content}

@@ -1,4 +1,3 @@
-import { Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/react";
 import Script from "next/script";
@@ -8,11 +7,7 @@ import { TooltipProvider } from "../components/ui/tooltip";
 import { DevelopmentDebug } from "../components/development-debug";
 import { StorageProvider } from "../components/storage-provider";
 import { baseMetaData } from "./metadata";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
+import { defaultFont } from "../lib/font-config";
 
 export const metadata = baseMetaData;
 
@@ -23,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${defaultFont.className} font-sans antialiased`}>
         <ThemeProvider attribute="class" forcedTheme="dark" enableSystem>
           <TooltipProvider>
             <StorageProvider>{children}</StorageProvider>

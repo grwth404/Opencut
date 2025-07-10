@@ -50,7 +50,7 @@ import {
   getCumulativeHeightBefore,
   getTotalTracksHeight,
   TIMELINE_CONSTANTS,
-} from "@/lib/timeline-constants";
+} from "@/constants/timeline-constants";
 
 export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their elements.
