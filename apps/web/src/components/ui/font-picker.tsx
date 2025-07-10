@@ -25,7 +25,12 @@ export function FontPicker({
       </SelectTrigger>
       <SelectContent>
         {FONT_OPTIONS.map((font) => (
-          <SelectItem key={font.value} value={font.value}>
+          <SelectItem
+            key={font.value}
+            value={font.value}
+            className="text-xs"
+            style={{ fontFamily: font.value }}
+          >
             {font.label}
           </SelectItem>
         ))}
