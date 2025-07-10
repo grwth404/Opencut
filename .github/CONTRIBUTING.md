@@ -10,7 +10,10 @@ Thank you for your interest in contributing to OpenCut! This document provides g
 4. Install dependencies: `bun install`
 5. Start the development server: `bun run dev`
 
-**Note:** If you see an error like `Unsupported URL Type "workspace:*"` when using `npm install`, use **bun** or **pnpm** instead.
+> **Note:** If you see an error like `Unsupported URL Type "workspace:*"` when running `npm install`, you have two options:
+>
+> 1. Upgrade to a recent npm version (v9 or later), which has full workspace protocol support.
+> 2. Use an alternative package manager such as **bun** or **pnpm**.
 
 ## Development Setup
 
