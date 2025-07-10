@@ -202,7 +202,10 @@ export function PreviewPanel() {
       // Video elements
       if (mediaItem.type === "video") {
         return (
-          <div key={element.id} className="absolute inset-0">
+          <div
+            key={element.id}
+            className="absolute inset-0 flex items-center justify-center"
+          >
             <VideoPlayer
               src={mediaItem.url!}
               poster={mediaItem.thumbnailUrl}
@@ -218,11 +221,14 @@ export function PreviewPanel() {
       // Image elements
       if (mediaItem.type === "image") {
         return (
-          <div key={element.id} className="absolute inset-0">
+          <div
+            key={element.id}
+            className="absolute inset-0 flex items-center justify-center"
+          >
             <img
               src={mediaItem.url!}
               alt={mediaItem.name}
-              className="w-full h-full object-cover"
+              className="max-w-full max-h-full object-contain"
               draggable={false}
             />
           </div>
