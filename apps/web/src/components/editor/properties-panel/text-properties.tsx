@@ -25,7 +25,7 @@ export function TextProperties({
       <Textarea
         placeholder="Name"
         defaultValue={element.content}
-        className="min-h-[4.5rem] resize-none bg-background/75"
+        className="min-h-[4.5rem] resize-none bg-background/50"
         onChange={(e) =>
           updateTextElement(trackId, element.id, { content: e.target.value })
         }
