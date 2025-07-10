@@ -7,6 +7,7 @@ import { usePlaybackStore } from "@/stores/playback-store";
 import { useEditorStore } from "@/stores/editor-store";
 import { useAspectRatio } from "@/hooks/use-aspect-ratio";
 import { VideoPlayer } from "@/components/ui/video-player";
+import { AudioPlayer } from "@/components/ui/audio-player";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -222,7 +223,18 @@ export function PreviewPanel() {
 
       // Audio elements (no visual representation)
       if (mediaItem.type === "audio") {
-        return null;
+        return (
+          <div key={element.id} className="absolute inset-0">
+            <AudioPlayer
+              src={mediaItem.url!}
+              clipStartTime={element.startTime}
+              trimStart={element.trimStart}
+              trimEnd={element.trimEnd}
+              clipDuration={element.duration}
+              trackMuted={elementData.track.muted}
+            />
+          </div>
+        );
       }
     }
 
