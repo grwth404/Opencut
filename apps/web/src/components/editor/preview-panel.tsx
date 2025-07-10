@@ -343,7 +343,7 @@ function PreviewToolbar({ hasAnyElements }: { hasAnyElements: boolean }) {
           <DropdownMenuTrigger asChild>
             <Button
               size="sm"
-              className="!bg-panel-accent text-foreground/85 text-xs h-auto rounded-none border border-muted-foreground px-0.5 py-0 font-light"
+              className="!bg-panel-accent text-foreground/85 text-[0.75rem] h-auto rounded-none border border-muted-foreground px-0.5 py-0 font-light"
               disabled={!hasAnyElements}
             >
               {getDisplayName()}
