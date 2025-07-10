@@ -68,6 +68,7 @@ export function Timeline() {
     splitElement,
     splitAndKeepLeft,
     splitAndKeepRight,
+    toggleTrackMute,
     separateAudio,
     undo,
     redo,
@@ -1087,6 +1088,11 @@ export function Timeline() {
                           </div>
                         </ContextMenuTrigger>
                         <ContextMenuContent>
+                          <ContextMenuItem
+                            onClick={() => toggleTrackMute(track.id)}
+                          >
+                            {track.muted ? "Unmute Track" : "Mute Track"}
+                          </ContextMenuItem>
                           <ContextMenuItem>
                             Track settings (soon)
                           </ContextMenuItem>
