@@ -5,7 +5,7 @@ import { useAspectRatio } from "@/hooks/use-aspect-ratio";
 import { Label } from "../ui/label";
 import { ScrollArea } from "../ui/scroll-area";
 import { useTimelineStore } from "@/stores/timeline-store";
-import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
 import { MediaElement, TextElement } from "@/types/timeline";
 import { useMediaStore } from "@/stores/media-store";
 
@@ -32,9 +32,10 @@ export function PropertiesPanel() {
 
   const TextProperties = (element: TextElement, trackId: string) => (
     <div className="space-y-4 p-5">
-      <Input
+      <Textarea
         placeholder="Name"
         defaultValue={element.content}
+        className="min-h-[4.5rem]"
         onChange={(e) =>
           updateTextElement(trackId, element.id, { content: e.target.value })
         }
