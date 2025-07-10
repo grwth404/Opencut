@@ -48,6 +48,8 @@ import {
   TimelinePlayhead,
   useTimelinePlayheadRuler,
 } from "./timeline-playhead";
+import { SelectionBox } from "./selection-box";
+import { useSelectionBox } from "@/hooks/use-selection-box";
 import type { DragData, TimelineTrack } from "@/types/timeline";
 import {
   getTrackHeight,
@@ -103,15 +105,7 @@ export function Timeline() {
     isInTimeline,
   });
 
-  // Marquee selection state
-  const [marquee, setMarquee] = useState<{
-    startX: number;
-    startY: number;
-    endX: number;
-    endY: number;
-    active: boolean;
-    additive: boolean;
-  } | null>(null);
+  // Old marquee selection removed - using new SelectionBox component instead
 
   // Dynamic timeline width calculation based on playhead position and duration
   const dynamicTimelineWidth = Math.max(
@@ -141,9 +135,40 @@ export function Timeline() {
     playheadRef,
   });
 
+  // Selection box functionality
+  const tracksContainerRef = useRef<HTMLDivElement>(null);
+  const {
+    selectionBox,
+    handleMouseDown: handleSelectionMouseDown,
+    isSelecting,
+    justFinishedSelecting,
+  } = useSelectionBox({
+    containerRef: tracksContainerRef,
+    playheadRef,
+    onSelectionComplete: (elements) => {
+      console.log(JSON.stringify({ onSelectionComplete: elements.length }));
+      setSelectedElements(elements);
+    },
+  });
+
   // Timeline content click to seek handler
   const handleTimelineContentClick = useCallback(
     (e: React.MouseEvent) => {
+      console.log(
+        JSON.stringify({
+          timelineClick: {
+            isSelecting,
+            justFinishedSelecting,
+            willReturn: isSelecting || justFinishedSelecting,
+          },
+        })
+      );
+
+      // Don't seek if this was a selection box operation
+      if (isSelecting || justFinishedSelecting) {
+        return;
+      }
+
       // Don't seek if clicking on timeline elements, but still deselect
       if ((e.target as HTMLElement).closest(".timeline-element")) {
         return;
@@ -161,6 +186,7 @@ export function Timeline() {
       }
 
       // Clear selected elements when clicking empty timeline area
+      console.log(JSON.stringify({ clearingSelectedElements: true }));
       clearSelectedElements();
 
       // Determine if we're clicking in ruler or tracks area
@@ -209,6 +235,8 @@ export function Timeline() {
       rulerScrollRef,
       tracksScrollRef,
       clearSelectedElements,
+      isSelecting,
+      justFinishedSelecting,
     ]
   );
 
@@ -283,107 +311,7 @@ export function Timeline() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [redo]);
 
-  // Mouse down on timeline background to start marquee
-  const handleTimelineMouseDown = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && e.button === 0) {
-      setMarquee({
-        startX: e.clientX,
-        startY: e.clientY,
-        endX: e.clientX,
-        endY: e.clientY,
-        active: true,
-        additive: e.metaKey || e.ctrlKey || e.shiftKey,
-      });
-    }
-  };
-
-  // Mouse move to update marquee
-  useEffect(() => {
-    if (!marquee || !marquee.active) return;
-    const handleMouseMove = (e: MouseEvent) => {
-      setMarquee(
-        (prev) => prev && { ...prev, endX: e.clientX, endY: e.clientY }
-      );
-    };
-    const handleMouseUp = (e: MouseEvent) => {
-      setMarquee(
-        (prev) =>
-          prev && { ...prev, endX: e.clientX, endY: e.clientY, active: false }
-      );
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [marquee]);
-
-  // On marquee end, select elements in box
-  useEffect(() => {
-    if (!marquee || marquee.active) return;
-    const timeline = timelineRef.current;
-    if (!timeline) return;
-    const rect = timeline.getBoundingClientRect();
-    const x1 = Math.min(marquee.startX, marquee.endX) - rect.left;
-    const x2 = Math.max(marquee.startX, marquee.endX) - rect.left;
-    const y1 = Math.min(marquee.startY, marquee.endY) - rect.top;
-    const y2 = Math.max(marquee.startY, marquee.endY) - rect.top;
-    // Validation: skip if too small
-    if (Math.abs(x2 - x1) < 5 || Math.abs(y2 - y1) < 5) {
-      setMarquee(null);
-      return;
-    }
-    // Clamp to timeline bounds
-    const clamp = (val: number, min: number, max: number) =>
-      Math.max(min, Math.min(max, val));
-    const bx1 = clamp(x1, 0, rect.width);
-    const bx2 = clamp(x2, 0, rect.width);
-    const by1 = clamp(y1, 0, rect.height);
-    const by2 = clamp(y2, 0, rect.height);
-    let newSelection: { trackId: string; elementId: string }[] = [];
-    tracks.forEach((track, trackIdx) => {
-      track.elements.forEach((element) => {
-        const clipLeft =
-          element.startTime * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
-        const clipTop = getCumulativeHeightBefore(tracks, trackIdx);
-        const clipBottom = clipTop + getTrackHeight(track.type);
-        const clipRight = clipLeft + getTrackHeight(track.type);
-        if (
-          bx1 < clipRight &&
-          bx2 > clipLeft &&
-          by1 < clipBottom &&
-          by2 > clipTop
-        ) {
-          newSelection.push({ trackId: track.id, elementId: element.id });
-        }
-      });
-    });
-    if (newSelection.length > 0) {
-      if (marquee.additive) {
-        const selectedSet = new Set(
-          selectedElements.map((c) => c.trackId + ":" + c.elementId)
-        );
-        newSelection = [
-          ...selectedElements,
-          ...newSelection.filter(
-            (c) => !selectedSet.has(c.trackId + ":" + c.elementId)
-          ),
-        ];
-      }
-      setSelectedElements(newSelection);
-    } else if (!marquee.additive) {
-      clearSelectedElements();
-    }
-    setMarquee(null);
-  }, [
-    marquee,
-    tracks,
-    zoomLevel,
-    selectedElements,
-    setSelectedElements,
-    clearSelectedElements,
-  ]);
+  // Old marquee system removed - using new SelectionBox component instead
 
   const handleDragEnter = (e: React.DragEvent) => {
     // When something is dragged over the timeline, show overlay
@@ -898,6 +826,7 @@ export function Timeline() {
           <div
             className="flex-1 relative overflow-hidden h-4"
             onWheel={handleWheel}
+            onMouseDown={handleSelectionMouseDown}
             onClick={handleTimelineContentClick}
             data-ruler-area
           >
@@ -1016,8 +945,16 @@ export function Timeline() {
           <div
             className="flex-1 relative overflow-hidden"
             onWheel={handleWheel}
+            onMouseDown={handleSelectionMouseDown}
             onClick={handleTimelineContentClick}
+            ref={tracksContainerRef}
           >
+            <SelectionBox
+              startPos={selectionBox?.startPos || null}
+              currentPos={selectionBox?.currentPos || null}
+              containerRef={tracksContainerRef}
+              isActive={selectionBox?.isActive || false}
+            />
             <ScrollArea className="w-full h-full" ref={tracksScrollRef}>
               <div
                 className="relative flex-1"
@@ -1025,7 +962,6 @@ export function Timeline() {
                   height: `${Math.max(200, Math.min(800, getTotalTracksHeight(tracks)))}px`,
                   width: `${dynamicTimelineWidth}px`,
                 }}
-                onMouseDown={handleTimelineMouseDown}
               >
                 {tracks.length === 0 ? (
                   <div></div>

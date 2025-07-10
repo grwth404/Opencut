@@ -339,6 +339,8 @@ export function TimelineElement({
             left: `${elementLeft}px`,
             width: `${elementWidth}px`,
           }}
+          data-element-id={element.id}
+          data-track-id={track.id}
           onMouseMove={resizing ? handleResizeMove : undefined}
           onMouseUp={resizing ? handleResizeEnd : undefined}
           onMouseLeave={resizing ? handleResizeEnd : undefined}
