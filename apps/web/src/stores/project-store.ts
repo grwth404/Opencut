@@ -20,6 +20,11 @@ interface ProjectStore {
   closeProject: () => void;
   renameProject: (projectId: string, name: string) => Promise<void>;
   duplicateProject: (projectId: string) => Promise<string>;
+  updateProjectBackground: (backgroundColor: string) => Promise<void>;
+  updateBackgroundType: (
+    type: "color" | "blur",
+    options?: { backgroundColor?: string; blurIntensity?: number }
+  ) => Promise<void>;
 }
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
@@ -35,6 +40,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       thumbnail: "",
       createdAt: new Date(),
       updatedAt: new Date(),
+      backgroundColor: "#000000",
+      backgroundType: "color",
+      blurIntensity: 8,
     };
 
     set({ activeProject: newProject });
@@ -232,6 +240,57 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
           error instanceof Error ? error.message : "Please try again",
       });
       throw error;
+    }
+  },
+
+  updateProjectBackground: async (backgroundColor: string) => {
+    const { activeProject } = get();
+    if (!activeProject) return;
+
+    const updatedProject = {
+      ...activeProject,
+      backgroundColor,
+      updatedAt: new Date(),
+    };
+
+    try {
+      await storageService.saveProject(updatedProject);
+      set({ activeProject: updatedProject });
+      await get().loadAllProjects(); // Refresh the list
+    } catch (error) {
+      console.error("Failed to update project background:", error);
+      toast.error("Failed to update background", {
+        description: "Please try again",
+      });
+    }
+  },
+
+  updateBackgroundType: async (
+    type: "color" | "blur",
+    options?: { backgroundColor?: string; blurIntensity?: number }
+  ) => {
+    const { activeProject } = get();
+    if (!activeProject) return;
+
+    const updatedProject = {
+      ...activeProject,
+      backgroundType: type,
+      ...(options?.backgroundColor && {
+        backgroundColor: options.backgroundColor,
+      }),
+      ...(options?.blurIntensity && { blurIntensity: options.blurIntensity }),
+      updatedAt: new Date(),
+    };
+
+    try {
+      await storageService.saveProject(updatedProject);
+      set({ activeProject: updatedProject });
+      await get().loadAllProjects(); // Refresh the list
+    } catch (error) {
+      console.error("Failed to update background type:", error);
+      toast.error("Failed to update background", {
+        description: "Please try again",
+      });
     }
   },
 }));

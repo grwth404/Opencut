@@ -21,6 +21,8 @@ import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { formatTimeCode } from "@/lib/time";
 import { FONT_CLASS_MAP } from "@/lib/font-config";
+import { BackgroundSettings } from "../background-settings";
+import { useProjectStore } from "@/stores/project-store";
 
 interface ActiveElement {
   element: TimelineElement;
@@ -39,6 +41,7 @@ export function PreviewPanel() {
     width: 0,
     height: 0,
   });
+  const { activeProject } = useProjectStore();
 
   // Calculate optimal preview size that fits in container while maintaining aspect ratio
   useEffect(() => {
@@ -135,6 +138,85 @@ export function PreviewPanel() {
 
   // Check if there are any elements in the timeline at all
   const hasAnyElements = tracks.some((track) => track.elements.length > 0);
+
+  // Get media elements for blur background (video/image only)
+  const getBlurBackgroundElements = (): ActiveElement[] => {
+    return activeElements.filter(
+      ({ element, mediaItem }) =>
+        element.type === "media" &&
+        mediaItem &&
+        (mediaItem.type === "video" || mediaItem.type === "image") &&
+        element.mediaId !== "test" // Exclude test elements
+    );
+  };
+
+  const blurBackgroundElements = getBlurBackgroundElements();
+
+  // Render blur background layer
+  const renderBlurBackground = () => {
+    if (
+      !activeProject?.backgroundType ||
+      activeProject.backgroundType !== "blur" ||
+      blurBackgroundElements.length === 0
+    ) {
+      return null;
+    }
+
+    // Use the first media element for background (could be enhanced to use primary/focused element)
+    const backgroundElement = blurBackgroundElements[0];
+    const { element, mediaItem } = backgroundElement;
+
+    if (!mediaItem) return null;
+
+    const blurIntensity = activeProject.blurIntensity || 8;
+
+    if (mediaItem.type === "video") {
+      return (
+        <div
+          key={`blur-${element.id}`}
+          className="absolute inset-0 overflow-hidden"
+          style={{
+            filter: `blur(${blurIntensity}px)`,
+            transform: "scale(1.1)", // Slightly zoom to avoid blur edge artifacts
+            transformOrigin: "center",
+          }}
+        >
+          <VideoPlayer
+            src={mediaItem.url!}
+            poster={mediaItem.thumbnailUrl}
+            clipStartTime={element.startTime}
+            trimStart={element.trimStart}
+            trimEnd={element.trimEnd}
+            clipDuration={element.duration}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      );
+    }
+
+    if (mediaItem.type === "image") {
+      return (
+        <div
+          key={`blur-${element.id}`}
+          className="absolute inset-0 overflow-hidden"
+          style={{
+            filter: `blur(${blurIntensity}px)`,
+            transform: "scale(1.1)", // Slightly zoom to avoid blur edge artifacts
+            transformOrigin: "center",
+          }}
+        >
+          <img
+            src={mediaItem.url!}
+            alt={mediaItem.name}
+            className="w-full h-full object-cover"
+            draggable={false}
+          />
+        </div>
+      );
+    }
+
+    return null;
+  };
 
   // Render an element
   const renderElement = (elementData: ActiveElement, index: number) => {
@@ -265,12 +347,17 @@ export function PreviewPanel() {
         {hasAnyElements ? (
           <div
             ref={previewRef}
-            className="relative overflow-hidden rounded-sm bg-black border"
+            className="relative overflow-hidden rounded-sm border"
             style={{
               width: previewDimensions.width,
               height: previewDimensions.height,
+              backgroundColor:
+                activeProject?.backgroundType === "blur"
+                  ? "transparent"
+                  : activeProject?.backgroundColor || "#000000",
             }}
           >
+            {renderBlurBackground()}
             {activeElements.length === 0 ? (
               <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
                 No elements at current time
@@ -280,6 +367,14 @@ export function PreviewPanel() {
                 renderElement(elementData, index)
               )
             )}
+            {/* Show message when blur is selected but no media available */}
+            {activeProject?.backgroundType === "blur" &&
+              blurBackgroundElements.length === 0 &&
+              activeElements.length > 0 && (
+                <div className="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-xs p-2 rounded">
+                  Add a video or image to use blur background
+                </div>
+              )}
           </div>
         ) : null}
 
@@ -346,7 +441,8 @@ function PreviewToolbar({ hasAnyElements }: { hasAnyElements: boolean }) {
           <Play className="h-3 w-3" />
         )}
       </Button>
-      <div>
+      <div className="flex items-center gap-3">
+        <BackgroundSettings />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
