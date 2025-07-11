@@ -979,6 +979,11 @@ export function Timeline() {
                       <div className="flex items-center flex-1 min-w-0">
                         <TrackIcon track={track} />
                       </div>
+                      {track.muted && (
+                        <span className="ml-2 text-xs text-red-500 font-semibold flex-shrink-0">
+                          Muted
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
