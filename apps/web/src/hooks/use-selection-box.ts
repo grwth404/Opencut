@@ -41,6 +41,10 @@ export function useSelectionBox({
       if ((e.target as HTMLElement).closest("[data-track-labels]")) {
         return;
       }
+      // Don't start selection when clicking in the ruler area - this interferes with playhead dragging
+      if ((e.target as HTMLElement).closest("[data-ruler-area]")) {
+        return;
+      }
 
       setSelectionBox({
         startPos: { x: e.clientX, y: e.clientY },
