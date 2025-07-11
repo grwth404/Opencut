@@ -121,15 +121,17 @@ export function Hero({ signupCount }: HeroProps) {
             onSubmit={handleSubmit}
             className="flex gap-3 w-full max-w-lg flex-col sm:flex-row"
           >
-            <Input
-              type="email"
-              placeholder="Enter your email"
-              className="h-11 text-base flex-1"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isSubmitting}
-              required
-            />
+            <div className="relative w-full">
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                className="h-11 text-base flex-1"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
             <Button
               type="submit"
               size="lg"
