@@ -55,9 +55,9 @@ export default function Editor() {
 
   return (
     <EditorProvider>
-      <div className="h-screen w-screen flex flex-col bg-background">
+      <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
         <EditorHeader />
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-h-0 min-w-0">
           <ResizablePanelGroup
             direction="vertical"
             className="h-full w-full gap-1"
@@ -67,6 +67,7 @@ export default function Editor() {
               minSize={30}
               maxSize={85}
               onResize={setMainContent}
+              className="min-h-0"
             >
               {/* Main content area */}
               <ResizablePanelGroup
@@ -118,7 +119,7 @@ export default function Editor() {
               minSize={15}
               maxSize={70}
               onResize={setTimeline}
-              className="px-2 pb-2"
+              className="min-h-0 px-2 pb-2"
             >
               <Timeline />
             </ResizablePanel>
