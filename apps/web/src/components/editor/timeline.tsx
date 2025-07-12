@@ -770,27 +770,6 @@ export function Timeline() {
             </TooltipTrigger>
             <TooltipContent>Delete element (Delete)</TooltipContent>
           </Tooltip>
-          <div className="w-px h-6 bg-border mx-1" />
-          {/* Speed Control */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Select
-                value={speed.toFixed(1)}
-                onValueChange={(value) => setSpeed(parseFloat(value))}
-              >
-                <SelectTrigger className="w-[90px] h-8">
-                  <SelectValue placeholder="1.0x" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0.5">0.5x</SelectItem>
-                  <SelectItem value="1.0">1.0x</SelectItem>
-                  <SelectItem value="1.5">1.5x</SelectItem>
-                  <SelectItem value="2.0">2.0x</SelectItem>
-                </SelectContent>
-              </Select>
-            </TooltipTrigger>
-            <TooltipContent>Playback Speed</TooltipContent>
-          </Tooltip>
         </TooltipProvider>
       </div>
 
