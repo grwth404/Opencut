@@ -81,14 +81,8 @@ export function Timeline() {
   } = useTimelineStore();
   const { mediaItems, addMediaItem } = useMediaStore();
   const { activeProject } = useProjectStore();
-  const {
-    currentTime,
-    duration,
-    seek,
-    setDuration,
-    isPlaying,
-    toggle,
-  } = usePlaybackStore();
+  const { currentTime, duration, seek, setDuration, isPlaying, toggle } =
+    usePlaybackStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -215,7 +209,7 @@ export function Timeline() {
         scrollLeft = tracksContent.scrollLeft;
       }
 
-      const time = Math.max(
+      const rawTime = Math.max(
         0,
         Math.min(
           duration,
@@ -223,6 +217,11 @@ export function Timeline() {
             (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel)
         )
       );
+
+      // Use frame snapping for timeline clicking
+      const projectFps = activeProject?.fps || 30;
+      const { snapTimeToFrame } = require("@/constants/timeline-constants");
+      const time = snapTimeToFrame(rawTime, projectFps);
 
       seek(time);
     },

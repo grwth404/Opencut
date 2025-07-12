@@ -25,6 +25,7 @@ interface ProjectStore {
     type: "color" | "blur",
     options?: { backgroundColor?: string; blurIntensity?: number }
   ) => Promise<void>;
+  updateProjectFps: (fps: number) => Promise<void>;
 }
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
@@ -289,6 +290,28 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     } catch (error) {
       console.error("Failed to update background type:", error);
       toast.error("Failed to update background", {
+        description: "Please try again",
+      });
+    }
+  },
+
+  updateProjectFps: async (fps: number) => {
+    const { activeProject } = get();
+    if (!activeProject) return;
+
+    const updatedProject = {
+      ...activeProject,
+      fps,
+      updatedAt: new Date(),
+    };
+
+    try {
+      await storageService.saveProject(updatedProject);
+      set({ activeProject: updatedProject });
+      await get().loadAllProjects(); // Refresh the list
+    } catch (error) {
+      console.error("Failed to update project FPS:", error);
+      toast.error("Failed to update project FPS", {
         description: "Please try again",
       });
     }

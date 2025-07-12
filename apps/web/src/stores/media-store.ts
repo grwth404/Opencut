@@ -14,6 +14,7 @@ export interface MediaItem {
   duration?: number; // For video/audio duration
   width?: number; // For video/image width
   height?: number; // For video/image height
+  fps?: number; // For video frame rate
   // Text-specific properties
   content?: string; // Text content
   fontSize?: number; // Font size

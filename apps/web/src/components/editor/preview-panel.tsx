@@ -390,6 +390,7 @@ function PreviewToolbar({ hasAnyElements }: { hasAnyElements: boolean }) {
   const { isPlaying, toggle, currentTime } = usePlaybackStore();
   const { setCanvasSize, setCanvasSizeToOriginal } = useEditorStore();
   const { getTotalDuration } = useTimelineStore();
+  const { activeProject } = useProjectStore();
   const {
     currentPreset,
     isOriginal,
@@ -420,11 +421,19 @@ function PreviewToolbar({ hasAnyElements }: { hasAnyElements: boolean }) {
           )}
         >
           <span className="text-primary tabular-nums">
-            {formatTimeCode(currentTime, "HH:MM:SS:CS")}
+            {formatTimeCode(
+              currentTime,
+              "HH:MM:SS:FF",
+              activeProject?.fps || 30
+            )}
           </span>
           <span className="opacity-50">/</span>
           <span className="tabular-nums">
-            {formatTimeCode(getTotalDuration(), "HH:MM:SS:CS")}
+            {formatTimeCode(
+              getTotalDuration(),
+              "HH:MM:SS:FF",
+              activeProject?.fps || 30
+            )}
           </span>
         </p>
       </div>

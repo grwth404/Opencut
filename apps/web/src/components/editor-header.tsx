@@ -31,13 +31,24 @@ export function EditorHeader() {
 
   const centerContent = (
     <div className="flex items-center gap-2 text-xs">
-      <span>{formatTimeCode(getTotalDuration(), "HH:MM:SS:CS")}</span>
+      <span>
+        {formatTimeCode(
+          getTotalDuration(),
+          "HH:MM:SS:FF",
+          activeProject?.fps || 30
+        )}
+      </span>
     </div>
   );
 
   const rightContent = (
     <nav className="flex items-center gap-2">
-      <Button size="sm" variant="primary" className="h-7 text-xs" onClick={handleExport}>
+      <Button
+        size="sm"
+        variant="primary"
+        className="h-7 text-xs"
+        onClick={handleExport}
+      >
         <Download className="h-4 w-4" />
         <span className="text-sm">Export</span>
       </Button>

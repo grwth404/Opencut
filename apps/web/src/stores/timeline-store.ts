@@ -370,7 +370,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       } as TimelineElement; // Type assertion since we trust the caller passes valid data
 
       // If this is the first element and it's a media element, automatically set the project canvas size
-      // to match the media's aspect ratio
+      // to match the media's aspect ratio and FPS (for videos)
       if (isFirstElement && newElement.type === "media") {
         const mediaStore = useMediaStore.getState();
         const mediaItem = mediaStore.mediaItems.find(
@@ -385,6 +385,14 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
           editorStore.setCanvasSizeFromAspectRatio(
             getMediaAspectRatio(mediaItem)
           );
+        }
+
+        // Set project FPS from the first video element
+        if (mediaItem && mediaItem.type === "video" && mediaItem.fps) {
+          const projectStore = useProjectStore.getState();
+          if (projectStore.activeProject) {
+            projectStore.updateProjectFps(mediaItem.fps);
+          }
         }
       }
 

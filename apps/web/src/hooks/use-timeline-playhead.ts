@@ -1,3 +1,5 @@
+import { snapTimeToFrame } from "@/constants/timeline-constants";
+import { useProjectStore } from "@/stores/project-store";
 import { useState, useEffect, useCallback } from "react";
 
 interface UseTimelinePlayheadProps {
@@ -69,7 +71,11 @@ export function useTimelinePlayhead({
       if (!ruler) return;
       const rect = ruler.getBoundingClientRect();
       const x = e.clientX - rect.left;
-      const time = Math.max(0, Math.min(duration, x / (50 * zoomLevel)));
+      const rawTime = Math.max(0, Math.min(duration, x / (50 * zoomLevel)));
+      // Use frame snapping for playhead scrubbing
+      const projectStore = useProjectStore.getState();
+      const projectFps = projectStore.activeProject?.fps || 30;
+      const time = snapTimeToFrame(rawTime, projectFps);
       setScrubTime(time);
       seek(time); // update video preview in real time
     },

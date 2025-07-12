@@ -9,12 +9,27 @@ import { useMediaStore } from "@/stores/media-store";
 import { AudioProperties } from "./audio-properties";
 import { MediaProperties } from "./media-properties";
 import { TextProperties } from "./text-properties";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../ui/select";
+import { FPS_PRESETS } from "@/constants/timeline-constants";
 
 export function PropertiesPanel() {
-  const { activeProject } = useProjectStore();
+  const { activeProject, updateProjectFps } = useProjectStore();
   const { getDisplayName, canvasSize } = useAspectRatio();
   const { selectedElements, tracks } = useTimelineStore();
   const { mediaItems } = useMediaStore();
+
+  const handleFpsChange = (value: string) => {
+    const fps = parseFloat(value);
+    if (!isNaN(fps) && fps > 0) {
+      updateProjectFps(fps);
+    }
+  };
 
   const emptyView = (
     <div className="space-y-4 p-5">
@@ -26,7 +41,24 @@ export function PropertiesPanel() {
           label="Resolution:"
           value={`${canvasSize.width} × ${canvasSize.height}`}
         />
-        <PropertyItem label="Frame rate:" value="30.00fps" />
+        <div className="flex justify-between items-center">
+          <Label className="text-xs text-muted-foreground">Frame rate:</Label>
+          <Select
+            value={(activeProject?.fps || 30).toString()}
+            onValueChange={handleFpsChange}
+          >
+            <SelectTrigger className="w-32 h-6 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FPS_PRESETS.map(({ value, label }) => (
+                <SelectItem key={value} value={value} className="text-xs">
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     </div>
   );
