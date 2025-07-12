@@ -31,6 +31,7 @@ export default function RootLayout({
               data-client-id="UP-Wcoy5arxFeK7oyjMMZ"
               data-disabled="true"
               data-track-sessions="false"
+              data-track-performance="false"
               data-enable-batching="true"
               crossOrigin="anonymous"
             />
