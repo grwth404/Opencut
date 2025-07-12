@@ -111,9 +111,11 @@ export function Timeline() {
   const tracksScrollRef = useRef<HTMLDivElement>(null);
   const trackLabelsRef = useRef<HTMLDivElement>(null);
   const playheadRef = useRef<HTMLDivElement>(null);
+  const trackLabelsScrollRef = useRef<HTMLDivElement>(null);
   const isUpdatingRef = useRef(false);
   const lastRulerSync = useRef(0);
   const lastTracksSync = useRef(0);
+  const lastVerticalSync = useRef(0);
 
   // Timeline playhead ruler handlers
   const { handleRulerMouseDown, isDraggingRuler } = useTimelinePlayheadRuler({
@@ -605,7 +607,13 @@ export function Timeline() {
     const tracksViewport = tracksScrollRef.current?.querySelector(
       "[data-radix-scroll-area-viewport]"
     ) as HTMLElement;
+    const trackLabelsViewport = trackLabelsScrollRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    ) as HTMLElement;
+
     if (!rulerViewport || !tracksViewport) return;
+
+    // Horizontal scroll synchronization between ruler and tracks
     const handleRulerScroll = () => {
       const now = Date.now();
       if (isUpdatingRef.current || now - lastRulerSync.current < 16) return;
@@ -622,8 +630,48 @@ export function Timeline() {
       rulerViewport.scrollLeft = tracksViewport.scrollLeft;
       isUpdatingRef.current = false;
     };
+
     rulerViewport.addEventListener("scroll", handleRulerScroll);
     tracksViewport.addEventListener("scroll", handleTracksScroll);
+
+    // Vertical scroll synchronization between track labels and tracks content
+    if (trackLabelsViewport) {
+      const handleTrackLabelsScroll = () => {
+        const now = Date.now();
+        if (isUpdatingRef.current || now - lastVerticalSync.current < 16)
+          return;
+        lastVerticalSync.current = now;
+        isUpdatingRef.current = true;
+        tracksViewport.scrollTop = trackLabelsViewport.scrollTop;
+        isUpdatingRef.current = false;
+      };
+      const handleTracksVerticalScroll = () => {
+        const now = Date.now();
+        if (isUpdatingRef.current || now - lastVerticalSync.current < 16)
+          return;
+        lastVerticalSync.current = now;
+        isUpdatingRef.current = true;
+        trackLabelsViewport.scrollTop = tracksViewport.scrollTop;
+        isUpdatingRef.current = false;
+      };
+
+      trackLabelsViewport.addEventListener("scroll", handleTrackLabelsScroll);
+      tracksViewport.addEventListener("scroll", handleTracksVerticalScroll);
+
+      return () => {
+        rulerViewport.removeEventListener("scroll", handleRulerScroll);
+        tracksViewport.removeEventListener("scroll", handleTracksScroll);
+        trackLabelsViewport.removeEventListener(
+          "scroll",
+          handleTrackLabelsScroll
+        );
+        tracksViewport.removeEventListener(
+          "scroll",
+          handleTracksVerticalScroll
+        );
+      };
+    }
+
     return () => {
       rulerViewport.removeEventListener("scroll", handleRulerScroll);
       tracksViewport.removeEventListener("scroll", handleTracksScroll);
@@ -896,24 +944,26 @@ export function Timeline() {
               className="w-48 flex-shrink-0 border-r bg-panel-accent overflow-y-auto"
               data-track-labels
             >
-              <div className="flex flex-col gap-1">
-                {tracks.map((track) => (
-                  <div
-                    key={track.id}
-                    className="flex items-center px-3 border-b border-muted/30 group bg-foreground/5"
-                    style={{ height: `${getTrackHeight(track.type)}px` }}
-                  >
-                    <div className="flex items-center flex-1 min-w-0">
-                      <TrackIcon track={track} />
+              <ScrollArea className="w-full h-full" ref={trackLabelsScrollRef}>
+                <div className="flex flex-col gap-1">
+                  {tracks.map((track) => (
+                    <div
+                      key={track.id}
+                      className="flex items-center px-3 border-b border-muted/30 group bg-foreground/5"
+                      style={{ height: `${getTrackHeight(track.type)}px` }}
+                    >
+                      <div className="flex items-center flex-1 min-w-0">
+                        <TrackIcon track={track} />
+                      </div>
+                      {track.muted && (
+                        <span className="ml-2 text-xs text-red-500 font-semibold flex-shrink-0">
+                          Muted
+                        </span>
+                      )}
                     </div>
-                    {track.muted && (
-                      <span className="ml-2 text-xs text-red-500 font-semibold flex-shrink-0">
-                        Muted
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
           )}
 
