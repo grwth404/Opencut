@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { storageService } from "@/lib/storage/storage-service";
 import { useTimelineStore } from "./timeline-store";
+import { generateUUID } from "@/lib/utils";
 
 export type MediaType = "image" | "video" | "audio";
 
@@ -162,7 +163,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
   addMediaItem: async (projectId, item) => {
     const newItem: MediaItem = {
       ...item,
-      id: crypto.randomUUID(),
+      id: generateUUID(),
     };
 
     // Add to local state immediately for UI responsiveness

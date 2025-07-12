@@ -4,6 +4,7 @@ import { storageService } from "@/lib/storage/storage-service";
 import { toast } from "sonner";
 import { useMediaStore } from "./media-store";
 import { useTimelineStore } from "./timeline-store";
+import { generateUUID } from "@/lib/utils";
 
 interface ProjectStore {
   activeProject: TProject | null;
@@ -36,7 +37,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   createNewProject: async (name: string) => {
     const newProject: TProject = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name,
       thumbnail: "",
       createdAt: new Date(),
@@ -224,7 +225,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
 
       const newProject: TProject = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         name: `(${nextNumber}) ${baseName}`,
         thumbnail: project.thumbnail,
         createdAt: new Date(),

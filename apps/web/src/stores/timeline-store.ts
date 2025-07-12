@@ -13,6 +13,7 @@ import { useEditorStore } from "./editor-store";
 import { useMediaStore, getMediaAspectRatio } from "./media-store";
 import { storageService } from "@/lib/storage/storage-service";
 import { useProjectStore } from "./project-store";
+import { generateUUID } from "@/lib/utils";
 
 // Helper function to manage element naming with suffixes
 const getElementNameWithSuffix = (
@@ -279,7 +280,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
               : "Track";
 
       const newTrack: TimelineTrack = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         name: trackName,
         type,
         elements: [],
@@ -304,7 +305,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
               : "Track";
 
       const newTrack: TimelineTrack = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         name: trackName,
         type,
         elements: [],
@@ -363,7 +364,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
       const newElement: TimelineElement = {
         ...elementData,
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         startTime: elementData.startTime || 0,
         trimStart: 0,
         trimEnd: 0,
@@ -564,7 +565,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       const secondDuration =
         element.duration - element.trimStart - element.trimEnd - relativeTime;
 
-      const secondElementId = crypto.randomUUID();
+      const secondElementId = generateUUID();
 
       updateTracksAndSave(
         get()._tracks.map((track) =>
@@ -690,7 +691,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
       // Find existing audio track or prepare to create one
       const existingAudioTrack = _tracks.find((t) => t.type === "audio");
-      const audioElementId = crypto.randomUUID();
+      const audioElementId = generateUUID();
 
       if (existingAudioTrack) {
         // Add audio element to existing audio track
@@ -714,7 +715,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       } else {
         // Create new audio track with the audio element in a single atomic update
         const newAudioTrack: TimelineTrack = {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           name: "Audio Track",
           type: "audio",
           elements: [
