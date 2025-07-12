@@ -27,13 +27,13 @@ export default function RootLayout({
             <DevelopmentDebug />
             <Script
               src="https://cdn.databuddy.cc/databuddy.js"
+              strategy="afterInteractive"
               async
               data-client-id="UP-Wcoy5arxFeK7oyjMMZ"
-              data-disabled="true"
-              data-track-sessions="false"
-              data-track-performance="false"
-              data-enable-batching="true"
-              crossOrigin="anonymous"
+              data-track-attributes={true}
+              data-track-errors={true}
+              data-track-outgoing-links={true}
+              data-track-web-vitals={true}
             />
           </TooltipProvider>
         </ThemeProvider>
