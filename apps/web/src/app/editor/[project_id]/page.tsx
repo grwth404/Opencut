@@ -60,7 +60,7 @@ export default function Editor() {
         <div className="flex-1 min-h-0 min-w-0">
           <ResizablePanelGroup
             direction="vertical"
-            className="h-full w-full gap-1"
+            className="h-full w-full gap-[0.18rem]"
           >
             <ResizablePanel
               defaultSize={mainContent}
@@ -72,7 +72,7 @@ export default function Editor() {
               {/* Main content area */}
               <ResizablePanelGroup
                 direction="horizontal"
-                className="h-full w-full gap-1 px-2"
+                className="h-full w-full gap-[0.19rem] px-2"
               >
                 {/* Tools Panel */}
                 <ResizablePanel
