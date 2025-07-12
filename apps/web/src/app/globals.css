@@ -82,7 +82,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* Prevent back/forward swipe & pull-to-refresh on all axes */
-    overscroll-behavior: contain;
+    /* Prevent back/forward swipe */
+    overscroll-behavior-x: contain;
   }
 }
