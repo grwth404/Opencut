@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState, useRef, useEffect } from "react";
 import { motion, useMotionValue, useTransform, PanInfo } from "motion/react";
 
@@ -9,12 +10,12 @@ interface HandlebarsProps {
   onRangeChange?: (left: number, right: number) => void;
 }
 
-export const Handlebars = ({
+export function Handlebars({
   children,
   minWidth = 50,
   maxWidth = 400,
   onRangeChange,
-}: HandlebarsProps) => {
+}: HandlebarsProps) {
   const [leftHandle, setLeftHandle] = useState(0);
   const [rightHandle, setRightHandle] = useState(maxWidth);
   const [contentWidth, setContentWidth] = useState(maxWidth);
@@ -93,9 +94,9 @@ export const Handlebars = ({
         className="relative -rotate-[2.76deg] max-w-[250px] md:max-w-[454px] mt-2"
         style={{ width: contentWidth }}
       >
-        <div className="absolute inset-0 w-full h-full rounded-2xl border border-[#FFCC02] flex justify-between">
+        <div className="absolute inset-0 w-full h-full rounded-2xl border border-yellow-500 flex justify-between">
           <motion.div
-            className="h-full border border-[#FFCC02] w-7 rounded-full bg-[#2A2A2A] flex items-center justify-center cursor-ew-resize select-none"
+            className="h-full border border-yellow-500 w-7 rounded-full bg-accent flex items-center justify-center cursor-ew-resize select-none"
             style={{
               position: "absolute",
               x: leftHandleX,
@@ -111,11 +112,11 @@ export const Handlebars = ({
             whileDrag={{ scale: 1.1 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           >
-            <div className="w-2 h-8 rounded-full bg-[#FFCC02]"></div>
+            <div className="w-2 h-8 rounded-full bg-yellow-500"></div>
           </motion.div>
 
           <motion.div
-            className="h-full border border-[#FFCC02] w-7 rounded-full bg-[#2A2A2A] flex items-center justify-center cursor-ew-resize select-none"
+            className="h-full border border-yellow-500 w-7 rounded-full bg-accent flex items-center justify-center cursor-ew-resize select-none"
             style={{
               position: "absolute",
               x: rightHandleX,
@@ -134,7 +135,7 @@ export const Handlebars = ({
             whileDrag={{ scale: 1.1 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           >
-            <div className="w-2 h-8 rounded-full bg-[#FFCC02]"></div>
+            <div className="w-2 h-8 rounded-full bg-yellow-500"></div>
           </motion.div>
         </div>
 
