@@ -40,9 +40,9 @@ export function BackgroundSettings() {
         <Button
           variant="text"
           size="icon"
-          className="!size-5 border border-muted-foreground"
+          className="!size-4 border border-muted-foreground"
         >
-          <BackgroundIcon className="!size-4" />
+          <BackgroundIcon className="!size-3" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="flex flex-col items-start w-[20rem] h-[16rem] overflow-hidden p-0">

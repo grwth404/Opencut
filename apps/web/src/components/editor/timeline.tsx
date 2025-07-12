@@ -88,8 +88,6 @@ export function Timeline() {
     setDuration,
     isPlaying,
     toggle,
-    setSpeed,
-    speed,
   } = usePlaybackStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
