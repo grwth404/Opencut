@@ -31,7 +31,7 @@ export default function RootLayout({
               async
               data-client-id="UP-Wcoy5arxFeK7oyjMMZ"
               data-track-attributes={false}
-              data-track-errors={false}
+              data-track-errors={true}
               data-track-outgoing-links={false}
               data-track-web-vitals={false}
               data-track-sessions={false}
