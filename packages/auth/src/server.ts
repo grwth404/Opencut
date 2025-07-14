@@ -22,6 +22,7 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
   },
+  baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL,
   appName: "OpenCut",
   trustedOrigins: ["http://localhost:3000"],
 });
