@@ -51,9 +51,12 @@ interface TimelineStore {
 
   // Snapping settings
   snappingEnabled: boolean;
-
   // Snapping actions
   toggleSnapping: () => void;
+
+  // Ripple editing mode
+  rippleEditingEnabled: boolean;
+  setRippleEditingEnabled: (enabled: boolean) => void;
 
   // Multi-selection
   selectedElements: { trackId: string; elementId: string }[];
@@ -138,6 +141,17 @@ interface TimelineStore {
     elementId: string,
     newFile: File
   ) => Promise<boolean>;
+
+  // Ripple editing functions
+  updateElementStartTimeWithRipple: (
+    trackId: string,
+    elementId: string,
+    newStartTime: number
+  ) => void;
+  removeElementFromTrackWithRipple: (
+    trackId: string,
+    elementId: string
+  ) => void;
 
   // Computed values
   getTotalDuration: () => number;
@@ -226,6 +240,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     history: [],
     redoStack: [],
     selectedElements: [],
+    rippleEditingEnabled: false,
 
     // Snapping settings defaults
     snappingEnabled: true,
@@ -292,6 +307,9 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     },
 
     setSelectedElements: (elements) => set({ selectedElements: elements }),
+
+    setRippleEditingEnabled: (enabled) =>
+      set({ rippleEditingEnabled: enabled }),
 
     addTrack: (type) => {
       get().pushHistory();
@@ -1124,6 +1142,137 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
           "opacity" in item && item.opacity !== undefined ? item.opacity : 1,
       });
       return true;
+    },
+
+    // Ripple editing functions
+    updateElementStartTimeWithRipple: (trackId, elementId, newStartTime) => {
+      const { _tracks, rippleEditingEnabled } = get();
+
+      if (!rippleEditingEnabled) {
+        // If ripple editing is disabled, use regular update
+        get().updateElementStartTime(trackId, elementId, newStartTime);
+        return;
+      }
+
+      const track = _tracks.find((t) => t.id === trackId);
+      const element = track?.elements.find((e) => e.id === elementId);
+
+      if (!element || !track) return;
+
+      get().pushHistory();
+
+      const oldStartTime = element.startTime;
+      const oldEndTime =
+        element.startTime +
+        (element.duration - element.trimStart - element.trimEnd);
+      const newEndTime =
+        newStartTime + (element.duration - element.trimStart - element.trimEnd);
+      const timeDelta = newStartTime - oldStartTime;
+
+      // Update all tracks, not just the current one
+      const updatedTracks = _tracks.map((currentTrack) => {
+        const updatedElements = currentTrack.elements.map((currentElement) => {
+          if (currentElement.id === elementId && currentTrack.id === trackId) {
+            // Update the moved element
+            return { ...currentElement, startTime: newStartTime };
+          }
+
+          // For ripple editing, we need to move elements that come after the moved element
+          // across all tracks to maintain sync
+          const currentElementStart = currentElement.startTime;
+          const currentElementEnd =
+            currentElement.startTime +
+            (currentElement.duration -
+              currentElement.trimStart -
+              currentElement.trimEnd);
+
+          // If moving element to the right (positive delta)
+          if (timeDelta > 0) {
+            // Move elements that start after the original position of the moved element
+            if (currentElementStart >= oldEndTime) {
+              return {
+                ...currentElement,
+                startTime: currentElementStart + timeDelta,
+              };
+            }
+          }
+          // If moving element to the left (negative delta)
+          else if (timeDelta < 0) {
+            // Move elements that start after the new position of the moved element
+            if (
+              currentElementStart >= newEndTime &&
+              currentElementStart >= oldStartTime
+            ) {
+              return {
+                ...currentElement,
+                startTime: Math.max(0, currentElementStart + timeDelta),
+              };
+            }
+          }
+
+          return currentElement;
+        });
+
+        return { ...currentTrack, elements: updatedElements };
+      });
+
+      updateTracksAndSave(updatedTracks);
+    },
+
+    removeElementFromTrackWithRipple: (trackId, elementId) => {
+      const { _tracks, rippleEditingEnabled } = get();
+
+      if (!rippleEditingEnabled) {
+        // If ripple editing is disabled, use regular removal
+        get().removeElementFromTrack(trackId, elementId);
+        return;
+      }
+
+      const track = _tracks.find((t) => t.id === trackId);
+      const element = track?.elements.find((e) => e.id === elementId);
+
+      if (!element || !track) return;
+
+      get().pushHistory();
+
+      const elementStartTime = element.startTime;
+      const elementDuration =
+        element.duration - element.trimStart - element.trimEnd;
+      const elementEndTime = elementStartTime + elementDuration;
+
+      // Remove the element and shift all elements that come after it
+      const updatedTracks = _tracks
+        .map((currentTrack) => {
+          const updatedElements = currentTrack.elements
+            .filter((currentElement) => {
+              // Remove the target element
+              if (
+                currentElement.id === elementId &&
+                currentTrack.id === trackId
+              ) {
+                return false;
+              }
+              return true;
+            })
+            .map((currentElement) => {
+              // Shift elements that start after the removed element
+              if (currentElement.startTime >= elementEndTime) {
+                return {
+                  ...currentElement,
+                  startTime: Math.max(
+                    0,
+                    currentElement.startTime - elementDuration
+                  ),
+                };
+              }
+              return currentElement;
+            });
+
+          return { ...currentTrack, elements: updatedElements };
+        })
+        .filter((track) => track.elements.length > 0 || track.isMain);
+
+      updateTracksAndSave(updatedTracks);
     },
   };
 });
