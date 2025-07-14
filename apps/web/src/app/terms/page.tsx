@@ -304,7 +304,7 @@ export default function TermsPage() {
                 </section>
 
                 <p className="text-sm text-muted-foreground mt-8 pt-8 border-t border-muted/20">
-                  Last updated: January 15, 2025
+                  Last updated: July 14, 2025
                 </p>
               </CardContent>
             </Card>
