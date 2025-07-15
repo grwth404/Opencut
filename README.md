@@ -40,10 +40,15 @@
 Before you begin, ensure you have the following installed on your system:
 
 - [Bun](https://bun.sh/docs/installation)
-- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
 - [Node.js](https://nodejs.org/en/) (for `npm` alternative)
 
-### Setup
+**Additional requirements for full-stack development:**
+
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) (only needed for database/auth features)
+
+### Frontend-only Development (Recommended for UI work)
+
+If you're working on the UI/frontend and don't need authentication or database features:
 
 1. Fork the repository
 2. Clone your fork locally
@@ -51,15 +56,13 @@ Before you begin, ensure you have the following installed on your system:
 4. Install dependencies: `bun install`
 5. Start the development server: `bun dev`
 
-## Development Setup
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
-### Prerequisites
+**Note:** This setup runs without Docker and is perfect for frontend development, UI improvements, and most feature work.
 
-- Node.js 18+
-- Bun (latest version)
-- Docker (for local database)
+### Full Development Setup (Database + Auth)
 
-### Local Development
+Only follow this if you need to work with authentication, user accounts, or database features.
 
 1. Start the database and Redis services:
 
