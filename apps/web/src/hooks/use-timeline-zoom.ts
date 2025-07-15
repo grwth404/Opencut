@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect, RefObject } from "react";
+import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import { useState, useCallback, RefObject, useMemo } from "react";
 
 interface UseTimelineZoomProps {
   containerRef: RefObject<HTMLDivElement>;
@@ -7,48 +8,63 @@ interface UseTimelineZoomProps {
 
 interface UseTimelineZoomReturn {
   zoomLevel: number;
+  zoomStep: number;
   setZoomLevel: (zoomLevel: number | ((prev: number) => number)) => void;
+  handleChangeZoomStep: (zoomStep: number) => void;
+  handleChangeZoomLevel: (zoomStep: number) => void;
   handleWheel: (e: React.WheelEvent) => void;
 }
 
-export function useTimelineZoom({
-  containerRef,
-  isInTimeline = false,
-}: UseTimelineZoomProps): UseTimelineZoomReturn {
+export function useTimelineZoom(): UseTimelineZoomReturn {
   const [zoomLevel, setZoomLevel] = useState(1);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    // Only zoom if user is using pinch gesture (ctrlKey or metaKey is true)
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.15 : 0.15;
-      setZoomLevel((prev) => Math.max(0.1, Math.min(10, prev + delta)));
-    }
-    // Otherwise, allow normal scrolling
+  const zoomStep = useMemo(
+    () =>
+      Math.max(1, Math.round(zoomLevel / TIMELINE_CONSTANTS.ZOOM_STEP_BASE)),
+    [zoomLevel]
+  );
+
+  const handleChangeZoomStep = useCallback((newStep: number) => {
+    setZoomLevel(
+      Math.max(
+        TIMELINE_CONSTANTS.ZOOM_LEVEL_MIN,
+        newStep * TIMELINE_CONSTANTS.ZOOM_STEP_BASE
+      )
+    );
   }, []);
 
-  // Prevent browser zooming in/out when in timeline
-  useEffect(() => {
-    const preventZoom = (e: WheelEvent) => {
-      if (
-        isInTimeline &&
-        (e.ctrlKey || e.metaKey) &&
-        containerRef.current?.contains(e.target as Node)
-      ) {
-        e.preventDefault();
-      }
-    };
+  const handleChangeZoomLevel = useCallback((newLevel: number) => {
+    setZoomLevel(
+      Math.max(
+        TIMELINE_CONSTANTS.ZOOM_LEVEL_MIN,
+        Math.min(TIMELINE_CONSTANTS.ZOOM_LEVEL_MAX, newLevel)
+      )
+    );
+  }, []);
 
-    document.addEventListener("wheel", preventZoom, { passive: false });
-
-    return () => {
-      document.removeEventListener("wheel", preventZoom);
-    };
-  }, [isInTimeline, containerRef]);
+  // Mouse wheel zoom, ctrl/meta gesture
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault?.();
+      const delta =
+        e.deltaY > 0
+          ? -TIMELINE_CONSTANTS.ZOOM_STEP_BASE
+          : TIMELINE_CONSTANTS.ZOOM_STEP_BASE;
+      setZoomLevel((prev) =>
+        Math.max(
+          TIMELINE_CONSTANTS.ZOOM_LEVEL_MIN,
+          Math.min(TIMELINE_CONSTANTS.ZOOM_LEVEL_MAX, prev + delta)
+        )
+      );
+    }
+  }, []);
 
   return {
     zoomLevel,
+    zoomStep,
     setZoomLevel,
+    handleChangeZoomStep,
+    handleChangeZoomLevel,
     handleWheel,
   };
 }

@@ -16,6 +16,7 @@ import { usePanelStore } from "@/stores/panel-store";
 import { useProjectStore } from "@/stores/project-store";
 import { EditorProvider } from "@/components/editor-provider";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
+import { useDisableBrowserZoom } from "@/hooks/use-disable-browser-zoom";
 
 export default function Editor() {
   const {
@@ -35,6 +36,7 @@ export default function Editor() {
   const params = useParams();
   const projectId = params.project_id as string;
 
+  useDisableBrowserZoom();
   usePlaybackControls();
 
   useEffect(() => {
