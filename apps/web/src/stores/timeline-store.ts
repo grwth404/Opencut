@@ -56,7 +56,7 @@ interface TimelineStore {
 
   // Ripple editing mode
   rippleEditingEnabled: boolean;
-  setRippleEditingEnabled: (enabled: boolean) => void;
+  toggleRippleEditing: () => void;
 
   // Multi-selection
   selectedElements: { trackId: string; elementId: string }[];
@@ -307,9 +307,6 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     },
 
     setSelectedElements: (elements) => set({ selectedElements: elements }),
-
-    setRippleEditingEnabled: (enabled) =>
-      set({ rippleEditingEnabled: enabled }),
 
     addTrack: (type) => {
       get().pushHistory();
@@ -1145,6 +1142,12 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     },
 
     // Ripple editing functions
+    toggleRippleEditing: () => {
+      set((state) => ({
+        rippleEditingEnabled: !state.rippleEditingEnabled,
+      }));
+    },
+
     updateElementStartTimeWithRipple: (trackId, elementId, newStartTime) => {
       const { _tracks, rippleEditingEnabled } = get();
 
