@@ -7,8 +7,22 @@ Thank you for your interest in contributing to OpenCut! This document provides g
 1. Fork the repository
 2. Clone your fork locally
 3. Navigate to the web app directory: `cd apps/web`
-4. Install dependencies: `bun install`
-5. Start the development server: `bun run dev`
+4. Copy `.env.example` to `.env.local`:
+
+   ```bash
+   # Unix/Linux/Mac
+   cp .env.example .env.local
+
+   # Windows Command Prompt
+   copy .env.example .env.local
+
+   # Windows PowerShell
+   Copy-Item .env.example .env.local
+   ```
+
+5. Install dependencies: `bun install`
+
+6. Start the development server: `bun run dev`
 
 > **Note:** If you see an error like `Unsupported URL Type "workspace:*"` when running `npm install`, you have two options:
 >

@@ -53,8 +53,22 @@ If you're working on the UI/frontend and don't need authentication or database f
 1. Fork the repository
 2. Clone your fork locally
 3. Navigate to the web app directory: `cd apps/web`
-4. Install dependencies: `bun install`
-5. Start the development server: `bun dev`
+4. Copy `.env.example` to `.env.local`:
+
+   ```bash
+   # Unix/Linux/Mac
+   cp .env.example .env.local
+
+   # Windows Command Prompt
+   copy .env.example .env.local
+
+   # Windows PowerShell
+   Copy-Item .env.example .env.local
+   ```
+
+5. Install dependencies: `bun install`
+
+6. Start the development server: `bun dev`
 
 The application will be available at [http://localhost:3000](http://localhost:3000).
 
