@@ -21,6 +21,7 @@ import { useProjectStore } from "./project-store";
 import { generateUUID } from "@/lib/utils";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 import { toast } from "sonner";
+import { checkElementOverlaps, resolveElementOverlaps } from "@/lib/timeline";
 
 // Helper function to manage element naming with suffixes
 const getElementNameWithSuffix = (
@@ -56,6 +57,7 @@ interface TimelineStore {
 
   // Ripple editing mode
   rippleEditingEnabled: boolean;
+  // Controls whether ripple editing affects all tracks or just the current track
   toggleRippleEditing: () => void;
 
   // Multi-selection
@@ -1172,16 +1174,23 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
         newStartTime + (element.duration - element.trimStart - element.trimEnd);
       const timeDelta = newStartTime - oldStartTime;
 
-      // Update all tracks, not just the current one
+      // Update tracks based on multi-track ripple setting
       const updatedTracks = _tracks.map((currentTrack) => {
+        // Only apply ripple effects to the same track unless multi-track ripple is enabled
+        const shouldApplyRipple = currentTrack.id === trackId;
+
         const updatedElements = currentTrack.elements.map((currentElement) => {
           if (currentElement.id === elementId && currentTrack.id === trackId) {
             // Update the moved element
             return { ...currentElement, startTime: newStartTime };
           }
 
+          // Only apply ripple effects if we should process this track
+          if (!shouldApplyRipple) {
+            return currentElement;
+          }
+
           // For ripple editing, we need to move elements that come after the moved element
-          // across all tracks to maintain sync
           const currentElementStart = currentElement.startTime;
           const currentElementEnd =
             currentElement.startTime +
@@ -1216,6 +1225,14 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
           return currentElement;
         });
 
+        // Check for overlaps and resolve them if necessary
+        const hasOverlaps = checkElementOverlaps(updatedElements);
+        if (hasOverlaps) {
+          // Resolve overlaps by adjusting element positions
+          const resolvedElements = resolveElementOverlaps(updatedElements);
+          return { ...currentTrack, elements: resolvedElements };
+        }
+
         return { ...currentTrack, elements: updatedElements };
       });
 
@@ -1246,6 +1263,9 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       // Remove the element and shift all elements that come after it
       const updatedTracks = _tracks
         .map((currentTrack) => {
+          // Only apply ripple effects to the same track unless multi-track ripple is enabled
+          const shouldApplyRipple = currentTrack.id === trackId;
+
           const updatedElements = currentTrack.elements
             .filter((currentElement) => {
               // Remove the target element
@@ -1258,6 +1278,11 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
               return true;
             })
             .map((currentElement) => {
+              // Only apply ripple effects if we should process this track
+              if (!shouldApplyRipple) {
+                return currentElement;
+              }
+
               // Shift elements that start after the removed element
               if (currentElement.startTime >= elementEndTime) {
                 return {
@@ -1270,6 +1295,14 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
               }
               return currentElement;
             });
+
+          // Check for overlaps and resolve them if necessary
+          const hasOverlaps = checkElementOverlaps(updatedElements);
+          if (hasOverlaps) {
+            // Resolve overlaps by adjusting element positions
+            const resolvedElements = resolveElementOverlaps(updatedElements);
+            return { ...currentTrack, elements: resolvedElements };
+          }
 
           return { ...currentTrack, elements: updatedElements };
         })
