@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { DraggableMediaItem } from "@/components/ui/draggable-item";
 import { useProjectStore } from "@/stores/project-store";
+import { useTimelineStore } from "@/stores/timeline-store";
 
 export function MediaView() {
   const { mediaItems, addMediaItem, removeMediaItem } = useMediaStore();
@@ -288,6 +289,11 @@ export function MediaView() {
                         name: item.name,
                       }}
                       showPlusOnDrag={false}
+                      onAddToTimeline={(currentTime) =>
+                        useTimelineStore
+                          .getState()
+                          .addMediaAtTime(item, currentTime)
+                      }
                       rounded={false}
                     />
                   </ContextMenuTrigger>

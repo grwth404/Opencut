@@ -17,6 +17,7 @@ import {
   TypeIcon,
   Magnet,
   Lock,
+  LockOpen,
 } from "lucide-react";
 import {
   Tooltip,
@@ -376,29 +377,7 @@ export function Timeline() {
 
         if (dragData.type === "text") {
           // Always create new text track to avoid overlaps
-          const newTrackId = addTrack("text");
-
-          addElementToTrack(newTrackId, {
-            type: "text",
-            name: dragData.name || "Text",
-            content: dragData.content || "Default Text",
-            duration: TIMELINE_CONSTANTS.DEFAULT_TEXT_DURATION,
-            startTime: 0,
-            trimStart: 0,
-            trimEnd: 0,
-            fontSize: 48,
-            fontFamily: "Arial",
-            color: "#ffffff",
-            backgroundColor: "transparent",
-            textAlign: "center",
-            fontWeight: "normal",
-            fontStyle: "normal",
-            textDecoration: "none",
-            x: 0,
-            y: 0,
-            rotation: 0,
-            opacity: 1,
-          });
+          useTimelineStore.getState().addTextToNewTrack(dragData);
         } else {
           // Handle media items
           const mediaItem = mediaItems.find((item) => item.id === dragData.id);
@@ -407,19 +386,7 @@ export function Timeline() {
             return;
           }
 
-          const trackType = dragData.type === "audio" ? "audio" : "media";
-          let targetTrack = tracks.find((t) => t.type === trackType);
-          const newTrackId = targetTrack ? targetTrack.id : addTrack(trackType);
-
-          addElementToTrack(newTrackId, {
-            type: "media",
-            mediaId: mediaItem.id,
-            name: mediaItem.name,
-            duration: mediaItem.duration || 5,
-            startTime: 0,
-            trimStart: 0,
-            trimEnd: 0,
-          });
+          useTimelineStore.getState().addMediaToNewTrack(mediaItem);
         }
       } catch (error) {
         console.error("Error parsing dropped item data:", error);
@@ -447,18 +414,7 @@ export function Timeline() {
               item.name === processedItem.name && item.url === processedItem.url
           );
           if (addedItem) {
-            const trackType =
-              processedItem.type === "audio" ? "audio" : "media";
-            const newTrackId = addTrack(trackType);
-            addElementToTrack(newTrackId, {
-              type: "media",
-              mediaId: addedItem.id,
-              name: addedItem.name,
-              duration: addedItem.duration || 5,
-              startTime: 0,
-              trimStart: 0,
-              trimEnd: 0,
-            });
+            useTimelineStore.getState().addMediaToNewTrack(addedItem);
           }
         }
       } catch (error) {
@@ -853,7 +809,11 @@ export function Timeline() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="text" size="icon" onClick={toggleSnapping}>
-                  <Lock className="h-4 w-4" />
+                  {snappingEnabled ? (
+                    <Lock className="h-4 w-4" />
+                  ) : (
+                    <LockOpen className="h-4 w-4 text-primary" />
+                  )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Auto snapping</TooltipContent>
