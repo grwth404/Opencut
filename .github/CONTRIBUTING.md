@@ -18,6 +18,7 @@ Thank you for your interest in contributing to OpenCut! This document provides g
 ## What to Focus On
 
 **🎯 Good Areas to Contribute:**
+
 - Timeline functionality and UI improvements
 - Project management features
 - Performance optimizations
@@ -26,6 +27,7 @@ Thank you for your interest in contributing to OpenCut! This document provides g
 - Documentation and testing
 
 **⚠️ Areas to Avoid:**
+
 - Preview panel enhancements (text fonts, stickers, effects)
 - Export functionality improvements
 - Preview rendering optimizations
