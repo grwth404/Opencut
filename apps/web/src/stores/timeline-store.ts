@@ -42,6 +42,12 @@ interface TimelineStore {
   // Manual method if you need to force recomputation
   getSortedTracks: () => TimelineTrack[];
 
+  // Snapping settings
+  snappingEnabled: boolean;
+
+  // Snapping actions
+  toggleSnapping: () => void;
+
   // Multi-selection
   selectedElements: { trackId: string; elementId: string }[];
   selectElement: (trackId: string, elementId: string, multi?: boolean) => void;
@@ -202,6 +208,9 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     history: [],
     redoStack: [],
     selectedElements: [],
+
+    // Snapping settings defaults
+    snappingEnabled: true,
 
     getSortedTracks: () => {
       const { _tracks } = get();
@@ -948,6 +957,11 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       const defaultTracks = ensureMainTrack([]);
       updateTracks(defaultTracks);
       set({ history: [], redoStack: [], selectedElements: [] });
+    },
+
+    // Snapping actions
+    toggleSnapping: () => {
+      set((state) => ({ snappingEnabled: !state.snappingEnabled }));
     },
   };
 });
