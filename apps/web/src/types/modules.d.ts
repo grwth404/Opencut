@@ -23,10 +23,46 @@ declare module 'lucide-react' {
   export const Magnet: FC<IconProps>;
   export const Lock: FC<IconProps>;
   export const ChevronLeft: FC<IconProps>;
+  export const ChevronRight: FC<IconProps>;
+  export const ChevronDown: FC<IconProps>;
+  export const ChevronUp: FC<IconProps>;
   export const Download: FC<IconProps>;
   export const Keyboard: FC<IconProps>;
   export const SkipBack: FC<IconProps>;
   export const SkipForward: FC<IconProps>;
+  export const Loader2: FC<IconProps>;
+  export const ExternalLink: FC<IconProps>;
+  export const ArrowRight: FC<IconProps>;
+  export const ArrowLeft: FC<IconProps>;
+  export const Expand: FC<IconProps>;
+  export const Plus: FC<IconProps>;
+  export const Upload: FC<IconProps>;
+  export const Image: FC<IconProps>;
+  export const MoreVertical: FC<IconProps>;
+  export const MoreHorizontal: FC<IconProps>;
+  export const Eye: FC<IconProps>;
+  export const EyeOff: FC<IconProps>;
+  export const Check: FC<IconProps>;
+  export const Circle: FC<IconProps>;
+  export const Search: FC<IconProps>;
+  export const X: FC<IconProps>;
+  export const PanelLeft: FC<IconProps>;
+  export const ChevronsUpDown: FC<IconProps>;
+  export const CheckIcon: FC<IconProps>;
+  export const Minus: FC<IconProps>;
+  export const RefreshCw: FC<IconProps>;
+  export const PipetteIcon: FC<IconProps>;
+  export const Type: FC<IconProps>;
+  export const Calendar: FC<IconProps>;
+  export const CaptionsIcon: FC<IconProps>;
+  export const ArrowLeftRightIcon: FC<IconProps>;
+  export const SparklesIcon: FC<IconProps>;
+  export const StickerIcon: FC<IconProps>;
+  export const MusicIcon: FC<IconProps>;
+  export const VideoIcon: FC<IconProps>;
+  export const BlendIcon: FC<IconProps>;
+  export const SlidersHorizontalIcon: FC<IconProps>;
+  export type LucideIcon = FC<IconProps>;
   // Add other icons as needed
 }
 

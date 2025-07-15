@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import { GoogleIcon } from "@/components/icons";
 import { useLogin } from "@/hooks/auth/useLogin";
 
@@ -41,7 +41,7 @@ const LoginPage = () => {
         onClick={() => router.back()}
         className="absolute top-6 left-6"
       >
-        <ArrowLeft className="h-5 w-5" /> Back
+        <ChevronLeft className="h-5 w-5" /> Back
       </Button>
       <Card className="w-[400px] shadow-lg border-0">
         <CardHeader className="text-center pb-4">
