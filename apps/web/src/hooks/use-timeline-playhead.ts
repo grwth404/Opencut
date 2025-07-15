@@ -89,7 +89,6 @@ export function useTimelinePlayhead({
       if (e.button !== 0) return;
       e.preventDefault();
       const time = getTimeFromMouse(e);
-      if (time === undefined) return;
 
       isScrubbingRef.current = true;
       scrubTimeRef.current = time;
