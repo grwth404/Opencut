@@ -86,6 +86,7 @@ export function useTimelinePlayhead({
    */
   const handleRulerMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
       e.preventDefault();
       const time = getTimeFromMouse(e);
       if (time === undefined) return;
