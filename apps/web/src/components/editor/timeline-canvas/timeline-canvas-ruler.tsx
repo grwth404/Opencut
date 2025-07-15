@@ -1,3 +1,4 @@
+import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 import { TimelineCanvasRulerProps } from "@/types/timeline";
 import React, { useRef, useEffect } from "react";
 
@@ -19,7 +20,7 @@ export default function TimelineCanvasRuler({
 
     ctx.clearRect(0, 0, width, height);
 
-    const pixelsPerSecond = 50 * zoomLevel;
+    const pixelsPerSecond = TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
 
     const getTimeInterval = () => {
       if (pixelsPerSecond >= 200) return 0.1;
