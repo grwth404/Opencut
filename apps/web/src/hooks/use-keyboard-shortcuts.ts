@@ -66,7 +66,6 @@ export const useKeyboardShortcuts = (
       category: "Playback",
       action: () => {
         toggle();
-        toast.info(isPlaying ? "Paused" : "Playing", { duration: 1000 });
       },
     },
     {
@@ -76,7 +75,6 @@ export const useKeyboardShortcuts = (
       category: "Playback",
       action: () => {
         seek(Math.max(0, currentTime - 1));
-        toast.info("Rewind 1s", { duration: 1000 });
       },
     },
     {
@@ -86,7 +84,6 @@ export const useKeyboardShortcuts = (
       category: "Playback",
       action: () => {
         toggle();
-        toast.info(isPlaying ? "Paused" : "Playing", { duration: 1000 });
       },
     },
     {
@@ -96,7 +93,6 @@ export const useKeyboardShortcuts = (
       category: "Playback",
       action: () => {
         seek(Math.min(duration, currentTime + 1));
-        toast.info("Forward 1s", { duration: 1000 });
       },
     },
 
@@ -146,7 +142,6 @@ export const useKeyboardShortcuts = (
       category: "Navigation",
       action: () => {
         seek(0);
-        toast.info("Start of timeline", { duration: 1000 });
       },
     },
     {
@@ -156,7 +151,6 @@ export const useKeyboardShortcuts = (
       category: "Navigation",
       action: () => {
         seek(duration);
-        toast.info("End of timeline", { duration: 1000 });
       },
     },
 
@@ -185,7 +179,6 @@ export const useKeyboardShortcuts = (
 
           if (currentTime > effectiveStart && currentTime < effectiveEnd) {
             splitElement(trackId, elementId, currentTime);
-            toast.success("Element split at playhead");
           } else {
             toast.error("Playhead must be within selected element");
           }
@@ -218,9 +211,6 @@ export const useKeyboardShortcuts = (
       category: "Editing",
       action: () => {
         toggleSnapping();
-        toast.info(`Snapping ${snappingEnabled ? "disabled" : "enabled"}`, {
-          duration: 1000,
-        });
       },
     },
 
@@ -238,9 +228,6 @@ export const useKeyboardShortcuts = (
           }))
         );
         setSelectedElements(allElements);
-        toast.info(`Selected ${allElements.length} elements`, {
-          duration: 1000,
-        });
       },
     },
     {
@@ -270,8 +257,6 @@ export const useKeyboardShortcuts = (
             ...elementWithoutId,
             startTime: newStartTime,
           });
-
-          toast.success("Element duplicated");
         }
       },
     },

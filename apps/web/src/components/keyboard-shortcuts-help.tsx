@@ -15,41 +15,73 @@ import { Keyboard } from "lucide-react";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 const KeyBadge = ({ keyName }: { keyName: string }) => {
-  // Replace common key names with symbols
+  // Replace common key names with symbols or friendly names
   const displayKey = keyName
     .replace("Cmd", "⌘")
-    .replace("Shift", "⇧")
+    .replace("Shift", "Shift")
+    .replace("ArrowLeft", "Arrow Left")
+    .replace("ArrowRight", "Arrow Right")
+    .replace("ArrowUp", "Arrow Up")
+    .replace("ArrowDown", "Arrow Down")
     .replace("←", "◀")
     .replace("→", "▶")
-    .replace("Space", "⎵");
+    .replace("Space", "Space");
 
   return (
-    <Badge variant="secondary" className="font-mono text-xs px-2 py-1">
+    <Badge variant="secondary" className="font-mono text-xs px-1 py-1">
       {displayKey}
     </Badge>
   );
 };
 
-const ShortcutItem = ({ shortcut }: { shortcut: any }) => (
-  <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50">
-    <div className="flex items-center gap-3">
-      {shortcut.icon && (
-        <div className="text-muted-foreground">{shortcut.icon}</div>
-      )}
-      <span className="text-sm">{shortcut.description}</span>
+const ShortcutItem = ({ shortcut }: { shortcut: any }) => {
+  // Filter out lowercase duplicates for display - if both "j" and "J" exist, only show "J"
+  const displayKeys = shortcut.keys.filter((key: string) => {
+    const lowerKey = key.toLowerCase();
+    const upperKey = key.toUpperCase();
+
+    // If this is a lowercase letter and the uppercase version exists, skip it
+    if (
+      key === lowerKey &&
+      key !== upperKey &&
+      shortcut.keys.includes(upperKey)
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        {shortcut.icon && (
+          <div className="text-muted-foreground">{shortcut.icon}</div>
+        )}
+        <span className="text-sm">{shortcut.description}</span>
+      </div>
+      <div className="flex items-center gap-1">
+        {displayKeys.map((key: string, index: number) => (
+          <div key={index} className="flex items-center gap-1">
+            <div className="flex items-center">
+              {key.split("+").map((keyPart: string, partIndex: number) => (
+                <div key={partIndex} className="flex items-center gap-1">
+                  <KeyBadge keyName={keyPart} />
+                  {partIndex < key.split("+").length - 1 && (
+                    <span className="text-xs text-muted-foreground">+</span>
+                  )}
+                </div>
+              ))}
+            </div>
+            {index < displayKeys.length - 1 && (
+              <span className="text-xs text-muted-foreground">or</span>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
-    <div className="flex items-center gap-1">
-      {shortcut.keys.map((key: string, index: number) => (
-        <div key={index} className="flex items-center gap-1">
-          <KeyBadge keyName={key} />
-          {index < shortcut.keys.length - 1 && (
-            <span className="text-xs text-muted-foreground">+</span>
-          )}
-        </div>
-      ))}
-    </div>
-  </div>
-);
+  );
+};
 
 export const KeyboardShortcutsHelp = () => {
   const [open, setOpen] = useState(false);
@@ -67,7 +99,7 @@ export const KeyboardShortcutsHelp = () => {
           Shortcuts
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-hidden flex">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Keyboard className="w-5 h-5" />
@@ -81,11 +113,11 @@ export const KeyboardShortcutsHelp = () => {
 
         <div className="space-y-6">
           {categories.map((category) => (
-            <div key={category}>
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
+            <div key={category} className="flex flex-col gap-1">
+              <h3 className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
                 {category}
               </h3>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {shortcuts
                   .filter((shortcut) => shortcut.category === category)
                   .map((shortcut, index) => (
@@ -94,18 +126,6 @@ export const KeyboardShortcutsHelp = () => {
               </div>
             </div>
           ))}
-        </div>
-
-        <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-          <h4 className="font-medium text-sm mb-2">Tips:</h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>
-              • Shortcuts work when the editor is focused (not typing in inputs)
-            </li>
-            <li>• J/K/L are industry-standard video editing shortcuts</li>
-            <li>• Use arrow keys for frame-perfect positioning</li>
-            <li>• Hold Shift with arrow keys for larger jumps</li>
-          </ul>
         </div>
       </DialogContent>
     </Dialog>
