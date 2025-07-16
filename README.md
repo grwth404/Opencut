@@ -45,8 +45,6 @@ Before you begin, ensure you have the following installed on your system:
 
 ### Setup
 
-## Getting Started
-
 1. Fork the repository
 2. Clone your fork locally
 3. Navigate to the web app directory: `cd apps/web`
