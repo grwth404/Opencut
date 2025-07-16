@@ -1,8 +1,7 @@
-"use client"
-import { redirect } from "next/navigation";
+"use client";
 
 import Link from "next/link";
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,15 +28,8 @@ import { useProjectStore } from "@/stores/project-store";
 import { useRouter } from "next/navigation";
 import { DeleteProjectDialog } from "@/components/delete-project-dialog";
 import { RenameProjectDialog } from "@/components/rename-project-dialog";
-import { toast } from "sonner";
 
 export default function ProjectsPage() {
-  
-  if (process.env.NODE_ENV !== "development") {
-    toast.error("You are not allowed to access this page");
-    redirect("/");
-  }
-
   const {
     createNewProject,
     savedProjects,
