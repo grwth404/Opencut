@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useMediaStore } from "./media-store";
 import { useTimelineStore } from "./timeline-store";
 import { generateUUID } from "@/lib/utils";
+import { env } from "@/env";
 
 interface ProjectStore {
   activeProject: TProject | null;
@@ -36,6 +37,16 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   isInitialized: false,
 
   createNewProject: async (name: string) => {
+    try {
+      if (process.env.NODE_ENV !== "development") {
+      toast.error("Project creation is disabled outside development environment");
+      throw new Error("Not allowed in production");
+    }
+    } catch (error) {
+      toast.error("Failed to create new project");
+      throw error;
+    }
+
     const newProject: TProject = {
       id: generateUUID(),
       name,
