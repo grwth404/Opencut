@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   ChevronLeft,
   Plus,
@@ -28,6 +29,13 @@ import { useProjectStore } from "@/stores/project-store";
 import { useRouter } from "next/navigation";
 import { DeleteProjectDialog } from "@/components/delete-project-dialog";
 import { RenameProjectDialog } from "@/components/rename-project-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function ProjectsPage() {
   const {
@@ -43,6 +51,8 @@ export default function ProjectsPage() {
     new Set()
   );
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortOption, setSortOption] = useState("createdAt-desc");
 
   const handleCreateProject = async () => {
     const projectId = await createNewProject("New Project");
@@ -62,7 +72,7 @@ export default function ProjectsPage() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedProjects(new Set(savedProjects.map((p) => p.id)));
+      setSelectedProjects(new Set(filteredProjects.map((p) => p.id)));
     } else {
       setSelectedProjects(new Set());
     }
@@ -82,10 +92,34 @@ export default function ProjectsPage() {
     setIsBulkDeleteDialogOpen(false);
   };
 
+  const filteredProjects = savedProjects.filter((project) =>
+    project.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const sortedProjects = [...filteredProjects].sort((a, b) => {
+    const [key, order] = sortOption.split("-");
+    const aValue = a[key as keyof TProject];
+    const bValue = b[key as keyof TProject];
+
+    if (aValue === undefined || bValue === undefined) return 0;
+
+    if (order === "asc") {
+      if (aValue < bValue) return -1;
+      if (aValue > bValue) return 1;
+      return 0;
+    } else {
+      if (aValue > bValue) return -1;
+      if (aValue < bValue) return 1;
+      return 0;
+    }
+  });
+
   const allSelected =
-    savedProjects.length > 0 && selectedProjects.size === savedProjects.length;
+    sortedProjects.length > 0 &&
+    selectedProjects.size === sortedProjects.length;
   const someSelected =
-    selectedProjects.size > 0 && selectedProjects.size < savedProjects.length;
+    selectedProjects.size > 0 &&
+    selectedProjects.size < sortedProjects.length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -172,25 +206,40 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {isSelectionMode && savedProjects.length > 0 && (
-          <div
-            className="mb-6 p-4 bg-muted/30 rounded-lg border cursor-pointer hover:bg-muted/40 transition-colors"
-            onClick={() => handleSelectAll(!allSelected)}
-          >
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <div className="flex-1 max-w-72">
+            <Input
+              placeholder="Search projects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Select value={sortOption} onValueChange={setSortOption}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="createdAt-desc">Newest to Oldest</SelectItem>
+              <SelectItem value="createdAt-asc">Oldest to Newest</SelectItem>
+              <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+              <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {isSelectionMode && sortedProjects.length > 0 && (
+          <div className="mb-6 p-4 bg-muted/30 rounded-lg border">
             <div className="flex items-center gap-3">
               <Checkbox
-                checked={allSelected}
-                onCheckedChange={handleSelectAll}
-                onClick={(e) => e.stopPropagation()}
+                checked={someSelected ? "indeterminate" : allSelected}
+                onCheckedChange={(value) => handleSelectAll(!!value)}
               />
-              <div className="flex-1 flex items-center justify-start gap-2">
-                <span className="text-sm font-medium">
-                  {allSelected ? "Deselect All" : "Select All"}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  ({selectedProjects.size} of {savedProjects.length} selected)
-                </span>
-              </div>
+              <span className="text-sm font-medium">
+                {allSelected ? "Deselect All" : "Select All"}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                ({selectedProjects.size} of {sortedProjects.length} selected)
+              </span>
             </div>
           </div>
         )}
@@ -199,17 +248,18 @@ export default function ProjectsPage() {
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
           </div>
-        ) : savedProjects.length === 0 ? (
+        ) : sortedProjects.length === 0 ? (
           <NoProjects onCreateProject={handleCreateProject} />
         ) : (
           <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-            {savedProjects.map((project) => (
+            {sortedProjects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
                 isSelectionMode={isSelectionMode}
                 isSelected={selectedProjects.has(project.id)}
                 onSelect={handleSelectProject}
+                searchQuery={searchQuery}
               />
             ))}
           </div>
@@ -230,6 +280,7 @@ interface ProjectCardProps {
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onSelect?: (projectId: string, checked: boolean) => void;
+  searchQuery?: string;
 }
 
 function ProjectCard({
@@ -237,6 +288,7 @@ function ProjectCard({
   isSelectionMode = false,
   isSelected = false,
   onSelect,
+  searchQuery,
 }: ProjectCardProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -292,7 +344,7 @@ function ProjectCard({
               {/* Selection checkbox */}
               {isSelectionMode && (
                 <div className="absolute top-3 left-3 z-10">
-                  <div className="w-5 h-5 rounded-full bg-background/80 backdrop-blur-sm border flex items-center justify-center">
+                  <div className="w-5 h-5 rounded bg-background/80 backdrop-blur-sm border flex items-center justify-center">
                     <Checkbox
                       checked={isSelected}
                       onCheckedChange={(checked) =>
@@ -322,10 +374,10 @@ function ProjectCard({
               </div>
             </div>
 
-            <CardContent className="px-0 pt-5 flex flex-col gap-1 p-2">
+            <CardContent className="px-0 pt-5 flex flex-col gap-1">
               <div className="flex items-start justify-between">
                 <h3 className="font-medium text-sm leading-snug group-hover:text-foreground/90 transition-colors line-clamp-2">
-                  {project.name}
+                  <Highlight text={project.name} query={searchQuery} />
                 </h3>
                 {!isSelectionMode && (
                   <DropdownMenu
@@ -432,7 +484,7 @@ function ProjectCard({
             <CardContent className="px-0 pt-5 flex flex-col gap-1">
               <div className="flex items-start justify-between">
                 <h3 className="font-medium text-sm leading-snug group-hover:text-foreground/90 transition-colors line-clamp-2">
-                  {project.name}
+                  <Highlight text={project.name} query={searchQuery} />
                 </h3>
                 <DropdownMenu
                   open={isDropdownOpen}
@@ -516,6 +568,26 @@ function ProjectCard({
         projectName={project.name}
       />
     </>
+  );
+}
+
+function Highlight({ text, query }: { text: string; query?: string }) {
+  if (!query) {
+    return <span>{text}</span>;
+  }
+  const parts = text.split(new RegExp(`(${query})`, "gi"));
+  return (
+    <span>
+      {parts.map((part, i) =>
+        part.toLowerCase() === query.toLowerCase() ? (
+          <mark key={i} className="bg-yellow-200 text-black">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </span>
   );
 }
 
