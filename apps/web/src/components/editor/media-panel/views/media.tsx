@@ -7,7 +7,7 @@ import { Image, Loader2, Music, Plus, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { DragOverlay } from "@/components/ui/drag-overlay";
+import { MediaDragOverlay } from "@/components/editor/media-panel/drag-overlay";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -242,23 +242,9 @@ export function MediaView() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 pt-0">
-          {(isDragOver || filteredMediaItems.length === 0) ? (
-            <DragOverlay
+          {isDragOver || filteredMediaItems.length === 0 ? (
+            <MediaDragOverlay
               isVisible={true}
-              title={
-                isDragOver
-                  ? "Drop files here"
-                  : mediaItems.length === 0
-                    ? "No media in project"
-                    : "No media found"
-              }
-              description={
-                isDragOver
-                  ? "Release to add files"
-                  : mediaItems.length === 0
-                    ? "Drag and drop your images, videos, or audio files here to get started"
-                    : "No media matches your current search or filter. Try adjusting your filters or add new media."
-              }
               isProcessing={isProcessing}
               progress={progress}
               onClick={handleFileSelect}
