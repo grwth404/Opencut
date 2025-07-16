@@ -54,7 +54,7 @@ export function TimelineTrackContent({
   const { currentTime } = usePlaybackStore();
 
   // Initialize snapping hook
-  const { snapElementPosition } = useTimelineSnapping({
+  const { snapElementPosition, snapElementEdge } = useTimelineSnapping({
     snapThreshold: 10,
     enableElementSnapping: snappingEnabled,
     enablePlayheadSnapping: snappingEnabled,
@@ -103,15 +103,52 @@ export function TimelineTrackContent({
       let finalTime = adjustedTime;
       let snapPoint = null;
       if (snappingEnabled) {
-        const snapResult = snapElementPosition(
+        // Find the element being dragged to get its duration
+        let elementDuration = 5; // fallback duration
+        if (dragState.elementId && dragState.trackId) {
+          const sourceTrack = tracks.find((t) => t.id === dragState.trackId);
+          const element = sourceTrack?.elements.find(
+            (e) => e.id === dragState.elementId
+          );
+          if (element) {
+            elementDuration =
+              element.duration - element.trimStart - element.trimEnd;
+          }
+        }
+
+        // Try snapping both start and end edges
+        const startSnapResult = snapElementEdge(
           adjustedTime,
+          elementDuration,
           tracks,
           currentTime,
           zoomLevel,
-          dragState.elementId || undefined
+          dragState.elementId || undefined,
+          true // snap to start edge
         );
-        finalTime = snapResult.snappedTime;
-        snapPoint = snapResult.snapPoint;
+
+        const endSnapResult = snapElementEdge(
+          adjustedTime,
+          elementDuration,
+          tracks,
+          currentTime,
+          zoomLevel,
+          dragState.elementId || undefined,
+          false // snap to end edge
+        );
+
+        // Choose the snap result with the smaller distance (closer snap)
+        let bestSnapResult = startSnapResult;
+        if (
+          endSnapResult.snapPoint &&
+          (!startSnapResult.snapPoint ||
+            endSnapResult.snapDistance < startSnapResult.snapDistance)
+        ) {
+          bestSnapResult = endSnapResult;
+        }
+
+        finalTime = bestSnapResult.snappedTime;
+        snapPoint = bestSnapResult.snapPoint;
 
         // Notify parent component about snap point change
         onSnapPointChange?.(snapPoint);
