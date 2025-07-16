@@ -149,7 +149,15 @@ export function DraggableMediaItem({
   );
 }
 
-function PlusButton({ className, onClick }: { className?: string; onClick?: () => void }) {
+function PlusButton({
+  className,
+  onClick,
+  tooltipText,
+}: {
+  className?: string;
+  onClick?: () => void;
+  tooltipText?: string;
+}) {
   return (
     <Button
       size="icon"
@@ -159,6 +167,7 @@ function PlusButton({ className, onClick }: { className?: string; onClick?: () =
         e.stopPropagation();
         onClick?.();
       }}
+      title={tooltipText}
     >
       <Plus className="!size-3" />
     </Button>
