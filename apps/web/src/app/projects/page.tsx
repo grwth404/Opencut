@@ -15,6 +15,7 @@ import {
   Loader2,
   X,
   Trash2,
+  Search,
 } from "lucide-react";
 import { TProject } from "@/types/project";
 import Image from "next/image";
@@ -248,8 +249,13 @@ export default function ProjectsPage() {
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
           </div>
-        ) : sortedProjects.length === 0 ? (
+        ) : savedProjects.length === 0 ? (
           <NoProjects onCreateProject={handleCreateProject} />
+        ) : sortedProjects.length === 0 ? (
+          <NoResults
+            searchQuery={searchQuery}
+            onClearSearch={() => setSearchQuery("")}
+          />
         ) : (
           <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
             {sortedProjects.map((project) => (
@@ -614,6 +620,29 @@ function NoProjects({ onCreateProject }: { onCreateProject: () => void }) {
       <Button size="lg" className="gap-2" onClick={onCreateProject}>
         <Plus className="h-4 w-4" />
         Create Your First Project
+      </Button>
+    </div>
+  );
+}
+
+function NoResults({
+  searchQuery,
+  onClearSearch,
+}: {
+  searchQuery: string;
+  onClearSearch: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
+        <Search className="h-8 w-8 text-muted-foreground" />
+      </div>
+      <h3 className="text-lg font-medium mb-2">No results found</h3>
+      <p className="text-muted-foreground mb-6 max-w-md">
+        Your search for "{searchQuery}" did not return any results.
+      </p>
+      <Button onClick={onClearSearch} variant="outline">
+        Clear Search
       </Button>
     </div>
   );
