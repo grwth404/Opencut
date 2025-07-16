@@ -15,7 +15,6 @@ export interface KeyboardShortcut {
   enabled?: boolean;
   requiresSelection?: boolean;
   icon?: React.ReactNode;
-  displayKeys?: string[]; // Keys to show in help (defaults to keys if not provided)
 }
 
 interface UseKeyboardShortcutsOptions {
