@@ -158,7 +158,7 @@ function PlusButton({
   onClick?: () => void;
   tooltipText?: string;
 }) {
-  return (
+  const button = (
     <Button
       size="icon"
       className={cn("absolute bottom-2 right-2 size-4", className)}
@@ -172,4 +172,6 @@ function PlusButton({
       <Plus className="!size-3" />
     </Button>
   );
+
+  return button;
 }
