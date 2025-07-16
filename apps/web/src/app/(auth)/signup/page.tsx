@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { GoogleIcon } from "@/components/icons";
 import { useSignUp } from "@/hooks/auth/useSignUp";
 
@@ -43,7 +43,7 @@ const SignUpPage = () => {
         onClick={() => router.back()}
         className="absolute top-6 left-6"
       >
-        <ChevronLeft className="h-5 w-5" /> Back
+        <ArrowLeft className="h-5 w-5" /> Back
       </Button>
       <Card className="w-[400px] shadow-lg border-0">
         <CardHeader className="text-center pb-4">
@@ -157,6 +157,6 @@ const SignUpPage = () => {
       </Card>
     </div>
   );
-}
+};
 
 export default memo(SignUpPage);

@@ -1,6 +1,5 @@
 "use client";
 
-// @ts-ignore - IDE TypeScript configuration issue (React modules compile fine in Docker)
 import { ScrollArea } from "../ui/scroll-area";
 import { Button } from "../ui/button";
 import {
@@ -16,7 +15,6 @@ import {
   Video,
   Music,
   TypeIcon,
-  Magnet,
   Lock,
   LockOpen,
 } from "lucide-react";
@@ -39,9 +37,6 @@ import { useProjectStore } from "@/stores/project-store";
 import { useTimelineZoom } from "@/hooks/use-timeline-zoom";
 import { processMediaFiles } from "@/lib/media-processing";
 import { toast } from "sonner";
-// @ts-ignore - React type definitions
-import * as React from "react";
-// @ts-ignore - React type definitions  
 import { useState, useRef, useEffect, useCallback } from "react";
 import { TimelineTrackContent } from "./timeline-track";
 import {
@@ -65,9 +60,7 @@ export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their elements.
   // You can drag media here to add it to your project.
   // elements can be trimmed, deleted, and moved.
-  
-  // Note: Some parameter types are inferred as 'any' due to store interface definitions
-  // This doesn't affect runtime safety as the stores provide proper type checking
+
   const {
     tracks,
     addTrack,
@@ -265,259 +258,6 @@ export function Timeline() {
     setDuration(Math.max(totalDuration, 10)); // Minimum 10 seconds for empty timeline
   }, [tracks, setDuration, getTotalDuration]);
 
-  // Keyboard event for deleting selected elements
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger when typing in input fields or textareas
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      ) {
-        return;
-      }
-
-      // Only trigger when timeline is focused or mouse is over timeline
-      if (
-        !isInTimeline &&
-        !timelineRef.current?.contains(document.activeElement)
-      ) {
-        return;
-      }
-
-      if (
-        (e.key === "Delete" || e.key === "Backspace") &&
-        selectedElements.length > 0
-      ) {
-        selectedElements.forEach(({ trackId, elementId }: { trackId: string; elementId: string }) => {
-          removeElementFromTrack(trackId, elementId);
-        });
-        clearSelectedElements();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    selectedElements,
-    removeElementFromTrack,
-    clearSelectedElements,
-    isInTimeline,
-  ]);
-
-  // Keyboard event for undo (Cmd+Z)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [undo]);
-
-  // Keyboard event for redo (Cmd+Shift+Z or Cmd+Y)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "z" && e.shiftKey) {
-        e.preventDefault();
-        redo();
-      } else if ((e.metaKey || e.ctrlKey) && e.key === "y") {
-        e.preventDefault();
-        redo();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [redo]);
-
-  // Core video editor keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't interfere with typing in inputs
-      const activeElement = document.activeElement as HTMLElement;
-      const isInputFocused = activeElement && (
-        activeElement.tagName === 'INPUT' || 
-        activeElement.tagName === 'TEXTAREA' || 
-        activeElement.contentEditable === 'true'
-      );
-      
-      if (isInputFocused) return;
-
-      const { key, metaKey, ctrlKey, shiftKey } = e;
-      const isModified = metaKey || ctrlKey || shiftKey;
-
-      switch (key) {
-        case ' ': // Spacebar - Play/Pause
-          if (!isModified) {
-            e.preventDefault();
-            toggle();
-            toast.info(isPlaying ? 'Paused' : 'Playing', { duration: 1000 });
-          }
-          break;
-
-        case 'j':
-        case 'J':
-          if (!isModified) {
-            e.preventDefault();
-            // J - Rewind 1 second
-            seek(Math.max(0, currentTime - 1));
-            toast.info('Rewind 1s', { duration: 1000 });
-          }
-          break;
-
-        case 'k':
-        case 'K':
-          if (!isModified) {
-            e.preventDefault();
-            // K - Pause/Play toggle
-            toggle();
-            toast.info(isPlaying ? 'Paused' : 'Playing', { duration: 1000 });
-          }
-          break;
-
-        case 'l':
-        case 'L':
-          if (!isModified) {
-            e.preventDefault();
-            // L - Fast forward 1 second
-            seek(Math.min(duration, currentTime + 1));
-            toast.info('Forward 1s', { duration: 1000 });
-          }
-          break;
-
-        case 'ArrowLeft':
-          if (shiftKey) {
-            e.preventDefault();
-            // Shift+Left - Jump back 5 seconds
-            seek(Math.max(0, currentTime - 5));
-          } else if (!isModified) {
-            e.preventDefault();
-            // Left - Frame step backward (1 frame)
-            const projectFps = activeProject?.fps || 30;
-            seek(Math.max(0, currentTime - (1/projectFps)));
-          }
-          break;
-
-        case 'ArrowRight':
-          if (shiftKey) {
-            e.preventDefault();
-            // Shift+Right - Jump forward 5 seconds
-            seek(Math.min(duration, currentTime + 5));
-          } else if (!isModified) {
-            e.preventDefault();
-            // Right - Frame step forward (1 frame)
-            const projectFps = activeProject?.fps || 30;
-            seek(Math.min(duration, currentTime + (1/projectFps)));
-          }
-          break;
-
-        case 'Home':
-          if (!isModified) {
-            e.preventDefault();
-            seek(0);
-            toast.info('Start of timeline', { duration: 1000 });
-          }
-          break;
-
-        case 'End':
-          if (!isModified) {
-            e.preventDefault();
-            seek(duration);
-            toast.info('End of timeline', { duration: 1000 });
-          }
-          break;
-
-        case 's':
-        case 'S':
-          if (!isModified && selectedElements.length === 1) {
-            e.preventDefault();
-            // S - Split element at playhead
-            const { trackId, elementId } = selectedElements[0];
-            const track = tracks.find((t: any) => t.id === trackId);
-            const element = track?.elements.find((el: any) => el.id === elementId);
-            
-            if (element) {
-              const effectiveStart = element.startTime;
-              const effectiveEnd = element.startTime + (element.duration - element.trimStart - element.trimEnd);
-              
-              if (currentTime > effectiveStart && currentTime < effectiveEnd) {
-                splitElement(trackId, elementId, currentTime);
-                toast.success('Element split at playhead');
-              } else {
-                toast.error('Playhead must be within selected element');
-              }
-            }
-          }
-          break;
-
-        case 'n':
-        case 'N':
-          if (!isModified) {
-            e.preventDefault();
-            toggleSnapping();
-            toast.info(`Snapping ${snappingEnabled ? 'disabled' : 'enabled'}`, { duration: 1000 });
-          }
-          break;
-      }
-
-      // Multi-key shortcuts
-      if ((metaKey || ctrlKey) && !shiftKey) {
-        switch (key.toLowerCase()) {
-          case 'a':
-            e.preventDefault();
-            // Cmd/Ctrl+A - Select all elements
-            const allElements = tracks.flatMap((track: any) => 
-              track.elements.map((element: any) => ({
-                trackId: track.id,
-                elementId: element.id
-              }))
-            );
-            setSelectedElements(allElements);
-            toast.info(`Selected ${allElements.length} elements`, { duration: 1000 });
-            break;
-
-          case 'd':
-            if (selectedElements.length === 1) {
-              e.preventDefault();
-              // Cmd/Ctrl+D - Duplicate selected element
-              const { trackId, elementId } = selectedElements[0];
-              const track = tracks.find((t: any) => t.id === trackId);
-              const element = track?.elements.find((el: any) => el.id === elementId);
-              
-              if (element) {
-                const newStartTime = element.startTime + (element.duration - element.trimStart - element.trimEnd) + 0.1;
-                const { id, ...elementWithoutId } = element;
-                
-                addElementToTrack(trackId, {
-                  ...elementWithoutId,
-                  startTime: newStartTime,
-                });
-                
-                toast.success('Element duplicated');
-              }
-            }
-            break;
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    isPlaying,
-    currentTime,
-    duration,
-    selectedElements,
-    tracks,
-    toggle,
-    seek,
-    splitElement,
-    snappingEnabled,
-    toggleSnapping,
-    setSelectedElements,
-    addElementToTrack
-  ]);
-
   // Old marquee system removed - using new SelectionBox component instead
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -575,7 +315,9 @@ export function Timeline() {
           useTimelineStore.getState().addTextToNewTrack(dragData);
         } else {
           // Handle media items
-          const mediaItem = mediaItems.find((item: any) => item.id === dragData.id);
+          const mediaItem = mediaItems.find(
+            (item: any) => item.id === dragData.id
+          );
           if (!mediaItem) {
             toast.error("Media item not found");
             return;
