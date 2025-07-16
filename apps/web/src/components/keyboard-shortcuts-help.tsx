@@ -21,7 +21,7 @@ const KeyBadge = ({ keyName }: { keyName: string }) => {
     .replace("Shift", "⇧")
     .replace("←", "◀")
     .replace("→", "▶")
-    .replace("Space", "⎵");
+    .replace("Space", "Space");
 
   return (
     <Badge variant="secondary" className="font-mono text-xs px-2 py-1">
@@ -31,7 +31,7 @@ const KeyBadge = ({ keyName }: { keyName: string }) => {
 };
 
 const ShortcutItem = ({ shortcut }: { shortcut: any }) => (
-  <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50">
+  <div className="flex items-center justify-between">
     <div className="flex items-center gap-3">
       {shortcut.icon && (
         <div className="text-muted-foreground">{shortcut.icon}</div>
@@ -67,7 +67,7 @@ export const KeyboardShortcutsHelp = () => {
           Shortcuts
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-hidden flex">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Keyboard className="w-5 h-5" />
@@ -81,11 +81,11 @@ export const KeyboardShortcutsHelp = () => {
 
         <div className="space-y-6">
           {categories.map((category) => (
-            <div key={category}>
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
+            <div key={category} className="flex flex-col gap-1">
+              <h3 className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
                 {category}
               </h3>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {shortcuts
                   .filter((shortcut) => shortcut.category === category)
                   .map((shortcut, index) => (
@@ -94,18 +94,6 @@ export const KeyboardShortcutsHelp = () => {
               </div>
             </div>
           ))}
-        </div>
-
-        <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-          <h4 className="font-medium text-sm mb-2">Tips:</h4>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>
-              • Shortcuts work when the editor is focused (not typing in inputs)
-            </li>
-            <li>• J/K/L are industry-standard video editing shortcuts</li>
-            <li>• Use arrow keys for frame-perfect positioning</li>
-            <li>• Hold Shift with arrow keys for larger jumps</li>
-          </ul>
         </div>
       </DialogContent>
     </Dialog>
