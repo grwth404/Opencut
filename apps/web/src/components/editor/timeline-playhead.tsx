@@ -82,7 +82,7 @@ export function TimelinePlayhead({
 
       {/* Playhead dot indicator at the top (in ruler area) */}
       <div
-        className={`absolute top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 shadow-sm ${isSnappingToPlayhead ? "bg-primary border-primary" : "bg-foreground border-foreground"}`}
+        className={`sticky top-1 left-1 -translate-x-[40%] transform w-3 h-3 rounded-full shadow-sm ${isSnappingToPlayhead ? "bg-primary border-primary" : "bg-foreground border-foreground"}`}
       />
     </div>
   );

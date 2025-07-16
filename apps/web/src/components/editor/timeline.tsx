@@ -17,6 +17,7 @@ import {
   TypeIcon,
   Lock,
   LockOpen,
+  Plus,
 } from "lucide-react";
 import {
   Tooltip,
@@ -37,7 +38,7 @@ import { useProjectStore } from "@/stores/project-store";
 import { useTimelineZoom } from "@/hooks/use-timeline-zoom";
 import { processMediaFiles } from "@/lib/media-processing";
 import { toast } from "sonner";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, Fragment } from "react";
 import { TimelineTrackContent } from "./timeline-track";
 import {
   TimelinePlayhead,
@@ -108,15 +109,18 @@ export function Timeline() {
     timelineRef.current?.clientWidth || 1000 // Minimum width
   );
 
-  // Essential refs for timeline functionality
-  const playheadRef = useRef<HTMLDivElement>(null);
-  const tracksContainerRef = useRef<HTMLDivElement>(null);
-
-  // Temporary refs for compatibility (should be removed when TimelinePlayhead is updated)
+  // Scroll synchronization and auto-scroll to playhead
   const rulerScrollRef = useRef<HTMLDivElement>(null);
   const tracksScrollRef = useRef<HTMLDivElement>(null);
+  const trackLabelsRef = useRef<HTMLDivElement>(null);
+  const playheadRef = useRef<HTMLDivElement>(null);
+  const trackLabelsScrollRef = useRef<HTMLDivElement>(null);
+  const isUpdatingRef = useRef(false);
+  const lastRulerSync = useRef(0);
+  const lastTracksSync = useRef(0);
+  const lastVerticalSync = useRef(0);
 
-  // Timeline playhead ruler handlers - temporarily keeping all refs for compatibility
+  // Timeline playhead ruler handlers
   const { handleRulerMouseDown } = useTimelinePlayheadRuler({
     currentTime,
     duration,
@@ -129,6 +133,7 @@ export function Timeline() {
   });
 
   // Selection box functionality
+  const tracksContainerRef = useRef<HTMLDivElement>(null);
   const {
     selectionBox,
     handleMouseDown: handleSelectionMouseDown,
@@ -155,7 +160,7 @@ export function Timeline() {
     setCurrentSnapPoint(snapPoint);
   }, []);
 
-  // Timeline content click to seek handler - simplified for single scroll area
+  // Timeline content click to seek handler
   const handleTimelineContentClick = useCallback(
     (e: React.MouseEvent) => {
       console.log(
@@ -240,10 +245,11 @@ export function Timeline() {
       duration,
       zoomLevel,
       seek,
+      rulerScrollRef,
+      tracksScrollRef,
       clearSelectedElements,
       isSelecting,
       justFinishedSelecting,
-      activeProject?.fps,
     ]
   );
 
@@ -499,6 +505,85 @@ export function Timeline() {
     clearSelectedElements();
   };
 
+  // --- Scroll synchronization effect ---
+  useEffect(() => {
+    const rulerViewport = rulerScrollRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    ) as HTMLElement;
+    const tracksViewport = tracksScrollRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    ) as HTMLElement;
+    const trackLabelsViewport = trackLabelsScrollRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    ) as HTMLElement;
+
+    if (!rulerViewport || !tracksViewport) return;
+
+    // Horizontal scroll synchronization between ruler and tracks
+    const handleRulerScroll = () => {
+      const now = Date.now();
+      if (isUpdatingRef.current || now - lastRulerSync.current < 16) return;
+      lastRulerSync.current = now;
+      isUpdatingRef.current = true;
+      tracksViewport.scrollLeft = rulerViewport.scrollLeft;
+      isUpdatingRef.current = false;
+    };
+    const handleTracksScroll = () => {
+      const now = Date.now();
+      if (isUpdatingRef.current || now - lastTracksSync.current < 16) return;
+      lastTracksSync.current = now;
+      isUpdatingRef.current = true;
+      rulerViewport.scrollLeft = tracksViewport.scrollLeft;
+      isUpdatingRef.current = false;
+    };
+
+    rulerViewport.addEventListener("scroll", handleRulerScroll);
+    tracksViewport.addEventListener("scroll", handleTracksScroll);
+
+    // Vertical scroll synchronization between track labels and tracks content
+    if (trackLabelsViewport) {
+      const handleTrackLabelsScroll = () => {
+        const now = Date.now();
+        if (isUpdatingRef.current || now - lastVerticalSync.current < 16)
+          return;
+        lastVerticalSync.current = now;
+        isUpdatingRef.current = true;
+        tracksViewport.scrollTop = trackLabelsViewport.scrollTop;
+        isUpdatingRef.current = false;
+      };
+      const handleTracksVerticalScroll = () => {
+        const now = Date.now();
+        if (isUpdatingRef.current || now - lastVerticalSync.current < 16)
+          return;
+        lastVerticalSync.current = now;
+        isUpdatingRef.current = true;
+        trackLabelsViewport.scrollTop = tracksViewport.scrollTop;
+        isUpdatingRef.current = false;
+      };
+
+      trackLabelsViewport.addEventListener("scroll", handleTrackLabelsScroll);
+      tracksViewport.addEventListener("scroll", handleTracksVerticalScroll);
+
+      return () => {
+        rulerViewport.removeEventListener("scroll", handleRulerScroll);
+        tracksViewport.removeEventListener("scroll", handleTracksScroll);
+        trackLabelsViewport.removeEventListener(
+          "scroll",
+          handleTrackLabelsScroll
+        );
+        tracksViewport.removeEventListener(
+          "scroll",
+          handleTracksVerticalScroll
+        );
+      };
+    }
+
+    return () => {
+      rulerViewport.removeEventListener("scroll", handleRulerScroll);
+      tracksViewport.removeEventListener("scroll", handleTracksScroll);
+    };
+  }, []);
+
   // Add wheel event listeners with passive: false to allow preventDefault
   useEffect(() => {
     const timelineContainer = timelineRef.current;
@@ -525,7 +610,7 @@ export function Timeline() {
       onMouseLeave={() => setIsInTimeline(false)}
     >
       {/* Toolbar */}
-      <div className="border-b flex items-center justify-between px-2 py-1 bg-background z-90">
+      <div className="border-b flex items-center justify-between px-2 py-1 bg-card z-90">
         <div className="flex items-center gap-1 w-full">
           <TooltipProvider delayDuration={500}>
             <Tooltip>
@@ -692,178 +777,204 @@ export function Timeline() {
 
       {/* Timeline Container */}
 
-      <ScrollArea className=" w-full h-full" style={{ minWidth: `${dynamicTimelineWidth}px` }}>
+      {/* Timeline Container with Grid Layout */}
+      <div
+        ref={timelineRef}
+        className="relative h-full w-full overflow-auto border"
+        onMouseEnter={() => setIsInTimeline(true)}
+        onMouseLeave={() => setIsInTimeline(false)}
+        onMouseDown={handleSelectionMouseDown}
+        onClick={handleTimelineContentClick}
+      >
+        <div className="min-w-max min-h-max" style={{ minWidth: `${dynamicTimelineWidth}px` }}>
+          <div className={`grid grid-cols-[192px_1fr] ${tracks.length > 0 ? `grid-rows-[20px_repeat(${tracks.length},minmax(0,max-content))]` : 'grid-rows-[20px_1fr]'}`}>
 
-          {/* Timeline Tracks Content */}
-          <div
-            ref={timelineRef}
-            className="relative w-full overflow-x-auto h-full min-h-72"
-            onMouseDown={handleSelectionMouseDown}
-            onClick={handleTimelineContentClick}
-          >
-            <SelectionBox
-              startPos={selectionBox?.startPos || null}
-              currentPos={selectionBox?.currentPos || null}
-              containerRef={tracksContainerRef}
-              isActive={selectionBox?.isActive || false}
-            />
+            {/* Top-Left Corner (Empty space above track labels) */}
+            <div className="sticky top-0 left-0 border-inset bg-card/[0.99]"></div>
 
-              <TimelinePlayhead
-                currentTime={currentTime}
-                duration={duration}
-                zoomLevel={zoomLevel}
-                tracks={tracks}
-                seek={seek}
-                rulerRef={rulerRef}
-                rulerScrollRef={rulerScrollRef}
-                tracksScrollRef={tracksScrollRef}
-                timelineRef={timelineRef}
-                playheadRef={playheadRef}
-                isSnappingToPlayhead={
-                  showSnapIndicator && currentSnapPoint?.type === "playhead"
-                }
-              />
-              <SnapIndicator
-                snapPoint={currentSnapPoint}
-                zoomLevel={zoomLevel}
-                tracks={tracks}
-                timelineRef={timelineRef}
-                isVisible={showSnapIndicator}
-              />
-              <div ref={tracksContainerRef} className="relative w-full h-full min-h-64">
-                <div
-                  className="sticky top-0 h-5 w-full ml-48  z-[99] bg-card/[0.99] border-b border-muted/30"
-                  onMouseDown={handleSelectionMouseDown}
-                  onClick={handleTimelineContentClick}
-                  data-ruler-area
-                >
+            {/* Top Row (Sticky Ruler Header) */}
+            <div
+              className="sticky top-0 bg-card/[0.99] border-b border-muted/30 z-[95]"
+              onMouseDown={handleSelectionMouseDown}
+              onClick={handleTimelineContentClick}
+              data-ruler-area
+            >
+              <div
+                ref={rulerRef}
+                className="relative h-5 select-none cursor-default pb-1 z-[95]"
+                onMouseDown={handleRulerMouseDown}
+              >
+                {(() => {
+                  // Calculate appropriate time interval based on zoom level
+                  const getTimeInterval = (zoom: number) => {
+                    const pixelsPerSecond =
+                      TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoom;
+                    if (pixelsPerSecond >= 200) return 0.1; // Every 0.1s when very zoomed in
+                    if (pixelsPerSecond >= 100) return 0.5; // Every 0.5s when zoomed in
+                    if (pixelsPerSecond >= 50) return 1; // Every 1s at normal zoom
+                    if (pixelsPerSecond >= 25) return 2; // Every 2s when zoomed out
+                    if (pixelsPerSecond >= 12) return 5; // Every 5s when more zoomed out
+                    if (pixelsPerSecond >= 6) return 10; // Every 10s when very zoomed out
+                    return 30; // Every 30s when extremely zoomed out
+                  };
 
-                  <div
-                    ref={rulerRef}
-                    className="relative h-5 select-none cursor-default pb-1"
-                    onMouseDown={handleRulerMouseDown}
-                  >
-                    {(() => {
-                      // Calculate appropriate time interval based on zoom level
-                      const getTimeInterval = (zoom: number) => {
-                        const pixelsPerSecond =
-                          TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoom;
-                        if (pixelsPerSecond >= 200) return 0.1; // Every 0.1s when very zoomed in
-                        if (pixelsPerSecond >= 100) return 0.5; // Every 0.5s when zoomed in
-                        if (pixelsPerSecond >= 50) return 1; // Every 1s at normal zoom
-                        if (pixelsPerSecond >= 25) return 2; // Every 2s when zoomed out
-                        if (pixelsPerSecond >= 12) return 5; // Every 5s when more zoomed out
-                        if (pixelsPerSecond >= 6) return 10; // Every 10s when very zoomed out
-                        return 30; // Every 30s when extremely zoomed out
-                      };
+                  const interval = getTimeInterval(zoomLevel);
+                  const markerCount = Math.ceil(duration / interval) + 1;
 
-                      const interval = getTimeInterval(zoomLevel);
-                      const markerCount = Math.ceil(duration / interval) + 1;
+                  return Array.from({ length: markerCount }, (_, i) => {
+                    const time = i * interval;
+                    if (time > duration) return null;
 
-                      return Array.from({ length: markerCount }, (_, i) => {
-                        const time = i * interval;
-                        if (time > duration) return null;
+                    const isMainMarker =
+                      time % (interval >= 1 ? Math.max(1, interval) : 1) === 0;
 
-                        const isMainMarker =
-                          time % (interval >= 1 ? Math.max(1, interval) : 1) === 0;
+                    return (
+                      <div
+                        key={i}
+                        className={`absolute top-0 bottom-0 z-[95] ${isMainMarker
+                          ? "border-l border-muted-foreground/40"
+                          : "border-l border-muted-foreground/20"
+                          }`}
+                        style={{
+                          left: `${time * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel}px`,
+                        }}
+                      >
+                        <span
+                          className={`absolute top-1 left-1 text-[0.6rem] z-[95] ${isMainMarker
+                            ? "text-muted-foreground font-medium"
+                            : "text-muted-foreground/70"
+                            }`}
+                        >
 
-                        return (
-                          <div
-                            key={i}
-                            className={`absolute top-0 bottom-0 ${isMainMarker
-                              ? "border-l border-muted-foreground/40"
-                              : "border-l border-muted-foreground/20"
-                              }`}
-                            style={{
-                              left: `${time * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel}px`,
-                            }}
-                          >
-                            <span
-                              className={`absolute top-1 left-1 text-[0.6rem] ${isMainMarker
-                                ? "text-muted-foreground font-medium"
-                                : "text-muted-foreground/70"
-                                }`}
-                            >
-                              {(() => {
-                                const formatTime = (seconds: number) => {
-                                  const hours = Math.floor(seconds / 3600);
-                                  const minutes = Math.floor((seconds % 3600) / 60);
-                                  const secs = seconds % 60;
+                          {(() => {
+                            const formatTime = (seconds: number) => {
+                              const hours = Math.floor(seconds / 3600);
+                              const minutes = Math.floor((seconds % 3600) / 60);
+                              const secs = seconds % 60;
 
-                                  if (hours > 0) {
-                                    return `${hours}:${minutes.toString().padStart(2, "0")}:${Math.floor(secs).toString().padStart(2, "0")}`;
-                                  } else if (minutes > 0) {
-                                    return `${minutes}:${Math.floor(secs).toString().padStart(2, "0")}`;
-                                  } else if (interval >= 1) {
-                                    return `${Math.floor(secs)}s`;
-                                  } else {
-                                    return `${secs.toFixed(1)}s`;
-                                  }
-                                };
-                                return formatTime(time);
-                              })()}
-                            </span>
-                          </div>
-                        );
-                      }).filter(Boolean);
-                    })()}
-                  </div>
-                </div>
-                {tracks.map((track, index) => (
-                  <div key={track.id} className="relative flex flex-row w-full">
-
-                    <div
-                      className="sticky left-0 flex w-48 items-center border-b border-muted/30 group bg-card/[0.99] z-[101]"
-                      style={{ height: `${getTrackHeight(track.type)}px` }}
-                    >
-                      <div className="flex items-center gap-2 px-2">
-                        <TrackIcon track={track} />
-                      </div>
-                      {track.muted && (
-                        <span className=" text-xs text-red-500 font-semibold">
-                          Muted
+                              if (hours > 0) {
+                                return `${hours}:${minutes.toString().padStart(2, "0")}:${Math.floor(secs).toString().padStart(2, "0")}`;
+                              } else if (minutes > 0) {
+                                return `${minutes}:${Math.floor(secs).toString().padStart(2, "0")}`;
+                              } else if (interval >= 1) {
+                                return `${Math.floor(secs)}s`;
+                              } else {
+                                return `${secs.toFixed(1)}s`;
+                              }
+                            };
+                            return formatTime(time);
+                          })()}
                         </span>
-                      )}
-                    </div>
-                    <ContextMenu>
-                      <ContextMenuTrigger asChild>
-                        <div
-                          className="absolute left-0 right-0 h-full border-b border-muted/30 ml-48"
-                          onClick={(e) => {
-                            // If clicking empty area (not on a element), deselect all elements
-                            if (
-                              !(e.target as HTMLElement).closest(
-                                ".timeline-element"
-                              )
-                            ) {
-                              clearSelectedElements();
-                            }
-                          }}
-                        >
-                          <TimelineTrackContent
-                            track={track}
-                            zoomLevel={zoomLevel}
-                            onSnapPointChange={handleSnapPointChange}
-                          />
-                        </div>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent>
-                        <ContextMenuItem
-                          onClick={() => toggleTrackMute(track.id)}
-                        >
-                          {track.muted ? "Unmute Track" : "Mute Track"}
-                        </ContextMenuItem>
-                        <ContextMenuItem>
-                          Track settings (soon)
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
-                  </div>
-                ))}
-
+                      </div>
+                    );
+                  }).filter(Boolean);
+                })()}
               </div>
+            </div>
+
+            {/* Track Rows */}
+            {tracks.map((track, index) => (
+              <Fragment key={track.id}>
+                {/* Left Column (Sticky Track Labels) */}
+                <div
+                  className="sticky left-0 flex items-center border-b border-panel border-inset group bg-card/[0.99] z-[90]"
+                  style={{ height: `${getTrackHeight(track.type)}px` }}
+                >
+                  <div className="flex items-center gap-2 px-2">
+                    <TrackIcon track={track} />
+                  </div>
+                  {track.muted && (
+                    <span className="text-xs text-red-500 font-semibold">
+                      Muted
+                    </span>
+                  )}
+                </div>
+
+                {/* Scrollable Track Content */}
+                <ContextMenu>
+                  <ContextMenuTrigger asChild>
+                    <div
+                      className=" h-full"
+                      onClick={(e) => {
+                        // If clicking empty area (not on a element), deselect all elements
+                        if (
+                          !(e.target as HTMLElement).closest(
+                            ".timeline-element"
+                          )
+                        ) {
+                          clearSelectedElements();
+                        }
+                      }}
+                    >
+                      <TimelineTrackContent
+                        track={track}
+                        zoomLevel={zoomLevel}
+                        onSnapPointChange={handleSnapPointChange}
+                      />
+                    </div>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem
+                      onClick={() => toggleTrackMute(track.id)}
+                    >
+                      {track.muted ? "Unmute Track" : "Mute Track"}
+                    </ContextMenuItem>
+                    <ContextMenuItem>
+                      Track settings (soon)
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+              </Fragment>
+            ))}
+            {/* Add Track Button - spans full width */}
+            <div
+              onClick={() => addTrack('media')}
+              className="col-span-1 sticky left-0 w-full flex items-center border-b border-muted bg-card/[0.99] hover:bg-card/50 transition-colors cursor-pointer z-[89]"
+              style={{ height: `${getTrackHeight("media")}px` }}
+            >
+              <div className="w-full flex  justify-center items-center">
+                <Plus className="w-4 h-4 text-muted-foreground" />
+              </div>
+            </div>
           </div>
-        </ScrollArea>
+        </div>
+
+        {/* Overlay Components */}
+        <SelectionBox
+          startPos={selectionBox?.startPos || null}
+          currentPos={selectionBox?.currentPos || null}
+          containerRef={tracksContainerRef}
+          isActive={selectionBox?.isActive || false}
+        />
+
+        <TimelinePlayhead
+          currentTime={currentTime}
+          duration={duration}
+          zoomLevel={zoomLevel}
+          tracks={tracks}
+          seek={seek}
+          rulerRef={rulerRef}
+          rulerScrollRef={rulerScrollRef}
+          tracksScrollRef={tracksScrollRef}
+          trackLabelsRef={trackLabelsRef}
+          timelineRef={timelineRef}
+          playheadRef={playheadRef}
+          isSnappingToPlayhead={
+            showSnapIndicator && currentSnapPoint?.type === "playhead"
+          }
+        />
+
+        <SnapIndicator
+          snapPoint={currentSnapPoint}
+          zoomLevel={zoomLevel}
+          tracks={tracks}
+          timelineRef={timelineRef}
+          trackLabelsRef={trackLabelsRef}
+          isVisible={showSnapIndicator}
+        />
+      </div>
+
+
       </div>
   );
 }
