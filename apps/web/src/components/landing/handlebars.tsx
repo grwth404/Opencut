@@ -19,7 +19,6 @@ export function Handlebars({
   const [leftHandle, setLeftHandle] = useState(0);
   const [rightHandle, setRightHandle] = useState(maxWidth);
   const [contentWidth, setContentWidth] = useState(maxWidth);
-  const [isDragging, setIsDragging] = useState(false);
 
   const leftHandleX = useMotionValue(0);
   const rightHandleX = useMotionValue(maxWidth);
@@ -33,27 +32,6 @@ export function Handlebars({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
-
-  // Prevent scroll when dragging on mobile
-  useEffect(() => {
-    const preventDefault = (e: TouchEvent) => {
-      if (isDragging) {
-        e.preventDefault();
-      }
-    };
-
-    if (isDragging) {
-      document.addEventListener("touchmove", preventDefault, {
-        passive: false,
-      });
-      document.body.style.overflow = "hidden";
-    }
-
-    return () => {
-      document.removeEventListener("touchmove", preventDefault);
-      document.body.style.overflow = "";
-    };
-  }, [isDragging]);
 
   useEffect(() => {
     if (!measureRef.current) return;
@@ -102,14 +80,6 @@ export function Handlebars({
     setRightHandle(newRight);
   };
 
-  const handleDragStart = () => {
-    setIsDragging(true);
-  };
-
-  const handleDragEnd = () => {
-    setIsDragging(false);
-  };
-
   return (
     <div className="flex justify-center gap-4 leading-[4rem] mt-0 md:mt-2">
       <div
@@ -125,10 +95,8 @@ export function Handlebars({
         style={{ width: contentWidth }}
       >
         <div className="absolute inset-0 w-full h-full rounded-2xl border border-yellow-500 flex justify-between">
-          {/* Left Handle */}
           <motion.div
-            className="h-full border border-yellow-500 rounded-full bg-accent flex items-center justify-center cursor-ew-resize select-none touch-none
-                       w-9 md:w-7 min-h-[44px] md:min-h-0"
+            className="h-full border border-yellow-500 w-7 rounded-full bg-accent flex items-center justify-center cursor-ew-resize select-none"
             style={{
               position: "absolute",
               x: leftHandleX,
@@ -140,24 +108,19 @@ export function Handlebars({
             dragElastic={0}
             dragMomentum={false}
             onDrag={handleLeftDrag}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
             whileHover={{ scale: 1.05 }}
             whileDrag={{ scale: 1.1 }}
-            whileTap={{ scale: 1.1 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           >
             <div className="w-2 h-8 rounded-full bg-yellow-500"></div>
           </motion.div>
 
-          {/* Right Handle */}
           <motion.div
-            className="h-full border border-yellow-500 rounded-full bg-accent flex items-center justify-center cursor-ew-resize select-none touch-none
-                       w-9 md:w-7 min-h-[44px] md:min-h-0"
+            className="h-full border border-yellow-500 w-7 rounded-full bg-accent flex items-center justify-center cursor-ew-resize select-none"
             style={{
               position: "absolute",
               x: rightHandleX,
-              left: -36, // Adjusted for larger mobile handle
+              left: -30,
               zIndex: 10,
             }}
             drag="x"
@@ -168,11 +131,8 @@ export function Handlebars({
             dragElastic={0}
             dragMomentum={false}
             onDrag={handleRightDrag}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
             whileHover={{ scale: 1.05 }}
             whileDrag={{ scale: 1.1 }}
-            whileTap={{ scale: 1.1 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           >
             <div className="w-2 h-8 rounded-full bg-yellow-500"></div>
@@ -201,4 +161,4 @@ export function Handlebars({
       </div>
     </div>
   );
-}
+};
