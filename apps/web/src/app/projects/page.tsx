@@ -99,8 +99,14 @@ export default function ProjectsPage() {
 
   const sortedProjects = [...filteredProjects].sort((a, b) => {
     const [key, order] = sortOption.split("-");
-    const aValue = a[key as keyof TProject];
-    const bValue = b[key as keyof TProject];
+
+    if (key !== "createdAt" && key !== "name") {
+      console.warn(`Invalid sort key: ${key}`);
+      return 0;
+    }
+
+    const aValue = a[key];
+    const bValue = b[key];
 
     if (aValue === undefined || bValue === undefined) return 0;
 
@@ -578,10 +584,12 @@ function ProjectCard({
 }
 
 function Highlight({ text, query }: { text: string; query?: string }) {
-  if (!query) {
+  if (!query || query.trim() === "") {
     return <span>{text}</span>;
   }
-  const parts = text.split(new RegExp(`(${query})`, "gi"));
+
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escapedQuery})`, "gi"));
   return (
     <span>
       {parts.map((part, i) =>
