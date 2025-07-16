@@ -2,6 +2,11 @@
 
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ReactNode, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Plus } from "lucide-react";
@@ -172,6 +177,17 @@ function PlusButton({
       <Plus className="!size-3" />
     </Button>
   );
+
+  if (tooltipText) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent>
+          <p>{tooltipText}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
 
   return button;
 }
