@@ -94,6 +94,7 @@ interface TimelineStore {
   addTrack: (type: TrackType) => string;
   insertTrackAt: (type: TrackType, index: number) => string;
   removeTrack: (trackId: string) => void;
+  removeTrackWithRipple: (trackId: string) => void;
   addElementToTrack: (trackId: string, element: CreateTimelineElement) => void;
   removeElementFromTrack: (trackId: string, elementId: string) => void;
   moveElementToTrack: (
@@ -363,10 +364,107 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     },
 
     removeTrack: (trackId) => {
+      const { rippleEditingEnabled } = get();
+
+      if (rippleEditingEnabled) {
+        get().removeTrackWithRipple(trackId);
+      } else {
+        get().pushHistory();
+        updateTracksAndSave(
+          get()._tracks.filter((track) => track.id !== trackId)
+        );
+      }
+    },
+
+    removeTrackWithRipple: (trackId) => {
+      const { _tracks } = get();
+      const trackToRemove = _tracks.find((t) => t.id === trackId);
+
+      if (!trackToRemove) return;
+
       get().pushHistory();
-      updateTracksAndSave(
-        get()._tracks.filter((track) => track.id !== trackId)
-      );
+
+      // If track has no elements, just remove it normally
+      if (trackToRemove.elements.length === 0) {
+        updateTracksAndSave(_tracks.filter((track) => track.id !== trackId));
+        return;
+      }
+
+      // Find all the time ranges occupied by elements in the track being removed
+      const occupiedRanges = trackToRemove.elements.map((element) => ({
+        startTime: element.startTime,
+        endTime:
+          element.startTime +
+          (element.duration - element.trimStart - element.trimEnd),
+      }));
+
+      // Sort ranges by start time
+      occupiedRanges.sort((a, b) => a.startTime - b.startTime);
+
+      // Merge overlapping ranges to get consolidated gaps
+      const mergedRanges: Array<{
+        startTime: number;
+        endTime: number;
+        duration: number;
+      }> = [];
+
+      for (const range of occupiedRanges) {
+        if (mergedRanges.length === 0) {
+          mergedRanges.push({
+            startTime: range.startTime,
+            endTime: range.endTime,
+            duration: range.endTime - range.startTime,
+          });
+        } else {
+          const lastRange = mergedRanges[mergedRanges.length - 1];
+          if (range.startTime <= lastRange.endTime) {
+            // Overlapping or adjacent ranges, merge them
+            lastRange.endTime = Math.max(lastRange.endTime, range.endTime);
+            lastRange.duration = lastRange.endTime - lastRange.startTime;
+          } else {
+            // Non-overlapping range, add as new
+            mergedRanges.push({
+              startTime: range.startTime,
+              endTime: range.endTime,
+              duration: range.endTime - range.startTime,
+            });
+          }
+        }
+      }
+
+      // Remove the track and apply ripple effects to remaining tracks
+      const updatedTracks = _tracks
+        .filter((track) => track.id !== trackId)
+        .map((track) => {
+          const updatedElements = track.elements.map((element) => {
+            let newStartTime = element.startTime;
+
+            // Process gaps from right to left (latest to earliest) to avoid cumulative shifts
+            for (let i = mergedRanges.length - 1; i >= 0; i--) {
+              const gap = mergedRanges[i];
+              // If this element starts after the gap, shift it left by the gap duration
+              if (newStartTime >= gap.endTime) {
+                newStartTime -= gap.duration;
+              }
+            }
+
+            return {
+              ...element,
+              startTime: Math.max(0, newStartTime),
+            };
+          });
+
+          // Check for overlaps and resolve them if necessary
+          const hasOverlaps = checkElementOverlaps(updatedElements);
+          if (hasOverlaps) {
+            const resolvedElements = resolveElementOverlaps(updatedElements);
+            return { ...track, elements: resolvedElements };
+          }
+
+          return { ...track, elements: updatedElements };
+        });
+
+      updateTracksAndSave(updatedTracks);
     },
 
     addElementToTrack: (trackId, elementData) => {
@@ -451,21 +549,27 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     },
 
     removeElementFromTrack: (trackId, elementId) => {
-      get().pushHistory();
-      updateTracksAndSave(
-        get()
-          ._tracks.map((track) =>
-            track.id === trackId
-              ? {
-                  ...track,
-                  elements: track.elements.filter(
-                    (element) => element.id !== elementId
-                  ),
-                }
-              : track
-          )
-          .filter((track) => track.elements.length > 0)
-      );
+      const { rippleEditingEnabled } = get();
+
+      if (rippleEditingEnabled) {
+        get().removeElementFromTrackWithRipple(trackId, elementId);
+      } else {
+        get().pushHistory();
+        updateTracksAndSave(
+          get()
+            ._tracks.map((track) =>
+              track.id === trackId
+                ? {
+                    ...track,
+                    elements: track.elements.filter(
+                      (element) => element.id !== elementId
+                    ),
+                  }
+                : track
+            )
+            .filter((track) => track.elements.length > 0)
+        );
+      }
     },
 
     moveElementToTrack: (fromTrackId, toTrackId, elementId) => {
