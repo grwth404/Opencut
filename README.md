@@ -51,7 +51,7 @@ Before you begin, ensure you have the following installed on your system:
 2. Clone your fork locally
 3. Navigate to the web app directory: `cd apps/web`
 4. Install dependencies: `bun install`
-5. Start the development server: `bun run dev`
+5. Start the development server: `bun dev`
 
 ## Development Setup
 
