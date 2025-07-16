@@ -3,7 +3,7 @@
 import { useDragDrop } from "@/hooks/use-drag-drop";
 import { processMediaFiles } from "@/lib/media-processing";
 import { useMediaStore, type MediaItem } from "@/stores/media-store";
-import { Image, Loader2, Music, Plus, Upload, Video } from "lucide-react";
+import { Image, Loader2, Music, Plus, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
