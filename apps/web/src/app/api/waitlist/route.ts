@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, eq } from "@opencut/db";
 import { waitlist } from "@opencut/db/schema";
+import { checkBotId } from "botid/server";
 import { nanoid } from "nanoid";
 import { waitlistRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
@@ -143,6 +144,12 @@ async function validateCSRFToken(request: NextRequest): Promise<boolean> {
 }
 
 export async function POST(request: NextRequest) {
+  const verification = await checkBotId();
+
+  if (verification.isBot) {
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+
   const identifier = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
   const { success } = await waitlistRateLimit.limit(identifier);
 
