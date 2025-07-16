@@ -16,16 +16,24 @@ export function Hero() {
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     fetch("/api/waitlist/token", {
       credentials: "include",
     })
       .then((res) => res.json())
       .then((data) => {
-        if (data.token) {
+        if (isMounted && data.token) {
           setCsrfToken(data.token);
         }
       })
-      .catch((err) => console.error("Failed to fetch CSRF token:", err));
+      .catch((err) => {
+        console.error("Failed to fetch CSRF token:", err);
+        if (isMounted) {
+          toast.error("Security initialization failed", {
+            description: "Please refresh the page to continue.",
+          });
+        }
+      });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,6 +78,9 @@ export function Hero() {
           .then((res) => res.json())
           .then((data) => {
             if (data.token) setCsrfToken(data.token);
+          })
+          .catch((err) => {
+            console.error("Failed to refresh CSRF token:", err);
           });
       } else {
         toast.error("Oops!", {

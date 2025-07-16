@@ -135,10 +135,7 @@ async function validateCSRFToken(request: NextRequest): Promise<boolean> {
   const tokenTime = parseInt(timestamp);
   if (now - tokenTime > TOKEN_EXPIRY) return false;
 
-  const expectedSignature = crypto
-    .createHmac("sha256", env.BETTER_AUTH_SECRET || "fallback-secret")
-    .update(`${token}:${timestamp}`)
-    .digest("hex");
+  const expectedSignature = crypto.createHmac("sha256", env.BETTER_AUTH_SECRET).update(`${token}:${timestamp}`).digest("hex");
 
   return signature === expectedSignature;
 }
