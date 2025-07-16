@@ -108,18 +108,15 @@ export function Timeline() {
     timelineRef.current?.clientWidth || 1000 // Minimum width
   );
 
-  // Scroll synchronization and auto-scroll to playhead
+  // Essential refs for timeline functionality
+  const playheadRef = useRef<HTMLDivElement>(null);
+  const tracksContainerRef = useRef<HTMLDivElement>(null);
+
+  // Temporary refs for compatibility (should be removed when TimelinePlayhead is updated)
   const rulerScrollRef = useRef<HTMLDivElement>(null);
   const tracksScrollRef = useRef<HTMLDivElement>(null);
-  const trackLabelsRef = useRef<HTMLDivElement>(null);
-  const playheadRef = useRef<HTMLDivElement>(null);
-  const trackLabelsScrollRef = useRef<HTMLDivElement>(null);
-  const isUpdatingRef = useRef(false);
-  const lastRulerSync = useRef(0);
-  const lastTracksSync = useRef(0);
-  const lastVerticalSync = useRef(0);
 
-  // Timeline playhead ruler handlers
+  // Timeline playhead ruler handlers - temporarily keeping all refs for compatibility
   const { handleRulerMouseDown } = useTimelinePlayheadRuler({
     currentTime,
     duration,
@@ -132,7 +129,6 @@ export function Timeline() {
   });
 
   // Selection box functionality
-  const tracksContainerRef = useRef<HTMLDivElement>(null);
   const {
     selectionBox,
     handleMouseDown: handleSelectionMouseDown,
@@ -159,7 +155,7 @@ export function Timeline() {
     setCurrentSnapPoint(snapPoint);
   }, []);
 
-  // Timeline content click to seek handler
+  // Timeline content click to seek handler - simplified for single scroll area
   const handleTimelineContentClick = useCallback(
     (e: React.MouseEvent) => {
       console.log(
@@ -230,7 +226,7 @@ export function Timeline() {
         Math.min(
           duration,
           (mouseX + scrollLeft) /
-            (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel)
+          (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel)
         )
       );
 
@@ -244,11 +240,10 @@ export function Timeline() {
       duration,
       zoomLevel,
       seek,
-      rulerScrollRef,
-      tracksScrollRef,
       clearSelectedElements,
       isSelecting,
       justFinishedSelecting,
+      activeProject?.fps,
     ]
   );
 
@@ -504,84 +499,23 @@ export function Timeline() {
     clearSelectedElements();
   };
 
-  // --- Scroll synchronization effect ---
+  // Add wheel event listeners with passive: false to allow preventDefault
   useEffect(() => {
-    const rulerViewport = rulerScrollRef.current?.querySelector(
-      "[data-radix-scroll-area-viewport]"
-    ) as HTMLElement;
-    const tracksViewport = tracksScrollRef.current?.querySelector(
-      "[data-radix-scroll-area-viewport]"
-    ) as HTMLElement;
-    const trackLabelsViewport = trackLabelsScrollRef.current?.querySelector(
-      "[data-radix-scroll-area-viewport]"
-    ) as HTMLElement;
+    const timelineContainer = timelineRef.current;
+    if (!timelineContainer || !isInTimeline) return;
 
-    if (!rulerViewport || !tracksViewport) return;
-
-    // Horizontal scroll synchronization between ruler and tracks
-    const handleRulerScroll = () => {
-      const now = Date.now();
-      if (isUpdatingRef.current || now - lastRulerSync.current < 16) return;
-      lastRulerSync.current = now;
-      isUpdatingRef.current = true;
-      tracksViewport.scrollLeft = rulerViewport.scrollLeft;
-      isUpdatingRef.current = false;
-    };
-    const handleTracksScroll = () => {
-      const now = Date.now();
-      if (isUpdatingRef.current || now - lastTracksSync.current < 16) return;
-      lastTracksSync.current = now;
-      isUpdatingRef.current = true;
-      rulerViewport.scrollLeft = tracksViewport.scrollLeft;
-      isUpdatingRef.current = false;
+    const handleWheelCapture = (e: WheelEvent) => {
+      // Call the existing handleWheel function
+      handleWheel(e as any);
     };
 
-    rulerViewport.addEventListener("scroll", handleRulerScroll);
-    tracksViewport.addEventListener("scroll", handleTracksScroll);
-
-    // Vertical scroll synchronization between track labels and tracks content
-    if (trackLabelsViewport) {
-      const handleTrackLabelsScroll = () => {
-        const now = Date.now();
-        if (isUpdatingRef.current || now - lastVerticalSync.current < 16)
-          return;
-        lastVerticalSync.current = now;
-        isUpdatingRef.current = true;
-        tracksViewport.scrollTop = trackLabelsViewport.scrollTop;
-        isUpdatingRef.current = false;
-      };
-      const handleTracksVerticalScroll = () => {
-        const now = Date.now();
-        if (isUpdatingRef.current || now - lastVerticalSync.current < 16)
-          return;
-        lastVerticalSync.current = now;
-        isUpdatingRef.current = true;
-        trackLabelsViewport.scrollTop = tracksViewport.scrollTop;
-        isUpdatingRef.current = false;
-      };
-
-      trackLabelsViewport.addEventListener("scroll", handleTrackLabelsScroll);
-      tracksViewport.addEventListener("scroll", handleTracksVerticalScroll);
-
-      return () => {
-        rulerViewport.removeEventListener("scroll", handleRulerScroll);
-        tracksViewport.removeEventListener("scroll", handleTracksScroll);
-        trackLabelsViewport.removeEventListener(
-          "scroll",
-          handleTrackLabelsScroll
-        );
-        tracksViewport.removeEventListener(
-          "scroll",
-          handleTracksVerticalScroll
-        );
-      };
-    }
+    // Add wheel event listener with passive: false to allow preventDefault
+    timelineContainer.addEventListener("wheel", handleWheelCapture, { passive: false });
 
     return () => {
-      rulerViewport.removeEventListener("scroll", handleRulerScroll);
-      tracksViewport.removeEventListener("scroll", handleTracksScroll);
+      timelineContainer.removeEventListener("wheel", handleWheelCapture);
     };
-  }, []);
+  }, [handleWheel, isInTimeline]);
 
   return (
     <div
@@ -591,10 +525,9 @@ export function Timeline() {
       onMouseLeave={() => setIsInTimeline(false)}
     >
       {/* Toolbar */}
-      <div className="border-b flex items-center justify-between px-2 py-1">
+      <div className="border-b flex items-center justify-between px-2 py-1 bg-background z-90">
         <div className="flex items-center gap-1 w-full">
           <TooltipProvider delayDuration={500}>
-            {/* Play/Pause Button */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -615,14 +548,12 @@ export function Timeline() {
               </TooltipContent>
             </Tooltip>
             <div className="w-px h-6 bg-border mx-1" />
-            {/* Time Display */}
             <div
               className="text-xs text-muted-foreground font-mono px-2"
               style={{ minWidth: "18ch", textAlign: "center" }}
             >
               {currentTime.toFixed(1)}s / {duration.toFixed(1)}s
             </div>
-            {/* Test Clip Button - for debugging */}
             {tracks.length === 0 && (
               <>
                 <div className="w-px h-6 bg-border mx-1" />
@@ -760,172 +691,15 @@ export function Timeline() {
       </div>
 
       {/* Timeline Container */}
-      <div
-        className="flex-1 flex flex-col overflow-hidden relative"
-        ref={timelineRef}
-      >
-        <TimelinePlayhead
-          currentTime={currentTime}
-          duration={duration}
-          zoomLevel={zoomLevel}
-          tracks={tracks}
-          seek={seek}
-          rulerRef={rulerRef}
-          rulerScrollRef={rulerScrollRef}
-          tracksScrollRef={tracksScrollRef}
-          trackLabelsRef={trackLabelsRef}
-          timelineRef={timelineRef}
-          playheadRef={playheadRef}
-          isSnappingToPlayhead={
-            showSnapIndicator && currentSnapPoint?.type === "playhead"
-          }
-        />
-        <SnapIndicator
-          snapPoint={currentSnapPoint}
-          zoomLevel={zoomLevel}
-          tracks={tracks}
-          timelineRef={timelineRef}
-          trackLabelsRef={trackLabelsRef}
-          isVisible={showSnapIndicator}
-        />
-        {/* Timeline Header with Ruler */}
-        <div className="flex bg-panel sticky top-0 z-10">
-          {/* Track Labels Header */}
-          <div className="w-48 flex-shrink-0 bg-muted/30 border-r flex items-center justify-between px-3 py-2">
-            {/* Empty space */}
-            <span className="text-sm font-medium text-muted-foreground opacity-0">
-              .
-            </span>
-          </div>
 
-          {/* Timeline Ruler */}
-          <div
-            className="flex-1 relative overflow-hidden h-4"
-            onWheel={handleWheel}
-            onMouseDown={handleSelectionMouseDown}
-            onClick={handleTimelineContentClick}
-            data-ruler-area
-          >
-            <ScrollArea className="w-full" ref={rulerScrollRef}>
-              <div
-                ref={rulerRef}
-                className="relative h-4 select-none cursor-default"
-                style={{
-                  width: `${dynamicTimelineWidth}px`,
-                }}
-                onMouseDown={handleRulerMouseDown}
-              >
-                {/* Time markers */}
-                {(() => {
-                  // Calculate appropriate time interval based on zoom level
-                  const getTimeInterval = (zoom: number) => {
-                    const pixelsPerSecond =
-                      TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoom;
-                    if (pixelsPerSecond >= 200) return 0.1; // Every 0.1s when very zoomed in
-                    if (pixelsPerSecond >= 100) return 0.5; // Every 0.5s when zoomed in
-                    if (pixelsPerSecond >= 50) return 1; // Every 1s at normal zoom
-                    if (pixelsPerSecond >= 25) return 2; // Every 2s when zoomed out
-                    if (pixelsPerSecond >= 12) return 5; // Every 5s when more zoomed out
-                    if (pixelsPerSecond >= 6) return 10; // Every 10s when very zoomed out
-                    return 30; // Every 30s when extremely zoomed out
-                  };
-
-                  const interval = getTimeInterval(zoomLevel);
-                  const markerCount = Math.ceil(duration / interval) + 1;
-
-                  return Array.from({ length: markerCount }, (_, i) => {
-                    const time = i * interval;
-                    if (time > duration) return null;
-
-                    const isMainMarker =
-                      time % (interval >= 1 ? Math.max(1, interval) : 1) === 0;
-
-                    return (
-                      <div
-                        key={i}
-                        className={`absolute top-0 bottom-0 ${
-                          isMainMarker
-                            ? "border-l border-muted-foreground/40"
-                            : "border-l border-muted-foreground/20"
-                        }`}
-                        style={{
-                          left: `${time * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel}px`,
-                        }}
-                      >
-                        <span
-                          className={`absolute top-1 left-1 text-[0.6rem] ${
-                            isMainMarker
-                              ? "text-muted-foreground font-medium"
-                              : "text-muted-foreground/70"
-                          }`}
-                        >
-                          {(() => {
-                            const formatTime = (seconds: number) => {
-                              const hours = Math.floor(seconds / 3600);
-                              const minutes = Math.floor((seconds % 3600) / 60);
-                              const secs = seconds % 60;
-
-                              if (hours > 0) {
-                                return `${hours}:${minutes.toString().padStart(2, "0")}:${Math.floor(secs).toString().padStart(2, "0")}`;
-                              } else if (minutes > 0) {
-                                return `${minutes}:${Math.floor(secs).toString().padStart(2, "0")}`;
-                              } else if (interval >= 1) {
-                                return `${Math.floor(secs)}s`;
-                              } else {
-                                return `${secs.toFixed(1)}s`;
-                              }
-                            };
-                            return formatTime(time);
-                          })()}
-                        </span>
-                      </div>
-                    );
-                  }).filter(Boolean);
-                })()}
-              </div>
-            </ScrollArea>
-          </div>
-        </div>
-
-        {/* Tracks Area */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Track Labels */}
-          {tracks.length > 0 && (
-            <div
-              ref={trackLabelsRef}
-              className="w-48 flex-shrink-0 border-r bg-panel-accent overflow-y-auto"
-              data-track-labels
-            >
-              <ScrollArea className="w-full h-full" ref={trackLabelsScrollRef}>
-                <div className="flex flex-col gap-1">
-                  {tracks.map((track) => (
-                    <div
-                      key={track.id}
-                      className="flex items-center px-3 border-b border-muted/30 group bg-foreground/5"
-                      style={{ height: `${getTrackHeight(track.type)}px` }}
-                    >
-                      <div className="flex items-center flex-1 min-w-0">
-                        <TrackIcon track={track} />
-                      </div>
-                      {track.muted && (
-                        <span className="ml-2 text-xs text-red-500 font-semibold flex-shrink-0">
-                          Muted
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-          )}
+      <ScrollArea className=" w-full h-full" style={{ minWidth: `${dynamicTimelineWidth}px` }}>
 
           {/* Timeline Tracks Content */}
           <div
-            className="flex-1 relative overflow-hidden"
-            onWheel={handleWheel}
+            ref={timelineRef}
+            className="relative w-full overflow-x-auto h-full min-h-72"
             onMouseDown={handleSelectionMouseDown}
             onClick={handleTimelineContentClick}
-            ref={tracksContainerRef}
           >
             <SelectionBox
               startPos={selectionBox?.startPos || null}
@@ -933,65 +707,164 @@ export function Timeline() {
               containerRef={tracksContainerRef}
               isActive={selectionBox?.isActive || false}
             />
-            <ScrollArea className="w-full h-full" ref={tracksScrollRef}>
-              <div
-                className="relative flex-1"
-                style={{
-                  height: `${Math.max(200, Math.min(800, getTotalTracksHeight(tracks)))}px`,
-                  width: `${dynamicTimelineWidth}px`,
-                }}
-              >
-                {tracks.length === 0 ? (
-                  <div></div>
-                ) : (
-                  <>
-                    {tracks.map((track, index) => (
-                      <ContextMenu key={track.id}>
-                        <ContextMenuTrigger asChild>
+
+              <TimelinePlayhead
+                currentTime={currentTime}
+                duration={duration}
+                zoomLevel={zoomLevel}
+                tracks={tracks}
+                seek={seek}
+                rulerRef={rulerRef}
+                rulerScrollRef={rulerScrollRef}
+                tracksScrollRef={tracksScrollRef}
+                timelineRef={timelineRef}
+                playheadRef={playheadRef}
+                isSnappingToPlayhead={
+                  showSnapIndicator && currentSnapPoint?.type === "playhead"
+                }
+              />
+              <SnapIndicator
+                snapPoint={currentSnapPoint}
+                zoomLevel={zoomLevel}
+                tracks={tracks}
+                timelineRef={timelineRef}
+                isVisible={showSnapIndicator}
+              />
+              <div ref={tracksContainerRef} className="relative w-full h-full min-h-64">
+                <div
+                  className="sticky top-0 h-5 w-full ml-48  z-[99] bg-card/[0.99] border-b border-muted/30"
+                  onMouseDown={handleSelectionMouseDown}
+                  onClick={handleTimelineContentClick}
+                  data-ruler-area
+                >
+
+                  <div
+                    ref={rulerRef}
+                    className="relative h-5 select-none cursor-default pb-1"
+                    onMouseDown={handleRulerMouseDown}
+                  >
+                    {(() => {
+                      // Calculate appropriate time interval based on zoom level
+                      const getTimeInterval = (zoom: number) => {
+                        const pixelsPerSecond =
+                          TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoom;
+                        if (pixelsPerSecond >= 200) return 0.1; // Every 0.1s when very zoomed in
+                        if (pixelsPerSecond >= 100) return 0.5; // Every 0.5s when zoomed in
+                        if (pixelsPerSecond >= 50) return 1; // Every 1s at normal zoom
+                        if (pixelsPerSecond >= 25) return 2; // Every 2s when zoomed out
+                        if (pixelsPerSecond >= 12) return 5; // Every 5s when more zoomed out
+                        if (pixelsPerSecond >= 6) return 10; // Every 10s when very zoomed out
+                        return 30; // Every 30s when extremely zoomed out
+                      };
+
+                      const interval = getTimeInterval(zoomLevel);
+                      const markerCount = Math.ceil(duration / interval) + 1;
+
+                      return Array.from({ length: markerCount }, (_, i) => {
+                        const time = i * interval;
+                        if (time > duration) return null;
+
+                        const isMainMarker =
+                          time % (interval >= 1 ? Math.max(1, interval) : 1) === 0;
+
+                        return (
                           <div
-                            className="absolute left-0 right-0 border-b border-muted/30 py-[0.05rem]"
+                            key={i}
+                            className={`absolute top-0 bottom-0 ${isMainMarker
+                              ? "border-l border-muted-foreground/40"
+                              : "border-l border-muted-foreground/20"
+                              }`}
                             style={{
-                              top: `${getCumulativeHeightBefore(tracks, index)}px`,
-                              height: `${getTrackHeight(track.type)}px`,
-                            }}
-                            onClick={(e) => {
-                              // If clicking empty area (not on a element), deselect all elements
-                              if (
-                                !(e.target as HTMLElement).closest(
-                                  ".timeline-element"
-                                )
-                              ) {
-                                clearSelectedElements();
-                              }
+                              left: `${time * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel}px`,
                             }}
                           >
-                            <TimelineTrackContent
-                              track={track}
-                              zoomLevel={zoomLevel}
-                              onSnapPointChange={handleSnapPointChange}
-                            />
+                            <span
+                              className={`absolute top-1 left-1 text-[0.6rem] ${isMainMarker
+                                ? "text-muted-foreground font-medium"
+                                : "text-muted-foreground/70"
+                                }`}
+                            >
+                              {(() => {
+                                const formatTime = (seconds: number) => {
+                                  const hours = Math.floor(seconds / 3600);
+                                  const minutes = Math.floor((seconds % 3600) / 60);
+                                  const secs = seconds % 60;
+
+                                  if (hours > 0) {
+                                    return `${hours}:${minutes.toString().padStart(2, "0")}:${Math.floor(secs).toString().padStart(2, "0")}`;
+                                  } else if (minutes > 0) {
+                                    return `${minutes}:${Math.floor(secs).toString().padStart(2, "0")}`;
+                                  } else if (interval >= 1) {
+                                    return `${Math.floor(secs)}s`;
+                                  } else {
+                                    return `${secs.toFixed(1)}s`;
+                                  }
+                                };
+                                return formatTime(time);
+                              })()}
+                            </span>
                           </div>
-                        </ContextMenuTrigger>
-                        <ContextMenuContent>
-                          <ContextMenuItem
-                            onClick={() => toggleTrackMute(track.id)}
-                          >
-                            {track.muted ? "Unmute Track" : "Mute Track"}
-                          </ContextMenuItem>
-                          <ContextMenuItem>
-                            Track settings (soon)
-                          </ContextMenuItem>
-                        </ContextMenuContent>
-                      </ContextMenu>
-                    ))}
-                  </>
-                )}
+                        );
+                      }).filter(Boolean);
+                    })()}
+                  </div>
+                </div>
+                {tracks.map((track, index) => (
+                  <div key={track.id} className="relative flex flex-row w-full">
+
+                    <div
+                      className="sticky left-0 flex w-48 items-center border-b border-muted/30 group bg-card/[0.99] z-[101]"
+                      style={{ height: `${getTrackHeight(track.type)}px` }}
+                    >
+                      <div className="flex items-center gap-2 px-2">
+                        <TrackIcon track={track} />
+                      </div>
+                      {track.muted && (
+                        <span className=" text-xs text-red-500 font-semibold">
+                          Muted
+                        </span>
+                      )}
+                    </div>
+                    <ContextMenu>
+                      <ContextMenuTrigger asChild>
+                        <div
+                          className="absolute left-0 right-0 h-full border-b border-muted/30 ml-48"
+                          onClick={(e) => {
+                            // If clicking empty area (not on a element), deselect all elements
+                            if (
+                              !(e.target as HTMLElement).closest(
+                                ".timeline-element"
+                              )
+                            ) {
+                              clearSelectedElements();
+                            }
+                          }}
+                        >
+                          <TimelineTrackContent
+                            track={track}
+                            zoomLevel={zoomLevel}
+                            onSnapPointChange={handleSnapPointChange}
+                          />
+                        </div>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent>
+                        <ContextMenuItem
+                          onClick={() => toggleTrackMute(track.id)}
+                        >
+                          {track.muted ? "Unmute Track" : "Mute Track"}
+                        </ContextMenuItem>
+                        <ContextMenuItem>
+                          Track settings (soon)
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  </div>
+                ))}
+
               </div>
-            </ScrollArea>
           </div>
-        </div>
+        </ScrollArea>
       </div>
-    </div>
   );
 }
 
