@@ -66,7 +66,7 @@ export function TimelinePlayhead({
   return (
     <div
       ref={playheadRef}
-      className="absolute pointer-events-auto z-[100]  ml-48"
+      className="absolute pointer-events-auto z-[100] ml-48"
       style={{
         left: `${leftPosition}px`,
         top: 0,
@@ -112,5 +112,3 @@ export function useTimelinePlayheadRuler({
 
   return { handleRulerMouseDown, isDraggingRuler };
 }
-
-export { TimelinePlayhead as default };
