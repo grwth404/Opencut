@@ -11,17 +11,14 @@ export function useTimelineWheelHandler({
   isInTimeline,
   handleWheel,
 }: TimelineWheelHandlerProps) {
-  // Add wheel event listeners with passive: false to allow preventDefault
   useEffect(() => {
     const timelineContainer = timelineRef.current;
     if (!timelineContainer || !isInTimeline) return;
 
     const handleWheelCapture = (e: WheelEvent) => {
-      // Call the existing handleWheel function
       handleWheel(e as any);
     };
 
-    // Add wheel event listener with passive: false to allow preventDefault
     timelineContainer.addEventListener("wheel", handleWheelCapture, { passive: false });
 
     return () => {

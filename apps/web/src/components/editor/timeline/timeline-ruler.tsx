@@ -83,7 +83,7 @@ export function TimelineRuler({
       markers.push(
         <div
           key={i}
-          className={`absolute top-0 bottom-0 z-[97] ${
+          className={`absolute top-0 bottom-0 z-[99] ${
             isMainMarker
               ? "border-l border-muted-foreground/40"
               : "border-l border-muted-foreground/20"
@@ -91,7 +91,7 @@ export function TimelineRuler({
           style={{ left: `${leftPosition}px` }}
         >
           <span
-            className={`absolute top-1 left-1 text-[0.6rem] z-[97] ${
+            className={`absolute top-1 left-1 text-[0.6rem] z-[99] ${
               isMainMarker
                 ? "text-muted-foreground font-medium"
                 : "text-muted-foreground/70"
@@ -108,14 +108,14 @@ export function TimelineRuler({
 
   return (
     <div
-      className="sticky top-0 bg-card/[0.99] border-b border-muted/30 z-[97]"
+      className="sticky top-0 bg-card/[0.99] border-b border-muted/30 z-[99]"
       onMouseDown={handleSelectionMouseDown}
       onClick={handleTimelineContentClick}
       data-ruler-area
     >
       <div
         ref={rulerRef}
-        className="relative h-5 select-none cursor-default pb-1 z-[97]"
+        className="relative h-5 select-none cursor-default pb-1 z-[99]"
         onMouseDown={handleRulerMouseDown}
       >
         {rulerMarkers}

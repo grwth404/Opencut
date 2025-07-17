@@ -129,7 +129,6 @@ export function Timeline() {
   useTimelineScrollSync({
     rulerScrollRef,
     tracksScrollRef,
-    trackLabelsScrollRef,
   });
 
   // Wheel event handling

@@ -59,27 +59,39 @@ export function TimelinePlayhead({
   const leftPosition = playheadPosition * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
 
   return (
-    <div
-      ref={playheadRef}
-      className="absolute pointer-events-auto z-[95]"
-      style={{
-        left: `${trackLabelsWidth + leftPosition}px`,
-        top: 0,
-        bottom: 0,
-        width: "2px", // Slightly wider for better click target
-      }}
-      onMouseDown={handlePlayheadMouseDown}
-    >
-      {/* The playhead line spanning full height */}
+    <>
+      {/* Playhead line container */}
       <div
-        className={`absolute left-0 w-0.5 cursor-col-resize h-full ${isSnappingToPlayhead ? "bg-primary" : "bg-foreground"}`}
-      />
+        ref={playheadRef}
+        className="absolute pointer-events-auto z-[95]"
+        style={{
+          left: `${trackLabelsWidth + leftPosition}px`,
+          top: 0,
+          bottom: 0,
+          width: "2px", // Slightly wider for better click target
+        }}
+        onMouseDown={handlePlayheadMouseDown}
+      >
+        {/* The playhead line spanning full height */}
+        <div
+          className={`absolute left-0 w-0.5 cursor-col-resize h-full ${isSnappingToPlayhead ? "bg-primary" : "bg-foreground"}`}
+        />
+      </div>
 
-      {/* Playhead dot indicator at the top (in ruler area) */}
+      {/* Playhead dot indicator - separate container with highest z-index */}
       <div
-        className={`sticky top-1 left-1 -translate-x-[40%] transform w-3 h-3 rounded-full shadow-sm ${isSnappingToPlayhead ? "bg-primary border-primary" : "bg-foreground border-foreground"}`}
-      />
-    </div>
+        className="absolute pointer-events-none z-[100]"
+        style={{
+          left: `${trackLabelsWidth + leftPosition}px`,
+          top: 0,
+          bottom: 0,
+        }}
+      >
+        <div
+          className={`sticky top-1 left-1 -translate-x-[40%] transform w-3 h-3 rounded-full shadow-sm ${isSnappingToPlayhead ? "bg-primary border-primary" : "bg-foreground border-foreground"}`}
+        />
+      </div>
+    </>
   );
 }
 
