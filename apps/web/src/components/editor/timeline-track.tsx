@@ -39,6 +39,7 @@ export function TimelineTrackContent({
     addTrack,
     moveElementToTrack,
     updateElementStartTime,
+    updateElementStartTimeWithRipple,
     addElementToTrack,
     selectedElements,
     selectElement,
@@ -49,6 +50,7 @@ export function TimelineTrackContent({
     clearSelectedElements,
     insertTrackAt,
     snappingEnabled,
+    rippleEditingEnabled,
   } = useTimelineStore();
 
   const { currentTime } = usePlaybackStore();
@@ -272,7 +274,20 @@ export function TimelineTrackContent({
 
           if (!hasOverlap) {
             if (dragState.trackId === track.id) {
-              updateElementStartTime(track.id, dragState.elementId, finalTime);
+              // Use ripple editing if enabled, otherwise regular update
+              if (rippleEditingEnabled) {
+                updateElementStartTimeWithRipple(
+                  track.id,
+                  dragState.elementId,
+                  finalTime
+                );
+              } else {
+                updateElementStartTime(
+                  track.id,
+                  dragState.elementId,
+                  finalTime
+                );
+              }
             } else {
               moveElementToTrack(
                 dragState.trackId,
@@ -280,11 +295,20 @@ export function TimelineTrackContent({
                 dragState.elementId
               );
               requestAnimationFrame(() => {
-                updateElementStartTime(
-                  track.id,
-                  dragState.elementId!,
-                  finalTime
-                );
+                // Use ripple editing if enabled, otherwise regular update
+                if (rippleEditingEnabled) {
+                  updateElementStartTimeWithRipple(
+                    track.id,
+                    dragState.elementId!,
+                    finalTime
+                  );
+                } else {
+                  updateElementStartTime(
+                    track.id,
+                    dragState.elementId!,
+                    finalTime
+                  );
+                }
               });
             }
           }
@@ -318,7 +342,16 @@ export function TimelineTrackContent({
           });
 
           if (!hasOverlap) {
-            updateElementStartTime(track.id, dragState.elementId, finalTime);
+            // Use ripple editing if enabled, otherwise regular update
+            if (rippleEditingEnabled) {
+              updateElementStartTimeWithRipple(
+                track.id,
+                dragState.elementId,
+                finalTime
+              );
+            } else {
+              updateElementStartTime(track.id, dragState.elementId, finalTime);
+            }
           }
         }
       }
