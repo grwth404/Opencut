@@ -21,7 +21,6 @@ Thank you for your interest in contributing to OpenCut! This document provides g
    ```
 
 5. Install dependencies: `bun install`
-
 6. Start the development server: `bun run dev`
 
 > **Note:** If you see an error like `Unsupported URL Type "workspace:*"` when running `npm install`, you have two options:
@@ -59,6 +58,8 @@ If you're unsure whether your idea falls into the preview category, feel free to
 - Node.js 18+
 - Bun (latest version)
 - Docker (for local database)
+
+> **Note:** Docker is optional, but it's essential for running the local database and Redis services. If you're planning to contribute to frontend features, you can skip the Docker setup. If you have followed the steps above in [Getting Started](#getting-started), you're all set to go!
 
 ### Local Development
 
