@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ResizeState, TimelineElement, TimelineTrack } from "@/types/timeline";
 import { useMediaStore } from "@/stores/media-store";
+import { useTimelineStore } from "@/stores/timeline-store";
 
 interface UseTimelineElementResizeProps {
   element: TimelineElement;
@@ -28,6 +29,7 @@ export function useTimelineElementResize({
 }: UseTimelineElementResizeProps) {
   const [resizing, setResizing] = useState<ResizeState | null>(null);
   const { mediaItems } = useMediaStore();
+  const { updateElementStartTime } = useTimelineStore();
 
   // Set up document-level mouse listeners during resize (like proper drag behavior)
   useEffect(() => {
@@ -100,12 +102,20 @@ export function useTimelineElementResize({
     const deltaTime = deltaX / (50 * zoomLevel);
 
     if (resizing.side === "left") {
-      // Left resize - only trim within original duration
+      // Left resize - trim content AND move element position to the right
       const maxAllowed = element.duration - resizing.initialTrimEnd - 0.1;
       const calculated = resizing.initialTrimStart + deltaTime;
       const newTrimStart = Math.max(0, Math.min(maxAllowed, calculated));
 
+      // Calculate how much the trim changed and update startTime accordingly
+      const trimDelta = newTrimStart - resizing.initialTrimStart;
+      const newStartTime = element.startTime + trimDelta;
+
+      // Update both trim and start time for proper left resize behavior
       onUpdateTrim(track.id, element.id, newTrimStart, resizing.initialTrimEnd);
+
+      // Update startTime so element moves to the right when trimming from left
+      updateElementStartTime(track.id, element.id, newStartTime);
     } else {
       // Right resize - can extend duration for supported element types
       const calculated = resizing.initialTrimEnd - deltaTime;
