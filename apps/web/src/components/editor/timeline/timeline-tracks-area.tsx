@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import { Plus } from "lucide-react";
 import {
   ContextMenu,
@@ -7,7 +6,7 @@ import {
   ContextMenuTrigger,
 } from "../../ui/context-menu";
 import { useTimelineStore } from "@/stores/timeline-store";
-import { TimelineTrackContent } from "../timeline-track";
+import { TimelineTrackContent } from "./timeline-track";
 import { TrackIcon } from "./track-icon";
 import { getTrackHeight } from "@/constants/timeline-constants";
 import type { TimelineTrack } from "@/types/timeline";
@@ -26,16 +25,17 @@ export function TimelineTracksArea({
   handleSnapPointChange,
   clearSelectedElements,
 }: TimelineTracksAreaProps) {
-  const { addTrack, toggleTrackMute } = useTimelineStore();
+  const { toggleTrackMute } = useTimelineStore();
 
   return (
     <>
-      {/* Track Rows */}
-      {tracks.map((track, index) => (
-        <Fragment key={track.id}>
-          {/* Left Column (Sticky Track Labels) */}
+      <div className="h-full flex flex-col absolute left-0 top-0 w-24 bg-panel border-r border-black z-[100]">
+        <div className="sticky left-0 h-5 border-inset z-[100]"></div>
+
+        {tracks.map((track, index) => (
           <div
-            className="sticky left-0 flex items-center border-b border-panel border-inset group bg-card z-[100]"
+            key={track.id}
+            className="sticky left-0 flex items-center border-b border-panel border-inset group z-[100]"
             style={{ height: `${getTrackHeight(track.type)}px` }}
           >
             <div className="flex items-center gap-2 px-2">
@@ -45,14 +45,17 @@ export function TimelineTracksArea({
               <span className="text-xs text-red-500 font-semibold">Muted</span>
             )}
           </div>
+        ))}
+      </div>
 
-          {/* Scrollable Track Content */}
-          <ContextMenu>
+      <div className="h-full flex flex-col pt-5 ml-24">
+        {tracks.map((track, index) => (
+          <ContextMenu key={track.id}>
             <ContextMenuTrigger asChild>
               <div
-                className=" h-full"
+                className="h-full"
+                style={{ height: `${getTrackHeight(track.type)}px` }}
                 onClick={(e) => {
-                  // If clicking empty area (not on a element), deselect all elements
                   if (!(e.target as HTMLElement).closest(".timeline-element")) {
                     clearSelectedElements();
                   }
@@ -72,17 +75,9 @@ export function TimelineTracksArea({
               <ContextMenuItem>Track settings (soon)</ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
-        </Fragment>
-      ))}
-      {/* Add Track Button - spans full width */}
-      <div
-        onClick={() => addTrack("media")}
-        className="col-span-1 sticky left-0 w-full flex items-center border-b border-muted bg-card hover:bg-card/50 transition-colors cursor-pointer z-[100]"
-        style={{ height: `${getTrackHeight("media")}px` }}
-      >
-        <div className="w-full flex  justify-center items-center">
-          <Plus className="w-4 h-4 text-muted-foreground" />
-        </div>
+        ))}
+
+        <div style={{ height: `${getTrackHeight("media")}px` }}></div>
       </div>
     </>
   );

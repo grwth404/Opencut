@@ -1,25 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "../ui/button";
-import {
-  MoreVertical,
-  Scissors,
-  Trash2,
-  SplitSquareHorizontal,
-  Music,
-  ChevronRight,
-  ChevronLeft,
-  Type,
-  Copy,
-  RefreshCw,
-} from "lucide-react";
+import { Scissors, Trash2, Copy, RefreshCw } from "lucide-react";
 import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
-import AudioWaveform from "./audio-waveform";
+import AudioWaveform from "@/components/editor/audio-waveform";
 import { toast } from "sonner";
-import { TimelineElementProps, TrackType } from "@/types/timeline";
+import { TimelineElementProps } from "@/types/timeline";
 import { useTimelineElementResize } from "@/hooks/use-timeline-element-resize";
 import {
   getTrackElementClasses,
@@ -27,22 +14,12 @@ import {
   getTrackHeight,
 } from "@/constants/timeline-constants";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-} from "../ui/dropdown-menu";
-import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from "../ui/context-menu";
+} from "@/components/ui/context-menu";
 
 export function TimelineElement({
   element,
@@ -59,29 +36,19 @@ export function TimelineElement({
     removeElementFromTrack,
     dragState,
     splitElement,
-    splitAndKeepLeft,
-    splitAndKeepRight,
-    separateAudio,
     addElementToTrack,
     replaceElementMedia,
   } = useTimelineStore();
   const { currentTime } = usePlaybackStore();
 
-  const [elementMenuOpen, setElementMenuOpen] = useState(false);
-
-  const {
-    resizing,
-    isResizing,
-    handleResizeStart,
-    handleResizeMove,
-    handleResizeEnd,
-  } = useTimelineElementResize({
-    element,
-    track,
-    zoomLevel,
-    onUpdateTrim: updateElementTrim,
-    onUpdateDuration: updateElementDuration,
-  });
+  const { resizing, handleResizeStart, handleResizeMove, handleResizeEnd } =
+    useTimelineElementResize({
+      element,
+      track,
+      zoomLevel,
+      onUpdateTrim: updateElementTrim,
+      onUpdateDuration: updateElementDuration,
+    });
 
   const effectiveDuration =
     element.duration - element.trimStart - element.trimEnd;
@@ -97,92 +64,6 @@ export function TimelineElement({
       ? dragState.currentTime
       : element.startTime;
   const elementLeft = elementStartTime * 50 * zoomLevel;
-
-  const handleDeleteElement = () => {
-    removeElementFromTrack(track.id, element.id);
-    setElementMenuOpen(false);
-  };
-
-  const handleSplitElement = () => {
-    const effectiveStart = element.startTime;
-    const effectiveEnd =
-      element.startTime +
-      (element.duration - element.trimStart - element.trimEnd);
-
-    if (currentTime <= effectiveStart || currentTime >= effectiveEnd) {
-      toast.error("Playhead must be within element to split");
-      return;
-    }
-
-    const secondElementId = splitElement(track.id, element.id, currentTime);
-    if (!secondElementId) {
-      toast.error("Failed to split element");
-    }
-    setElementMenuOpen(false);
-  };
-
-  const handleSplitAndKeepLeft = () => {
-    const effectiveStart = element.startTime;
-    const effectiveEnd =
-      element.startTime +
-      (element.duration - element.trimStart - element.trimEnd);
-
-    if (currentTime <= effectiveStart || currentTime >= effectiveEnd) {
-      toast.error("Playhead must be within element");
-      return;
-    }
-
-    splitAndKeepLeft(track.id, element.id, currentTime);
-    setElementMenuOpen(false);
-  };
-
-  const handleSplitAndKeepRight = () => {
-    const effectiveStart = element.startTime;
-    const effectiveEnd =
-      element.startTime +
-      (element.duration - element.trimStart - element.trimEnd);
-
-    if (currentTime <= effectiveStart || currentTime >= effectiveEnd) {
-      toast.error("Playhead must be within element");
-      return;
-    }
-
-    splitAndKeepRight(track.id, element.id, currentTime);
-    setElementMenuOpen(false);
-  };
-
-  const handleSeparateAudio = () => {
-    if (element.type !== "media") {
-      toast.error("Audio separation only available for media elements");
-      return;
-    }
-
-    const mediaItem = mediaItems.find((item) => item.id === element.mediaId);
-    if (!mediaItem || mediaItem.type !== "video") {
-      toast.error("Audio separation only available for video elements");
-      return;
-    }
-
-    const audioElementId = separateAudio(track.id, element.id);
-    if (!audioElementId) {
-      toast.error("Failed to separate audio");
-    }
-    setElementMenuOpen(false);
-  };
-
-  const canSplitAtPlayhead = () => {
-    const effectiveStart = element.startTime;
-    const effectiveEnd =
-      element.startTime +
-      (element.duration - element.trimStart - element.trimEnd);
-    return currentTime > effectiveStart && currentTime < effectiveEnd;
-  };
-
-  const canSeparateAudio = () => {
-    if (element.type !== "media") return false;
-    const mediaItem = mediaItems.find((item) => item.id === element.mediaId);
-    return mediaItem?.type === "video" && track.type === "media";
-  };
 
   const handleElementSplitContext = () => {
     const effectiveStart = element.startTime;

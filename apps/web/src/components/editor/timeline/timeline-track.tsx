@@ -7,8 +7,6 @@ import { toast } from "sonner";
 import { TimelineElement } from "./timeline-element";
 import {
   TimelineTrack,
-  sortTracksByOrder,
-  ensureMainTrack,
   getMainTrack,
   canElementGoOnTrack,
 } from "@/types/timeline";
@@ -54,7 +52,7 @@ export function TimelineTrackContent({
   const { currentTime } = usePlaybackStore();
 
   // Initialize snapping hook
-  const { snapElementPosition, snapElementEdge } = useTimelineSnapping({
+  const { snapElementEdge } = useTimelineSnapping({
     snapThreshold: 10,
     enableElementSnapping: snappingEnabled,
     enablePlayheadSnapping: snappingEnabled,
