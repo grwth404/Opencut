@@ -39,25 +39,35 @@
 
 Before you begin, ensure you have the following installed on your system:
 
+- [Node.js](https://nodejs.org/en/) (v18 or later)
 - [Bun](https://bun.sh/docs/installation)
+  (for `npm` alternative)
 - [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
-- [Node.js](https://nodejs.org/en/) (for `npm` alternative)
+
+> **Note:** Docker is optional, but it's essential for running the local database and Redis services. If you're planning to run the frontend or want to contribute to frontend features, you can skip the Docker setup. If you have followed the steps below in [Setup](#setup), you're all set to go!
 
 ### Setup
 
 1. Fork the repository
 2. Clone your fork locally
 3. Navigate to the web app directory: `cd apps/web`
-4. Install dependencies: `bun install`
-5. Start the development server: `bun dev`
+4. Copy `.env.example` to `.env.local`:
+
+   ```bash
+   # Unix/Linux/Mac
+   cp .env.example .env.local
+
+   # Windows Command Prompt
+   copy .env.example .env.local
+
+   # Windows PowerShell
+   Copy-Item .env.example .env.local
+   ```
+
+5. Install dependencies: `bun install`
+6. Start the development server: `bun dev`
 
 ## Development Setup
-
-### Prerequisites
-
-- Node.js 18+
-- Bun (latest version)
-- Docker (for local database)
 
 ### Local Development
 
