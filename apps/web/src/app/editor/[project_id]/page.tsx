@@ -140,12 +140,6 @@ export default function Editor() {
           </ResizablePanelGroup>
         </div>
       </div>
-      <Onboarding
-        isOpen={isOnboardingOpen}
-        onClose={() => {
-          setIsOnboardingOpen(false);
-        }}
-      />
     </EditorProvider>
   );
 }
