@@ -245,7 +245,6 @@ export default function ProjectsPage() {
                 isSelectionMode={isSelectionMode}
                 isSelected={selectedProjects.has(project.id)}
                 onSelect={handleSelectProject}
-                searchQuery={searchQuery}
               />
             ))}
           </div>
@@ -266,7 +265,6 @@ interface ProjectCardProps {
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onSelect?: (projectId: string, checked: boolean) => void;
-  searchQuery?: string;
 }
 
 function ProjectCard({
@@ -274,7 +272,6 @@ function ProjectCard({
   isSelectionMode = false,
   isSelected = false,
   onSelect,
-  searchQuery,
 }: ProjectCardProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -363,7 +360,7 @@ function ProjectCard({
             <CardContent className="px-0 pt-5 flex flex-col gap-1">
               <div className="flex items-start justify-between">
                 <h3 className="font-medium text-sm leading-snug group-hover:text-foreground/90 transition-colors line-clamp-2">
-                  <Highlight text={project.name} query={searchQuery} />
+                  {project.name}
                 </h3>
                 {!isSelectionMode && (
                   <DropdownMenu
@@ -470,7 +467,7 @@ function ProjectCard({
             <CardContent className="px-0 pt-5 flex flex-col gap-1">
               <div className="flex items-start justify-between">
                 <h3 className="font-medium text-sm leading-snug group-hover:text-foreground/90 transition-colors line-clamp-2">
-                  <Highlight text={project.name} query={searchQuery} />
+                  {project.name}
                 </h3>
                 <DropdownMenu
                   open={isDropdownOpen}
@@ -555,28 +552,6 @@ function ProjectCard({
         projectName={project.name}
       />
     </>
-  );
-}
-
-function Highlight({ text, query }: { text: string; query?: string }) {
-  if (!query || query.trim() === "") {
-    return <span>{text}</span>;
-  }
-
-  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const parts = text.split(new RegExp(`(${escapedQuery})`, "gi"));
-  return (
-    <span>
-      {parts.map((part, i) =>
-        part.toLowerCase() === query.toLowerCase() ? (
-          <mark key={i} className="bg-yellow-200 text-black">
-            {part}
-          </mark>
-        ) : (
-          part
-        )
-      )}
-    </span>
   );
 }
 
