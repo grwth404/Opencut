@@ -177,6 +177,7 @@ function PlusButton({
         e.stopPropagation();
         onClick?.();
       }}
+      title={tooltipText}
     >
       <Plus className="!size-3" />
     </Button>
