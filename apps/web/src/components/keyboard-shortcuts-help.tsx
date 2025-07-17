@@ -16,7 +16,7 @@ import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 const KeyBadge = ({ keyName }: { keyName: string }) => {
   // Replace common key names with symbols or friendly names
-  const displayKey = keyName
+  return keyName
     .replace("Cmd", "⌘")
     .replace("Shift", "Shift")
     .replace("ArrowLeft", "Arrow Left")
@@ -26,12 +26,6 @@ const KeyBadge = ({ keyName }: { keyName: string }) => {
     .replace("←", "◀")
     .replace("→", "▶")
     .replace("Space", "Space");
-
-  return (
-    <Badge variant="secondary" className="font-mono text-xs px-1 py-1">
-      {displayKey}
-    </Badge>
-  );
 };
 
 const ShortcutItem = ({ shortcut }: { shortcut: any }) => {
@@ -65,12 +59,9 @@ const ShortcutItem = ({ shortcut }: { shortcut: any }) => {
           <div key={index} className="flex items-center gap-1">
             <div className="flex items-center">
               {key.split("+").map((keyPart: string, partIndex: number) => (
-                <div key={partIndex} className="flex items-center gap-1">
+                <kbd key={partIndex} className="shortcut-key">
                   <KeyBadge keyName={keyPart} />
-                  {partIndex < key.split("+").length - 1 && (
-                    <span className="text-xs text-muted-foreground">+</span>
-                  )}
-                </div>
+                </kbd>
               ))}
             </div>
             {index < displayKeys.length - 1 && (
