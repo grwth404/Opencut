@@ -4,6 +4,17 @@ Thank you for your interest in contributing to OpenCut! This document provides g
 
 ## Getting Started
 
+### Prerequisites
+
+- [Node.js](https://nodejs.org/en/) (v18 or later)
+- [Bun](https://bun.sh/docs/installation)
+  (for `npm` alternative)
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
+
+> **Note:** Docker is optional, but it's essential for running the local database and Redis services. If you're planning to contribute to frontend features, you can skip the Docker setup. If you have followed the steps below in [Setup](#setup), you're all set to go!
+
+### Setup
+
 1. Fork the repository
 2. Clone your fork locally
 3. Navigate to the web app directory: `cd apps/web`
@@ -52,14 +63,6 @@ The current HTML-based preview is essentially a prototype - the binary approach 
 If you're unsure whether your idea falls into the preview category, feel free to ask us [directly in discord](https://discord.gg/zmR9N35cjK) or create a GitHub issue!
 
 ## Development Setup
-
-### Prerequisites
-
-- Node.js 18+
-- Bun (latest version)
-- Docker (for local database)
-
-> **Note:** Docker is optional, but it's essential for running the local database and Redis services. If you're planning to contribute to frontend features, you can skip the Docker setup. If you have followed the steps above in [Getting Started](#getting-started), you're all set to go!
 
 ### Local Development
 
