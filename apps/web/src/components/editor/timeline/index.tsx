@@ -7,13 +7,13 @@ import { useTimelineZoom } from "@/hooks/use-timeline-zoom";
 import { useSelectionBox } from "@/hooks/use-selection-box";
 import { SnapPoint } from "@/hooks/use-timeline-snapping";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
-import { TimelineToolbar } from "./timeline/timeline-toolbar";
-import { TimelineContent } from "./timeline/timeline-content";
-import { useTimelineDragHandlers } from "./timeline/timeline-drag-handlers";
-import { useTimelineActionHandlers } from "./timeline/timeline-action-handlers";
-import { useTimelineScrollSync } from "./timeline/timeline-scroll-sync";
-import { useTimelineContentClick } from "./timeline/timeline-content-click";
-import { useTimelineWheelHandler } from "./timeline/timeline-wheel-handler";
+import { TimelineToolbar } from "./timeline-toolbar";
+import { TimelineContent } from "./timeline-content";
+import { useTimelineDragHandlers } from "./timeline-drag-handlers";
+import { useTimelineActionHandlers } from "./timeline-action-handlers";
+import { useTimelineScrollSync } from "./timeline-scroll-sync";
+import { useTimelineContentClick } from "./timeline-content-click";
+import { useTimelineWheelHandler } from "./timeline-wheel-handler";
 
 export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their elements.
