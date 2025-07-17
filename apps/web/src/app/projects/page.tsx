@@ -508,6 +508,7 @@ function ProjectCard({
         isOpen={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleDeleteProject}
+        projectName={project.name}
       />
       <RenameProjectDialog
         isOpen={isRenameDialogOpen}
