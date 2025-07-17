@@ -110,7 +110,7 @@ export function TimelineRuler({
 
 	return (
 		<div
-			className="sticky top-0 bg-card/[0.99] border-b border-muted/30 z-[99]"
+			className="sticky top-0 bg-card border-b border-muted/30 z-[99]"
 			onMouseDown={handleSelectionMouseDown}
 			onClick={handleTimelineContentClick}
 			data-ruler-area

@@ -64,7 +64,7 @@ export function TimelineContent({
 				className={`h-full grid grid-cols-[192px_1fr] ${tracks.length > 0 ? `grid-rows-[20px_repeat(${tracks.length},minmax(0,max-content))]` : "grid-rows-[20px_1fr]"}`}
 			>
 				{/* Top-Left Corner (Empty space above track labels) */}
-				<div className="sticky top-0 left-0 border-inset bg-card/[0.99]"></div>
+				<div className="sticky top-0 left-0 border-inset bg-card"></div>
 
 				{/* Top Row (Sticky Ruler Header) */}
 				<TimelineRuler

@@ -35,7 +35,7 @@ export function TimelineTracksArea({
 				<Fragment key={track.id}>
 					{/* Left Column (Sticky Track Labels) */}
 					<div
-						className="sticky left-0 flex items-center border-b border-panel border-inset group bg-card/[0.99] z-[98]"
+						className="sticky left-0 flex items-center border-b border-panel border-inset group bg-card z-[100]"
 						style={{ height: `${getTrackHeight(track.type)}px` }}
 					>
 						<div className="flex items-center gap-2 px-2">
@@ -77,7 +77,7 @@ export function TimelineTracksArea({
 			{/* Add Track Button - spans full width */}
 			<div
 				onClick={() => addTrack("media")}
-				className="col-span-1 sticky left-0 w-full flex items-center border-b border-muted bg-card/[0.99] hover:bg-card/50 transition-colors cursor-pointer z-[89]"
+				className="col-span-1 sticky left-0 w-full flex items-center border-b border-muted bg-card hover:bg-card/50 transition-colors cursor-pointer z-[100]"
 				style={{ height: `${getTrackHeight("media")}px` }}
 			>
 				<div className="w-full flex  justify-center items-center">
