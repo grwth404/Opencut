@@ -35,7 +35,7 @@ export function TimelineTracksArea({
         <Fragment key={track.id}>
           {/* Left Column (Sticky Track Labels) */}
           <div
-            className="sticky left-0 flex items-center border-b border-panel border-inset group bg-card/[0.99] z-[90]"
+            className="sticky left-0 flex items-center border-b border-panel border-inset group bg-card/[0.99] z-[96]"
             style={{ height: `${getTrackHeight(track.type)}px` }}
           >
             <div className="flex items-center gap-2 px-2">

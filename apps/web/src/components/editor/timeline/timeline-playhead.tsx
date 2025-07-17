@@ -54,23 +54,18 @@ export function TimelinePlayhead({
   const timelineContainerHeight = timelineRef.current?.offsetHeight || 400;
   const totalHeight = timelineContainerHeight - 8; // 8px padding from edges
 
-  // Get dynamic track labels width, fallback to 0 if no tracks or no ref
-  const trackLabelsWidth =
-    tracks.length > 0 && trackLabelsRef?.current
-      ? trackLabelsRef.current.offsetWidth
-      : 0;
-  const leftPosition =
-    trackLabelsWidth +
-    playheadPosition * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
+  // Get dynamic track labels width, fallback to 192px (ml-48) if no tracks or no ref
+  const trackLabelsWidth = 192; // Fixed width from grid layout
+  const leftPosition = playheadPosition * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
 
   return (
     <div
       ref={playheadRef}
-      className="absolute pointer-events-auto z-[100] ml-48"
+      className="absolute pointer-events-auto z-[95]"
       style={{
-        left: `${leftPosition}px`,
+        left: `${trackLabelsWidth + leftPosition}px`,
         top: 0,
-        height: `${totalHeight}px`,
+        bottom: 0,
         width: "2px", // Slightly wider for better click target
       }}
       onMouseDown={handlePlayheadMouseDown}

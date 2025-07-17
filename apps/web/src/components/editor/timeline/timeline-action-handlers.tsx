@@ -1,12 +1,11 @@
+import { useMemo } from "react";
 import { toast } from "sonner";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { usePlaybackStore } from "@/stores/playback-store";
-import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 
 export function useTimelineActionHandlers() {
   const {
     tracks,
-    addTrack,
     addElementToTrack,
     removeElementFromTrack,
     selectedElements,
@@ -18,6 +17,29 @@ export function useTimelineActionHandlers() {
   } = useTimelineStore();
   const { currentTime } = usePlaybackStore();
 
+  // Create optimized lookup maps for O(1) access instead of O(n) find operations
+  const trackMap = useMemo(() => {
+    const map = new Map();
+    tracks.forEach(track => {
+      map.set(track.id, track);
+      // Also create element lookup for this track
+      const elementMap = new Map();
+      track.elements.forEach(element => {
+        elementMap.set(element.id, element);
+      });
+      map.set(`${track.id}_elements`, elementMap);
+    });
+    return map;
+  }, [tracks]);
+
+  // Helper function for O(1) track/element lookup
+  const findTrackAndElement = (trackId: string, elementId: string) => {
+    const track = trackMap.get(trackId);
+    const elementMap = trackMap.get(`${trackId}_elements`);
+    const element = elementMap?.get(elementId);
+    return { track, element };
+  };
+
   // Action handlers for toolbar
   const handleSplitSelected = () => {
     if (selectedElements.length === 0) {
@@ -26,8 +48,7 @@ export function useTimelineActionHandlers() {
     }
     let splitCount = 0;
     selectedElements.forEach(({ trackId, elementId }) => {
-      const track = tracks.find((t) => t.id === trackId);
-      const element = track?.elements.find((c) => c.id === elementId);
+      const { track, element } = findTrackAndElement(trackId, elementId);
       if (element && track) {
         const effectiveStart = element.startTime;
         const effectiveEnd =
@@ -53,11 +74,8 @@ export function useTimelineActionHandlers() {
     const canDuplicate = selectedElements.length === 1;
     if (!canDuplicate) return;
 
-    const newSelections: { trackId: string; elementId: string }[] = [];
-
     selectedElements.forEach(({ trackId, elementId }) => {
-      const track = tracks.find((t) => t.id === trackId);
-      const element = track?.elements.find((el) => el.id === elementId);
+      const { element } = findTrackAndElement(trackId, elementId);
 
       if (element) {
         const newStartTime =
@@ -91,8 +109,7 @@ export function useTimelineActionHandlers() {
       return;
     }
     const { trackId, elementId } = selectedElements[0];
-    const track = tracks.find((t) => t.id === trackId);
-    const element = track?.elements.find((c) => c.id === elementId);
+    const { element } = findTrackAndElement(trackId, elementId);
     if (!element) return;
     const effectiveStart = element.startTime;
     const effectiveEnd =
@@ -111,8 +128,7 @@ export function useTimelineActionHandlers() {
       return;
     }
     const { trackId, elementId } = selectedElements[0];
-    const track = tracks.find((t) => t.id === trackId);
-    const element = track?.elements.find((c) => c.id === elementId);
+    const { element } = findTrackAndElement(trackId, elementId);
     if (!element) return;
     const effectiveStart = element.startTime;
     const effectiveEnd =
@@ -131,7 +147,7 @@ export function useTimelineActionHandlers() {
       return;
     }
     const { trackId, elementId } = selectedElements[0];
-    const track = tracks.find((t) => t.id === trackId);
+    const { track } = findTrackAndElement(trackId, elementId);
     if (!track || track.type !== "media") {
       toast.error("Select a media element to separate audio");
       return;

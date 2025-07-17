@@ -56,8 +56,8 @@ export function TimelineContent({
   showSnapIndicator,
 }: TimelineContentProps) {
   return (
-    <div className="min-w-max min-h-max" style={{ minWidth: `${dynamicTimelineWidth}px` }}>
-      <div className={`grid grid-cols-[192px_1fr] ${tracks.length > 0 ? `grid-rows-[20px_repeat(${tracks.length},minmax(0,max-content))]` : 'grid-rows-[20px_1fr]'}`}>
+    <div className="relative min-w-max min-h-max" style={{ minWidth: `${dynamicTimelineWidth}px` }}>
+      <div className={`h-full grid grid-cols-[192px_1fr] ${tracks.length > 0 ? `grid-rows-[20px_repeat(${tracks.length},minmax(0,max-content))]` : 'grid-rows-[20px_1fr]'}`}>
 
         {/* Top-Left Corner (Empty space above track labels) */}
         <div className="sticky top-0 left-0 border-inset bg-card/[0.99]"></div>
@@ -85,7 +85,7 @@ export function TimelineContent({
         />
       </div>
 
-      {/* Overlay Components */}
+      {/* Overlay Components - positioned absolutely relative to the timeline container */}
       <SelectionBox
         startPos={selectionBox?.startPos || null}
         currentPos={selectionBox?.currentPos || null}

@@ -30,16 +30,6 @@ export function useTimelineContentClick({
   // Timeline content click to seek handler
   const handleTimelineContentClick = useCallback(
     (e: React.MouseEvent) => {
-      console.log(
-        JSON.stringify({
-          timelineClick: {
-            isSelecting,
-            justFinishedSelecting,
-            willReturn: isSelecting || justFinishedSelecting,
-          },
-        })
-      );
-
       // Don't seek if this was a selection box operation
       if (isSelecting || justFinishedSelecting) {
         return;
@@ -62,7 +52,6 @@ export function useTimelineContentClick({
       }
 
       // Clear selected elements when clicking empty timeline area
-      console.log(JSON.stringify({ clearingSelectedElements: true }));
       clearSelectedElements();
 
       // Determine if we're clicking in ruler or tracks area
