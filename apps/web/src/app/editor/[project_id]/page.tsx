@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ResizablePanelGroup,
@@ -17,6 +17,7 @@ import { useProjectStore } from "@/stores/project-store";
 import { EditorProvider } from "@/components/editor-provider";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
 import { useDisableBrowserZoom } from "@/hooks/use-disable-browser-zoom";
+import { Onboarding } from "@/components/onboarding";
 
 export default function Editor() {
   const {
@@ -37,13 +38,13 @@ export default function Editor() {
   const router = useRouter();
   const projectId = params.project_id as string;
   const handledProjectIds = useRef<Set<string>>(new Set());
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(true);
 
   useDisableBrowserZoom();
   usePlaybackControls();
 
   useEffect(() => {
     const initProject = async () => {
-
       if (!projectId) return;
 
       if (activeProject?.id === projectId) {

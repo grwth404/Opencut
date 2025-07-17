@@ -129,11 +129,13 @@ The application will be available at [http://localhost:3000](http://localhost:30
 
 ## Contributing
 
-**Note**: We're currently moving at an extremely fast pace with rapid development and breaking changes. While we appreciate the interest, it's recommended to wait until the project stabilizes before contributing to avoid conflicts and wasted effort.
+We welcome contributions! While we're actively developing and refactoring certain areas, there are plenty of opportunities to contribute effectively.
 
-## Visit [CONTRIBUTING.md](.github/CONTRIBUTING.md)
+**🎯 Focus areas:** Timeline functionality, project management, performance, bug fixes, and UI improvements outside the preview panel.
 
-We welcome contributions! Please see our [Contributing Guide](.github/CONTRIBUTING.md) for detailed setup instructions and development guidelines.
+**⚠️ Avoid for now:** Preview panel enhancements (fonts, stickers, effects) and export functionality - we're refactoring these with a new binary rendering approach.
+
+See our [Contributing Guide](.github/CONTRIBUTING.md) for detailed setup instructions, development guidelines, and complete focus area guidance.
 
 **Quick start for contributors:**
 

@@ -15,6 +15,27 @@ Thank you for your interest in contributing to OpenCut! This document provides g
 > 1. Upgrade to a recent npm version (v9 or later), which has full workspace protocol support.
 > 2. Use an alternative package manager such as **bun** or **pnpm**.
 
+## What to Focus On
+
+**🎯 Good Areas to Contribute:**
+- Timeline functionality and UI improvements
+- Project management features
+- Performance optimizations
+- Bug fixes in existing functionality
+- UI/UX improvements
+- Documentation and testing
+
+**⚠️ Areas to Avoid:**
+- Preview panel enhancements (text fonts, stickers, effects)
+- Export functionality improvements
+- Preview rendering optimizations
+
+**Why?** We're currently planning a major refactor of the preview system. The current preview renders DOM elements (HTML), but we're moving to a binary rendering approach similar to CapCut. This new system will ensure consistency between preview and export, and provide much better performance and quality.
+
+The current HTML-based preview is essentially a prototype - the binary approach will be the "real deal." To avoid wasted effort, please focus on other areas of the application until this refactor is complete.
+
+If you're unsure whether your idea falls into the preview category, feel free to ask us [directly in discord](https://discord.gg/zmR9N35cjK) or create a GitHub issue!
+
 ## Development Setup
 
 ### Prerequisites
