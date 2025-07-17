@@ -45,6 +45,7 @@ export default function ProjectsPage() {
     isLoading,
     isInitialized,
     deleteProject,
+    getFilteredAndSortedProjects,
   } = useProjectStore();
   const router = useRouter();
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -73,7 +74,7 @@ export default function ProjectsPage() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedProjects(new Set(filteredProjects.map((p) => p.id)));
+      setSelectedProjects(new Set(sortedProjects.map((p) => p.id)));
     } else {
       setSelectedProjects(new Set());
     }
@@ -93,40 +94,13 @@ export default function ProjectsPage() {
     setIsBulkDeleteDialogOpen(false);
   };
 
-  const filteredProjects = savedProjects.filter((project) =>
-    project.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const sortedProjects = [...filteredProjects].sort((a, b) => {
-    const [key, order] = sortOption.split("-");
-
-    if (key !== "createdAt" && key !== "name") {
-      console.warn(`Invalid sort key: ${key}`);
-      return 0;
-    }
-
-    const aValue = a[key];
-    const bValue = b[key];
-
-    if (aValue === undefined || bValue === undefined) return 0;
-
-    if (order === "asc") {
-      if (aValue < bValue) return -1;
-      if (aValue > bValue) return 1;
-      return 0;
-    } else {
-      if (aValue > bValue) return -1;
-      if (aValue < bValue) return 1;
-      return 0;
-    }
-  });
+  const sortedProjects = getFilteredAndSortedProjects(searchQuery, sortOption);
 
   const allSelected =
     sortedProjects.length > 0 &&
     selectedProjects.size === sortedProjects.length;
   const someSelected =
-    selectedProjects.size > 0 &&
-    selectedProjects.size < sortedProjects.length;
+    selectedProjects.size > 0 && selectedProjects.size < sortedProjects.length;
 
   return (
     <div className="min-h-screen bg-background">
