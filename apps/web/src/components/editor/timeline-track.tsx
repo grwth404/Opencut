@@ -1015,12 +1015,12 @@ export function TimelineTrackContent({
       >
         {track.elements.length === 0 ? (
           <div
-            className={`h-full w-full rounded-sm border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${
+            className={`h-full w-full border-inset border-b border-dashed flex items-center justify-center text-xs text-muted-foreground transition-colors ${
               isDropping
                 ? wouldOverlap
-                  ? "border-red-500 bg-red-500/10 text-red-600"
-                  : "border-blue-500 bg-blue-500/10 text-blue-600"
-                : "border-muted/30"
+                  ? "rounded-sm border-red-500 bg-red-500/10 text-red-600"
+                  : "rounded-sm border-blue-500 bg-blue-500/10 text-blue-600"
+                : "border-background"
             }`}
           >
             {isDropping
@@ -1030,7 +1030,9 @@ export function TimelineTrackContent({
               : ""}
           </div>
         ) : (
-          <>
+          <div
+            className={`h-full w-full border-b border-dashed border-background flex items-center justify-center text-xs text-muted-foreground transition-colors`}
+          >
             {track.elements.map((element) => {
               const isSelected = selectedElements.some(
                 (c) => c.trackId === track.id && c.elementId === element.id
@@ -1089,7 +1091,7 @@ export function TimelineTrackContent({
                 />
               );
             })}
-          </>
+          </div>
         )}
       </div>
     </div>
