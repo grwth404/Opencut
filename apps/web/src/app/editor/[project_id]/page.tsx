@@ -16,6 +16,7 @@ import { usePanelStore } from "@/stores/panel-store";
 import { useProjectStore } from "@/stores/project-store";
 import { EditorProvider } from "@/components/editor-provider";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
+import { useDisableBrowserZoom } from "@/hooks/use-disable-browser-zoom";
 import { Onboarding } from "@/components/onboarding";
 
 export default function Editor() {
@@ -39,6 +40,7 @@ export default function Editor() {
   const handledProjectIds = useRef<Set<string>>(new Set());
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(true);
 
+  useDisableBrowserZoom();
   usePlaybackControls();
 
   useEffect(() => {
