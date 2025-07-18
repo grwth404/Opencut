@@ -102,20 +102,40 @@ export function useTimelineElementResize({
     const deltaTime = deltaX / (50 * zoomLevel);
 
     if (resizing.side === "left") {
-      // Left resize - trim content AND move element position to the right
+      // Left resize - different behavior for media vs text/image elements
       const maxAllowed = element.duration - resizing.initialTrimEnd - 0.1;
       const calculated = resizing.initialTrimStart + deltaTime;
-      const newTrimStart = Math.max(0, Math.min(maxAllowed, calculated));
 
-      // Calculate how much the trim changed and update startTime accordingly
-      const trimDelta = newTrimStart - resizing.initialTrimStart;
-      const newStartTime = element.startTime + trimDelta;
+      if (calculated >= 0) {
+        // Normal trimming within available content
+        const newTrimStart = Math.min(maxAllowed, calculated);
+        const trimDelta = newTrimStart - resizing.initialTrimStart;
+        const newStartTime = element.startTime + trimDelta;
 
-      // Update both trim and start time for proper left resize behavior
-      onUpdateTrim(track.id, element.id, newTrimStart, resizing.initialTrimEnd);
+        onUpdateTrim(track.id, element.id, newTrimStart, resizing.initialTrimEnd);
+        updateElementStartTime(track.id, element.id, newStartTime);
+      } else {
+        // Trying to extend beyond trimStart = 0
+        if (canExtendElementDuration()) {
+          // Text/Image: extend element to the left by moving startTime and increasing duration
+          const extensionAmount = Math.abs(calculated);
+          const newStartTime = element.startTime - extensionAmount;
+          const newDuration = element.duration + extensionAmount;
 
-      // Update startTime so element moves to the right when trimming from left
-      updateElementStartTime(track.id, element.id, newStartTime);
+          // Keep trimStart at 0 and extend the element
+          onUpdateTrim(track.id, element.id, 0, resizing.initialTrimEnd);
+          onUpdateDuration(track.id, element.id, newDuration);
+          updateElementStartTime(track.id, element.id, newStartTime);
+        } else {
+          // Video/Audio: can't extend beyond original content - limit to trimStart = 0
+          const newTrimStart = 0;
+          const trimDelta = newTrimStart - resizing.initialTrimStart;
+          const newStartTime = element.startTime + trimDelta;
+
+          onUpdateTrim(track.id, element.id, newTrimStart, resizing.initialTrimEnd);
+          updateElementStartTime(track.id, element.id, newStartTime);
+        }
+      }
     } else {
       // Right resize - can extend duration for supported element types
       const calculated = resizing.initialTrimEnd - deltaTime;
