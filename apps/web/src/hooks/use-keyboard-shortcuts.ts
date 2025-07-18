@@ -70,7 +70,7 @@ export const useKeyboardShortcuts = (
     },
     {
       id: "rewind",
-      keys: ["j", "J"],
+      keys: ["J"],
       description: "Rewind 1 second",
       category: "Playback",
       action: () => {
@@ -79,7 +79,7 @@ export const useKeyboardShortcuts = (
     },
     {
       id: "play-pause-alt",
-      keys: ["k", "K"],
+      keys: ["K"],
       description: "Play/Pause (alternative)",
       category: "Playback",
       action: () => {
@@ -88,7 +88,7 @@ export const useKeyboardShortcuts = (
     },
     {
       id: "fast-forward",
-      keys: ["l", "L"],
+      keys: ["L"],
       description: "Fast forward 1 second",
       category: "Playback",
       action: () => {
@@ -157,7 +157,7 @@ export const useKeyboardShortcuts = (
     // Editing
     {
       id: "split-element",
-      keys: ["s", "S"],
+      keys: ["S"],
       description: "Split element at playhead",
       category: "Editing",
       requiresSelection: true,
@@ -206,7 +206,7 @@ export const useKeyboardShortcuts = (
     },
     {
       id: "toggle-snapping",
-      keys: ["n", "N"],
+      keys: ["N"],
       description: "Toggle snapping",
       category: "Editing",
       action: () => {
@@ -217,7 +217,7 @@ export const useKeyboardShortcuts = (
     // Selection & Organization
     {
       id: "select-all",
-      keys: ["Cmd+a", "Ctrl+a"],
+      keys: ["Cmd+A", "Ctrl+A"],
       description: "Select all elements",
       category: "Selection",
       action: () => {
@@ -232,7 +232,7 @@ export const useKeyboardShortcuts = (
     },
     {
       id: "duplicate-element",
-      keys: ["Cmd+d", "Ctrl+d"],
+      keys: ["Cmd+D", "Ctrl+D"],
       description: "Duplicate selected element",
       category: "Selection",
       requiresSelection: true,
@@ -264,7 +264,7 @@ export const useKeyboardShortcuts = (
     // History
     {
       id: "undo",
-      keys: ["Cmd+z", "Ctrl+z"],
+      keys: ["Cmd+Z", "Ctrl+Z"],
       description: "Undo",
       category: "History",
       action: () => {
@@ -273,7 +273,7 @@ export const useKeyboardShortcuts = (
     },
     {
       id: "redo",
-      keys: ["Cmd+Shift+z", "Ctrl+Shift+z", "Cmd+y", "Ctrl+y"],
+      keys: ["Cmd+Shift+Z", "Ctrl+Shift+Z", "Cmd+Y", "Ctrl+Y"],
       description: "Redo",
       category: "History",
       action: () => {
