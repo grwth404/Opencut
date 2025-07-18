@@ -292,7 +292,7 @@ export const useKeyboardShortcuts = (
 
     parts.push(e.key);
 
-    return parts.join("+");
+    return parts.join("+").toLowerCase();
   }, []);
 
   // Handle keyboard events
@@ -302,7 +302,11 @@ export const useKeyboardShortcuts = (
 
       const keyCombo = parseKeyboardEvent(e);
       const shortcut = shortcuts.find((s) =>
-        s.keys.some((key) => key === keyCombo || key === e.key)
+        s.keys.some(
+          (key) =>
+            key.toLowerCase() === keyCombo ||
+            key.toLowerCase() === e.key.toLowerCase()
+        )
       );
 
       if (shortcut) {
