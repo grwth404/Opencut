@@ -1,7 +1,6 @@
 "use client";
 
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
-import { Keyboard } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import {
@@ -13,6 +12,13 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { getPlatformSpecialKey } from "@/lib/utils";
+import { Badge } from "./ui/badge";
+import { Keyboard, Settings } from "lucide-react";
+import {
+  useKeyboardShortcutsHelp,
+  KeyboardShortcut,
+} from "@/hooks/use-keyboard-shortcuts-help";
+import { KeybindingEditor } from "./keybinding-editor";
 
 const modifier: {
   [key: string]: string;
@@ -31,7 +37,7 @@ function getKeyWithModifier(key: string) {
   return modifier[key] || key;
 }
 
-const ShortcutItem = ({ shortcut }: { shortcut: any }) => {
+const ShortcutItem = ({ shortcut }: { shortcut: KeyboardShortcut }) => {
   // Filter out lowercase duplicates for display - if both "j" and "J" exist, only show "J"
   const displayKeys = shortcut.keys.filter((key: string) => {
     if (
@@ -73,11 +79,31 @@ const ShortcutItem = ({ shortcut }: { shortcut: any }) => {
 
 export const KeyboardShortcutsHelp = () => {
   const [open, setOpen] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
 
-  // Get shortcuts from centralized hook (disabled so it doesn't add event listeners)
-  const { shortcuts } = useKeyboardShortcuts({ enabled: false });
+  // Get shortcuts from centralized hook
+  const { shortcuts } = useKeyboardShortcutsHelp();
 
   const categories = Array.from(new Set(shortcuts.map((s) => s.category)));
+
+  if (showEditor) {
+    return (
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button variant="text" size="sm" className="gap-2">
+            <Keyboard className="w-4 h-4" />
+            Shortcuts
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <KeybindingEditor
+            shortcuts={shortcuts}
+            onClose={() => setShowEditor(false)}
+          />
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -87,7 +113,7 @@ export const KeyboardShortcutsHelp = () => {
           Shortcuts
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-hidden flex">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Keyboard className="w-5 h-5" />
@@ -98,6 +124,17 @@ export const KeyboardShortcutsHelp = () => {
             Most shortcuts work when the timeline is focused.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="flex justify-end mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowEditor(true)}
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Customize
+          </Button>
+        </div>
 
         <div className="space-y-6">
           {categories.map((category) => (
@@ -122,14 +159,14 @@ export const KeyboardShortcutsHelp = () => {
 
 function ShortcutKey({ children }: { children: React.ReactNode }) {
   return (
-    <kbd 
+    <kbd
       className="inline-flex font-sans text-xs rounded px-2 min-w-[1.5rem] min-h-[1.5rem] leading-none items-center justify-center shadow-sm border mr-1"
       style={{
         backgroundColor: "rgba(0, 0, 0, 0.2)",
-        borderColor: "rgba(255, 255, 255, 0.1)"
+        borderColor: "rgba(255, 255, 255, 0.1)",
       }}
     >
       {children}
     </kbd>
   );
-};
+}
