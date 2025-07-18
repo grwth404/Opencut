@@ -37,6 +37,7 @@ export default function Editor() {
   const params = useParams();
   const router = useRouter();
   const projectId = params.project_id as string;
+  const handledProjectIds = useRef<Set<string>>(new Set());
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(true);
 
   useDisableBrowserZoom();
@@ -44,14 +45,20 @@ export default function Editor() {
 
   useEffect(() => {
     const initProject = async () => {
+      if (!projectId) return;
+
+      if (handledProjectIds.current.has(projectId)) {
+        return;
+      }
+
       try {
         await loadProject(projectId);
-      } catch (error: any) {
-        // if the project is not found, go back to the projects page,
-        // creating a new project here will cause multiple projects to be created
-        if (error.message.includes("not found")) {
-          router.push("/projects");
-        }
+      } catch (error) {
+        handledProjectIds.current.add(projectId);
+
+        const newProjectId = await createNewProject("Untitled Project");
+        router.replace(`/editor/${newProjectId}`);
+        return;
       }
     };
 
