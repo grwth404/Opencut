@@ -12,7 +12,10 @@ import {
 } from "./ui/dialog";
 import { Badge } from "./ui/badge";
 import { Keyboard } from "lucide-react";
-import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import {
+  useKeyboardShortcutsHelp,
+  KeyboardShortcut,
+} from "@/hooks/use-keyboard-shortcuts-help";
 
 const KeyBadge = ({ keyName }: { keyName: string }) => {
   // Replace common key names with symbols or friendly names
@@ -34,7 +37,7 @@ const KeyBadge = ({ keyName }: { keyName: string }) => {
   );
 };
 
-const ShortcutItem = ({ shortcut }: { shortcut: any }) => {
+const ShortcutItem = ({ shortcut }: { shortcut: KeyboardShortcut }) => {
   // Filter out lowercase duplicates for display - if both "j" and "J" exist, only show "J"
   const displayKeys = shortcut.keys.filter((key: string) => {
     const lowerKey = key.toLowerCase();
@@ -86,8 +89,8 @@ const ShortcutItem = ({ shortcut }: { shortcut: any }) => {
 export const KeyboardShortcutsHelp = () => {
   const [open, setOpen] = useState(false);
 
-  // Get shortcuts from centralized hook (disabled so it doesn't add event listeners)
-  const { shortcuts } = useKeyboardShortcuts({ enabled: false });
+  // Get shortcuts from centralized hook
+  const { shortcuts } = useKeyboardShortcutsHelp();
 
   const categories = Array.from(new Set(shortcuts.map((s) => s.category)));
 
