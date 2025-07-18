@@ -112,7 +112,12 @@ export function useTimelineElementResize({
         const trimDelta = newTrimStart - resizing.initialTrimStart;
         const newStartTime = element.startTime + trimDelta;
 
-        onUpdateTrim(track.id, element.id, newTrimStart, resizing.initialTrimEnd);
+        onUpdateTrim(
+          track.id,
+          element.id,
+          newTrimStart,
+          resizing.initialTrimEnd
+        );
         updateElementStartTime(track.id, element.id, newStartTime);
       } else {
         // Trying to extend beyond trimStart = 0
@@ -132,7 +137,12 @@ export function useTimelineElementResize({
           const trimDelta = newTrimStart - resizing.initialTrimStart;
           const newStartTime = element.startTime + trimDelta;
 
-          onUpdateTrim(track.id, element.id, newTrimStart, resizing.initialTrimEnd);
+          onUpdateTrim(
+            track.id,
+            element.id,
+            newTrimStart,
+            resizing.initialTrimEnd
+          );
           updateElementStartTime(track.id, element.id, newStartTime);
         }
       }
@@ -175,11 +185,13 @@ export function useTimelineElementResize({
     }
   };
 
-  const handleResizeMove = (e: React.MouseEvent) => {
-    updateTrimFromMouseMove(e);
-  };
-
   const handleResizeEnd = () => {
+    console.log(
+      JSON.stringify({
+        resizeEnd: true,
+        timeStamp: Date.now(),
+      })
+    );
     setResizing(null);
   };
 

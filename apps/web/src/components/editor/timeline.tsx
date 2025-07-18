@@ -75,11 +75,10 @@ export function Timeline() {
     splitAndKeepRight,
     toggleTrackMute,
     separateAudio,
-    undo,
-    redo,
     snappingEnabled,
     toggleSnapping,
     dragState,
+    justFinishedDragging,
   } = useTimelineStore();
   const { mediaItems, addMediaItem } = useMediaStore();
   const { activeProject } = useProjectStore();
@@ -162,18 +161,13 @@ export function Timeline() {
   // Timeline content click to seek handler
   const handleTimelineContentClick = useCallback(
     (e: React.MouseEvent) => {
-      console.log(
-        JSON.stringify({
-          timelineClick: {
-            isSelecting,
-            justFinishedSelecting,
-            willReturn: isSelecting || justFinishedSelecting,
-          },
-        })
-      );
-
       // Don't seek if this was a selection box operation
       if (isSelecting || justFinishedSelecting) {
+        return;
+      }
+
+      // Don't seek if we just finished dragging an element
+      if (justFinishedDragging) {
         return;
       }
 
@@ -189,6 +183,19 @@ export function Timeline() {
 
       // Don't seek if clicking on track labels
       if ((e.target as HTMLElement).closest("[data-track-labels]")) {
+        clearSelectedElements();
+        return;
+      }
+
+      // MAIN FIX: Only seek on direct clicks to timeline background areas
+      // Check if the click is on the actual timeline background, not on any interactive elements
+      const target = e.target as HTMLElement;
+      const isTimelineBackground =
+        target.classList.contains("track-elements-container") ||
+        target.closest("[data-ruler-area]") ||
+        target.classList.contains("timeline-track-background");
+
+      if (!isTimelineBackground) {
         clearSelectedElements();
         return;
       }
@@ -249,6 +256,7 @@ export function Timeline() {
       clearSelectedElements,
       isSelecting,
       justFinishedSelecting,
+      justFinishedDragging,
     ]
   );
 
