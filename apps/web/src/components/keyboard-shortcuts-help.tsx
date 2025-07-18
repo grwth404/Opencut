@@ -56,9 +56,9 @@ const ShortcutItem = ({ shortcut }: { shortcut: any }) => {
           <div key={index} className="flex items-center gap-1">
             <div className="flex items-center">
               {key.split("+").map((keyPart: string, partIndex: number) => (
-                <kbd key={partIndex} className="shortcut-key">
+                <ShortcutKey key={partIndex}>
                   {getKeyWithModifier(keyPart)}
-                </kbd>
+                </ShortcutKey>
               ))}
             </div>
             {index < displayKeys.length - 1 && (
@@ -117,5 +117,19 @@ export const KeyboardShortcutsHelp = () => {
         </div>
       </DialogContent>
     </Dialog>
+  );
+};
+
+function ShortcutKey({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd 
+      className="inline-flex font-sans text-xs rounded px-2 min-w-[1.5rem] min-h-[1.5rem] leading-none items-center justify-center shadow-sm border mr-1"
+      style={{
+        backgroundColor: "rgba(0, 0, 0, 0.2)",
+        borderColor: "rgba(255, 255, 255, 0.1)"
+      }}
+    >
+      {children}
+    </kbd>
   );
 };

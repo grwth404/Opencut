@@ -86,25 +86,3 @@
     overscroll-behavior-x: contain;
   }
 }
-
-.shortcut-key {
-  @apply inline-flex;
-  @apply font-sans;
-  @apply text-xs;
-  @apply rounded;
-  @apply px-2;
-  @apply min-w-[1.5rem];
-  @apply min-h-[1.5rem];
-  @apply leading-none;
-  @apply items-center;
-  @apply justify-center;
-  @apply shadow-sm;
-  @apply border;
-
-  background-color: rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.1);
-
-  &:not(:last-child) {
-    @apply mr-1;
-  }
-}
