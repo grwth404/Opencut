@@ -114,7 +114,13 @@ export const useKeyboardShortcutsHelp = () => {
       }
     });
 
-    return result;
+    // Sort shortcuts by category first, then by description to ensure consistent ordering
+    return result.sort((a, b) => {
+      if (a.category !== b.category) {
+        return a.category.localeCompare(b.category);
+      }
+      return a.description.localeCompare(b.description);
+    });
   }, [keybindings]);
 
   return {
