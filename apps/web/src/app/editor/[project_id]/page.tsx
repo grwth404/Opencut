@@ -47,10 +47,6 @@ export default function Editor() {
     const initProject = async () => {
       if (!projectId) return;
 
-      if (activeProject?.id === projectId) {
-        return;
-      }
-
       if (handledProjectIds.current.has(projectId)) {
         return;
       }
