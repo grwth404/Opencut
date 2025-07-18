@@ -33,7 +33,7 @@ export default function Editor() {
     setPropertiesPanel,
   } = usePanelStore();
 
-  const { activeProject, loadProject, createNewProject } = useProjectStore();
+  const { loadProject, createNewProject } = useProjectStore();
   const params = useParams();
   const router = useRouter();
   const projectId = params.project_id as string;
@@ -63,7 +63,7 @@ export default function Editor() {
     };
 
     initProject();
-  }, [projectId, activeProject?.id, loadProject, createNewProject, router]);
+  }, [projectId, loadProject, createNewProject, router]);
 
   return (
     <EditorProvider>
