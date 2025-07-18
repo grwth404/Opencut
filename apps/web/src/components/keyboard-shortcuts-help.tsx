@@ -1,5 +1,7 @@
 "use client";
 
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { Keyboard } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import {
@@ -10,44 +12,33 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import { Badge } from "./ui/badge";
-import { Keyboard } from "lucide-react";
-import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { getPlatformSpecialKey } from "@/lib/utils";
 
-const KeyBadge = ({ keyName }: { keyName: string }) => {
-  // Replace common key names with symbols or friendly names
-  const displayKey = keyName
-    .replace("Cmd", "⌘")
-    .replace("Shift", "Shift")
-    .replace("ArrowLeft", "Arrow Left")
-    .replace("ArrowRight", "Arrow Right")
-    .replace("ArrowUp", "Arrow Up")
-    .replace("ArrowDown", "Arrow Down")
-    .replace("←", "◀")
-    .replace("→", "▶")
-    .replace("Space", "Space");
-
-  return (
-    <Badge variant="secondary" className="font-mono text-xs px-1 py-1">
-      {displayKey}
-    </Badge>
-  );
+const modifier: {
+  [key: string]: string;
+} = {
+  Shift: "Shift",
+  Alt: "Alt",
+  ArrowLeft: "←",
+  ArrowRight: "→",
+  ArrowUp: "↑",
+  ArrowDown: "↓",
+  Space: "Space",
 };
+
+function getKeyWithModifier(key: string) {
+  if (key === "Ctrl") return getPlatformSpecialKey();
+  return modifier[key] || key;
+}
 
 const ShortcutItem = ({ shortcut }: { shortcut: any }) => {
   // Filter out lowercase duplicates for display - if both "j" and "J" exist, only show "J"
   const displayKeys = shortcut.keys.filter((key: string) => {
-    const lowerKey = key.toLowerCase();
-    const upperKey = key.toUpperCase();
-
-    // If this is a lowercase letter and the uppercase version exists, skip it
     if (
-      key === lowerKey &&
-      key !== upperKey &&
-      shortcut.keys.includes(upperKey)
-    ) {
+      key.includes("Cmd") &&
+      shortcut.keys.includes(key.replace("Cmd", "Ctrl"))
+    )
       return false;
-    }
 
     return true;
   });
@@ -65,12 +56,9 @@ const ShortcutItem = ({ shortcut }: { shortcut: any }) => {
           <div key={index} className="flex items-center gap-1">
             <div className="flex items-center">
               {key.split("+").map((keyPart: string, partIndex: number) => (
-                <div key={partIndex} className="flex items-center gap-1">
-                  <KeyBadge keyName={keyPart} />
-                  {partIndex < key.split("+").length - 1 && (
-                    <span className="text-xs text-muted-foreground">+</span>
-                  )}
-                </div>
+                <ShortcutKey key={partIndex}>
+                  {getKeyWithModifier(keyPart)}
+                </ShortcutKey>
               ))}
             </div>
             {index < displayKeys.length - 1 && (
@@ -129,5 +117,19 @@ export const KeyboardShortcutsHelp = () => {
         </div>
       </DialogContent>
     </Dialog>
+  );
+};
+
+function ShortcutKey({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd 
+      className="inline-flex font-sans text-xs rounded px-2 min-w-[1.5rem] min-h-[1.5rem] leading-none items-center justify-center shadow-sm border mr-1"
+      style={{
+        backgroundColor: "rgba(0, 0, 0, 0.2)",
+        borderColor: "rgba(255, 255, 255, 0.1)"
+      }}
+    >
+      {children}
+    </kbd>
   );
 };
