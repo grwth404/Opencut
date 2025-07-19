@@ -17,6 +17,7 @@ import {
   TypeIcon,
   Lock,
   LockOpen,
+  Link,
 } from "lucide-react";
 import {
   Tooltip,
@@ -66,6 +67,7 @@ export function Timeline() {
     addTrack,
     addElementToTrack,
     removeElementFromTrack,
+    removeElementFromTrackWithRipple,
     getTotalDuration,
     selectedElements,
     clearSelectedElements,
@@ -77,6 +79,8 @@ export function Timeline() {
     separateAudio,
     snappingEnabled,
     toggleSnapping,
+    rippleEditingEnabled,
+    toggleRippleEditing,
     dragState,
   } = useTimelineStore();
   const { mediaItems, addMediaItem } = useMediaStore();
@@ -553,7 +557,11 @@ export function Timeline() {
       return;
     }
     selectedElements.forEach(({ trackId, elementId }) => {
-      removeElementFromTrack(trackId, elementId);
+      if (rippleEditingEnabled) {
+        removeElementFromTrackWithRipple(trackId, elementId);
+      } else {
+        removeElementFromTrack(trackId, elementId);
+      }
     });
     clearSelectedElements();
   };
@@ -808,6 +816,24 @@ export function Timeline() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Auto snapping</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="text"
+                  size="icon"
+                  onClick={toggleRippleEditing}
+                >
+                  <Link
+                    className={`h-4 w-4 ${rippleEditingEnabled ? "text-primary" : ""}`}
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {rippleEditingEnabled
+                  ? "Disable Ripple Editing"
+                  : "Enable Ripple Editing"}
+              </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>

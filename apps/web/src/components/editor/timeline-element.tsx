@@ -57,6 +57,7 @@ export function TimelineElement({
     updateElementTrim,
     updateElementDuration,
     removeElementFromTrack,
+    removeElementFromTrackWithRipple,
     dragState,
     splitElement,
     splitAndKeepLeft,
@@ -64,6 +65,7 @@ export function TimelineElement({
     separateAudio,
     addElementToTrack,
     replaceElementMedia,
+    rippleEditingEnabled,
   } = useTimelineStore();
   const { currentTime } = usePlaybackStore();
 
@@ -129,7 +131,11 @@ export function TimelineElement({
   };
 
   const handleElementDeleteContext = () => {
-    removeElementFromTrack(track.id, element.id);
+    if (rippleEditingEnabled) {
+      removeElementFromTrackWithRipple(track.id, element.id);
+    } else {
+      removeElementFromTrack(track.id, element.id);
+    }
   };
 
   const handleReplaceClip = () => {
