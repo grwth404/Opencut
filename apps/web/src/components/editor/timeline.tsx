@@ -755,9 +755,9 @@ export function Timeline() {
               <TooltipTrigger asChild>
                 <Button variant="text" size="icon" onClick={toggleSnapping}>
                   {snappingEnabled ? (
-                    <Lock className="h-4 w-4" />
-                  ) : (
                     <LockOpen className="h-4 w-4 text-primary" />
+                  ) : (
+                    <Lock className="h-4 w-4" />
                   )}
                 </Button>
               </TooltipTrigger>
