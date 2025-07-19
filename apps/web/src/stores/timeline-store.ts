@@ -74,7 +74,6 @@ interface TimelineStore {
     clickOffsetTime: number;
     currentTime: number;
   };
-  justFinishedDragging: boolean;
   setDragState: (dragState: Partial<TimelineStore["dragState"]>) => void;
   startDrag: (
     elementId: string,
@@ -230,8 +229,6 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
     // Snapping settings defaults
     snappingEnabled: true,
-
-    justFinishedDragging: false,
 
     getSortedTracks: () => {
       const { _tracks } = get();
@@ -941,12 +938,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
           clickOffsetTime: 0,
           currentTime: 0,
         },
-        justFinishedDragging: true,
       });
-      
-      setTimeout(() => {
-        set({ justFinishedDragging: false });
-      }, 50);
     },
 
     // Persistence methods
