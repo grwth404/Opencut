@@ -1,36 +1,33 @@
 "use client";
 
+import {
+	Calendar,
+	ChevronLeft,
+	Loader2,
+	MoreHorizontal,
+	Plus,
+	Search,
+	Trash2,
+	Video,
+	X,
+} from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { DeleteProjectDialog } from "@/components/delete-project-dialog";
+import { RenameProjectDialog } from "@/components/rename-project-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import {
-	ChevronLeft,
-	Plus,
-	Calendar,
-	MoreHorizontal,
-	Video,
-	Loader2,
-	X,
-	Trash2,
-	Search,
-} from "lucide-react";
-import { TProject } from "@/types/project";
-import Image from "next/image";
 import {
 	DropdownMenu,
-	DropdownMenuItem,
 	DropdownMenuContent,
-	DropdownMenuTrigger,
+	DropdownMenuItem,
 	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useProjectStore } from "@/stores/project-store";
-import { useRouter } from "next/navigation";
-import { DeleteProjectDialog } from "@/components/delete-project-dialog";
-import { RenameProjectDialog } from "@/components/rename-project-dialog";
-import { useTimelineStore } from "@/stores/timeline-store";
+import { Input } from "@/components/ui/input";
 import {
 	Select,
 	SelectContent,
@@ -39,6 +36,9 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useProjectStore } from "@/stores/project-store";
+import { useTimelineStore } from "@/stores/timeline-store";
+import type { TProject } from "@/types/project";
 
 export default function ProjectsPage() {
 	const {
@@ -52,13 +52,9 @@ export default function ProjectsPage() {
 	const [thumbnailCache, setThumbnailCache] = useState<
 		Record<string, string | null>
 	>({});
-	const [loadingThumbnails, setLoadingThumbnails] = useState<Set<string>>(
+	const [_loadingThumbnails, setLoadingThumbnails] = useState<Set<string>>(
 		new Set(),
 	);
-	const [selectedProject, setSelectedProject] = useState<TProject | null>(null);
-	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-	const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
-	const [sortBy, setSortBy] = useState<"name" | "date">("date");
 	const [isSelectionMode, setIsSelectionMode] = useState(false);
 	const [selectedProjects, setSelectedProjects] = useState<Set<string>>(
 		new Set(),
@@ -246,9 +242,17 @@ export default function ProjectsPage() {
 				</div>
 
 				{isSelectionMode && sortedProjects.length > 0 && (
-					<div
+					<button
+						type="button"
 						onClick={() => handleSelectAll(!allSelected)}
-						className="hover:cursor-pointer gap-2 mb-6 p-4 bg-muted/30 rounded-lg border items-center flex"
+						onKeyDown={(e) => {
+							if (e.key === "Enter" || e.key === " ") {
+								e.preventDefault();
+								handleSelectAll(!allSelected);
+							}
+						}}
+						className="w-full hover:cursor-pointer gap-2 mb-6 p-4 bg-muted/30 rounded-lg border items-center flex"
+						tabIndex={0}
 					>
 						<Checkbox checked={someSelected ? "indeterminate" : allSelected} />
 						<span className="text-sm font-medium">
@@ -257,14 +261,14 @@ export default function ProjectsPage() {
 						<span className="text-sm text-muted-foreground">
 							({selectedProjects.size} of {sortedProjects.length} selected)
 						</span>
-					</div>
+					</button>
 				)}
 
 				{isLoading || !isInitialized ? (
 					<div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-						{Array.from({ length: 8 }).map((_, index) => (
+						{Array.from({ length: 8 }, (_, index) => (
 							<div
-								key={index}
+								key={`skeleton-${index}-${Date.now()}`}
 								className="overflow-hidden bg-background border-none p-0"
 							>
 								<Skeleton className="aspect-square w-full bg-muted/50" />
@@ -343,7 +347,7 @@ function ProjectCard({
 			}
 		};
 		loadThumbnail();
-	}, [project.id]);
+	}, [project.id, getProjectThumbnail]);
 
 	const formatDate = (date: Date): string => {
 		return date.toLocaleDateString("en-US", {
@@ -370,6 +374,13 @@ function ProjectCard({
 
 	const handleCardClick = (e: React.MouseEvent) => {
 		if (isSelectionMode) {
+			e.preventDefault();
+			onSelect?.(project.id, !isSelected);
+		}
+	};
+
+	const handleCardKeyDown = (e: React.KeyboardEvent) => {
+		if (isSelectionMode && (e.key === "Enter" || e.key === " ")) {
 			e.preventDefault();
 			onSelect?.(project.id, !isSelected);
 		}
@@ -501,9 +512,14 @@ function ProjectCard({
 	return (
 		<>
 			{isSelectionMode ? (
-				<div onClick={handleCardClick} className="block group cursor-pointer">
+				<button
+					type="button"
+					onClick={handleCardClick}
+					onKeyDown={handleCardKeyDown}
+					className="block group cursor-pointer w-full text-left"
+				>
 					{cardContent}
-				</div>
+				</button>
 			) : (
 				<Link href={`/editor/${project.id}`} className="block group">
 					{cardContent}

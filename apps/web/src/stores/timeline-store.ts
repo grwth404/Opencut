@@ -1,27 +1,28 @@
+import { toast } from "sonner";
 import { create } from "zustand";
+import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import { storageService } from "@/lib/storage/storage-service";
+import { checkElementOverlaps, resolveElementOverlaps } from "@/lib/timeline";
+import { generateUUID } from "@/lib/utils";
 import {
-	TrackType,
-	TimelineElement,
-	CreateTimelineElement,
-	TimelineTrack,
-	TextElement,
-	DragData,
-	sortTracksByOrder,
+	type CreateTimelineElement,
+	type DragData,
 	ensureMainTrack,
+	sortTracksByOrder,
+	type TextElement,
+	type TimelineElement,
+	type TimelineTrack,
+	type TrackType,
 	validateElementTrackCompatibility,
 } from "@/types/timeline";
 import { useEditorStore } from "./editor-store";
 import {
-	useMediaStore,
 	getMediaAspectRatio,
 	type MediaItem,
+	type MediaType,
+	useMediaStore,
 } from "./media-store";
-import { storageService } from "@/lib/storage/storage-service";
 import { useProjectStore } from "./project-store";
-import { generateUUID } from "@/lib/utils";
-import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
-import { toast } from "sonner";
-import { checkElementOverlaps, resolveElementOverlaps } from "@/lib/timeline";
 
 // Helper function to manage element naming with suffixes
 const getElementNameWithSuffix = (
@@ -782,7 +783,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
 					// For ripple editing, we need to move elements that come after the moved element
 					const currentElementStart = currentElement.startTime;
-					const currentElementEnd =
+					const _currentElementEnd =
 						currentElement.startTime +
 						(currentElement.duration -
 							currentElement.trimStart -
@@ -1072,7 +1073,16 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 				if (!fileType) return false;
 
 				// Process the new media file
-				let mediaData: any = {
+				const mediaData: {
+					name: string;
+					type: MediaType;
+					file: File;
+					url: string;
+					duration?: number;
+					thumbnailUrl?: string;
+					width?: number;
+					height?: number;
+				} = {
 					name: newFile.name,
 					type: fileType,
 					file: newFile,
