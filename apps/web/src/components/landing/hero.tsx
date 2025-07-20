@@ -121,7 +121,7 @@ export function Hero() {
           transition={{ delay: 0.6, duration: 0.8 }}
           className="mb-8 flex justify-center"
         >
-          <SponsorButton 
+          <SponsorButton
             href="https://vercel.com/?utm_source=opencut"
             logo={VercelIcon}
             companyName="Vercel"
@@ -148,48 +148,21 @@ export function Hero() {
         </motion.p>
 
         <motion.div
-          className="mt-12 flex gap-8 justify-center"
+          className="mt-8 flex gap-8 justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.8 }}
         >
-          <form
-            onSubmit={handleSubmit}
-            className="flex gap-3 w-full max-w-lg flex-col sm:flex-row"
+          <Button
+            type="submit"
+            size="lg"
+            className="px-6 h-11 text-base bg-foreground"
+            disabled={isSubmitting || !csrfToken}
           >
-            <div className="relative w-full">
-              <Input
-                type="email"
-                placeholder="Enter your email"
-                className="h-11 text-base flex-1"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isSubmitting || !csrfToken}
-                required
-              />
-            </div>
-            <Button
-              type="submit"
-              size="lg"
-              className="px-6 h-11 text-base !bg-foreground"
-              disabled={isSubmitting || !csrfToken}
-            >
-              <span className="relative z-10">
-                {isSubmitting ? "Joining..." : "Join waitlist"}
-              </span>
-              <ArrowRight className="relative z-10 ml-0.5 h-4 w-4 inline-block" />
-            </Button>
-          </form>
+            Try early beta
+            <ArrowRight className="relative z-10 ml-0.5 h-4 w-4 inline-block" />
+          </Button>
         </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8, duration: 0.6 }}
-            className="mt-8 inline-flex items-center gap-2 text-sm text-muted-foreground justify-center"
-          >
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span>50k+ people already joined</span>
-          </motion.div>
       </motion.div>
     </div>
   );
