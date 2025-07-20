@@ -1,6 +1,5 @@
 "use client";
 
-import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import {
@@ -37,11 +36,11 @@ function getKeyWithModifier(key: string) {
   return modifier[key] || key;
 }
 
-const ShortcutItem = ({ 
-  shortcut, 
-  recordingKey, 
-  onStartRecording 
-}: { 
+const ShortcutItem = ({
+  shortcut,
+  recordingKey,
+  onStartRecording,
+}: {
   shortcut: KeyboardShortcut;
   recordingKey: string | null;
   onStartRecording: (keyId: string, shortcut: KeyboardShortcut) => void;
@@ -72,7 +71,7 @@ const ShortcutItem = ({
               {key.split("+").map((keyPart: string, partIndex: number) => {
                 const keyId = `${shortcut.id}-${index}-${partIndex}`;
                 return (
-                  <EditableShortcutKey 
+                  <EditableShortcutKey
                     key={partIndex}
                     keyId={keyId}
                     originalKey={key}
@@ -95,14 +94,14 @@ const ShortcutItem = ({
   );
 };
 
-const EditableShortcutKey = ({ 
-  children, 
+const EditableShortcutKey = ({
+  children,
   keyId,
-  originalKey, 
+  originalKey,
   shortcut,
   isRecording,
-  onStartRecording
-}: { 
+  onStartRecording,
+}: {
   children: React.ReactNode;
   keyId: string;
   originalKey: string;
@@ -119,22 +118,25 @@ const EditableShortcutKey = ({
   return (
     <kbd
       className={`inline-flex font-sans text-xs rounded px-2 min-w-[1.5rem] min-h-[1.5rem] leading-none items-center justify-center shadow-sm border mr-1 cursor-pointer hover:bg-opacity-80 ${
-        isRecording 
-          ? "border-primary bg-primary/10" 
+        isRecording
+          ? "border-primary bg-primary/10"
           : "border-white/10 bg-black/20"
       }`}
       onClick={handleClick}
-      title={isRecording ? "Press any key combination..." : "Click to edit shortcut"}
-         >
-       {children}
-     </kbd>
+      title={
+        isRecording ? "Press any key combination..." : "Click to edit shortcut"
+      }
+    >
+      {children}
+    </kbd>
   );
 };
 
 export const KeyboardShortcutsHelp = () => {
   const [open, setOpen] = useState(false);
   const [recordingKey, setRecordingKey] = useState<string | null>(null);
-  const [recordingShortcut, setRecordingShortcut] = useState<KeyboardShortcut | null>(null);
+  const [recordingShortcut, setRecordingShortcut] =
+    useState<KeyboardShortcut | null>(null);
 
   const {
     updateKeybinding,
@@ -159,7 +161,10 @@ export const KeyboardShortcutsHelp = () => {
       const keyString = getKeybindingString(e);
       if (keyString) {
         // Auto-save the new keybinding
-        const conflict = validateKeybinding(keyString, recordingShortcut.action);
+        const conflict = validateKeybinding(
+          keyString,
+          recordingShortcut.action
+        );
         if (conflict) {
           toast.error(
             `Key "${keyString}" is already bound to "${conflict.existingAction}"`
@@ -175,7 +180,7 @@ export const KeyboardShortcutsHelp = () => {
 
         // Add new keybinding
         updateKeybinding(keyString, recordingShortcut.action);
-        
+
         setRecordingKey(null);
         setRecordingShortcut(null);
       }
@@ -188,12 +193,20 @@ export const KeyboardShortcutsHelp = () => {
 
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("click", handleClickOutside);
-    
+
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("click", handleClickOutside);
     };
-  }, [recordingKey, recordingShortcut, getKeybindingString, updateKeybinding, removeKeybinding, validateKeybinding, getKeybindingsForAction]);
+  }, [
+    recordingKey,
+    recordingShortcut,
+    getKeybindingString,
+    updateKeybinding,
+    removeKeybinding,
+    validateKeybinding,
+    getKeybindingsForAction,
+  ]);
 
   const handleStartRecording = (keyId: string, shortcut: KeyboardShortcut) => {
     setRecordingKey(keyId);
@@ -230,8 +243,8 @@ export const KeyboardShortcutsHelp = () => {
                 {shortcuts
                   .filter((shortcut) => shortcut.category === category)
                   .map((shortcut, index) => (
-                    <ShortcutItem 
-                      key={index} 
+                    <ShortcutItem
+                      key={index}
                       shortcut={shortcut}
                       recordingKey={recordingKey}
                       onStartRecording={handleStartRecording}
