@@ -13,6 +13,8 @@ interface UseTimelineZoomReturn {
 }
 
 const ZOOM_STORAGE_KEY = 'opencut-timeline-zoom';
+const MIN_ZOOM = 0.5; // Minimum zoom to keep element borders visible
+const MAX_ZOOM = 5;
 
 export function useTimelineZoom({
   containerRef,
@@ -25,7 +27,7 @@ export function useTimelineZoom({
       const stored = localStorage.getItem(ZOOM_STORAGE_KEY);
       if (stored) {
         const parsed = parseFloat(stored);
-        if (!isNaN(parsed) && parsed >= 0.1 && parsed <= 5) {
+        if (!isNaN(parsed) && parsed >= MIN_ZOOM && parsed <= MAX_ZOOM) {
           return parsed;
         }
       }
@@ -45,7 +47,7 @@ export function useTimelineZoom({
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.15 : 0.15;
-      setZoomLevel((prev) => Math.max(0.1, Math.min(5, prev + delta)));
+      setZoomLevel((prev) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev + delta)));
     }
     // Otherwise, allow normal scrolling
   }, []);
@@ -61,11 +63,11 @@ export function useTimelineZoom({
           case '=':
           case '+':
             e.preventDefault();
-            setZoomLevel((prev) => Math.min(5, prev + 0.2));
+            setZoomLevel((prev) => Math.min(MAX_ZOOM, prev + 0.2));
             break;
           case '-':
             e.preventDefault();
-            setZoomLevel((prev) => Math.max(0.1, prev - 0.2));
+            setZoomLevel((prev) => Math.max(MIN_ZOOM, prev - 0.2));
             break;
           case '0':
             e.preventDefault();

@@ -75,7 +75,9 @@ export const TIMELINE_CONSTANTS = {
   TRACK_HEIGHT: 60, // Default fallback
   DEFAULT_TEXT_DURATION: 5,
   DEFAULT_IMAGE_DURATION: 5,
-  ZOOM_LEVELS: [0.25, 0.5, 1, 1.5, 2, 3, 4],
+  ZOOM_LEVELS: [0.5, 1, 1.5, 2, 3, 4, 5],
+  MIN_ZOOM: 0.5,
+  MAX_ZOOM: 5,
 } as const;
 
 // FPS presets for project settings

@@ -1173,8 +1173,8 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       const requiredWidth = totalDuration * TIMELINE_CONSTANTS.PIXELS_PER_SECOND;
       const calculatedZoom = availableWidth / requiredWidth;
       
-      // Clamp between min and max zoom levels
-      return Math.max(0.1, Math.min(5, calculatedZoom));
+      // Clamp between min and max zoom levels (0.3 to 5)
+      return Math.max(0.5, Math.min(5, calculatedZoom));
     },
 
     redo: () => {
