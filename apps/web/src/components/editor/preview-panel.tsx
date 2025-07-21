@@ -637,89 +637,82 @@ function PreviewToolbar({
   };
 
   return (
-    <div data-toolbar className="flex flex-col gap-2 p-1 pt-2 w-full">
-      {/* Timeline Controls */}
-      <div className="flex items-center gap-2 w-full">
-        {/* Time Display */}
-        <div className="flex items-center gap-1 text-[0.70rem] text-muted-foreground tabular-nums">
-          <span className="text-primary">
-            {formatTimeCode(
-              currentTime,
-              "HH:MM:SS:FF",
-              activeProject?.fps || 30,
-            )}
-          </span>
-          <span className="opacity-50">/</span>
-          <span>
-            {formatTimeCode(
-              totalDuration,
-              "HH:MM:SS:FF",
-              activeProject?.fps || 30,
-            )}
-          </span>
-        </div>
+    <div data-toolbar className="flex items-center gap-2 p-1 pt-2 w-full">
+      {/* Time Display */}
+      <div className="flex items-center gap-1 text-[0.70rem] text-muted-foreground tabular-nums">
+        <span className="text-primary">
+          {formatTimeCode(currentTime, "HH:MM:SS:FF", activeProject?.fps || 30)}
+        </span>
+        <span className="opacity-50">/</span>
+        <span>
+          {formatTimeCode(
+            totalDuration,
+            "HH:MM:SS:FF",
+            activeProject?.fps || 30,
+          )}
+        </span>
+      </div>
 
-        {/* Transport Controls */}
-        <div className="flex items-center gap-1">
-          <Button
-            variant="text"
-            size="icon"
-            onClick={skipBackward}
-            disabled={!hasAnyElements}
-            className="h-auto p-0"
-            title="Skip backward 1s"
-          >
-            <SkipBack className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="text"
-            size="icon"
-            onClick={toggle}
-            disabled={!hasAnyElements}
-            className="h-auto p-0"
-          >
-            {isPlaying ? (
-              <Pause className="h-3 w-3" />
-            ) : (
-              <Play className="h-3 w-3" />
-            )}
-          </Button>
-          <Button
-            variant="text"
-            size="icon"
-            onClick={skipForward}
-            disabled={!hasAnyElements}
-            className="h-auto p-0"
-            title="Skip forward 1s"
-          >
-            <SkipForward className="h-3 w-3" />
-          </Button>
-        </div>
+      {/* Transport Controls */}
+      <div className="flex items-center gap-1">
+        <Button
+          variant="text"
+          size="icon"
+          onClick={skipBackward}
+          disabled={!hasAnyElements}
+          className="h-auto p-0"
+          title="Skip backward 1s"
+        >
+          <SkipBack className="h-3 w-3" />
+        </Button>
+        <Button
+          variant="text"
+          size="icon"
+          onClick={toggle}
+          disabled={!hasAnyElements}
+          className="h-auto p-0"
+        >
+          {isPlaying ? (
+            <Pause className="h-3 w-3" />
+          ) : (
+            <Play className="h-3 w-3" />
+          )}
+        </Button>
+        <Button
+          variant="text"
+          size="icon"
+          onClick={skipForward}
+          disabled={!hasAnyElements}
+          className="h-auto p-0"
+          title="Skip forward 1s"
+        >
+          <SkipForward className="h-3 w-3" />
+        </Button>
+      </div>
 
-        {/* Timeline Scrubber */}
-        <div className="flex-1 flex items-center gap-2">
+      {/* Timeline Scrubber */}
+      <div className="flex-1 flex items-center gap-2">
+        <div
+          className={cn(
+            "relative h-1 bg-muted rounded-full cursor-pointer flex-1",
+            !hasAnyElements && "opacity-50 cursor-not-allowed",
+          )}
+          onClick={hasAnyElements ? handleTimelineClick : undefined}
+          onMouseDown={hasAnyElements ? handleTimelineDrag : undefined}
+        >
           <div
-            className={cn(
-              "relative h-1 bg-muted rounded-full cursor-pointer flex-1",
-              !hasAnyElements && "opacity-50 cursor-not-allowed",
-            )}
-            onClick={hasAnyElements ? handleTimelineClick : undefined}
-            onMouseDown={hasAnyElements ? handleTimelineDrag : undefined}
-          >
-            <div
-              className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all duration-100"
-              style={{ width: `${progress}%` }}
-            />
-            <div
-              className="absolute top-1/2 w-3 h-3 bg-primary rounded-full -translate-y-1/2 -translate-x-1/2 shadow-sm border border-background"
-              style={{ left: `${progress}%` }}
-            />
-          </div>
+            className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all duration-100"
+            style={{ width: `${progress}%` }}
+          />
+          <div
+            className="absolute top-1/2 w-3 h-3 bg-primary rounded-full -translate-y-1/2 -translate-x-1/2 shadow-sm border border-background"
+            style={{ left: `${progress}%` }}
+          />
         </div>
       </div>
 
-      {/* Bottom Row - Aspect Ratio and Fullscreen */}
-      <div className="flex items-center justify-end gap-3">
+      {/* Aspect Ratio and Fullscreen Controls */}
+      <div className="flex items-center gap-3">
         {!isExpanded && (
           <>
             <BackgroundSettings />
