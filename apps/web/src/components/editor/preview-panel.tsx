@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Play, Pause, Expand } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { formatTimeCode } from "@/lib/time";
 import { FONT_CLASS_MAP } from "@/lib/font-config";
@@ -41,6 +41,7 @@ export function PreviewPanel() {
     width: 0,
     height: 0,
   });
+  const [isExpanded, setIsExpanded] = useState(false);
   const { activeProject } = useProjectStore();
 
   // Calculate optimal preview size that fits in container while maintaining aspect ratio
@@ -48,32 +49,41 @@ export function PreviewPanel() {
     const updatePreviewSize = () => {
       if (!containerRef.current) return;
 
-      const container = containerRef.current.getBoundingClientRect();
-      const computedStyle = getComputedStyle(containerRef.current);
+      let container;
+      let availableWidth, availableHeight;
 
-      // Get padding values
-      const paddingTop = parseFloat(computedStyle.paddingTop);
-      const paddingBottom = parseFloat(computedStyle.paddingBottom);
-      const paddingLeft = parseFloat(computedStyle.paddingLeft);
-      const paddingRight = parseFloat(computedStyle.paddingRight);
+      if (isExpanded) {
+        // Use full viewport when expanded
+        availableWidth = window.innerWidth;
+        availableHeight = window.innerHeight;
+      } else {
+        container = containerRef.current.getBoundingClientRect();
+        const computedStyle = getComputedStyle(containerRef.current);
 
-      // Get gap value (gap-4 = 1rem = 16px)
-      const gap = parseFloat(computedStyle.gap) || 16;
+        // Get padding values
+        const paddingTop = parseFloat(computedStyle.paddingTop);
+        const paddingBottom = parseFloat(computedStyle.paddingBottom);
+        const paddingLeft = parseFloat(computedStyle.paddingLeft);
+        const paddingRight = parseFloat(computedStyle.paddingRight);
 
-      // Get toolbar height if it exists
-      const toolbar = containerRef.current.querySelector("[data-toolbar]");
-      const toolbarHeight = toolbar
-        ? toolbar.getBoundingClientRect().height
-        : 0;
+        // Get gap value (gap-4 = 1rem = 16px)
+        const gap = parseFloat(computedStyle.gap) || 16;
 
-      // Calculate available space after accounting for padding, gap, and toolbar
-      const availableWidth = container.width - paddingLeft - paddingRight;
-      const availableHeight =
-        container.height -
-        paddingTop -
-        paddingBottom -
-        toolbarHeight -
-        (toolbarHeight > 0 ? gap : 0);
+        // Get toolbar height if it exists
+        const toolbar = containerRef.current.querySelector("[data-toolbar]");
+        const toolbarHeight = toolbar
+          ? toolbar.getBoundingClientRect().height
+          : 0;
+
+        // Calculate available space after accounting for padding, gap, and toolbar
+        availableWidth = container.width - paddingLeft - paddingRight;
+        availableHeight =
+          container.height -
+          paddingTop -
+          paddingBottom -
+          toolbarHeight -
+          (toolbarHeight > 0 ? gap : 0);
+      }
 
       const targetRatio = canvasSize.width / canvasSize.height;
       const containerRatio = availableWidth / availableHeight;
@@ -82,11 +92,11 @@ export function PreviewPanel() {
 
       if (containerRatio > targetRatio) {
         // Container is wider - constrain by height
-        height = availableHeight;
+        height = availableHeight * (isExpanded ? 0.9 : 1); // Leave some margin when expanded
         width = height * targetRatio;
       } else {
         // Container is taller - constrain by width
-        width = availableWidth;
+        width = availableWidth * (isExpanded ? 0.9 : 1); // Leave some margin when expanded
         height = width / targetRatio;
       }
 
@@ -100,8 +110,44 @@ export function PreviewPanel() {
       resizeObserver.observe(containerRef.current);
     }
 
-    return () => resizeObserver.disconnect();
-  }, [canvasSize.width, canvasSize.height]);
+    // Listen for window resize when expanded
+    if (isExpanded) {
+      window.addEventListener("resize", updatePreviewSize);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+      if (isExpanded) {
+        window.removeEventListener("resize", updatePreviewSize);
+      }
+    };
+  }, [canvasSize.width, canvasSize.height, isExpanded]);
+
+  // Handle escape key to exit expanded mode
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && isExpanded) {
+        setIsExpanded(false);
+      }
+    };
+
+    if (isExpanded) {
+      document.addEventListener("keydown", handleEscapeKey);
+      // Prevent body scroll when expanded
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscapeKey);
+      document.body.style.overflow = "";
+    };
+  }, [isExpanded]);
+
+  const toggleExpanded = useCallback(() => {
+    setIsExpanded((prev) => !prev);
+  }, []);
 
   // Get active elements at current time
   const getActiveElements = (): ActiveElement[] => {
@@ -146,7 +192,7 @@ export function PreviewPanel() {
         element.type === "media" &&
         mediaItem &&
         (mediaItem.type === "video" || mediaItem.type === "image") &&
-        element.mediaId !== "test" // Exclude test elements
+        element.mediaId !== "test", // Exclude test elements
     );
   };
 
@@ -338,55 +384,114 @@ export function PreviewPanel() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col min-h-0 min-w-0 bg-panel rounded-sm">
-      <div
-        ref={containerRef}
-        className="flex-1 flex flex-col items-center justify-center p-3 min-h-0 min-w-0"
-      >
-        <div className="flex-1"></div>
-        {hasAnyElements ? (
-          <div
-            ref={previewRef}
-            className="relative overflow-hidden border"
-            style={{
-              width: previewDimensions.width,
-              height: previewDimensions.height,
-              backgroundColor:
-                activeProject?.backgroundType === "blur"
-                  ? "transparent"
-                  : activeProject?.backgroundColor || "#000000",
-            }}
-          >
-            {renderBlurBackground()}
-            {activeElements.length === 0 ? (
-              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                No elements at current time
-              </div>
-            ) : (
-              activeElements.map((elementData, index) =>
-                renderElement(elementData, index)
-              )
-            )}
-            {/* Show message when blur is selected but no media available */}
-            {activeProject?.backgroundType === "blur" &&
-              blurBackgroundElements.length === 0 &&
-              activeElements.length > 0 && (
-                <div className="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-xs p-2 rounded">
-                  Add a video or image to use blur background
+    <>
+      <div className="h-full w-full flex flex-col min-h-0 min-w-0 bg-panel rounded-sm">
+        <div
+          ref={containerRef}
+          className="flex-1 flex flex-col items-center justify-center p-3 min-h-0 min-w-0"
+        >
+          <div className="flex-1"></div>
+          {hasAnyElements ? (
+            <div
+              ref={previewRef}
+              className="relative overflow-hidden border"
+              style={{
+                width: previewDimensions.width,
+                height: previewDimensions.height,
+                backgroundColor:
+                  activeProject?.backgroundType === "blur"
+                    ? "transparent"
+                    : activeProject?.backgroundColor || "#000000",
+              }}
+            >
+              {renderBlurBackground()}
+              {activeElements.length === 0 ? (
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                  No elements at current time
                 </div>
+              ) : (
+                activeElements.map((elementData, index) =>
+                  renderElement(elementData, index),
+                )
               )}
-          </div>
-        ) : null}
+              {/* Show message when blur is selected but no media available */}
+              {activeProject?.backgroundType === "blur" &&
+                blurBackgroundElements.length === 0 &&
+                activeElements.length > 0 && (
+                  <div className="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-xs p-2 rounded">
+                    Add a video or image to use blur background
+                  </div>
+                )}
+            </div>
+          ) : null}
 
-        <div className="flex-1"></div>
+          <div className="flex-1"></div>
 
-        <PreviewToolbar hasAnyElements={hasAnyElements} />
+          <PreviewToolbar
+            hasAnyElements={hasAnyElements}
+            onToggleExpanded={toggleExpanded}
+            isExpanded={isExpanded}
+          />
+        </div>
       </div>
-    </div>
+
+      {/* Expanded/Fullscreen Mode */}
+      {isExpanded && (
+        <div className="fixed inset-0 z-[9999] bg-black flex flex-col">
+          <div className="flex-1 flex items-center justify-center">
+            <div
+              className="relative overflow-hidden"
+              style={{
+                width: previewDimensions.width,
+                height: previewDimensions.height,
+                backgroundColor:
+                  activeProject?.backgroundType === "blur"
+                    ? "transparent"
+                    : activeProject?.backgroundColor || "#000000",
+              }}
+            >
+              {renderBlurBackground()}
+              {activeElements.length === 0 ? (
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                  No elements at current time
+                </div>
+              ) : (
+                activeElements.map((elementData, index) =>
+                  renderElement(elementData, index),
+                )
+              )}
+              {/* Show message when blur is selected but no media available */}
+              {activeProject?.backgroundType === "blur" &&
+                blurBackgroundElements.length === 0 &&
+                activeElements.length > 0 && (
+                  <div className="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-xs p-2 rounded">
+                    Add a video or image to use blur background
+                  </div>
+                )}
+            </div>
+          </div>
+          <div className="p-4">
+            <PreviewToolbar
+              hasAnyElements={hasAnyElements}
+              onToggleExpanded={toggleExpanded}
+              isExpanded={isExpanded}
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
-function PreviewToolbar({ hasAnyElements }: { hasAnyElements: boolean }) {
+function PreviewToolbar({
+  hasAnyElements,
+  onToggleExpanded,
+  isExpanded,
+}: {
+  hasAnyElements: boolean;
+  onToggleExpanded: () => void;
+  isExpanded: boolean;
+}) {
   const { isPlaying, toggle, currentTime } = usePlaybackStore();
   const { setCanvasSize, setCanvasSizeToOriginal } = useEditorStore();
   const { getTotalDuration } = useTimelineStore();
@@ -417,14 +522,14 @@ function PreviewToolbar({ hasAnyElements }: { hasAnyElements: boolean }) {
         <p
           className={cn(
             "text-[0.75rem] text-muted-foreground flex items-center gap-1",
-            !hasAnyElements && "opacity-50"
+            !hasAnyElements && "opacity-50",
           )}
         >
           <span className="text-primary tabular-nums">
             {formatTimeCode(
               currentTime,
               "HH:MM:SS:FF",
-              activeProject?.fps || 30
+              activeProject?.fps || 30,
             )}
           </span>
           <span className="opacity-50">/</span>
@@ -432,7 +537,7 @@ function PreviewToolbar({ hasAnyElements }: { hasAnyElements: boolean }) {
             {formatTimeCode(
               getTotalDuration(),
               "HH:MM:SS:FF",
-              activeProject?.fps || 30
+              activeProject?.fps || 30,
             )}
           </span>
         </p>
@@ -476,7 +581,7 @@ function PreviewToolbar({ hasAnyElements }: { hasAnyElements: boolean }) {
                 onClick={() => handlePresetSelect(preset)}
                 className={cn(
                   "text-xs",
-                  currentPreset?.name === preset.name && "font-semibold"
+                  currentPreset?.name === preset.name && "font-semibold",
                 )}
               >
                 {preset.name}
@@ -488,6 +593,8 @@ function PreviewToolbar({ hasAnyElements }: { hasAnyElements: boolean }) {
           variant="text"
           size="icon"
           className="!size-4 text-muted-foreground"
+          onClick={onToggleExpanded}
+          title={isExpanded ? "Exit fullscreen (Esc)" : "Enter fullscreen"}
         >
           <Expand className="!size-4" />
         </Button>
