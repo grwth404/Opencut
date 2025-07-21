@@ -1317,8 +1317,9 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
     findOrCreateTrack: (trackType) => {
       // Always create new text track to allow multiple text elements
+      // Insert text tracks at the top
       if (trackType === "text") {
-        return get().addTrack(trackType);
+        return get().insertTrackAt(trackType, 0);
       }
 
       const existingTrack = get()._tracks.find((t) => t.type === trackType);
@@ -1356,7 +1357,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     },
 
     addTextAtTime: (item, currentTime = 0) => {
-      const targetTrackId = get().addTrack("text"); // Always create new text track to allow multiple text elements
+      const targetTrackId = get().insertTrackAt("text", 0); // Always create new text track at the top
 
       get().addElementToTrack(targetTrackId, {
         type: "text",
@@ -1399,7 +1400,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     },
 
     addTextToNewTrack: (item) => {
-      const targetTrackId = get().addTrack("text"); // Always create new text track to allow multiple text elements
+      const targetTrackId = get().insertTrackAt("text", 0); // Always create new text track at the top
 
       get().addElementToTrack(targetTrackId, {
         type: "text",
