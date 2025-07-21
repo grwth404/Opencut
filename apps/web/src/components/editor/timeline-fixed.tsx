@@ -198,12 +198,11 @@ export function Timeline() {
       !target.closest("[data-track-labels]");
 
     if (isTimelineBackground) {
-      const now = Date.now();
       mouseTrackingRef.current = {
         isMouseDown: true,
         downX: e.clientX,
         downY: e.clientY,
-        downTime: now,
+        downTime: e.timeStamp,
       };
     }
   }, []);
@@ -250,7 +249,8 @@ export function Timeline() {
       clickX / (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel);
 
     // Snap to frame boundary for accurate seeking
-    const snappedTime = snapTimeToFrame(timeFromClick);
+    const projectFps = activeProject?.fps || 30;
+    const snappedTime = snapTimeToFrame(timeFromClick, projectFps);
 
     // Seek to the clicked time
     seek(Math.max(0, snappedTime));
@@ -382,7 +382,11 @@ export function Timeline() {
         });
 
         for (const media of processedMedia) {
-          addMediaItem(media);
+          if (!activeProject) {
+            toast.error("No active project");
+            return;
+          }
+          await addMediaItem(activeProject.id, media);
 
           // Add to timeline automatically
           const trackId = crypto.randomUUID();
@@ -517,9 +521,12 @@ export function Timeline() {
   // --- Scroll synchronization effect ---
   useEffect(() => {
     const rulerViewport = rulerScrollRef.current;
-    const tracksViewport = tracksScrollRef.current?.parentElement; // The container with overflow-auto
-    const trackLabelsViewport = trackLabelsScrollRef.current?.parentElement; // The container with overflow-y-auto
-
+    const tracksViewport = tracksScrollRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    ) as HTMLElement;
+    const trackLabelsViewport = trackLabelsScrollRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    ) as HTMLElement;
     if (!rulerViewport || !tracksViewport) return;
 
     // Horizontal scroll synchronization between ruler and tracks

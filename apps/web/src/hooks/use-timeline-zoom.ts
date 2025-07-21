@@ -87,7 +87,7 @@ export function useTimelineZoom({
       document.addEventListener('keydown', handleKeyDown);
       return () => document.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isInTimeline, setZoomLevel]);
+  }, [isInTimeline, setZoomLevel, onFitToWindow]);
 
   // Prevent browser zooming in/out when in timeline
   useEffect(() => {
