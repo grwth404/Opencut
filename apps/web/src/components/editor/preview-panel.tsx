@@ -507,19 +507,19 @@ export function PreviewPanel() {
         <div className="fixed inset-0 z-[9999] bg-black flex flex-col">
           <div className="flex-1 flex items-center justify-center">
             <div
-              className="relative overflow-hidden"
+              className="relative overflow-hidden border-2 border-white/20 rounded-lg shadow-2xl"
               style={{
                 width: previewDimensions.width,
                 height: previewDimensions.height,
                 backgroundColor:
                   activeProject?.backgroundType === "blur"
-                    ? "transparent"
-                    : activeProject?.backgroundColor || "#000000",
+                    ? "#1a1a1a"
+                    : activeProject?.backgroundColor || "#1a1a1a",
               }}
             >
               {renderBlurBackground()}
               {activeElements.length === 0 ? (
-                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                <div className="absolute inset-0 flex items-center justify-center text-white/60">
                   No elements at current time
                 </div>
               ) : (
@@ -651,9 +651,20 @@ function PreviewToolbar({
   };
 
   return (
-    <div data-toolbar className="flex items-center gap-2 p-1 pt-2 w-full">
+    <div
+      data-toolbar
+      className={cn(
+        "flex items-center gap-2 p-1 pt-2 w-full",
+        isExpanded && "text-white",
+      )}
+    >
       {/* Time Display */}
-      <div className="flex items-center gap-1 text-[0.70rem] text-muted-foreground tabular-nums">
+      <div
+        className={cn(
+          "flex items-center gap-1 text-[0.70rem] tabular-nums",
+          isExpanded ? "text-white/90" : "text-muted-foreground",
+        )}
+      >
         <span className="text-primary">
           {formatTimeCode(currentTime, "HH:MM:SS:FF", activeProject?.fps || 30)}
         </span>
@@ -674,7 +685,10 @@ function PreviewToolbar({
           size="icon"
           onClick={skipBackward}
           disabled={!hasAnyElements}
-          className="h-auto p-0"
+          className={cn(
+            "h-auto p-0",
+            isExpanded && "text-white hover:text-white/80",
+          )}
           title="Skip backward 1s"
         >
           <SkipBack className="h-3 w-3" />
@@ -684,7 +698,10 @@ function PreviewToolbar({
           size="icon"
           onClick={toggle}
           disabled={!hasAnyElements}
-          className="h-auto p-0"
+          className={cn(
+            "h-auto p-0",
+            isExpanded && "text-white hover:text-white/80",
+          )}
         >
           {isPlaying ? (
             <Pause className="h-3 w-3" />
@@ -697,7 +714,10 @@ function PreviewToolbar({
           size="icon"
           onClick={skipForward}
           disabled={!hasAnyElements}
-          className="h-auto p-0"
+          className={cn(
+            "h-auto p-0",
+            isExpanded && "text-white hover:text-white/80",
+          )}
           title="Skip forward 1s"
         >
           <SkipForward className="h-3 w-3" />
@@ -708,7 +728,8 @@ function PreviewToolbar({
       <div className="flex-1 flex items-center gap-2">
         <div
           className={cn(
-            "relative h-1 bg-muted rounded-full cursor-pointer flex-1",
+            "relative h-1 rounded-full cursor-pointer flex-1",
+            isExpanded ? "bg-white/20" : "bg-muted",
             !hasAnyElements && "opacity-50 cursor-not-allowed",
           )}
           onClick={hasAnyElements ? handleTimelineClick : undefined}
@@ -716,11 +737,19 @@ function PreviewToolbar({
           style={{ userSelect: "none" }}
         >
           <div
-            className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all duration-100"
+            className={cn(
+              "absolute top-0 left-0 h-full rounded-full transition-all duration-100",
+              isExpanded ? "bg-white" : "bg-primary",
+            )}
             style={{ width: `${progress}%` }}
           />
           <div
-            className="absolute top-1/2 w-3 h-3 bg-primary rounded-full -translate-y-1/2 -translate-x-1/2 shadow-sm border border-background"
+            className={cn(
+              "absolute top-1/2 w-3 h-3 rounded-full -translate-y-1/2 -translate-x-1/2 shadow-sm",
+              isExpanded
+                ? "bg-white border border-black/20"
+                : "bg-primary border border-background",
+            )}
             style={{ left: `${progress}%` }}
           />
         </div>
@@ -768,7 +797,12 @@ function PreviewToolbar({
         <Button
           variant="text"
           size="icon"
-          className="!size-4 text-muted-foreground"
+          className={cn(
+            "!size-4",
+            isExpanded
+              ? "text-white/80 hover:text-white"
+              : "text-muted-foreground",
+          )}
           onClick={onToggleExpanded}
           title={isExpanded ? "Exit fullscreen (Esc)" : "Enter fullscreen"}
         >
