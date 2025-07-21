@@ -720,39 +720,43 @@ function PreviewToolbar({
 
       {/* Bottom Row - Aspect Ratio and Fullscreen */}
       <div className="flex items-center justify-end gap-3">
-        <BackgroundSettings />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              size="sm"
-              className="!bg-panel-accent text-foreground/85 text-[0.70rem] h-4 rounded-none border border-muted-foreground px-0.5 py-0 font-light"
-              disabled={!hasAnyElements}
-            >
-              {getDisplayName()}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={handleOriginalSelect}
-              className={cn("text-xs", isOriginal && "font-semibold")}
-            >
-              Original
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {canvasPresets.map((preset) => (
-              <DropdownMenuItem
-                key={preset.name}
-                onClick={() => handlePresetSelect(preset)}
-                className={cn(
-                  "text-xs",
-                  currentPreset?.name === preset.name && "font-semibold",
-                )}
-              >
-                {preset.name}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {!isExpanded && (
+          <>
+            <BackgroundSettings />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  className="!bg-panel-accent text-foreground/85 text-[0.70rem] h-4 rounded-none border border-muted-foreground px-0.5 py-0 font-light"
+                  disabled={!hasAnyElements}
+                >
+                  {getDisplayName()}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={handleOriginalSelect}
+                  className={cn("text-xs", isOriginal && "font-semibold")}
+                >
+                  Original
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {canvasPresets.map((preset) => (
+                  <DropdownMenuItem
+                    key={preset.name}
+                    onClick={() => handlePresetSelect(preset)}
+                    className={cn(
+                      "text-xs",
+                      currentPreset?.name === preset.name && "font-semibold",
+                    )}
+                  >
+                    {preset.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        )}
         <Button
           variant="text"
           size="icon"
