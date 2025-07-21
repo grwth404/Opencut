@@ -25,6 +25,10 @@ export const defaultKeybindings: KeybindingConfig = {
   "ctrl+z": "undo",
   "ctrl+shift+z": "redo",
   "ctrl+y": "redo",
+  "ctrl+=": "zoom-in",
+  "ctrl+-": "zoom-out",
+  "ctrl+0": "zoom-reset",
+  "ctrl+9": "zoom-fit",
   delete: "delete-selected",
   backspace: "delete-selected",
 };

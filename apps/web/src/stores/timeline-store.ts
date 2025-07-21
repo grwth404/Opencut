@@ -158,6 +158,8 @@ interface TimelineStore {
 
   // Computed values
   getTotalDuration: () => number;
+  getContentWidth: (zoomLevel: number) => number;
+  calculateFitToWindowZoom: (containerWidth: number) => number;
 
   // History actions
   undo: () => void;
@@ -1155,6 +1157,24 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       );
 
       return Math.max(...trackEndTimes, 0);
+    },
+
+    getContentWidth: (zoomLevel: number) => {
+      const totalDuration = get().getTotalDuration();
+      return totalDuration * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
+    },
+
+    calculateFitToWindowZoom: (containerWidth: number) => {
+      const totalDuration = get().getTotalDuration();
+      if (totalDuration === 0) return 1;
+      
+      // Leave some padding (10% on each side)
+      const availableWidth = containerWidth * 0.8;
+      const requiredWidth = totalDuration * TIMELINE_CONSTANTS.PIXELS_PER_SECOND;
+      const calculatedZoom = availableWidth / requiredWidth;
+      
+      // Clamp between min and max zoom levels
+      return Math.max(0.1, Math.min(5, calculatedZoom));
     },
 
     redo: () => {

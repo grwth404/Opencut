@@ -56,6 +56,8 @@ import {
   TIMELINE_CONSTANTS,
   snapTimeToFrame,
 } from "@/constants/timeline-constants";
+import { TimelineZoomControl } from "./timeline-zoom-control";
+import { useTimelineZoomActions } from "@/hooks/use-timeline-zoom-actions";
 
 export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their elements.
@@ -69,6 +71,7 @@ export function Timeline() {
     removeElementFromTrack,
     removeElementFromTrackWithRipple,
     getTotalDuration,
+    calculateFitToWindowZoom,
     selectedElements,
     clearSelectedElements,
     setSelectedElements,
@@ -103,10 +106,20 @@ export function Timeline() {
     downTime: 0,
   });
 
+  // Fit to window function
+  const handleFitToWindow = useCallback(() => {
+    if (timelineRef.current) {
+      const containerWidth = timelineRef.current.clientWidth;
+      const optimalZoom = calculateFitToWindowZoom(containerWidth);
+      setZoomLevel(optimalZoom);
+    }
+  }, [calculateFitToWindowZoom]);
+
   // Timeline zoom functionality
   const { zoomLevel, setZoomLevel, handleWheel } = useTimelineZoom({
     containerRef: timelineRef,
     isInTimeline,
+    onFitToWindow: handleFitToWindow,
   });
 
   // Old marquee selection removed - using new SelectionBox component instead
@@ -139,6 +152,13 @@ export function Timeline() {
     rulerScrollRef,
     tracksScrollRef,
     playheadRef,
+  });
+
+  // Zoom actions
+  useTimelineZoomActions({
+    zoomLevel,
+    setZoomLevel,
+    onFitToWindow: handleFitToWindow,
   });
 
   // Selection box functionality
@@ -836,6 +856,15 @@ export function Timeline() {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+          
+          {/* Timeline Zoom Control */}
+          <div className="w-px h-6 bg-border mx-2" />
+          <TimelineZoomControl
+            zoomLevel={zoomLevel}
+            onZoomChange={setZoomLevel}
+            onFitToWindow={handleFitToWindow}
+            className="mr-2"
+          />
         </div>
       </div>
 
@@ -880,21 +909,21 @@ export function Timeline() {
 
           {/* Timeline Ruler */}
           <div
-            className="flex-1 relative overflow-hidden h-4"
+            className="flex-1 relative overflow-x-auto overflow-y-hidden h-4"
             onWheel={handleWheel}
             onMouseDown={handleSelectionMouseDown}
             onClick={handleTimelineContentClick}
             data-ruler-area
+            ref={rulerScrollRef}
           >
-            <ScrollArea className="w-full" ref={rulerScrollRef}>
-              <div
-                ref={rulerRef}
-                className="relative h-4 select-none cursor-default"
-                style={{
-                  width: `${dynamicTimelineWidth}px`,
-                }}
-                onMouseDown={handleRulerMouseDown}
-              >
+            <div
+              ref={rulerRef}
+              className="relative h-4 select-none cursor-default"
+              style={{
+                width: `${dynamicTimelineWidth}px`,
+              }}
+              onMouseDown={handleRulerMouseDown}
+            >
                 {/* Time markers */}
                 {(() => {
                   // Calculate appropriate time interval based on zoom level
@@ -962,8 +991,7 @@ export function Timeline() {
                     );
                   }).filter(Boolean);
                 })()}
-              </div>
-            </ScrollArea>
+            </div>
           </div>
         </div>
 
@@ -976,7 +1004,10 @@ export function Timeline() {
               className="w-48 flex-shrink-0 border-r border-black overflow-y-auto"
               data-track-labels
             >
-              <ScrollArea className="w-full h-full" ref={trackLabelsScrollRef}>
+              <ScrollArea
+                ref={trackLabelsScrollRef}
+                className="w-full h-full"
+              >
                 <div className="flex flex-col gap-1">
                   {tracks.map((track) => (
                     <div
@@ -1001,7 +1032,7 @@ export function Timeline() {
 
           {/* Timeline Tracks Content */}
           <div
-            className="flex-1 relative overflow-hidden"
+            className="flex-1 relative overflow-auto"
             onWheel={handleWheel}
             onMouseDown={(e) => {
               handleTimelineMouseDown(e);
@@ -1010,13 +1041,16 @@ export function Timeline() {
             onClick={handleTimelineContentClick}
             ref={tracksContainerRef}
           >
-            <SelectionBox
-              startPos={selectionBox?.startPos || null}
-              currentPos={selectionBox?.currentPos || null}
-              containerRef={tracksContainerRef}
-              isActive={selectionBox?.isActive || false}
-            />
-            <ScrollArea className="w-full h-full" ref={tracksScrollRef}>
+            <div
+              ref={tracksScrollRef}
+              className="w-full h-full"
+            >
+              <SelectionBox
+                startPos={selectionBox?.startPos || null}
+                currentPos={selectionBox?.currentPos || null}
+                containerRef={tracksContainerRef}
+                isActive={selectionBox?.isActive || false}
+              />
               <div
                 className="relative flex-1"
                 style={{
@@ -1070,7 +1104,7 @@ export function Timeline() {
                   </>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         </div>
       </div>
