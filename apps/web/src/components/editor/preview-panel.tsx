@@ -92,11 +92,11 @@ export function PreviewPanel() {
 
       if (containerRatio > targetRatio) {
         // Container is wider - constrain by height
-        height = availableHeight * (isExpanded ? 0.9 : 1); // Leave some margin when expanded
+        height = availableHeight * (isExpanded ? 0.95 : 1); // Use more space when expanded
         width = height * targetRatio;
       } else {
         // Container is taller - constrain by width
-        width = availableWidth * (isExpanded ? 0.9 : 1); // Leave some margin when expanded
+        width = availableWidth * (isExpanded ? 0.95 : 1); // Use more space when expanded
         height = width / targetRatio;
       }
 
@@ -507,7 +507,7 @@ export function PreviewPanel() {
         <div className="fixed inset-0 z-[9999] flex flex-col">
           <div className="flex-1 flex items-center justify-center bg-background">
             <div
-              className="relative overflow-hidden border-2 border-white/20 rounded-lg shadow-2xl"
+              className="relative overflow-hidden"
               style={{
                 width: previewDimensions.width,
                 height: previewDimensions.height,
