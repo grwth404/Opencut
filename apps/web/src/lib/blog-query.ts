@@ -4,62 +4,51 @@ import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
+import rehypeSanitize from "rehype-sanitize";
 
 const url = process.env.MARBLE_API_URL;
 const key = process.env.MARBLE_WORKSPACE_KEY;
 
-export async function getPosts() {
-  try {
-    const raw = await fetch(`${url}/${key}/posts`);
-    const data: MarblePostList = await raw.json();
-    return data;
-  } catch (error) {
-    console.log(error);
+async function fetchFromMarble<T>(endpoint: string): Promise<T> {
+    if (!url || !key) {
+      throw new Error('Missing required environment variables');
+    }
+    
+    try {
+      const response = await fetch(`${url}/${key}/${endpoint}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${endpoint}: ${response.status} ${response.statusText}`);
+      }
+      return await response.json() as T;
+    } catch (error) {
+      console.error(`Error fetching ${endpoint}:`, error);
+      throw error;
+    }
   }
-}
-
-export async function getTags() {
-  try {
-    const raw = await fetch(`${url}/${key}/tags`);
-    const data: MarbleTagList = await raw.json();
-    return data;
-  } catch (error) {
-    console.log(error);
+  
+  export async function getPosts() {
+    return fetchFromMarble<MarblePostList>('posts');
   }
-}
-
-export async function getSinglePost(slug: string) {
-  try {
-    const raw = await fetch(`${url}/${key}/posts/${slug}`);
-    const data: MarblePost = await raw.json();
-    return data;
-  } catch (error) {
-    console.log(error);
+  
+  export async function getTags() {
+    return fetchFromMarble<MarbleTagList>('tags');
   }
-}
-
-export async function getCategories() {
-  try {
-    const raw = await fetch(`${url}/${key}/categories`);
-    const data: MarbleCategoryList = await raw.json();
-    return data;
-  } catch (error) {
-    console.log(error);
+  
+  export async function getSinglePost(slug: string) {
+    return fetchFromMarble<MarblePost>(`posts/${slug}`);
   }
-}
-
-export async function getAuthors() {
-  try {
-    const raw = await fetch(`${url}/${key}/authors`);
-    const data: MarbleAuthorList = await raw.json();
-    return data;
-  } catch (error) {
-    console.log(error);
+  
+  export async function getCategories() {
+    return fetchFromMarble<MarbleCategoryList>('categories');
   }
-}
+  
+  export async function getAuthors() {
+    return fetchFromMarble<MarbleAuthorList>('authors');
+  }
 
 export async function processHtmlContent(html: string): Promise<string> {
 	const processor = unified()
+        .use(rehypeSanitize)
 		.use(rehypeParse, { fragment: true })
 		.use(rehypeSlug)
 		.use(rehypeAutolinkHeadings, { behavior: "append" })

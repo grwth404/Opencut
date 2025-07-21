@@ -1,11 +1,7 @@
 import { Header } from "@/components/header";
 import Prose from "@/components/ui/prose";
 import { Separator } from "@/components/ui/separator";
-import {
-  getPosts,
-  getSinglePost,
-  processHtmlContent,
-} from "@/lib/blog-query";
+import { getPosts, getSinglePost, processHtmlContent } from "@/lib/blog-query";
 import { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -118,17 +114,21 @@ async function Page({ params }: PageProps) {
               {data.post.title}
             </h1>
             <div className="flex items-center justify-center gap-2">
-              <Image
-                src={data.post.authors[0].image}
-                alt={data.post.authors[0].name}
-                width={36}
-                height={36}
-                loading="eager"
-                className="aspect-square shrink-0 size-8 rounded-full"
-              />
-              <p className="text-muted-foreground">
-                {data.post.authors[0].name}
-              </p>
+              {data.post.authors[0] && (
+                <>
+                  <Image
+                    src={data.post.authors[0].image}
+                    alt={data.post.authors[0].name}
+                    width={36}
+                    height={36}
+                    loading="eager"
+                    className="aspect-square shrink-0 size-8 rounded-full"
+                  />
+                  <p className="text-muted-foreground">
+                    {data.post.authors[0].name}
+                  </p>
+                </>
+              )}
             </div>
           </div>
           <Separator />
