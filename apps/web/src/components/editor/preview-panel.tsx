@@ -33,7 +33,7 @@ interface ActiveElement {
 export function PreviewPanel() {
   const { tracks, getTotalDuration } = useTimelineStore();
   const { mediaItems } = useMediaStore();
-  const { currentTime, toggle, setCurrentTime } = usePlaybackStore();
+  const { currentTime, toggle, setCurrentTime, pause } = usePlaybackStore();
   const { canvasSize } = useEditorStore();
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -174,6 +174,7 @@ export function PreviewPanel() {
         case "ArrowLeft":
           event.preventDefault();
           if (hasAnyElements) {
+            pause();
             const frameTime = 1 / (activeProject?.fps || 30);
             const newTime = Math.max(
               0,
@@ -185,6 +186,7 @@ export function PreviewPanel() {
         case "ArrowRight":
           event.preventDefault();
           if (hasAnyElements) {
+            pause();
             const frameTime = 1 / (activeProject?.fps || 30);
             const totalDuration = getTotalDuration();
             const newTime = Math.min(
@@ -504,6 +506,7 @@ export function PreviewPanel() {
             setCurrentTime={setCurrentTime}
             toggle={toggle}
             getTotalDuration={getTotalDuration}
+            pause={pause}
           />
         </div>
       </div>
@@ -552,6 +555,7 @@ export function PreviewPanel() {
               setCurrentTime={setCurrentTime}
               toggle={toggle}
               getTotalDuration={getTotalDuration}
+              pause={pause}
             />
           </div>
         </div>
@@ -568,6 +572,7 @@ function PreviewToolbar({
   setCurrentTime,
   toggle,
   getTotalDuration,
+  pause,
 }: {
   hasAnyElements: boolean;
   onToggleExpanded: () => void;
@@ -576,6 +581,7 @@ function PreviewToolbar({
   setCurrentTime: (time: number) => void;
   toggle: () => void;
   getTotalDuration: () => number;
+  pause: () => void;
 }) {
   const { isPlaying } = usePlaybackStore();
   const { setCanvasSize, setCanvasSizeToOriginal } = useEditorStore();
@@ -601,6 +607,7 @@ function PreviewToolbar({
   const progress = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0;
 
   const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    pause();
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const percentage = clickX / rect.width;
@@ -609,6 +616,7 @@ function PreviewToolbar({
   };
 
   const handleTimelineDrag = (e: React.MouseEvent<HTMLDivElement>) => {
+    pause();
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const rect = e.currentTarget.getBoundingClientRect();
       const dragX = moveEvent.clientX - rect.left;
@@ -627,11 +635,13 @@ function PreviewToolbar({
   };
 
   const skipBackward = () => {
+    pause();
     const newTime = Math.max(0, currentTime - 1); // Skip 1 second back
     setCurrentTime(newTime);
   };
 
   const skipForward = () => {
+    pause();
     const newTime = Math.min(totalDuration, currentTime + 1); // Skip 1 second forward
     setCurrentTime(newTime);
   };
