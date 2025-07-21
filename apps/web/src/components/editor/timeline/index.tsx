@@ -18,6 +18,8 @@ import {
   Lock,
   LockOpen,
   Link,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import {
   Tooltip,
@@ -56,6 +58,7 @@ import {
   TIMELINE_CONSTANTS,
   snapTimeToFrame,
 } from "@/constants/timeline-constants";
+import { Slider } from "@/components/ui/slider";
 
 export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their elements.
@@ -504,7 +507,7 @@ export function Timeline() {
       onMouseEnter={() => setIsInTimeline(true)}
       onMouseLeave={() => setIsInTimeline(false)}
     >
-      <TimelineToolbar />
+      <TimelineToolbar zoomLevel={zoomLevel} setZoomLevel={setZoomLevel} />
 
       {/* Timeline Container */}
       <div
@@ -778,7 +781,13 @@ function TrackIcon({ track }: { track: TimelineTrack }) {
   );
 }
 
-function TimelineToolbar() {
+function TimelineToolbar({
+  zoomLevel,
+  setZoomLevel,
+}: {
+  zoomLevel: number;
+  setZoomLevel: (zoom: number) => void;
+}) {
   const {
     tracks,
     addTrack,
@@ -797,8 +806,6 @@ function TimelineToolbar() {
     toggleRippleEditing,
   } = useTimelineStore();
   const { currentTime, duration, isPlaying, toggle } = usePlaybackStore();
-  const { activeProject } = useProjectStore();
-  const { mediaItems, addMediaItem } = useMediaStore();
 
   // Action handlers
   const handleSplitSelected = () => {
@@ -914,6 +921,19 @@ function TimelineToolbar() {
       }
     });
     clearSelectedElements();
+  };
+
+  // Zoom handlers
+  const handleZoomIn = () => {
+    setZoomLevel(Math.min(4, zoomLevel + 0.25));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(Math.max(0.25, zoomLevel - 0.25));
+  };
+
+  const handleZoomSliderChange = (values: number[]) => {
+    setZoomLevel(values[0]);
   };
   return (
     <div className="border-b flex items-center justify-between px-2 py-1">
@@ -1077,6 +1097,22 @@ function TimelineToolbar() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+        <div className="flex items-center gap-1">
+          <Button variant="text" size="icon" onClick={handleZoomOut}>
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <Slider
+            className="w-24"
+            value={[zoomLevel]}
+            onValueChange={handleZoomSliderChange}
+            min={0.25}
+            max={4}
+            step={0.25}
+          />
+          <Button variant="text" size="icon" onClick={handleZoomIn}>
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );
