@@ -6,7 +6,7 @@ import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSanitize from "rehype-sanitize";
 
-const url = process.env.NEXT_PUBLIC_MARBLE_API_URLL ?? "https://api.marblecms.com";
+const url = process.env.NEXT_PUBLIC_MARBLE_API_URL ?? "https://api.marblecms.com";
 const key = process.env.MARBLE_WORKSPACE_KEY ?? "cm6ytuq9x0000i803v0isidst";
 
 async function fetchFromMarble<T>(endpoint: string): Promise<T> {
