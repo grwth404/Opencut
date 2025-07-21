@@ -504,8 +504,8 @@ export function PreviewPanel() {
 
       {/* Expanded/Fullscreen Mode */}
       {isExpanded && (
-        <div className="fixed inset-0 z-[9999] bg-black flex flex-col">
-          <div className="flex-1 flex items-center justify-center">
+        <div className="fixed inset-0 z-[9999] flex flex-col">
+          <div className="flex-1 flex items-center justify-center bg-background">
             <div
               className="relative overflow-hidden border-2 border-white/20 rounded-lg shadow-2xl"
               style={{
@@ -537,7 +537,7 @@ export function PreviewPanel() {
                 )}
             </div>
           </div>
-          <div className="p-4">
+          <div className="p-4 bg-black">
             <PreviewToolbar
               hasAnyElements={hasAnyElements}
               onToggleExpanded={toggleExpanded}
