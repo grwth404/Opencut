@@ -42,7 +42,6 @@ export async function generateMetadata({
     },
     openGraph: {
       type: "article",
-      siteName: "",
       images: [
         {
           url: data.post.coverImage,
