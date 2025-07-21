@@ -116,7 +116,7 @@ Before you begin, ensure you have the following installed on your system:
 
    # Marble Blog
    MARBLE_WORKSPACE_KEY=cm6ytuq9x0000i803v0isidst # example organization key
-   MARBLE_API_URL=https://api.marblecms.com
+   NEXT_PUBLIC_MARBLE_API_URL=https://api.marblecms.com
 
    # Development
    NODE_ENV="development"
