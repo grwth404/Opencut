@@ -53,9 +53,11 @@ export function PreviewPanel() {
       let availableWidth, availableHeight;
 
       if (isExpanded) {
-        // Use full viewport when expanded
-        availableWidth = window.innerWidth;
-        availableHeight = window.innerHeight;
+        // Use full viewport when expanded, accounting for controls and margin
+        const controlsHeight = 80; // Approximate height of controls area
+        const marginSpace = 24; // m-3 = 12px on each side = 24px total
+        availableWidth = window.innerWidth - marginSpace;
+        availableHeight = window.innerHeight - controlsHeight - marginSpace;
       } else {
         container = containerRef.current.getBoundingClientRect();
         const computedStyle = getComputedStyle(containerRef.current);
