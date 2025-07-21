@@ -6,14 +6,10 @@ import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSanitize from "rehype-sanitize";
 
-const url = process.env.MARBLE_API_URL;
-const key = process.env.MARBLE_WORKSPACE_KEY;
+const url = process.env.MARBLE_API_URL || "https://api.marblecms.com";
+const key = process.env.MARBLE_WORKSPACE_KEY || "cm6ytuq9x0000i803v0isidst";
 
 async function fetchFromMarble<T>(endpoint: string): Promise<T> {
-    if (!url || !key) {
-      throw new Error('Missing required environment variables');
-    }
-    
     try {
       const response = await fetch(`${url}/${key}/${endpoint}`);
       if (!response.ok) {
