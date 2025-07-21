@@ -33,7 +33,7 @@ interface ActiveElement {
 export function PreviewPanel() {
   const { tracks, getTotalDuration } = useTimelineStore();
   const { mediaItems } = useMediaStore();
-  const { currentTime, toggle, setCurrentTime, pause } = usePlaybackStore();
+  const { currentTime, toggle, setCurrentTime, isPlaying } = usePlaybackStore();
   const { canvasSize } = useEditorStore();
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -174,8 +174,8 @@ export function PreviewPanel() {
         case "ArrowLeft":
           event.preventDefault();
           if (hasAnyElements) {
-            pause();
             const frameTime = 1 / (activeProject?.fps || 30);
+            const totalDuration = getTotalDuration();
             const newTime = Math.max(
               0,
               currentTime - (event.shiftKey ? frameTime : 1),
@@ -186,7 +186,6 @@ export function PreviewPanel() {
         case "ArrowRight":
           event.preventDefault();
           if (hasAnyElements) {
-            pause();
             const frameTime = 1 / (activeProject?.fps || 30);
             const totalDuration = getTotalDuration();
             const newTime = Math.min(
@@ -205,7 +204,8 @@ export function PreviewPanel() {
         case "End":
           event.preventDefault();
           if (hasAnyElements) {
-            setCurrentTime(getTotalDuration());
+            const totalDuration = getTotalDuration();
+            setCurrentTime(totalDuration);
           }
           break;
       }
@@ -213,15 +213,7 @@ export function PreviewPanel() {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [
-    hasAnyElements,
-    toggle,
-    currentTime,
-    setCurrentTime,
-    activeProject?.fps,
-    getTotalDuration,
-    toggle,
-  ]);
+  }, [hasAnyElements, toggle, currentTime, setCurrentTime, activeProject?.fps]);
 
   // Get active elements at current time
   const getActiveElements = (): ActiveElement[] => {
@@ -506,7 +498,6 @@ export function PreviewPanel() {
             setCurrentTime={setCurrentTime}
             toggle={toggle}
             getTotalDuration={getTotalDuration}
-            pause={pause}
           />
         </div>
       </div>
@@ -555,7 +546,6 @@ export function PreviewPanel() {
               setCurrentTime={setCurrentTime}
               toggle={toggle}
               getTotalDuration={getTotalDuration}
-              pause={pause}
             />
           </div>
         </div>
@@ -572,7 +562,6 @@ function PreviewToolbar({
   setCurrentTime,
   toggle,
   getTotalDuration,
-  pause,
 }: {
   hasAnyElements: boolean;
   onToggleExpanded: () => void;
@@ -581,7 +570,6 @@ function PreviewToolbar({
   setCurrentTime: (time: number) => void;
   toggle: () => void;
   getTotalDuration: () => number;
-  pause: () => void;
 }) {
   const { isPlaying } = usePlaybackStore();
   const { setCanvasSize, setCanvasSizeToOriginal } = useEditorStore();
@@ -607,41 +595,57 @@ function PreviewToolbar({
   const progress = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0;
 
   const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    pause();
+    if (!hasAnyElements) return;
+
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
-    const percentage = clickX / rect.width;
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
     const newTime = percentage * totalDuration;
     setCurrentTime(Math.max(0, Math.min(newTime, totalDuration)));
   };
 
   const handleTimelineDrag = (e: React.MouseEvent<HTMLDivElement>) => {
-    pause();
+    if (!hasAnyElements) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    let isDragging = true;
+
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      const rect = e.currentTarget.getBoundingClientRect();
+      if (!isDragging) return;
+
+      moveEvent.preventDefault();
       const dragX = moveEvent.clientX - rect.left;
       const percentage = Math.max(0, Math.min(1, dragX / rect.width));
       const newTime = percentage * totalDuration;
       setCurrentTime(Math.max(0, Math.min(newTime, totalDuration)));
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (moveEvent: MouseEvent) => {
+      isDragging = false;
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "";
     };
+
+    // Prevent text selection during drag
+    document.body.style.userSelect = "none";
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
+
+    // Also handle the initial click position
+    handleMouseMove(e.nativeEvent);
   };
 
   const skipBackward = () => {
-    pause();
     const newTime = Math.max(0, currentTime - 1); // Skip 1 second back
     setCurrentTime(newTime);
   };
 
   const skipForward = () => {
-    pause();
     const newTime = Math.min(totalDuration, currentTime + 1); // Skip 1 second forward
     setCurrentTime(newTime);
   };
@@ -709,6 +713,7 @@ function PreviewToolbar({
           )}
           onClick={hasAnyElements ? handleTimelineClick : undefined}
           onMouseDown={hasAnyElements ? handleTimelineDrag : undefined}
+          style={{ userSelect: "none" }}
         >
           <div
             className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all duration-100"
