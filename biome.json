@@ -11,7 +11,7 @@
     "experimentalScannerIgnores": [
       "**/node_modules/**",
       "**/.next/**",
-      "**/turbo/**"
+      "**/.turbo/**"
     ]
   },
   "formatter": {
