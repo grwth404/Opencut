@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Play, Pause, Expand } from "lucide-react";
+import { Play, Pause, Expand, SkipBack, SkipForward } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { formatTimeCode } from "@/lib/time";
@@ -31,9 +31,9 @@ interface ActiveElement {
 }
 
 export function PreviewPanel() {
-  const { tracks } = useTimelineStore();
+  const { tracks, getTotalDuration } = useTimelineStore();
   const { mediaItems } = useMediaStore();
-  const { currentTime } = usePlaybackStore();
+  const { currentTime, toggle, setCurrentTime } = usePlaybackStore();
   const { canvasSize } = useEditorStore();
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -149,6 +149,78 @@ export function PreviewPanel() {
     setIsExpanded((prev) => !prev);
   }, []);
 
+  // Check if there are any elements in the timeline at all
+  const hasAnyElements = tracks.some((track) => track.elements.length > 0);
+
+  // Handle keyboard shortcuts for timeline navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle shortcuts when preview panel is focused or no input is focused
+      const activeElement = document.activeElement;
+      const isInputFocused =
+        activeElement?.tagName === "INPUT" ||
+        activeElement?.tagName === "TEXTAREA" ||
+        activeElement?.contentEditable === "true";
+
+      if (isInputFocused) return;
+
+      switch (event.key) {
+        case " ":
+          event.preventDefault();
+          if (hasAnyElements) {
+            toggle();
+          }
+          break;
+        case "ArrowLeft":
+          event.preventDefault();
+          if (hasAnyElements) {
+            const frameTime = 1 / (activeProject?.fps || 30);
+            const newTime = Math.max(
+              0,
+              currentTime - (event.shiftKey ? frameTime : 1),
+            );
+            setCurrentTime(newTime);
+          }
+          break;
+        case "ArrowRight":
+          event.preventDefault();
+          if (hasAnyElements) {
+            const frameTime = 1 / (activeProject?.fps || 30);
+            const totalDuration = getTotalDuration();
+            const newTime = Math.min(
+              totalDuration,
+              currentTime + (event.shiftKey ? frameTime : 1),
+            );
+            setCurrentTime(newTime);
+          }
+          break;
+        case "Home":
+          event.preventDefault();
+          if (hasAnyElements) {
+            setCurrentTime(0);
+          }
+          break;
+        case "End":
+          event.preventDefault();
+          if (hasAnyElements) {
+            setCurrentTime(getTotalDuration());
+          }
+          break;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [
+    hasAnyElements,
+    toggle,
+    currentTime,
+    setCurrentTime,
+    activeProject?.fps,
+    getTotalDuration,
+    toggle,
+  ]);
+
   // Get active elements at current time
   const getActiveElements = (): ActiveElement[] => {
     const activeElements: ActiveElement[] = [];
@@ -181,9 +253,6 @@ export function PreviewPanel() {
   };
 
   const activeElements = getActiveElements();
-
-  // Check if there are any elements in the timeline at all
-  const hasAnyElements = tracks.some((track) => track.elements.length > 0);
 
   // Get media elements for blur background (video/image only)
   const getBlurBackgroundElements = (): ActiveElement[] => {
@@ -431,6 +500,10 @@ export function PreviewPanel() {
             hasAnyElements={hasAnyElements}
             onToggleExpanded={toggleExpanded}
             isExpanded={isExpanded}
+            currentTime={currentTime}
+            setCurrentTime={setCurrentTime}
+            toggle={toggle}
+            getTotalDuration={getTotalDuration}
           />
         </div>
       </div>
@@ -475,6 +548,10 @@ export function PreviewPanel() {
               hasAnyElements={hasAnyElements}
               onToggleExpanded={toggleExpanded}
               isExpanded={isExpanded}
+              currentTime={currentTime}
+              setCurrentTime={setCurrentTime}
+              toggle={toggle}
+              getTotalDuration={getTotalDuration}
             />
           </div>
         </div>
@@ -487,14 +564,21 @@ function PreviewToolbar({
   hasAnyElements,
   onToggleExpanded,
   isExpanded,
+  currentTime,
+  setCurrentTime,
+  toggle,
+  getTotalDuration,
 }: {
   hasAnyElements: boolean;
   onToggleExpanded: () => void;
   isExpanded: boolean;
+  currentTime: number;
+  setCurrentTime: (time: number) => void;
+  toggle: () => void;
+  getTotalDuration: () => number;
 }) {
-  const { isPlaying, toggle, currentTime } = usePlaybackStore();
+  const { isPlaying } = usePlaybackStore();
   const { setCanvasSize, setCanvasSizeToOriginal } = useEditorStore();
-  const { getTotalDuration } = useTimelineStore();
   const { activeProject } = useProjectStore();
   const {
     currentPreset,
@@ -513,19 +597,52 @@ function PreviewToolbar({
     setCanvasSizeToOriginal(aspectRatio);
   };
 
+  const totalDuration = getTotalDuration();
+  const progress = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0;
+
+  const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = clickX / rect.width;
+    const newTime = percentage * totalDuration;
+    setCurrentTime(Math.max(0, Math.min(newTime, totalDuration)));
+  };
+
+  const handleTimelineDrag = (e: React.MouseEvent<HTMLDivElement>) => {
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const dragX = moveEvent.clientX - rect.left;
+      const percentage = Math.max(0, Math.min(1, dragX / rect.width));
+      const newTime = percentage * totalDuration;
+      setCurrentTime(Math.max(0, Math.min(newTime, totalDuration)));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const skipBackward = () => {
+    const newTime = Math.max(0, currentTime - 1); // Skip 1 second back
+    setCurrentTime(newTime);
+  };
+
+  const skipForward = () => {
+    const newTime = Math.min(totalDuration, currentTime + 1); // Skip 1 second forward
+    setCurrentTime(newTime);
+  };
+
   return (
-    <div
-      data-toolbar
-      className="flex items-end justify-between gap-2 p-1 pt-2 w-full"
-    >
-      <div>
-        <p
-          className={cn(
-            "text-[0.75rem] text-muted-foreground flex items-center gap-1",
-            !hasAnyElements && "opacity-50",
-          )}
-        >
-          <span className="text-primary tabular-nums">
+    <div data-toolbar className="flex flex-col gap-2 p-1 pt-2 w-full">
+      {/* Timeline Controls */}
+      <div className="flex items-center gap-2 w-full">
+        {/* Time Display */}
+        <div className="flex items-center gap-1 text-[0.70rem] text-muted-foreground tabular-nums">
+          <span className="text-primary">
             {formatTimeCode(
               currentTime,
               "HH:MM:SS:FF",
@@ -533,29 +650,76 @@ function PreviewToolbar({
             )}
           </span>
           <span className="opacity-50">/</span>
-          <span className="tabular-nums">
+          <span>
             {formatTimeCode(
-              getTotalDuration(),
+              totalDuration,
               "HH:MM:SS:FF",
               activeProject?.fps || 30,
             )}
           </span>
-        </p>
+        </div>
+
+        {/* Transport Controls */}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="text"
+            size="icon"
+            onClick={skipBackward}
+            disabled={!hasAnyElements}
+            className="h-auto p-0"
+            title="Skip backward 1s"
+          >
+            <SkipBack className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="text"
+            size="icon"
+            onClick={toggle}
+            disabled={!hasAnyElements}
+            className="h-auto p-0"
+          >
+            {isPlaying ? (
+              <Pause className="h-3 w-3" />
+            ) : (
+              <Play className="h-3 w-3" />
+            )}
+          </Button>
+          <Button
+            variant="text"
+            size="icon"
+            onClick={skipForward}
+            disabled={!hasAnyElements}
+            className="h-auto p-0"
+            title="Skip forward 1s"
+          >
+            <SkipForward className="h-3 w-3" />
+          </Button>
+        </div>
+
+        {/* Timeline Scrubber */}
+        <div className="flex-1 flex items-center gap-2">
+          <div
+            className={cn(
+              "relative h-1 bg-muted rounded-full cursor-pointer flex-1",
+              !hasAnyElements && "opacity-50 cursor-not-allowed",
+            )}
+            onClick={hasAnyElements ? handleTimelineClick : undefined}
+            onMouseDown={hasAnyElements ? handleTimelineDrag : undefined}
+          >
+            <div
+              className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all duration-100"
+              style={{ width: `${progress}%` }}
+            />
+            <div
+              className="absolute top-1/2 w-3 h-3 bg-primary rounded-full -translate-y-1/2 -translate-x-1/2 shadow-sm border border-background"
+              style={{ left: `${progress}%` }}
+            />
+          </div>
+        </div>
       </div>
-      <Button
-        variant="text"
-        size="icon"
-        onClick={toggle}
-        disabled={!hasAnyElements}
-        className="h-auto p-0"
-      >
-        {isPlaying ? (
-          <Pause className="h-3 w-3" />
-        ) : (
-          <Play className="h-3 w-3" />
-        )}
-      </Button>
-      <div className="flex items-center gap-3">
+
+      {/* Bottom Row - Aspect Ratio and Fullscreen */}
+      <div className="flex items-center justify-end gap-3">
         <BackgroundSettings />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
