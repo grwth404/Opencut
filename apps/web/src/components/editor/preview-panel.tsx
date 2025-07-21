@@ -507,7 +507,7 @@ export function PreviewPanel() {
         <div className="fixed inset-0 z-[9999] flex flex-col">
           <div className="flex-1 flex items-center justify-center bg-background">
             <div
-              className="relative overflow-hidden"
+              className="relative overflow-hidden border border-border m-3"
               style={{
                 width: previewDimensions.width,
                 height: previewDimensions.height,
