@@ -211,13 +211,14 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
 
     // Iterate over a snapshot of tracks and their elements
     tracks.forEach((track) => {
-      track.elements.forEach((el) => {
-        if (el.type === "media" && el.mediaId === id) {
-          if (rippleEditingEnabled) {
-            removeElementFromTrackWithRipple(track.id, el.id);
-          } else {
-            removeElementFromTrack(track.id, el.id);
-          }
+      const elementsToRemove = track.elements.filter(
+        (el) => el.type === "media" && el.mediaId === id
+      );
+      elementsToRemove.forEach((el) => {
+        if (rippleEditingEnabled) {
+          removeElementFromTrackWithRipple(track.id, el.id);
+        } else {
+          removeElementFromTrack(track.id, el.id);
         }
       });
     });
