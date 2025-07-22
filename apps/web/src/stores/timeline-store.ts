@@ -161,6 +161,7 @@ interface TimelineStore {
 
   // Computed values
   getTotalDuration: () => number;
+  getProjectThumbnail: (projectId: string) => Promise<string | null>;
 
   // History actions
   undo: () => void;
@@ -1176,6 +1177,42 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       );
 
       return Math.max(...trackEndTimes, 0);
+    },
+
+    getProjectThumbnail: async (projectId) => {
+      try {
+        const tracks = await storageService.loadTimeline(projectId);
+        const mediaItems = await storageService.loadAllMediaItems(projectId);
+
+        if (!tracks || !mediaItems.length) return null;
+
+        const firstMediaElement = tracks
+          .flatMap((track) => track.elements)
+          .filter((element) => element.type === "media")
+          .sort((a, b) => a.startTime - b.startTime)[0];
+
+        if (!firstMediaElement) return null;
+
+        const mediaItem = mediaItems.find(
+          (item) => item.id === firstMediaElement.mediaId
+        );
+        if (!mediaItem) return null;
+
+        if (mediaItem.type === "video" && mediaItem.file) {
+          const { generateVideoThumbnail } = await import(
+            "@/stores/media-store"
+          );
+          const { thumbnailUrl } = await generateVideoThumbnail(mediaItem.file);
+          return thumbnailUrl;
+        } else if (mediaItem.type === "image" && mediaItem.url) {
+          return mediaItem.url;
+        }
+
+        return null;
+      } catch (error) {
+        console.error("Failed to get project thumbnail:", error);
+        return null;
+      }
     },
 
     redo: () => {
