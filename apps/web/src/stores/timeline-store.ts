@@ -549,6 +549,8 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
             : track
         )
       );
+
+      get().selectElement(trackId, newElement.id);
     },
 
     removeElementFromTrack: (trackId, elementId) => {
