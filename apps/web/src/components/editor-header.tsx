@@ -43,7 +43,14 @@ export function EditorHeader() {
   // Save the new name if changed, exit edit mode
   const handleNameSave = async () => {
     if (activeProject && newName.trim() && newName !== activeProject.name) {
-      await renameProject(activeProject.id, newName.trim());
+      try {
+        await renameProject(activeProject.id, newName.trim());
+      }
+      catch (error) {
+        console.error('Failed to rename project:', error);
+        // Reset to original name on error
+        setNewName(activeProject.name);
+      }
     }
     setIsEditing(false);
   };
@@ -68,7 +75,7 @@ export function EditorHeader() {
           // Editable input for project name using standard Input component
           <Input
             ref={inputRef}
-            className="text-sm font-medium px-2 py-1 h-7 truncate"
+            className="text-sm font-medium px-2 py-1 h-9 truncate"
             value={newName}
             onChange={e => setNewName(e.target.value)}
             onBlur={handleNameSave}
