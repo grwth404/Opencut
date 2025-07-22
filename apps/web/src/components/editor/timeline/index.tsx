@@ -1071,9 +1071,9 @@ function TimelineToolbar({
             <TooltipTrigger asChild>
               <Button variant="text" size="icon" onClick={toggleSnapping}>
                 {snappingEnabled ? (
-                  <LockOpen className="h-4 w-4 text-primary" />
+                  <Magnet className="h-4 w-4 text-primary" />
                 ) : (
-                  <Lock className="h-4 w-4" />
+                  <Magnet className="h-4 w-4" />
                 )}
               </Button>
             </TooltipTrigger>
