@@ -39,6 +39,7 @@ interface KeybindingsState {
   keybindings: KeybindingConfig;
   isCustomized: boolean;
   keybindingsEnabled: boolean;
+  isRecording: boolean;
 
   // Actions
   updateKeybinding: (key: ShortcutKey, action: ActionWithOptionalArgs) => void;
@@ -48,11 +49,12 @@ interface KeybindingsState {
   exportKeybindings: () => KeybindingConfig;
   enableKeybindings: () => void;
   disableKeybindings: () => void;
+  setIsRecording: (isRecording: boolean) => void;
 
   // Validation
   validateKeybinding: (
     key: ShortcutKey,
-    action: ActionWithOptionalArgs
+    action: ActionWithOptionalArgs,
   ) => KeybindingConflict | null;
   getKeybindingsForAction: (action: ActionWithOptionalArgs) => ShortcutKey[];
 
@@ -66,6 +68,7 @@ export const useKeybindingsStore = create<KeybindingsState>()(
       keybindings: { ...defaultKeybindings },
       isCustomized: false,
       keybindingsEnabled: true,
+      isRecording: false,
 
       updateKeybinding: (key: ShortcutKey, action: ActionWithOptionalArgs) => {
         set((state) => {
@@ -126,7 +129,7 @@ export const useKeybindingsStore = create<KeybindingsState>()(
 
       validateKeybinding: (
         key: ShortcutKey,
-        action: ActionWithOptionalArgs
+        action: ActionWithOptionalArgs,
       ) => {
         const { keybindings } = get();
         const existingAction = keybindings[key];
@@ -141,11 +144,14 @@ export const useKeybindingsStore = create<KeybindingsState>()(
 
         return null;
       },
+      setIsRecording: (isRecording: boolean) => {
+        set({ isRecording });
+      },
 
       getKeybindingsForAction: (action: ActionWithOptionalArgs) => {
         const { keybindings } = get();
         return Object.keys(keybindings).filter(
-          (key) => keybindings[key as ShortcutKey] === action
+          (key) => keybindings[key as ShortcutKey] === action,
         ) as ShortcutKey[];
       },
 
@@ -156,8 +162,8 @@ export const useKeybindingsStore = create<KeybindingsState>()(
     {
       name: "opencut-keybindings",
       version: 1,
-    }
-  )
+    },
+  ),
 );
 
 // Utility functions

@@ -144,6 +144,7 @@ export const KeyboardShortcutsHelp = () => {
     getKeybindingString,
     validateKeybinding,
     getKeybindingsForAction,
+    setIsRecording,
   } = useKeybindingsStore();
 
   // Get shortcuts from centralized hook
@@ -163,11 +164,11 @@ export const KeyboardShortcutsHelp = () => {
         // Auto-save the new keybinding
         const conflict = validateKeybinding(
           keyString,
-          recordingShortcut.action
+          recordingShortcut.action,
         );
         if (conflict) {
           toast.error(
-            `Key "${keyString}" is already bound to "${conflict.existingAction}"`
+            `Key "${keyString}" is already bound to "${conflict.existingAction}"`,
           );
           setRecordingKey(null);
           setRecordingShortcut(null);
@@ -181,14 +182,16 @@ export const KeyboardShortcutsHelp = () => {
         // Add new keybinding
         updateKeybinding(keyString, recordingShortcut.action);
 
+        setIsRecording(false);
         setRecordingKey(null);
         setRecordingShortcut(null);
       }
     };
 
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = () => {
       setRecordingKey(null);
       setRecordingShortcut(null);
+      setIsRecording(false);
     };
 
     document.addEventListener("keydown", handleKeyDown);
@@ -211,6 +214,7 @@ export const KeyboardShortcutsHelp = () => {
   const handleStartRecording = (keyId: string, shortcut: KeyboardShortcut) => {
     setRecordingKey(keyId);
     setRecordingShortcut(shortcut);
+    setIsRecording(true);
   };
 
   return (
