@@ -8,14 +8,40 @@ import { HeaderBase } from "./header-base";
 import { formatTimeCode } from "@/lib/time";
 import { useProjectStore } from "@/stores/project-store";
 import { KeyboardShortcutsHelp } from "./keyboard-shortcuts-help";
+import { useState, useRef } from "react";
 
 export function EditorHeader() {
   const { getTotalDuration } = useTimelineStore();
-  const { activeProject } = useProjectStore();
+  const { activeProject, renameProject } = useProjectStore();
+  const [isEditing, setIsEditing] = useState(false);
+  const [newName, setNewName] = useState(activeProject?.name || "");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
     // TODO: Implement export functionality
     console.log("Export project");
+  };
+
+  const handleNameClick = () => {
+    if (!activeProject) return;
+    setNewName(activeProject.name);
+    setIsEditing(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 0);
+  };
+
+  const handleNameSave = async () => {
+    if (activeProject && newName.trim() && newName !== activeProject.name) {
+      await renameProject(activeProject.id, newName.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") handleNameSave();
+    else if (e.key === "Escape") setIsEditing(false);
   };
 
   const leftContent = (
@@ -25,8 +51,27 @@ export function EditorHeader() {
         className="font-medium tracking-tight flex items-center gap-2 hover:opacity-80 transition-opacity"
       >
         <ChevronLeft className="h-4 w-4" />
-        <span className="text-sm">{activeProject?.name}</span>
       </Link>
+      <div className="w-[8rem] h-6 flex items-center">
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            className="text-sm font-medium bg-transparent border-b border-primary outline-none px-1 w-full h-6 flex items-center"
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            onBlur={handleNameSave}
+            onKeyDown={handleInputKeyDown}
+          />
+        ) : (
+          <span
+            className="text-sm font-medium cursor-pointer hover:underline truncate w-full h-6 flex items-center"
+            title="Click to rename"
+            onClick={handleNameClick}
+          >
+            {activeProject?.name}
+          </span>
+        )}
+      </div>
     </div>
   );
 
@@ -62,7 +107,7 @@ export function EditorHeader() {
       leftContent={leftContent}
       centerContent={centerContent}
       rightContent={rightContent}
-      className="bg-background h-[3.2rem] px-4"
+      className="bg-background h-[3.2rem] px-4 items-center"
     />
   );
 }
