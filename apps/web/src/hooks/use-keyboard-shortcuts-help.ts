@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useKeybindingsStore } from "@/stores/keybindings-store";
 import { Action } from "@/constants/actions";
+import { getPlatformAlternateKey, getPlatformSpecialKey } from "@/lib/utils";
 
 export interface KeyboardShortcut {
   id: string;
@@ -67,8 +68,8 @@ const actionDescriptions: Record<
 // Convert key binding format to display format
 const formatKey = (key: string): string => {
   return key
-    .replace("ctrl", "Cmd")
-    .replace("alt", "Alt")
+    .replace("ctrl", getPlatformSpecialKey())
+    .replace("alt", getPlatformAlternateKey())
     .replace("shift", "Shift")
     .replace("left", "ArrowLeft")
     .replace("right", "ArrowRight")
