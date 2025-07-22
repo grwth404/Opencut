@@ -15,8 +15,7 @@ import {
   Video,
   Music,
   TypeIcon,
-  Lock,
-  LockOpen,
+  Magnet,
   Link,
 } from "lucide-react";
 import {
@@ -288,7 +287,7 @@ export function Timeline() {
         Math.min(
           duration,
           (mouseX + scrollLeft) /
-            (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel)
+          (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel)
         )
       );
 
@@ -806,9 +805,9 @@ export function Timeline() {
               <TooltipTrigger asChild>
                 <Button variant="text" size="icon" onClick={toggleSnapping}>
                   {snappingEnabled ? (
-                    <LockOpen className="h-4 w-4 text-primary" />
+                    <Magnet className="h-4 w-4 text-primary" />
                   ) : (
-                    <Lock className="h-4 w-4" />
+                    <Magnet className="h-4 w-4" />
                   )}
                 </Button>
               </TooltipTrigger>
@@ -920,21 +919,19 @@ export function Timeline() {
                     return (
                       <div
                         key={i}
-                        className={`absolute top-0 bottom-0 ${
-                          isMainMarker
+                        className={`absolute top-0 bottom-0 ${isMainMarker
                             ? "border-l border-muted-foreground/40"
                             : "border-l border-muted-foreground/20"
-                        }`}
+                          }`}
                         style={{
                           left: `${time * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel}px`,
                         }}
                       >
                         <span
-                          className={`absolute top-1 left-1 text-[0.6rem] ${
-                            isMainMarker
+                          className={`absolute top-1 left-1 text-[0.6rem] ${isMainMarker
                               ? "text-muted-foreground font-medium"
                               : "text-muted-foreground/70"
-                          }`}
+                            }`}
                         >
                           {(() => {
                             const formatTime = (seconds: number) => {
