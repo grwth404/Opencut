@@ -34,7 +34,7 @@ export function PropertiesPanel() {
   const emptyView = (
     <div className="space-y-4 p-5">
       {/* Media Properties */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 ">
         <PropertyItem label="Name:" value={activeProject?.name || ""} />
         <PropertyItem label="Aspect ratio:" value={getDisplayName()} />
         <PropertyItem
@@ -103,7 +103,7 @@ function PropertyItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between">
       <Label className="text-xs text-muted-foreground">{label}</Label>
-      <span className="text-xs text-right">{value}</span>
+      <span className="text-xs text-right truncate text-ellipsis overflow-clip w-40" title={value}>{value}</span>
     </div>
   );
 }

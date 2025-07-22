@@ -9,6 +9,7 @@ import { formatTimeCode } from "@/lib/time";
 import { useProjectStore } from "@/stores/project-store";
 import { KeyboardShortcutsHelp } from "./keyboard-shortcuts-help";
 import { useState, useRef, useEffect } from "react";
+import { Input } from "@/components/ui/input";
 
 export function EditorHeader() {
   const { getTotalDuration } = useTimelineStore();
@@ -62,28 +63,30 @@ export function EditorHeader() {
       >
         <ChevronLeft className="h-4 w-4" />
       </Link>
-      <div className="w-[8rem] h-6 flex items-center">
+      <div className="w-[14rem] h-9 flex items-center">
         {isEditing ? (
-          // Editable input for project name
-          <input
+          // Editable input for project name using standard Input component
+          <Input
             ref={inputRef}
-            className="text-sm font-medium bg-transparent border-b border-primary outline-none px-1 w-full h-6 flex items-center"
+            className="text-sm font-medium px-2 py-1 h-7 truncate"
             value={newName}
             onChange={e => setNewName(e.target.value)}
             onBlur={handleNameSave}
             onKeyDown={handleInputKeyDown}
+            maxLength={64}
+            aria-label="Project name"
+            autoFocus
           />
         ) : (
           // Display project name as span, click to edit
           <span
-            className="text-sm font-medium cursor-pointer hover:underline truncate w-full h-6 flex items-center"
+            className="text-sm font-medium cursor-pointer hover:underline"
             title="Click to rename"
             role="button"
             tabIndex={0}
             onClick={handleNameClick}
             onKeyDown={e => e.key === 'Enter' && handleNameClick()}
-          >
-            {activeProject?.name}
+          ><div className="truncate text-ellipsis overflow-clip w-40">{activeProject?.name}</div>
           </span>
         )}
       </div>
