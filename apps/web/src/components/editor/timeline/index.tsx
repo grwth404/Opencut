@@ -15,8 +15,7 @@ import {
   Video,
   Music,
   TypeIcon,
-  Lock,
-  LockOpen,
+  Magnet,
   Link,
   ZoomIn,
   ZoomOut,
@@ -279,7 +278,7 @@ export function Timeline() {
         Math.min(
           duration,
           (mouseX + scrollLeft) /
-            (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel)
+          (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel)
         )
       );
 
@@ -599,21 +598,19 @@ export function Timeline() {
                     return (
                       <div
                         key={i}
-                        className={`absolute top-0 bottom-0 ${
-                          isMainMarker
+                        className={`absolute top-0 bottom-0 ${isMainMarker
                             ? "border-l border-muted-foreground/40"
                             : "border-l border-muted-foreground/20"
-                        }`}
+                          }`}
                         style={{
                           left: `${time * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel}px`,
                         }}
                       >
                         <span
-                          className={`absolute top-1 left-1 text-[0.6rem] ${
-                            isMainMarker
+                          className={`absolute top-1 left-1 text-[0.6rem] ${isMainMarker
                               ? "text-muted-foreground font-medium"
                               : "text-muted-foreground/70"
-                          }`}
+                            }`}
                         >
                           {(() => {
                             const formatTime = (seconds: number) => {
