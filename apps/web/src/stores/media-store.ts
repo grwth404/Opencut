@@ -210,18 +210,17 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
     } = timeline;
 
     // Iterate over a snapshot of tracks and their elements
-    tracks.forEach((track) => {
-      const elementsToRemove = track.elements.filter(
-        (el) => el.type === "media" && el.mediaId === id
-      );
-      elementsToRemove.forEach((el) => {
-        if (rippleEditingEnabled) {
-          removeElementFromTrackWithRipple(track.id, el.id);
-        } else {
-          removeElementFromTrack(track.id, el.id);
+    for (const track of tracks) {
+      for (const el of track.elements) {
+        if (el.type === "media" && el.mediaId === id) {
+          if (rippleEditingEnabled) {
+            removeElementFromTrackWithRipple(track.id, el.id);
+          } else {
+            removeElementFromTrack(track.id, el.id);
+          }
         }
-      });
-    });
+      }
+    }
 
     // 3) Remove from persistent storage
     try {
