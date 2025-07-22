@@ -8,7 +8,7 @@ import { HeaderBase } from "./header-base";
 import { formatTimeCode } from "@/lib/time";
 import { useProjectStore } from "@/stores/project-store";
 import { KeyboardShortcutsHelp } from "./keyboard-shortcuts-help";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export function EditorHeader() {
   const { getTotalDuration } = useTimelineStore();
@@ -24,16 +24,20 @@ export function EditorHeader() {
     console.log("Export project");
   };
 
-  // When user clicks the project name, enter edit mode and select all text
+  // When user clicks the project name, enter edit mode
   const handleNameClick = () => {
     if (!activeProject) return;
     setNewName(activeProject.name);
     setIsEditing(true);
-    setTimeout(() => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    }, 0);
   };
+
+  // Focus/select input when entering edit mode
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
 
   // Save the new name if changed, exit edit mode
   const handleNameSave = async () => {
@@ -74,7 +78,10 @@ export function EditorHeader() {
           <span
             className="text-sm font-medium cursor-pointer hover:underline truncate w-full h-6 flex items-center"
             title="Click to rename"
+            role="button"
+            tabIndex={0}
             onClick={handleNameClick}
+            onKeyDown={e => e.key === 'Enter' && handleNameClick()}
           >
             {activeProject?.name}
           </span>
