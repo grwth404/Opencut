@@ -10,7 +10,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import { getPlatformSpecialKey } from "@/lib/utils";
 import { Keyboard } from "lucide-react";
 import {
   useKeyboardShortcutsHelp,
@@ -18,23 +17,6 @@ import {
 } from "@/hooks/use-keyboard-shortcuts-help";
 import { useKeybindingsStore } from "@/stores/keybindings-store";
 import { toast } from "sonner";
-
-const modifier: {
-  [key: string]: string;
-} = {
-  Shift: "Shift",
-  Alt: "Alt",
-  ArrowLeft: "←",
-  ArrowRight: "→",
-  ArrowUp: "↑",
-  ArrowDown: "↓",
-  Space: "Space",
-};
-
-function getKeyWithModifier(key: string) {
-  if (key === "Ctrl") return getPlatformSpecialKey();
-  return modifier[key] || key;
-}
 
 const ShortcutItem = ({
   shortcut,
@@ -79,7 +61,7 @@ const ShortcutItem = ({
                     isRecording={recordingKey === keyId}
                     onStartRecording={() => onStartRecording(keyId, shortcut)}
                   >
-                    {getKeyWithModifier(keyPart)}
+                    {keyPart}
                   </EditableShortcutKey>
                 );
               })}
