@@ -246,7 +246,7 @@ export const KeyboardShortcutsHelp = () => {
         </div>
         <DialogFooter>
           <Button size="sm" className="mt-4" onClick={resetToDefaults}>
-            Reset to Defaults
+            Reset to Default
           </Button>
         </DialogFooter>
       </DialogContent>
