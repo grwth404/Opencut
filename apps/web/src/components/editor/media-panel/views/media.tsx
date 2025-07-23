@@ -25,6 +25,14 @@ import {
 import { DraggableMediaItem } from "@/components/ui/draggable-item";
 import { useProjectStore } from "@/stores/project-store";
 import { useTimelineStore } from "@/stores/timeline-store";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export function MediaView() {
   const { mediaItems, addMediaItem, removeMediaItem } = useMediaStore();
@@ -34,6 +42,8 @@ export function MediaView() {
   const [progress, setProgress] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [mediaFilter, setMediaFilter] = useState("all");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [itemToRemove, setItemToRemove] = useState<MediaItem | null>(null);
 
   const processFiles = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
@@ -76,17 +86,21 @@ export function MediaView() {
     e.target.value = ""; // Reset input
   };
 
-  const handleRemove = async (e: React.MouseEvent, id: string) => {
-    // Remove a media item from the store
+  const handleRemoveClick = (e: React.MouseEvent, item: MediaItem) => {
     e.stopPropagation();
+    setItemToRemove(item);
+    setDialogOpen(true);
+  };
 
-    if (!activeProject) {
-      toast.error("No active project");
+  // ← NEW: actually run removeMediaItem only when they confirm
+  const handleConfirmRemove = async () => {
+    if (!activeProject || !itemToRemove) {
+      setDialogOpen(false);
       return;
     }
-
-    // Media store now handles cascade deletion automatically
-    await removeMediaItem(activeProject.id, id);
+    await removeMediaItem(activeProject.id, itemToRemove.id);
+    setDialogOpen(false);
+    setItemToRemove(null);
   };
 
   const formatDuration = (duration: number) => {
@@ -282,7 +296,7 @@ export function MediaView() {
                     <ContextMenuItem>Export clips</ContextMenuItem>
                     <ContextMenuItem
                       variant="destructive"
-                      onClick={(e) => handleRemove(e, item.id)}
+                      onClick={(e) => handleRemoveClick(e, item)}
                     >
                       Delete
                     </ContextMenuItem>
@@ -293,6 +307,27 @@ export function MediaView() {
           )}
         </div>
       </div>
+      {itemToRemove && (
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete “{itemToRemove.name}”?</DialogTitle>
+              <DialogDescription>
+                This will permanently remove the media and any clips on your
+                timeline. Are you sure you want to continue?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="space-x-2">
+              <Button variant="default" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleConfirmRemove}>
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }
