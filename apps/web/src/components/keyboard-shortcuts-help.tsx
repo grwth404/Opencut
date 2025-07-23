@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -127,6 +128,7 @@ export const KeyboardShortcutsHelp = () => {
     validateKeybinding,
     getKeybindingsForAction,
     setIsRecording,
+    resetToDefaults,
   } = useKeybindingsStore();
 
   // Get shortcuts from centralized hook
@@ -240,6 +242,11 @@ export const KeyboardShortcutsHelp = () => {
             </div>
           ))}
         </div>
+        <DialogFooter>
+          <Button size="sm" className="mt-4" onClick={resetToDefaults}>
+            Reset to Defaults
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
