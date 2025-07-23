@@ -21,11 +21,11 @@ import { toast } from "sonner";
 
 const ShortcutItem = ({
   shortcut,
-  recordingKey,
+  isRecording,
   onStartRecording,
 }: {
   shortcut: KeyboardShortcut;
-  recordingKey: string | null;
+  isRecording: boolean;
   onStartRecording: (keyId: string, shortcut: KeyboardShortcut) => void;
 }) => {
   // Filter out lowercase duplicates for display - if both "j" and "J" exist, only show "J"
@@ -59,7 +59,7 @@ const ShortcutItem = ({
                     keyId={keyId}
                     originalKey={key}
                     shortcut={shortcut}
-                    isRecording={recordingKey === keyId}
+                    isRecording={isRecording}
                     onStartRecording={() => onStartRecording(keyId, shortcut)}
                   >
                     {keyPart}
@@ -234,7 +234,9 @@ export const KeyboardShortcutsHelp = () => {
                     <ShortcutItem
                       key={index}
                       shortcut={shortcut}
-                      recordingKey={recordingKey}
+                      isRecording={
+                        shortcut.action === recordingShortcut?.action
+                      }
                       onStartRecording={handleStartRecording}
                     />
                   ))}
