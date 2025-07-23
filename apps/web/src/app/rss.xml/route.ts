@@ -18,17 +18,17 @@ export async function GET() {
     }`,
   });
 
-  posts.forEach((article) => {
+  for (const post of posts) {
     feed.addItem({
-      title: article.title,
-      id: `${SITE_INFO.url}/blog/${article.slug}`,
-      link: `${SITE_INFO.url}/blog/${article.slug}`,
-      description: article.description,
-      author: article.authors.map((author) => ({
-        name: author.name ?? 'OpenCut',
+        title: post.title,
+        id: `${SITE_INFO.url}/blog/${post.slug}`,
+        link: `${SITE_INFO.url}/blog/${post.slug}`,
+        description: post.description,
+        author: post.authors.map((author) => ({
+        name: post.name ?? 'OpenCut',
       })),
-      date: new Date(article.publishedAt),
-      image: article.coverImage,
+      date: new Date(post.publishedAt),
+      image: post.coverImage,
     });
   });
 
