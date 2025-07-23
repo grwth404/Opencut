@@ -85,10 +85,10 @@ export function EditorHeader() {
                 autoFocus
               />
             ) : (
-              <span
+              <Button
                 className="text-sm font-medium cursor-pointer hover:text-muted-foreground flex items-center gap-2 group"
                 title="Click to rename"
-                role="button"
+                variant="text"
                 tabIndex={0}
                 onClick={handleNameEdit}
               >
@@ -96,7 +96,7 @@ export function EditorHeader() {
                   {activeProject?.name}
                 </div>
                 <SquarePen className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </span>
+              </Button>
             )}
           </BreadcrumbItem>
         </BreadcrumbList>
