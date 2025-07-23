@@ -79,7 +79,7 @@ export function PropertiesPanel() {
             }
             if (element?.type === "media") {
               const mediaItem = mediaItems.find(
-                (item) => item.id === element.mediaId
+                (item) => item.id === element.mediaId,
               );
 
               if (mediaItem?.type === "audio") {
@@ -101,9 +101,11 @@ export function PropertiesPanel() {
 
 function PropertyItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <span className="text-xs text-right truncate w-40" title={value}>
+    <div className="grid justify-between grid-cols-6">
+      <Label className="text-xs text-muted-foreground col-span-2">
+        {label}
+      </Label>
+      <span className="text-xs text-right col-span-4 truncate" title={value}>
         {value}
       </span>
     </div>
