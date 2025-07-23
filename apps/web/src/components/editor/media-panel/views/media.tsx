@@ -98,9 +98,15 @@ export function MediaView() {
       setDialogOpen(false);
       return;
     }
-    await removeMediaItem(activeProject.id, itemToRemove.id);
-    setDialogOpen(false);
-    setItemToRemove(null);
+    try {
+      await removeMediaItem(activeProject.id, itemToRemove.id);
+    } catch (error) {
+      console.error("Failed to remove media item:", error);
+      toast.error("Failed to delete media item");
+    } finally {
+      setDialogOpen(false);
+      setItemToRemove(null);
+    }
   };
 
   const formatDuration = (duration: number) => {
