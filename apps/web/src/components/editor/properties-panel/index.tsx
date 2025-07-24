@@ -1,14 +1,12 @@
 "use client";
 
-import { useProjectStore } from "@/stores/project-store";
+import { FPS_PRESETS } from "@/constants/timeline-constants";
 import { useAspectRatio } from "@/hooks/use-aspect-ratio";
+import { useMediaStore } from "@/stores/media-store";
+import { useProjectStore } from "@/stores/project-store";
+import { useTimelineStore } from "@/stores/timeline-store";
 import { Label } from "../../ui/label";
 import { ScrollArea } from "../../ui/scroll-area";
-import { useTimelineStore } from "@/stores/timeline-store";
-import { useMediaStore } from "@/stores/media-store";
-import { AudioProperties } from "./audio-properties";
-import { MediaProperties } from "./media-properties";
-import { TextProperties } from "./text-properties";
 import {
   Select,
   SelectContent,
@@ -16,7 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../ui/select";
-import { FPS_PRESETS } from "@/constants/timeline-constants";
+import { AudioProperties } from "./audio-properties";
+import { MediaProperties } from "./media-properties";
+import { TextProperties } from "./text-properties";
 
 export function PropertiesPanel() {
   const { activeProject, updateProjectFps } = useProjectStore();
@@ -83,7 +83,7 @@ export function PropertiesPanel() {
               );
 
               if (mediaItem?.type === "audio") {
-                return <AudioProperties element={element} />;
+                return <AudioProperties key={elementId} element={element} />;
               }
 
               return (

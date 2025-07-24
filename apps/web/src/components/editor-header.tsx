@@ -1,15 +1,14 @@
 "use client";
 
+import { Download, SquarePen } from "lucide-react";
 import Link from "next/link";
-import { Button } from "./ui/button";
-import { ChevronLeft, Download, SquarePen } from "lucide-react";
-import { useTimelineStore } from "@/stores/timeline-store";
-import { HeaderBase } from "./header-base";
+import { type MouseEvent, useRef, useState } from "react";
+import { Input } from "@/components/ui/input";
 import { formatTimeCode } from "@/lib/time";
 import { useProjectStore } from "@/stores/project-store";
+import { useTimelineStore } from "@/stores/timeline-store";
+import { HeaderBase } from "./header-base";
 import { KeyboardShortcutsHelp } from "./keyboard-shortcuts-help";
-import { useState, useRef, MouseEvent } from "react";
-import { Input } from "@/components/ui/input";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,6 +16,7 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from "./ui/breadcrumb";
+import { Button } from "./ui/button";
 
 export function EditorHeader() {
   const { getTotalDuration } = useTimelineStore();
