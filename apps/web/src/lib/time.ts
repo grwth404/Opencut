@@ -4,7 +4,7 @@
 export const formatTimeCode = (
   timeInSeconds: number,
   format: "MM:SS" | "HH:MM:SS" | "HH:MM:SS:CS" | "HH:MM:SS:FF" = "HH:MM:SS:CS",
-  fps = 30
+  fps: number = 30
 ): string => {
   const hours = Math.floor(timeInSeconds / 3600);
   const minutes = Math.floor((timeInSeconds % 3600) / 60);

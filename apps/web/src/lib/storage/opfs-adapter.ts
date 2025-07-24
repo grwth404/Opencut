@@ -3,7 +3,7 @@ import { StorageAdapter } from "./types";
 export class OPFSAdapter implements StorageAdapter<File> {
   private directoryName: string;
 
-  constructor(directoryName = "media") {
+  constructor(directoryName: string = "media") {
     this.directoryName = directoryName;
   }
 

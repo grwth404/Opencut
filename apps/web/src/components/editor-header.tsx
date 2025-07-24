@@ -1,16 +1,22 @@
 "use client";
 
-import Link from "next/link";
-import { Button } from "./ui/button";
 import { Download, SquarePen } from "lucide-react";
-import { useTimelineStore } from "@/stores/timeline-store";
-import { HeaderBase } from "./header-base";
+import Link from "next/link";
+import { type MouseEvent, useRef, useState } from "react";
+import { Input } from "@/components/ui/input";
 import { formatTimeCode } from "@/lib/time";
 import { useProjectStore } from "@/stores/project-store";
+import { useTimelineStore } from "@/stores/timeline-store";
+import { HeaderBase } from "./header-base";
 import { KeyboardShortcutsHelp } from "./keyboard-shortcuts-help";
-import { useState, useRef } from "react";
-import { Input } from "@/components/ui/input";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "./ui/breadcrumb";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "./ui/breadcrumb";
+import { Button } from "./ui/button";
 
 export function EditorHeader() {
   const { getTotalDuration } = useTimelineStore();
@@ -25,10 +31,11 @@ export function EditorHeader() {
     console.log("Export project");
   };
 
-  const handleNameEdit = () => {
+  const handleNameEdit = (e: MouseEvent<HTMLButtonElement>) => {
     if (!activeProject) return;
-    setNewName(activeProject.name);
+    e.stopPropagation();
     setIsEditing(true);
+    setNewName(activeProject.name);
   };
 
   const handleNameSave = async () => {
@@ -103,7 +110,7 @@ export function EditorHeader() {
         {formatTimeCode(
           getTotalDuration(),
           "HH:MM:SS:FF",
-          activeProject?.fps || 30
+          activeProject?.fps || 30,
         )}
       </span>
     </div>

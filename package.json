@@ -2,11 +2,9 @@
   "name": "opencut",
   "packageManager": "bun@1.2.18",
   "devDependencies": {
-    "@biomejs/biome": "2.1.2",
-    "husky": "^9.1.7",
     "turbo": "^2.5.4",
     "typescript": "5.8.3",
-    "ultracite": "5.0.48"
+    "@biomejs/biome": "^2.1.2"
   },
   "workspaces": [
     "apps/*",
@@ -16,8 +14,9 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "check-types": "turbo run check-types",
-    "lint": "npx ultracite@latest lint",
-    "format": "npx ultracite@latest format"
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "format": "turbo run format"
   },
   "dependencies": {
     "next": "^15.3.4",

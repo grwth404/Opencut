@@ -1,7 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { ReactNode } from "react";
 
 interface HeaderBaseProps {
   leftContent?: ReactNode;
@@ -28,9 +28,7 @@ export function HeaderBase({
   }
 
   return (
-    <header
-      className={cn("px-6 h-14 flex justify-between items-center", className)}
-    >
+    <header className={cn("px-6 h-14 flex justify-between", className)}>
       {leftContent && leftContent}
       {centerContent && centerContent}
       {rightContent && rightContent}

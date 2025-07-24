@@ -138,8 +138,7 @@ export function canElementGoOnTrack(
 ): boolean {
   if (elementType === "text") {
     return trackType === "text";
-  }
-  if (elementType === "media") {
+  } else if (elementType === "media") {
     return trackType === "media" || trackType === "audio";
   }
   return false;

@@ -25,7 +25,7 @@ export function useKeybindingsListener() {
       ev.preventDefault();
 
       // Handle actions with default arguments
-      let actionArgs: any;
+      let actionArgs: any = undefined;
 
       if (boundAction === "seek-forward") {
         actionArgs = { seconds: 1 };
