@@ -1,16 +1,16 @@
 import { Feed } from 'feed';
 import { getPosts } from '@/lib/blog-query';
-import { SITE_INFO } from '../metadata';
+import { SITE_INFO, SITE_URL } from '@/constants/site';
 
 export async function GET() {
   try {
     const { posts } = await getPosts();
     
     const feed = new Feed({
-      title: 'OpenCut Blog',
+      title: `${SITE_INFO.title} Blog`,
       description: SITE_INFO.description,
-      id: `${SITE_INFO.url}`,
-      link: `${SITE_INFO.url}/blog/`,
+      id: `${SITE_URL}`,
+      link: `${SITE_URL}/blog/`,
       language: 'en',
       image: `${SITE_INFO.openGraphImage}`,
       favicon: `${SITE_INFO.favicon}`,
@@ -22,8 +22,8 @@ export async function GET() {
     for (const post of posts) {
       feed.addItem({
           title: post.title,
-          id: `${SITE_INFO.url}/blog/${post.slug}`,
-          link: `${SITE_INFO.url}/blog/${post.slug}`,
+          id: `${SITE_URL}/blog/${post.slug}`,
+          link: `${SITE_URL}/blog/${post.slug}`,
           description: post.description,
           author: post.authors.map((author) => ({
             name: author.name,
