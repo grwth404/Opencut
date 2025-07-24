@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Keyboard } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import {
+  type KeyboardShortcut,
+  useKeyboardShortcutsHelp,
+} from "@/hooks/use-keyboard-shortcuts-help";
+import { useKeybindingsStore } from "@/stores/keybindings-store";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -11,13 +18,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import { Keyboard } from "lucide-react";
-import {
-  useKeyboardShortcutsHelp,
-  KeyboardShortcut,
-} from "@/hooks/use-keyboard-shortcuts-help";
-import { useKeybindingsStore } from "@/stores/keybindings-store";
-import { toast } from "sonner";
 
 const ShortcutItem = ({
   shortcut,
@@ -26,7 +26,7 @@ const ShortcutItem = ({
 }: {
   shortcut: KeyboardShortcut;
   isRecording: boolean;
-  onStartRecording: (keyId: string, shortcut: KeyboardShortcut) => void;
+  onStartRecording: (shortcut: KeyboardShortcut) => void;
 }) => {
   // Filter out lowercase duplicates for display - if both "j" and "J" exist, only show "J"
   const displayKeys = shortcut.keys.filter((key: string) => {
@@ -49,18 +49,15 @@ const ShortcutItem = ({
       </div>
       <div className="flex items-center gap-1">
         {displayKeys.map((key: string, index: number) => (
-          <div key={index} className="flex items-center gap-1">
+          <div key={key} className="flex items-center gap-1">
             <div className="flex items-center">
               {key.split("+").map((keyPart: string, partIndex: number) => {
                 const keyId = `${shortcut.id}-${index}-${partIndex}`;
                 return (
                   <EditableShortcutKey
-                    key={partIndex}
-                    keyId={keyId}
-                    originalKey={key}
-                    shortcut={shortcut}
+                    key={keyId}
                     isRecording={isRecording}
-                    onStartRecording={() => onStartRecording(keyId, shortcut)}
+                    onStartRecording={() => onStartRecording(shortcut)}
                   >
                     {keyPart}
                   </EditableShortcutKey>
@@ -79,16 +76,10 @@ const ShortcutItem = ({
 
 const EditableShortcutKey = ({
   children,
-  keyId,
-  originalKey,
-  shortcut,
   isRecording,
   onStartRecording,
 }: {
   children: React.ReactNode;
-  keyId: string;
-  originalKey: string;
-  shortcut: KeyboardShortcut;
   isRecording: boolean;
   onStartRecording: () => void;
 }) => {
@@ -99,7 +90,9 @@ const EditableShortcutKey = ({
   };
 
   return (
-    <kbd
+    <Button
+      variant='text'
+      size='sm'
       className={`inline-flex font-sans text-xs rounded px-2 min-w-[1.5rem] min-h-[1.5rem] leading-none items-center justify-center shadow-sm border mr-1 cursor-pointer hover:bg-opacity-80 ${
         isRecording
           ? "border-primary bg-primary/10"
@@ -111,13 +104,12 @@ const EditableShortcutKey = ({
       }
     >
       {children}
-    </kbd>
+    </Button>
   );
 };
 
 export const KeyboardShortcutsHelp = () => {
   const [open, setOpen] = useState(false);
-  const [recordingKey, setRecordingKey] = useState<string | null>(null);
   const [recordingShortcut, setRecordingShortcut] =
     useState<KeyboardShortcut | null>(null);
 
@@ -129,6 +121,7 @@ export const KeyboardShortcutsHelp = () => {
     getKeybindingsForAction,
     setIsRecording,
     resetToDefaults,
+    isRecording,
   } = useKeybindingsStore();
 
   // Get shortcuts from centralized hook
@@ -137,7 +130,7 @@ export const KeyboardShortcutsHelp = () => {
   const categories = Array.from(new Set(shortcuts.map((s) => s.category)));
 
   useEffect(() => {
-    if (!recordingKey || !recordingShortcut) return;
+    if (!isRecording || !recordingShortcut) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       e.preventDefault();
@@ -154,7 +147,6 @@ export const KeyboardShortcutsHelp = () => {
           toast.error(
             `Key "${keyString}" is already bound to "${conflict.existingAction}"`,
           );
-          setRecordingKey(null);
           setRecordingShortcut(null);
           return;
         }
@@ -167,13 +159,11 @@ export const KeyboardShortcutsHelp = () => {
         updateKeybinding(keyString, recordingShortcut.action);
 
         setIsRecording(false);
-        setRecordingKey(null);
         setRecordingShortcut(null);
       }
     };
 
     const handleClickOutside = () => {
-      setRecordingKey(null);
       setRecordingShortcut(null);
       setIsRecording(false);
     };
@@ -186,17 +176,17 @@ export const KeyboardShortcutsHelp = () => {
       document.removeEventListener("click", handleClickOutside);
     };
   }, [
-    recordingKey,
     recordingShortcut,
     getKeybindingString,
     updateKeybinding,
     removeKeybinding,
     validateKeybinding,
     getKeybindingsForAction,
+    setIsRecording,
+    isRecording,
   ]);
 
-  const handleStartRecording = (keyId: string, shortcut: KeyboardShortcut) => {
-    setRecordingKey(keyId);
+  const handleStartRecording = (shortcut: KeyboardShortcut) => {
     setRecordingShortcut(shortcut);
     setIsRecording(true);
   };
@@ -230,9 +220,9 @@ export const KeyboardShortcutsHelp = () => {
               <div className="space-y-0.5">
                 {shortcuts
                   .filter((shortcut) => shortcut.category === category)
-                  .map((shortcut, index) => (
+                  .map((shortcut) => (
                     <ShortcutItem
-                      key={index}
+                      key={shortcut.action}
                       shortcut={shortcut}
                       isRecording={
                         shortcut.action === recordingShortcut?.action
