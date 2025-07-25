@@ -23,7 +23,7 @@ export function EditorHeader() {
     // TODO: Implement export functionality
     // NOTE: This is already being worked on
     console.log("Export project");
-    toast.warning("Export project is being worked on.");
+    document.location.href = `https://youtube.com/watch?v=dQw4w9WgXcQ`;
   };
 
   const handleNameClick = () => {
