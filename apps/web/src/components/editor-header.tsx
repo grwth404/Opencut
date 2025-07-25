@@ -10,6 +10,7 @@ import { useProjectStore } from "@/stores/project-store";
 import { KeyboardShortcutsHelp } from "./keyboard-shortcuts-help";
 import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 export function EditorHeader() {
   const { getTotalDuration } = useTimelineStore();
@@ -22,6 +23,7 @@ export function EditorHeader() {
     // TODO: Implement export functionality
     // NOTE: This is already being worked on
     console.log("Export project");
+    toast.warning("Export project is being worked on.");
   };
 
   const handleNameClick = () => {
