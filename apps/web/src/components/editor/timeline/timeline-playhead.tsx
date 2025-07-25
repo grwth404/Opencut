@@ -72,7 +72,7 @@ export function TimelinePlayhead({
         top: 0,
         height: `${totalHeight}px`,
         width: "2px", // Slightly wider for better click target
-        zIndex: 50,
+        zIndex: 100,
       }}
       onMouseDown={handlePlayheadMouseDown}
     >
