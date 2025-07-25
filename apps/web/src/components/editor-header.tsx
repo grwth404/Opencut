@@ -17,6 +17,7 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from "./ui/breadcrumb";
+import { toast } from "sonner";
 
 export function EditorHeader() {
   const { getTotalDuration } = useTimelineStore();
@@ -29,6 +30,7 @@ export function EditorHeader() {
     // TODO: Implement export functionality
     // NOTE: This is already being worked on
     console.log("Export project");
+    window.open('https://youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
   };
 
   const handleNameEdit = () => {
