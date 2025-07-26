@@ -537,12 +537,13 @@ export function Timeline() {
           tracks={tracks}
           timelineRef={timelineRef}
           trackLabelsRef={trackLabelsRef}
+          tracksScrollRef={tracksScrollRef}
           isVisible={showSnapIndicator}
         />
         {/* Timeline Header with Ruler */}
         <div className="flex bg-panel sticky top-0 z-10">
           {/* Track Labels Header */}
-          <div className="w-48 flex-shrink-0 bg-muted/30 border-r flex items-center justify-between px-3 py-2">
+          <div className="w-48 flex-shrink-0 bg-panel border-r flex items-center justify-between px-3 py-2">
             {/* Empty space */}
             <span className="text-sm font-medium text-muted-foreground opacity-0">
               .
@@ -651,7 +652,7 @@ export function Timeline() {
           {tracks.length > 0 && (
             <div
               ref={trackLabelsRef}
-              className="w-48 flex-shrink-0 border-r border-black overflow-y-auto"
+              className="w-48 flex-shrink-0 border-r border-black overflow-y-auto z-[200] bg-panel"
               data-track-labels
             >
               <ScrollArea className="w-full h-full" ref={trackLabelsScrollRef}>
