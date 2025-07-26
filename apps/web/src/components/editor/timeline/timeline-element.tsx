@@ -157,16 +157,16 @@ export function TimelineElement({
       if (!file) return;
 
       try {
-        const success = await replaceElementMedia(track.id, element.id, file);
-        if (success) {
+        const result = await replaceElementMedia(track.id, element.id, file);
+        if (result.success) {
           toast.success("Clip replaced successfully");
         } else {
-          toast.error("Failed to replace clip");
+          toast.error(result.error || "Failed to replace clip");
         }
       } catch (error) {
-        toast.error("Failed to replace clip");
-        console.log(
-          JSON.stringify({ error: "Failed to replace clip", details: error })
+        console.error("Unexpected error replacing clip:", error);
+        toast.error(
+          `Unexpected error: ${error instanceof Error ? error.message : "Unknown error"}`
         );
       }
     };
