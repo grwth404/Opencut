@@ -207,17 +207,29 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
       removeElementFromTrack,
       removeElementFromTrackWithRipple,
       rippleEditingEnabled,
+      pushHistory,
     } = timeline;
 
-    // Iterate over a snapshot of tracks and their elements
+    // Find all elements that reference this media
+    const elementsToRemove: Array<{ trackId: string; elementId: string }> = [];
     for (const track of tracks) {
       for (const el of track.elements) {
         if (el.type === "media" && el.mediaId === id) {
-          if (rippleEditingEnabled) {
-            removeElementFromTrackWithRipple(track.id, el.id);
-          } else {
-            removeElementFromTrack(track.id, el.id);
-          }
+          elementsToRemove.push({ trackId: track.id, elementId: el.id });
+        }
+      }
+    }
+
+    // If there are elements to remove, push history once before batch removal
+    if (elementsToRemove.length > 0) {
+      pushHistory();
+
+      // Remove all elements without pushing additional history entries
+      for (const { trackId, elementId } of elementsToRemove) {
+        if (rippleEditingEnabled) {
+          removeElementFromTrackWithRipple(trackId, elementId, false);
+        } else {
+          removeElementFromTrack(trackId, elementId, false);
         }
       }
     }

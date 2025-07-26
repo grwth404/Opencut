@@ -96,7 +96,11 @@ interface TimelineStore {
   removeTrack: (trackId: string) => void;
   removeTrackWithRipple: (trackId: string) => void;
   addElementToTrack: (trackId: string, element: CreateTimelineElement) => void;
-  removeElementFromTrack: (trackId: string, elementId: string) => void;
+  removeElementFromTrack: (
+    trackId: string,
+    elementId: string,
+    pushHistory?: boolean
+  ) => void;
   moveElementToTrack: (
     fromTrackId: string,
     toTrackId: string,
@@ -156,7 +160,8 @@ interface TimelineStore {
   ) => void;
   removeElementFromTrackWithRipple: (
     trackId: string,
-    elementId: string
+    elementId: string,
+    pushHistory?: boolean
   ) => void;
 
   // Computed values
@@ -553,13 +558,13 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       get().selectElement(trackId, newElement.id);
     },
 
-    removeElementFromTrack: (trackId, elementId) => {
+    removeElementFromTrack: (trackId, elementId, pushHistory = true) => {
       const { rippleEditingEnabled } = get();
 
       if (rippleEditingEnabled) {
-        get().removeElementFromTrackWithRipple(trackId, elementId);
+        get().removeElementFromTrackWithRipple(trackId, elementId, pushHistory);
       } else {
-        get().pushHistory();
+        if (pushHistory) get().pushHistory();
         updateTracksAndSave(
           get()
             ._tracks.map((track) =>
@@ -577,12 +582,16 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       }
     },
 
-    removeElementFromTrackWithRipple: (trackId, elementId) => {
+    removeElementFromTrackWithRipple: (
+      trackId,
+      elementId,
+      pushHistory = true
+    ) => {
       const { _tracks, rippleEditingEnabled } = get();
 
       if (!rippleEditingEnabled) {
         // If ripple editing is disabled, use regular removal
-        get().removeElementFromTrack(trackId, elementId);
+        get().removeElementFromTrack(trackId, elementId, pushHistory);
         return;
       }
 
@@ -591,7 +600,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
       if (!element || !track) return;
 
-      get().pushHistory();
+      if (pushHistory) get().pushHistory();
 
       const elementStartTime = element.startTime;
       const elementDuration =
