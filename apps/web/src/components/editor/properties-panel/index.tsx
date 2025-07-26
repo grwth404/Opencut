@@ -16,6 +16,11 @@ import {
 } from "../../ui/select";
 import { AudioProperties } from "./audio-properties";
 import { MediaProperties } from "./media-properties";
+import {
+  PropertyItem,
+  PropertyItemLabel,
+  PropertyItemValue,
+} from "./property-item";
 import { TextProperties } from "./text-properties";
 
 export function PropertiesPanel() {
@@ -35,12 +40,30 @@ export function PropertiesPanel() {
     <div className="space-y-4 p-5">
       {/* Media Properties */}
       <div className="flex flex-col gap-3">
-        <PropertyItem label="Name:" value={activeProject?.name || ""} />
-        <PropertyItem label="Aspect ratio:" value={getDisplayName()} />
-        <PropertyItem
-          label="Resolution:"
-          value={`${canvasSize.width} × ${canvasSize.height}`}
-        />
+        <PropertyItem direction="column">
+          <PropertyItemLabel className="text-xs text-muted-foreground">
+            Name:
+          </PropertyItemLabel>
+          <PropertyItemValue className="text-xs truncate">
+            {activeProject?.name || ""}
+          </PropertyItemValue>
+        </PropertyItem>
+        <PropertyItem direction="column">
+          <PropertyItemLabel className="text-xs text-muted-foreground">
+            Aspect ratio:
+          </PropertyItemLabel>
+          <PropertyItemValue className="text-xs truncate">
+            {getDisplayName()}
+          </PropertyItemValue>
+        </PropertyItem>
+        <PropertyItem direction="column">
+          <PropertyItemLabel className="text-xs text-muted-foreground">
+            Resolution:
+          </PropertyItemLabel>
+          <PropertyItemValue className="text-xs truncate">
+            {`${canvasSize.width} × ${canvasSize.height}`}
+          </PropertyItemValue>
+        </PropertyItem>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Frame rate:</Label>
           <Select
@@ -96,18 +119,5 @@ export function PropertiesPanel() {
           })
         : emptyView}
     </ScrollArea>
-  );
-}
-
-function PropertyItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid justify-between grid-cols-6">
-      <Label className="text-xs text-muted-foreground col-span-2">
-        {label}
-      </Label>
-      <span className="text-xs text-right col-span-4 truncate" title={value}>
-        {value}
-      </span>
-    </div>
   );
 }
