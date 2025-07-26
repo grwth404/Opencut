@@ -183,24 +183,46 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
     }
   },
 
-  removeMediaItem: async (projectId, id: string) => {
+  removeMediaItem: async (projectId: string, id: string) => {
     const state = get();
     const item = state.mediaItems.find((media) => media.id === id);
 
     // Cleanup object URLs to prevent memory leaks
-    if (item && item.url) {
+    if (item?.url) {
       URL.revokeObjectURL(item.url);
       if (item.thumbnailUrl) {
         URL.revokeObjectURL(item.thumbnailUrl);
       }
     }
 
-    // Remove from local state immediately
+    // 1) Remove from local state immediately
     set((state) => ({
       mediaItems: state.mediaItems.filter((media) => media.id !== id),
     }));
 
-    // Remove from persistent storage
+    // 2) Cascade into the timeline: remove any elements using this media ID
+    const timeline = useTimelineStore.getState();
+    const {
+      tracks,
+      removeElementFromTrack,
+      removeElementFromTrackWithRipple,
+      rippleEditingEnabled,
+    } = timeline;
+
+    // Iterate over a snapshot of tracks and their elements
+    for (const track of tracks) {
+      for (const el of track.elements) {
+        if (el.type === "media" && el.mediaId === id) {
+          if (rippleEditingEnabled) {
+            removeElementFromTrackWithRipple(track.id, el.id);
+          } else {
+            removeElementFromTrack(track.id, el.id);
+          }
+        }
+      }
+    }
+
+    // 3) Remove from persistent storage
     try {
       await storageService.deleteMediaItem(projectId, id);
     } catch (error) {
