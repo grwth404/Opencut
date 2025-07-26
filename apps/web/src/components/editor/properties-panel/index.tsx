@@ -41,7 +41,7 @@ export function PropertiesPanel() {
           label="Resolution:"
           value={`${canvasSize.width} × ${canvasSize.height}`}
         />
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Frame rate:</Label>
           <Select
             value={(activeProject?.fps || 30).toString()}
@@ -101,9 +101,9 @@ export function PropertiesPanel() {
 
 function PropertyItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between">
+    <div className="flex flex-col gap-1">
       <Label className="text-xs text-muted-foreground">{label}</Label>
-      <span className="text-xs text-right truncate w-40" title={value}>
+      <span className="text-xs break-words" title={value}>
         {value}
       </span>
     </div>
