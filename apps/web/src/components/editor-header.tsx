@@ -23,7 +23,7 @@ export function EditorHeader() {
     // TODO: Implement export functionality
     // NOTE: This is already being worked on
     console.log("Export project");
-    window.open('https://youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
+    window.open("https://youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
   };
 
   const handleNameClick = () => {
@@ -57,11 +57,11 @@ export function EditorHeader() {
       >
         <ChevronLeft className="h-4 w-4" />
       </Link>
-      <div className="w-[14rem] h-9 flex items-center">
+      <div className="w-40 xl:w-60 h-9 flex items-center">
         {isEditing ? (
           <Input
             ref={inputRef}
-            className="text-sm font-medium px-2 py-1 h-9 truncate"
+            className="text-sm font-medium w-full px-2 py-1 h-9 truncate"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onBlur={handleNameSave}
@@ -80,7 +80,7 @@ export function EditorHeader() {
             onClick={handleNameClick}
             onKeyDown={(e) => e.key === "Enter" && handleNameClick()}
           >
-            <div className="truncate text-ellipsis overflow-clip w-40">
+            <div className="truncate text-ellipsis overflow-clip max-w-40 xl:max-w-60">
               {activeProject?.name}
             </div>
           </span>
