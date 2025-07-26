@@ -354,7 +354,7 @@ export function TimelineElement({
           </div>
         </div>
       </ContextMenuTrigger>
-      <ContextMenuContent>
+      <ContextMenuContent className="z-[200]">
         <ContextMenuItem onClick={handleElementSplitContext}>
           <Scissors className="h-4 w-4 mr-2" />
           Split at playhead

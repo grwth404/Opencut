@@ -744,7 +744,7 @@ export function Timeline() {
                             />
                           </div>
                         </ContextMenuTrigger>
-                        <ContextMenuContent>
+                        <ContextMenuContent className="z-[200]">
                           <ContextMenuItem
                             onClick={() => toggleTrackMute(track.id)}
                           >
