@@ -754,13 +754,16 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       pushHistory = true
     ) => {
       if (pushHistory) get().pushHistory();
+      const clampedStartTime = Math.max(0, startTime);
       updateTracksAndSave(
         get()._tracks.map((track) =>
           track.id === trackId
             ? {
                 ...track,
                 elements: track.elements.map((element) =>
-                  element.id === elementId ? { ...element, startTime } : element
+                  element.id === elementId
+                    ? { ...element, startTime: clampedStartTime }
+                    : element
                 ),
               }
             : track
@@ -799,8 +802,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
         const updatedElements = currentTrack.elements.map((currentElement) => {
           if (currentElement.id === elementId && currentTrack.id === trackId) {
-            // Update the moved element
-            return { ...currentElement, startTime: newStartTime };
+            return { ...currentElement, startTime: Math.max(0, newStartTime) };
           }
 
           // Only apply ripple effects if we should process this track
