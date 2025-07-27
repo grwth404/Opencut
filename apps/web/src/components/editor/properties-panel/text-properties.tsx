@@ -6,6 +6,7 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import {
   PropertyItem,
   PropertyItemLabel,
@@ -20,6 +21,46 @@ export function TextProperties({
   trackId: string;
 }) {
   const { updateTextElement } = useTimelineStore();
+  
+  // Local state for input values to allow temporary empty/invalid states
+  const [fontSizeInput, setFontSizeInput] = useState(element.fontSize.toString());
+  const [opacityInput, setOpacityInput] = useState(Math.round(element.opacity * 100).toString());
+
+  const parseAndValidateNumber = (value: string, min: number, max: number, fallback: number): number => {
+    const parsed = parseInt(value, 10);
+    if (isNaN(parsed)) return fallback;
+    return Math.max(min, Math.min(max, parsed));
+  };
+
+  const handleFontSizeChange = (value: string) => {
+    setFontSizeInput(value);
+    
+    if (value.trim() !== '') {
+      const fontSize = parseAndValidateNumber(value, 8, 300, element.fontSize);
+      updateTextElement(trackId, element.id, { fontSize });
+    }
+  };
+
+  const handleFontSizeBlur = () => {
+    const fontSize = parseAndValidateNumber(fontSizeInput, 8, 300, element.fontSize);
+    setFontSizeInput(fontSize.toString());
+    updateTextElement(trackId, element.id, { fontSize });
+  };
+
+  const handleOpacityChange = (value: string) => {
+    setOpacityInput(value);
+    
+    if (value.trim() !== '') {
+      const opacityPercent = parseAndValidateNumber(value, 0, 100, Math.round(element.opacity * 100));
+      updateTextElement(trackId, element.id, { opacity: opacityPercent / 100 });
+    }
+  };
+
+  const handleOpacityBlur = () => {
+    const opacityPercent = parseAndValidateNumber(opacityInput, 0, 100, Math.round(element.opacity * 100));
+    setOpacityInput(opacityPercent.toString());
+    updateTextElement(trackId, element.id, { opacity: opacityPercent / 100 });
+  };
 
   return (
     <div className="space-y-6 p-5">
@@ -93,7 +134,7 @@ export function TextProperties({
               }
               className="h-8 px-3 line-through"
             >
-              <span className="line-through">S</span>
+              S
             </Button>
           </div>
         </PropertyItemValue>
@@ -102,23 +143,23 @@ export function TextProperties({
         <PropertyItemValue>
           <div className="flex items-center gap-2">
             <Slider
-              defaultValue={[element.fontSize]}
+              value={[element.fontSize]}
               min={8}
               max={300}
               step={1}
-              onValueChange={([value]) =>
-                updateTextElement(trackId, element.id, { fontSize: value })
-              }
+              onValueChange={([value]) => {
+                updateTextElement(trackId, element.id, { fontSize: value });
+                setFontSizeInput(value.toString());
+              }}
               className="w-full"
             />
             <Input
               type="number"
-              value={element.fontSize}
-              onChange={(e) =>
-                updateTextElement(trackId, element.id, {
-                  fontSize: parseInt(e.target.value),
-                })
-              }
+              value={fontSizeInput}
+              min={8}
+              max={300}
+              onChange={(e) => handleFontSizeChange(e.target.value)}
+              onBlur={handleFontSizeBlur}
               className="w-12 !text-xs h-7 rounded-sm text-center
                [appearance:textfield]
                [&::-webkit-outer-spin-button]:appearance-none
@@ -160,23 +201,23 @@ export function TextProperties({
         <PropertyItemValue>
           <div className="flex items-center gap-2">
             <Slider
-              defaultValue={[element.opacity * 100]}
+              value={[element.opacity * 100]}
               min={0}
               max={100}
               step={1}
-              onValueChange={([value]) =>
-                updateTextElement(trackId, element.id, { opacity: value / 100 })
-              }
+              onValueChange={([value]) => {
+                updateTextElement(trackId, element.id, { opacity: value / 100 });
+                setOpacityInput(value.toString());
+              }}
               className="w-full"
             />
             <Input
               type="number"
-              value={Math.round(element.opacity * 100)}
-              onChange={(e) =>
-                updateTextElement(trackId, element.id, {
-                  opacity: parseInt(e.target.value) / 100,
-                })
-              }
+              value={opacityInput}
+              min={0}
+              max={100}
+              onChange={(e) => handleOpacityChange(e.target.value)}
+              onBlur={handleOpacityBlur}
               className="w-12 !text-xs h-7 rounded-sm text-center
                [appearance:textfield]
                [&::-webkit-outer-spin-button]:appearance-none
