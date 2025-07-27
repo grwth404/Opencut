@@ -399,7 +399,7 @@ function ProjectCard({
       >
         {isSelectionMode && (
           <div className="absolute top-3 left-3 z-10">
-            <div className="w-4.9 h-4.9 rounded-full bg-background/80 backdrop-blur-sm border flex items-center justify-center">
+            <div className="w-4 h-4 rounded-full bg-background/80 backdrop-blur-sm border flex items-center justify-center">
               <Checkbox
                 checked={isSelected}
                 onCheckedChange={(checked) =>
