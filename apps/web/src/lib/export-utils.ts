@@ -4,18 +4,18 @@ import { TimelineTrack, TimelineElement } from "@/types/timeline";
 import { MediaItem } from "@/stores/media-store";
 import { TProject } from "@/types/project";
 
-export interface ExportOptions {
+export type ExportOptions = {
   format: "mp4" | "webm" | "mov";
   quality: "low" | "medium" | "high";
   resolution: "720p" | "1080p" | "4k";
   fps: number;
-}
+};
 
-export interface ExportProgress {
+export type ExportProgress = {
   phase: "preparing" | "processing" | "finalizing" | "complete";
   progress: number; // 0-100
   message: string;
-}
+};
 
 export class VideoExporter {
   private ffmpeg: FFmpeg | null = null;
