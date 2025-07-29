@@ -1,10 +1,11 @@
 "use client";
 
-import { Dialog, DialogContent } from "./ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { ArrowRightIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
+import { VisuallyHidden } from "./ui/visually-hidden";
 
 export function Onboarding() {
   const [step, setStep] = useState(0);
@@ -24,6 +25,19 @@ export function Onboarding() {
   const handleClose = () => {
     setIsOpen(false);
     localStorage.setItem("hasSeenOnboarding", "true");
+  };
+
+  const getStepTitle = () => {
+    switch (step) {
+      case 0:
+        return "Welcome to OpenCut Beta! 🎉";
+      case 1:
+        return "⚠️ This is a super early beta!";
+      case 2:
+        return "🦋 Have fun testing!";
+      default:
+        return "OpenCut Onboarding";
+    }
   };
 
   const renderStepContent = () => {
@@ -67,6 +81,9 @@ export function Onboarding() {
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px] !outline-none">
+        <DialogTitle>
+          <VisuallyHidden>{getStepTitle()}</VisuallyHidden>
+        </DialogTitle>
         {renderStepContent()}
       </DialogContent>
     </Dialog>

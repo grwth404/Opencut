@@ -11,19 +11,79 @@ import { KeyboardShortcutsHelp } from "./keyboard-shortcuts-help";
 import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useMediaStore } from "@/stores/media-store";
+import {
+  VideoExporter,
+  downloadBlob,
+  type ExportOptions,
+} from "@/lib/export-utils";
 
 export function EditorHeader() {
-  const { getTotalDuration } = useTimelineStore();
+  const { getTotalDuration, tracks } = useTimelineStore();
   const { activeProject, renameProject } = useProjectStore();
+  const { mediaItems } = useMediaStore();
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(activeProject?.name || "");
+  const [isExporting, setIsExporting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleExport = () => {
-    // TODO: Implement export functionality
-    // NOTE: This is already being worked on
-    console.log("Export project");
-    window.open("https://youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
+  const handleExport = async () => {
+    if (!activeProject) {
+      toast.error("No active project to export");
+      return;
+    }
+
+    if (tracks.length === 0) {
+      toast.error("Timeline is empty - nothing to export");
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      const exportOptions: ExportOptions = {
+        format: "mp4",
+        quality: "medium",
+        resolution: "1080p",
+        fps: activeProject.fps || 30,
+      };
+
+      const exporter = new VideoExporter((progress) => {
+        toast.loading(
+          `${progress.message} (${Math.round(progress.progress)}%)`,
+          {
+            id: "export-progress",
+          }
+        );
+      });
+
+      const exportedBlob = await exporter.exportProject(
+        activeProject,
+        tracks,
+        mediaItems,
+        exportOptions
+      );
+
+      // Download the exported video
+      const filename = `${activeProject.name}.${exportOptions.format}`;
+      downloadBlob(exportedBlob, filename);
+
+      toast.success("Video exported successfully!", {
+        id: "export-progress",
+      });
+
+      exporter.cleanup();
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.error(
+        `Export failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        {
+          id: "export-progress",
+        }
+      );
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleNameClick = () => {
@@ -109,9 +169,12 @@ export function EditorHeader() {
         variant="primary"
         className="h-7 text-xs"
         onClick={handleExport}
+        disabled={isExporting}
       >
         <Download className="h-4 w-4" />
-        <span className="text-sm">Export</span>
+        <span className="text-sm">
+          {isExporting ? "Exporting..." : "Export"}
+        </span>
       </Button>
     </nav>
   );
