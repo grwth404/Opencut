@@ -20,6 +20,7 @@ export type ExportProgress = {
 export class VideoExporter {
   private ffmpeg: FFmpeg | null = null;
   private onProgress?: (progress: ExportProgress) => void;
+  private progressCallback?: (data: { progress: number }) => void;
 
   constructor(onProgress?: (progress: ExportProgress) => void) {
     this.onProgress = onProgress;
@@ -46,9 +47,10 @@ export class VideoExporter {
     this.ffmpeg = await initFFmpeg();
 
     // Set up progress callback for FFmpeg
-    this.ffmpeg.on("progress", ({ progress }) => {
+    this.progressCallback = ({ progress }) => {
       this.updateProgress("processing", progress * 100, "Rendering video...");
-    });
+    };
+    this.ffmpeg.on("progress", this.progressCallback);
 
     try {
       this.updateProgress("preparing", 10, "Analyzing timeline...");
@@ -243,6 +245,8 @@ export class VideoExporter {
       args.push("-c:v", "libx264", "-c:a", "aac");
     } else if (options.format === "webm") {
       args.push("-c:v", "libvpx-vp9", "-c:a", "libopus");
+    } else if (options.format === "mov") {
+      args.push("-c:v", "libx264", "-c:a", "aac");
     }
 
     args.push(outputName);
@@ -270,9 +274,9 @@ export class VideoExporter {
   }
 
   cleanup() {
-    if (this.ffmpeg) {
+    if (this.ffmpeg && this.progressCallback) {
       // Remove all progress listeners
-      this.ffmpeg.off("progress", () => {});
+      this.ffmpeg.off("progress", this.progressCallback);
     }
   }
 }
