@@ -23,7 +23,7 @@ interface ProjectStore {
   duplicateProject: (projectId: string) => Promise<string>;
   updateProjectBackground: (backgroundColor: string) => Promise<void>;
   updateBackgroundType: (
-    type: "color" | "blur-sm",
+    type: "color" | "blur",
     options?: { backgroundColor?: string; blurIntensity?: number }
   ) => Promise<void>;
   updateProjectFps: (fps: number) => Promise<void>;
@@ -273,7 +273,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   updateBackgroundType: async (
-    type: "color" | "blur-sm",
+    type: "color" | "blur",
     options?: { backgroundColor?: string; blurIntensity?: number }
   ) => {
     const { activeProject } = get();

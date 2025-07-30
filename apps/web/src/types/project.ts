@@ -6,7 +6,7 @@ export interface TProject {
   updatedAt: Date;
   mediaItems?: string[];
   backgroundColor?: string;
-  backgroundType?: "color" | "blur-sm";
+  backgroundType?: "color" | "blur";
   blurIntensity?: number; // in pixels (4, 8, 18)
   fps?: number;
 }

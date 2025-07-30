@@ -7,7 +7,7 @@ import { colors } from "@/data/colors";
 import { useProjectStore } from "@/stores/project-store";
 import { PipetteIcon } from "lucide-react";
 
-type BackgroundTab = "color" | "blur-sm";
+type BackgroundTab = "color" | "blur";
 
 export function BackgroundSettings() {
   const { activeProject, updateBackgroundType } = useProjectStore();
@@ -20,7 +20,7 @@ export function BackgroundSettings() {
   };
 
   const handleBlurSelect = (blurIntensity: number) => {
-    updateBackgroundType("blur-sm", { blurIntensity });
+    updateBackgroundType("blur", { blurIntensity });
   };
 
   const tabs = [
@@ -30,7 +30,7 @@ export function BackgroundSettings() {
     },
     {
       label: "Blur",
-      value: "blur-sm",
+      value: "blur",
     },
   ];
 
@@ -60,7 +60,7 @@ export function BackgroundSettings() {
                         activeProject?.backgroundColor || "#000000",
                     });
                   } else {
-                    updateBackgroundType("blur-sm", {
+                    updateBackgroundType("blur", {
                       blurIntensity: activeProject?.blurIntensity || 8,
                     });
                   }

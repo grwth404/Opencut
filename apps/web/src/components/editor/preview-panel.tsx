@@ -211,7 +211,7 @@ export function PreviewPanel() {
     setDragState({
       isDragging: true,
       elementId: element.id,
-      trackId: trackId,
+      trackId,
       startX: e.clientX,
       startY: e.clientY,
       initialElementX: element.x,
@@ -274,7 +274,7 @@ export function PreviewPanel() {
   const renderBlurBackground = () => {
     if (
       !activeProject?.backgroundType ||
-      activeProject.backgroundType !== "blur-sm" ||
+      activeProject.backgroundType !== "blur" ||
       blurBackgroundElements.length === 0
     ) {
       return null;
@@ -474,7 +474,7 @@ export function PreviewPanel() {
                 width: previewDimensions.width,
                 height: previewDimensions.height,
                 backgroundColor:
-                  activeProject?.backgroundType === "blur-sm"
+                  activeProject?.backgroundType === "blur"
                     ? "transparent"
                     : activeProject?.backgroundColor || "#000000",
               }}
@@ -489,7 +489,7 @@ export function PreviewPanel() {
                   renderElement(elementData, index)
                 )
               )}
-              {activeProject?.backgroundType === "blur-sm" &&
+              {activeProject?.backgroundType === "blur" &&
                 blurBackgroundElements.length === 0 &&
                 activeElements.length > 0 && (
                   <div className="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-xs p-2 rounded">
@@ -730,7 +730,7 @@ function FullscreenPreview({
             width: previewDimensions.width,
             height: previewDimensions.height,
             backgroundColor:
-              activeProject?.backgroundType === "blur-sm"
+              activeProject?.backgroundType === "blur"
                 ? "#1a1a1a"
                 : activeProject?.backgroundColor || "#1a1a1a",
           }}
@@ -745,7 +745,7 @@ function FullscreenPreview({
               renderElement(elementData, index)
             )
           )}
-          {activeProject?.backgroundType === "blur-sm" &&
+          {activeProject?.backgroundType === "blur" &&
             blurBackgroundElements.length === 0 &&
             activeElements.length > 0 && (
               <div className="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-xs p-2 rounded">

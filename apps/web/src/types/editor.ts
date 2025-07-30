@@ -1,4 +1,4 @@
-export type BackgroundType = "blur-sm" | "mirror" | "color";
+export type BackgroundType = "blur" | "mirror" | "color";
 
 export interface CanvasSize {
   width: number;
