@@ -21,7 +21,7 @@ export function SpeedControl() {
           {SPEED_PRESETS.map((preset) => (
             <Button
               key={preset.value}
-              variant={speed === preset.value ? "default" : "outline"}
+              variant={speed === preset.value ? "default" : "outline-solid"}
               className="flex-1"
               onClick={() => setSpeed(preset.value)}
             >

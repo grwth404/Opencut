@@ -130,7 +130,7 @@ export function DraggableMediaItem({
         typeof document !== "undefined" &&
         createPortal(
           <div
-            className="fixed pointer-events-none z-[9999]"
+            className="fixed pointer-events-none z-9999"
             style={{
               left: dragPosition.x - 40, // Center the preview (half of 80px)
               top: dragPosition.y - 40, // Center the preview (half of 80px)
@@ -139,7 +139,7 @@ export function DraggableMediaItem({
             <div className="w-[80px]">
               <AspectRatio
                 ratio={1}
-                className="relative rounded-md overflow-hidden shadow-2xl ring ring-primary"
+                className="relative rounded-md overflow-hidden shadow-2xl ring-3 ring-primary"
               >
                 <div className="w-full h-full [&_img]:w-full [&_img]:h-full [&_img]:object-cover [&_img]:rounded-none">
                   {preview}
@@ -179,7 +179,7 @@ function PlusButton({
       }}
       title={tooltipText}
     >
-      <Plus className="!size-3" />
+      <Plus className="size-3!" />
     </Button>
   );
 

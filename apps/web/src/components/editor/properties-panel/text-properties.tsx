@@ -25,7 +25,7 @@ export function TextProperties({
       <Textarea
         placeholder="Name"
         defaultValue={element.content}
-        className="min-h-[4.5rem] resize-none bg-background/50"
+        className="min-h-18 resize-none bg-background/50"
         onChange={(e) =>
           updateTextElement(trackId, element.id, { content: e.target.value })
         }
@@ -63,7 +63,7 @@ export function TextProperties({
                   fontSize: parseInt(e.target.value),
                 })
               }
-              className="w-12 !text-xs h-7 rounded-sm text-center
+              className="w-12 text-xs! h-7 rounded-sm text-center
                [appearance:textfield]
                [&::-webkit-outer-spin-button]:appearance-none
                [&::-webkit-inner-spin-button]:appearance-none"

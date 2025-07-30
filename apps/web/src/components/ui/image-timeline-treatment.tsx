@@ -18,7 +18,7 @@ export function ImageTimelineTreatment({
   alt,
   targetAspectRatio = 16 / 9,
   className,
-  backgroundType = "blur",
+  backgroundType = "blur-sm",
   backgroundColor = "#000000",
 }: ImageTimelineTreatmentProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -50,7 +50,7 @@ export function ImageTimelineTreatment({
       {/* Background Layer */}
       {needsAspectRatioTreatment && imageLoaded && (
         <>
-          {backgroundType === "blur" && (
+          {backgroundType === "blur-sm" && (
             <div className="absolute inset-0">
               <img
                 src={src}

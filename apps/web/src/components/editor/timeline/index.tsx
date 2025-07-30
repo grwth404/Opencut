@@ -543,7 +543,7 @@ export function Timeline() {
         {/* Timeline Header with Ruler */}
         <div className="flex bg-panel sticky top-0 z-10">
           {/* Track Labels Header */}
-          <div className="w-48 flex-shrink-0 bg-panel border-r flex items-center justify-between px-3 py-2">
+          <div className="w-48 shrink-0 bg-panel border-r flex items-center justify-between px-3 py-2">
             {/* Empty space */}
             <span className="text-sm font-medium text-muted-foreground opacity-0">
               .
@@ -652,7 +652,7 @@ export function Timeline() {
           {tracks.length > 0 && (
             <div
               ref={trackLabelsRef}
-              className="w-48 flex-shrink-0 border-r border-black overflow-y-auto z-[200] bg-panel"
+              className="w-48 shrink-0 border-r border-black overflow-y-auto z-200 bg-panel"
               data-track-labels
             >
               <ScrollArea className="w-full h-full" ref={trackLabelsScrollRef}>
@@ -667,7 +667,7 @@ export function Timeline() {
                         <TrackIcon track={track} />
                       </div>
                       {track.muted && (
-                        <span className="ml-2 text-xs text-red-500 font-semibold flex-shrink-0">
+                        <span className="ml-2 text-xs text-red-500 font-semibold shrink-0">
                           Muted
                         </span>
                       )}
@@ -745,7 +745,7 @@ export function Timeline() {
                             />
                           </div>
                         </ContextMenuTrigger>
-                        <ContextMenuContent className="z-[200]">
+                        <ContextMenuContent className="z-200">
                           <ContextMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
@@ -775,13 +775,13 @@ function TrackIcon({ track }: { track: TimelineTrack }) {
   return (
     <>
       {track.type === "media" && (
-        <Video className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+        <Video className="w-4 h-4 shrink-0 text-muted-foreground" />
       )}
       {track.type === "text" && (
-        <TypeIcon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+        <TypeIcon className="w-4 h-4 shrink-0 text-muted-foreground" />
       )}
       {track.type === "audio" && (
-        <Music className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+        <Music className="w-4 h-4 shrink-0 text-muted-foreground" />
       )}
     </>
   );

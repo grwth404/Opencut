@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 
 export default {
   darkMode: ["class"],
@@ -109,35 +110,38 @@ export default {
   plugins: [
     require("@tailwindcss/typography"),
     require("tailwindcss-animate"),
-    ({
-      addUtilities,
-    }: {
-      addUtilities: (utilities: Record<string, any>) => void;
-    }) => {
-      addUtilities({
-        ".scrollbar-hidden": {
-          "-ms-overflow-style": "none",
-          "scrollbar-width": "none",
-          "&::-webkit-scrollbar": {
-            display: "none",
+    plugin(
+      ({
+        addUtilities,
+      }: {
+        // biome-ignore lint/suspicious/noExplicitAny: <any> used by Tailwind `plugin` API
+        addUtilities: (utilities: Record<string, any>) => void;
+      }) => {
+        addUtilities({
+          ".scrollbar-hidden": {
+            "-ms-overflow-style": "none",
+            "scrollbar-width": "none",
+            "&::-webkit-scrollbar": {
+              display: "none",
+            },
           },
-        },
-        ".scrollbar-x-hidden": {
-          "-ms-overflow-style": "none",
-          "scrollbar-width": "none",
-          "&::-webkit-scrollbar:horizontal": {
-            display: "none",
+          ".scrollbar-x-hidden": {
+            "-ms-overflow-style": "none",
+            "scrollbar-width": "none",
+            "&::-webkit-scrollbar:horizontal": {
+              display: "none",
+            },
           },
-        },
-        ".scrollbar-y-hidden": {
-          "-ms-overflow-style": "none",
-          "scrollbar-width": "none",
-          "&::-webkit-scrollbar:vertical": {
-            display: "none",
+          ".scrollbar-y-hidden": {
+            "-ms-overflow-style": "none",
+            "scrollbar-width": "none",
+            "&::-webkit-scrollbar:vertical": {
+              display: "none",
+            },
           },
-        },
-      });
-    },
+        });
+      }
+    ),
   ],
   future: {
     hoverOnlyWhenSupported: true,

@@ -82,7 +82,7 @@ export function TabBar() {
               onClick={() => setActiveTab(tabKey)}
               key={tabKey}
             >
-              <tab.icon className="!size-[1.1rem]" />
+              <tab.icon className="size-[1.1rem]!" />
               <span className="text-[0.65rem]">{tab.label}</span>
             </div>
           );
@@ -114,10 +114,10 @@ function ScrollButton({
     <div className="bg-panel-accent w-12 h-full flex items-center justify-center">
       <Button
         size="icon"
-        className="rounded-[0.4rem] w-4 h-7 !bg-foreground/10"
+        className="rounded-[0.4rem] w-4 h-7 bg-foreground/10!"
         onClick={onClick}
       >
-        <Icon className="!size-4 text-foreground" />
+        <Icon className="size-4! text-foreground" />
       </Button>
     </div>
   );
