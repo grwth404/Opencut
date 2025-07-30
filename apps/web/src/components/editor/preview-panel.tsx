@@ -211,7 +211,7 @@ export function PreviewPanel() {
     setDragState({
       isDragging: true,
       elementId: element.id,
-      trackId: trackId,
+      trackId,
       startX: e.clientX,
       startY: e.clientY,
       initialElementX: element.x,
@@ -355,8 +355,22 @@ export function PreviewPanel() {
             handleTextMouseDown(e, element, elementData.track.id)
           }
           style={{
-            left: `${50 + ((dragState.isDragging && dragState.elementId === element.id ? dragState.currentX : element.x) / canvasSize.width) * 100}%`,
-            top: `${50 + ((dragState.isDragging && dragState.elementId === element.id ? dragState.currentY : element.y) / canvasSize.height) * 100}%`,
+            left: `${
+              50 +
+              ((dragState.isDragging && dragState.elementId === element.id
+                ? dragState.currentX
+                : element.x) /
+                canvasSize.width) *
+                100
+            }%`,
+            top: `${
+              50 +
+              ((dragState.isDragging && dragState.elementId === element.id
+                ? dragState.currentY
+                : element.y) /
+                canvasSize.height) *
+                100
+            }%`,
             transform: `translate(-50%, -50%) rotate(${element.rotation}deg) scale(${scaleRatio})`,
             opacity: element.opacity,
             zIndex: 100 + index, // Text elements on top
