@@ -20,8 +20,20 @@ const startTimer = (store: () => PlaybackStore) => {
       lastUpdate = now;
 
       const newTime = state.currentTime + delta * state.speed;
-      if (newTime >= state.duration) {
-        // When video completes, pause and reset playhead to start
+
+      // Get actual content duration from timeline store
+      const { useTimelineStore } = require("@/stores/timeline-store");
+      const actualContentDuration = useTimelineStore
+        .getState()
+        .getTotalDuration();
+
+      // Stop at actual content end, not timeline duration (which has 10s minimum)
+      // It was either this or reducing default min timeline to 1 second
+      const effectiveDuration =
+        actualContentDuration > 0 ? actualContentDuration : state.duration;
+
+      if (newTime >= effectiveDuration) {
+        // When content completes, pause and reset playhead to start
         state.pause();
         state.setCurrentTime(0);
         // Notify video elements to sync with reset
