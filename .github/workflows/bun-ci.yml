@@ -53,5 +53,8 @@ jobs:
 
       - name: Run tests
         working-directory: apps/web
-        run: echo "No tests implemented yet"
-        continue-on-error: true
+        run: |
+          echo "Running test suite..."
+          bun run test:run
+          echo "Running excessive projects bug tests..."
+          bun run test:excessive-projects
