@@ -1,23 +1,31 @@
 "use client";
 
-import Link from "next/link";
 import { Button } from "./ui/button";
-import { ChevronLeft, Download } from "lucide-react";
+import { ChevronDown, ArrowLeft, Download, SquarePen, Trash } from "lucide-react";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { HeaderBase } from "./header-base";
 import { formatTimeCode } from "@/lib/time";
 import { useProjectStore } from "@/stores/project-store";
 import { KeyboardShortcutsHelp } from "./keyboard-shortcuts-help";
-import { useState, useRef } from "react";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import Link from "next/link";
+import { RenameProjectDialog } from "./rename-project-dialog";
+import { DeleteProjectDialog } from "./delete-project-dialog";
+import { useRouter } from "next/navigation";
 
 export function EditorHeader() {
   const { getTotalDuration } = useTimelineStore();
-  const { activeProject, renameProject } = useProjectStore();
-  const [isEditing, setIsEditing] = useState(false);
-  const [newName, setNewName] = useState(activeProject?.name || "");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const { activeProject, renameProject, deleteProject } = useProjectStore();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const router = useRouter();
 
   const handleExport = () => {
     // TODO: Implement export functionality
@@ -26,66 +34,75 @@ export function EditorHeader() {
     window.open("https://youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
   };
 
-  const handleNameClick = () => {
-    if (!activeProject) return;
-    setNewName(activeProject.name);
-    setIsEditing(true);
-  };
-
-  const handleNameSave = async () => {
+  const handleNameSave = async (newName: string) => {
+    console.log("handleNameSave", newName);
     if (activeProject && newName.trim() && newName !== activeProject.name) {
       try {
         await renameProject(activeProject.id, newName.trim());
+        setIsRenameDialogOpen(false);
       } catch (error) {
         console.error("Failed to rename project:", error);
-        setNewName(activeProject.name);
       }
     }
-    setIsEditing(false);
   };
 
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") handleNameSave();
-    else if (e.key === "Escape") setIsEditing(false);
+  const handleDelete = () => {
+    if (activeProject) {
+      deleteProject(activeProject.id);
+      setIsDeleteDialogOpen(false);
+      router.push("/projects");
+    }
   };
 
   const leftContent = (
     <div className="flex items-center gap-2">
-      <Link
-        href="/projects"
-        className="font-medium tracking-tight flex items-center gap-2 hover:opacity-80 transition-opacity"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Link>
-      <div className="w-40 xl:w-60 h-9 flex items-center">
-        {isEditing ? (
-          <Input
-            ref={inputRef}
-            className="text-sm font-medium w-full px-2 py-1 h-9 truncate"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onBlur={handleNameSave}
-            onKeyDown={handleInputKeyDown}
-            onFocus={(e) => e.target.select()}
-            maxLength={64}
-            aria-label="Project name"
-            autoFocus
-          />
-        ) : (
-          <span
-            className="text-sm font-medium cursor-pointer hover:underline"
-            title="Click to rename"
-            role="button"
-            tabIndex={0}
-            onClick={handleNameClick}
-            onKeyDown={(e) => e.key === "Enter" && handleNameClick()}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="secondary"
+            className="h-auto py-1.5 px-2.5 flex items-center justify-center"
           >
-            <div className="truncate text-ellipsis overflow-clip max-w-40 xl:max-w-60">
-              {activeProject?.name}
-            </div>
-          </span>
-        )}
-      </div>
+            <ChevronDown className="text-muted-foreground" />
+            <span className="text-[0.85rem] mr-2">{activeProject?.name}</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-40">
+          <Link href="/projects">
+            <DropdownMenuItem className="flex items-center gap-1.5">
+              <ArrowLeft className="h-4 w-4" />
+              Projects
+            </DropdownMenuItem>
+          </Link>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="flex items-center gap-1.5"
+            onClick={() => setIsRenameDialogOpen(true)}
+          >
+            <SquarePen className="h-4 w-4" />
+            Rename project
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            variant="destructive"
+            className="flex items-center gap-1.5"
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            <Trash className="h-4 w-4" />
+            Delete Project
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <RenameProjectDialog
+        isOpen={isRenameDialogOpen}
+        onOpenChange={setIsRenameDialogOpen}
+        onConfirm={handleNameSave}
+        projectName={activeProject?.name || ""}
+      />
+      <DeleteProjectDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDelete}
+        projectName={activeProject?.name || ""}
+      />
     </div>
   );
 
@@ -106,8 +123,7 @@ export function EditorHeader() {
       <KeyboardShortcutsHelp />
       <Button
         size="sm"
-        variant="primary"
-        className="h-7 text-xs"
+        className="h-7 text-xs !bg-linear-to-r from-cyan-400 to-blue-500 text-white hover:opacity-85 transition-opacity"
         onClick={handleExport}
       >
         <Download className="h-4 w-4" />
