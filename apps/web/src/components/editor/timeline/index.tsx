@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { ScrollArea } from "../../ui/scroll-area";
 import { Button } from "../../ui/button";
 import {
@@ -984,12 +985,13 @@ function TimelineToolbar({
               {isPlaying ? "Pause (Space)" : "Play (Space)"}
             </TooltipContent>
           </Tooltip>
+          {/* Return to Start Button - Seeks timeline to 00:00:00 */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="text"
                 size="icon"
-                onClick={() => seek(0)}
+                onClick={() => seek(0)} // Seek to timeline start position
                 className="mr-2"
               >
                 <SkipBack className="h-4 w-4" />
