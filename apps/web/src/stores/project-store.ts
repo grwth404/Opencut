@@ -154,6 +154,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       backgroundType: "color",
       blurIntensity: 8,
       bookmarks: [],
+      fps: 30,
     };
 
     set({ activeProject: newProject });
@@ -334,9 +335,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
 
       const newProject: TProject = {
+        ...project, // Copy all properties from the original project
         id: generateUUID(),
         name: `(${nextNumber}) ${baseName}`,
-        thumbnail: project.thumbnail,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
