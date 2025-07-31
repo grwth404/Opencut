@@ -11,6 +11,7 @@ interface ProjectStore {
   savedProjects: TProject[];
   isLoading: boolean;
   isInitialized: boolean;
+  invalidProjectIds?: Set<string>;
 
   // Actions
   createNewProject: (name: string) => Promise<string>;
@@ -32,6 +33,11 @@ interface ProjectStore {
     searchQuery: string,
     sortOption: string
   ) => TProject[];
+
+  // Global invalid project ID tracking
+  isInvalidProjectId: (id: string) => boolean;
+  markProjectIdAsInvalid: (id: string) => void;
+  clearInvalidProjectIds: () => void;
 }
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
@@ -39,6 +45,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   savedProjects: [],
   isLoading: true,
   isInitialized: false,
+  invalidProjectIds: new Set<string>(),
 
   createNewProject: async (name: string) => {
     const newProject: TProject = {
@@ -356,5 +363,24 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     });
 
     return sortedProjects;
+  },
+
+  // Global invalid project ID tracking implementation
+  isInvalidProjectId: (id: string) => {
+    const invalidIds = get().invalidProjectIds || new Set();
+    return invalidIds.has(id);
+  },
+
+  markProjectIdAsInvalid: (id: string) => {
+    set((state) => ({
+      invalidProjectIds: new Set([
+        ...(state.invalidProjectIds || new Set()),
+        id,
+      ]),
+    }));
+  },
+
+  clearInvalidProjectIds: () => {
+    set({ invalidProjectIds: new Set() });
   },
 }));
