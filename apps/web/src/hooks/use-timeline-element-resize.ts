@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { ResizeState, TimelineElement, TimelineTrack } from "@/types/timeline";
 import { useMediaStore } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
+import { useProjectStore } from "@/stores/project-store";
+import { snapTimeToFrame } from "@/constants/timeline-constants";
 
 interface UseTimelineElementResizeProps {
   element: TimelineElement;
@@ -109,6 +111,10 @@ export function useTimelineElementResize({
     // Reasonable sensitivity for resize operations - similar to timeline scale
     const deltaTime = deltaX / (50 * zoomLevel);
 
+    // Get project FPS for frame snapping
+    const projectStore = useProjectStore.getState();
+    const projectFps = projectStore.activeProject?.fps || 30;
+
     if (resizing.side === "left") {
       // Left resize - different behavior for media vs text/image elements
       const maxAllowed = element.duration - resizing.initialTrimEnd - 0.1;
@@ -116,9 +122,15 @@ export function useTimelineElementResize({
 
       if (calculated >= 0) {
         // Normal trimming within available content
-        const newTrimStart = Math.min(maxAllowed, calculated);
+        const newTrimStart = snapTimeToFrame(
+          Math.min(maxAllowed, calculated),
+          projectFps
+        );
         const trimDelta = newTrimStart - resizing.initialTrimStart;
-        const newStartTime = element.startTime + trimDelta;
+        const newStartTime = snapTimeToFrame(
+          element.startTime + trimDelta,
+          projectFps
+        );
 
         updateElementTrim(
           track.id,
@@ -135,8 +147,14 @@ export function useTimelineElementResize({
           const extensionAmount = Math.abs(calculated);
           const maxExtension = element.startTime;
           const actualExtension = Math.min(extensionAmount, maxExtension);
-          const newStartTime = element.startTime - actualExtension;
-          const newDuration = element.duration + actualExtension;
+          const newStartTime = snapTimeToFrame(
+            element.startTime - actualExtension,
+            projectFps
+          );
+          const newDuration = snapTimeToFrame(
+            element.duration + actualExtension,
+            projectFps
+          );
 
           // Keep trimStart at 0 and extend the element
           updateElementTrim(
@@ -152,7 +170,10 @@ export function useTimelineElementResize({
           // Video/Audio: can't extend beyond original content - limit to trimStart = 0
           const newTrimStart = 0;
           const trimDelta = newTrimStart - resizing.initialTrimStart;
-          const newStartTime = element.startTime + trimDelta;
+          const newStartTime = snapTimeToFrame(
+            element.startTime + trimDelta,
+            projectFps
+          );
 
           updateElementTrim(
             track.id,
@@ -173,7 +194,10 @@ export function useTimelineElementResize({
         if (canExtendElementDuration()) {
           // Extend the duration instead of reducing trimEnd further
           const extensionNeeded = Math.abs(calculated);
-          const newDuration = element.duration + extensionNeeded;
+          const newDuration = snapTimeToFrame(
+            element.duration + extensionNeeded,
+            projectFps
+          );
           const newTrimEnd = 0; // Reset trimEnd to 0 since we're extending
 
           // Update duration first, then trim
@@ -198,7 +222,10 @@ export function useTimelineElementResize({
       } else {
         // Normal trimming within original duration
         const maxTrimEnd = element.duration - resizing.initialTrimStart - 0.1; // Leave at least 0.1s visible
-        const newTrimEnd = Math.max(0, Math.min(maxTrimEnd, calculated));
+        const newTrimEnd = snapTimeToFrame(
+          Math.max(0, Math.min(maxTrimEnd, calculated)),
+          projectFps
+        );
 
         updateElementTrim(
           track.id,
