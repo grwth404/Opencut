@@ -126,7 +126,7 @@ export function TimelinePlayhead({
   return (
     <div
       ref={playheadRef}
-      className="absolute pointer-events-auto z-[150]"
+      className="absolute pointer-events-auto z-150"
       style={{
         left: `${leftPosition}px`,
         top: 0,
@@ -142,7 +142,7 @@ export function TimelinePlayhead({
 
       {/* Playhead dot indicator at the top (in ruler area) */}
       <div
-        className={`absolute top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 shadow-sm ${isSnappingToPlayhead ? "bg-primary border-primary" : "bg-foreground border-foreground"}`}
+        className={`absolute top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 shadow-xs ${isSnappingToPlayhead ? "bg-primary border-primary" : "bg-foreground border-foreground"}`}
       />
     </div>
   );

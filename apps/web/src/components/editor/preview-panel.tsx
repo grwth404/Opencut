@@ -408,7 +408,7 @@ export function PreviewPanel() {
         return (
           <div
             key={element.id}
-            className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center"
+            className="absolute inset-0 bg-linear-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center"
           >
             <div className="text-center">
               <div className="text-2xl mb-2">🎬</div>
@@ -697,7 +697,7 @@ function FullscreenToolbar({
             style={{ width: `${progress}%` }}
           />
           <div
-            className="absolute top-1/2 w-3 h-3 rounded-full -translate-y-1/2 -translate-x-1/2 shadow-sm bg-white border border-black/20"
+            className="absolute top-1/2 w-3 h-3 rounded-full -translate-y-1/2 -translate-x-1/2 shadow-xs bg-white border border-black/20"
             style={{ left: `${progress}%` }}
           />
         </div>
@@ -706,11 +706,11 @@ function FullscreenToolbar({
       <Button
         variant="text"
         size="icon"
-        className="!size-4 text-white/80 hover:text-white"
+        className="size-4! text-white/80 hover:text-white"
         onClick={onToggleExpanded}
         title="Exit fullscreen (Esc)"
       >
-        <Expand className="!size-4" />
+        <Expand className="size-4!" />
       </Button>
     </div>
   );
@@ -744,7 +744,7 @@ function FullscreenPreview({
   getTotalDuration: () => number;
 }) {
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col">
+    <div className="fixed inset-0 z-9999 flex flex-col">
       <div className="flex-1 flex items-center justify-center bg-background">
         <div
           className="relative overflow-hidden border border-border m-3"
@@ -925,7 +925,7 @@ function PreviewToolbar({
           <DropdownMenuTrigger asChild>
             <Button
               size="sm"
-              className="!bg-panel-accent text-foreground/85 text-[0.70rem] h-4 rounded-none border border-muted-foreground px-0.5 py-0 font-light"
+              className="bg-panel-accent! text-foreground/85 text-[0.70rem] h-4 rounded-none border border-muted-foreground px-0.5 py-0 font-light"
               disabled={!hasAnyElements}
             >
               {getDisplayName()}
@@ -956,11 +956,11 @@ function PreviewToolbar({
         <Button
           variant="text"
           size="icon"
-          className="!size-4 text-muted-foreground"
+          className="size-4! text-muted-foreground"
           onClick={onToggleExpanded}
           title="Enter fullscreen"
         >
-          <Expand className="!size-4" />
+          <Expand className="size-4!" />
         </Button>
       </div>
     </div>

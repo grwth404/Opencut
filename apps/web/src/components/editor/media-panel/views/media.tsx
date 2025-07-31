@@ -169,7 +169,7 @@ export function MediaView() {
 
     if (item.type === "audio") {
       return (
-        <div className="w-full h-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex flex-col items-center justify-center text-muted-foreground rounded border border-green-500/20">
+        <div className="w-full h-full bg-linear-to-br from-green-500/20 to-emerald-500/20 flex flex-col items-center justify-center text-muted-foreground rounded border border-green-500/20">
           <Music className="h-6 w-6 mb-1" />
           <span className="text-xs">Audio</span>
           {item.duration && (
