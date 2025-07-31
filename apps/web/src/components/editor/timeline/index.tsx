@@ -12,6 +12,7 @@ import {
   SplitSquareHorizontal,
   Pause,
   Play,
+  SkipBack,
   Video,
   Music,
   TypeIcon,
@@ -508,7 +509,7 @@ export function Timeline() {
       onMouseEnter={() => setIsInTimeline(true)}
       onMouseLeave={() => setIsInTimeline(false)}
     >
-      <TimelineToolbar zoomLevel={zoomLevel} setZoomLevel={setZoomLevel} />
+      <TimelineToolbar zoomLevel={zoomLevel} setZoomLevel={setZoomLevel} seek={seek} />
 
       {/* Timeline Container */}
       <div
@@ -806,9 +807,11 @@ function TrackIcon({ track }: { track: TimelineTrack }) {
 function TimelineToolbar({
   zoomLevel,
   setZoomLevel,
+  seek,
 }: {
   zoomLevel: number;
   setZoomLevel: (zoom: number) => void;
+  seek: (time: number) => void;
 }) {
   const {
     tracks,
@@ -979,6 +982,21 @@ function TimelineToolbar({
             </TooltipTrigger>
             <TooltipContent>
               {isPlaying ? "Pause (Space)" : "Play (Space)"}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="text"
+                size="icon"
+                onClick={() => seek(0)}
+                className="mr-2"
+              >
+                <SkipBack className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Return to Start (Home / Enter)
             </TooltipContent>
           </Tooltip>
           <div className="w-px h-6 bg-border mx-1" />
