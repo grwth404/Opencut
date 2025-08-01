@@ -167,7 +167,7 @@ export default function Editor() {
               {/* Main content area */}
               <ResizablePanelGroup
                 direction="horizontal"
-                className="h-full w-full gap-[0.19rem] px-2"
+                className="h-full w-full gap-[0.19rem] px-3"
               >
                 {/* Tools Panel */}
                 <ResizablePanel
@@ -175,7 +175,7 @@ export default function Editor() {
                   minSize={15}
                   maxSize={40}
                   onResize={setToolsPanel}
-                  className="min-w-0"
+                  className="min-w-0 rounded-sm"
                 >
                   <MediaPanel />
                 </ResizablePanel>
@@ -214,7 +214,7 @@ export default function Editor() {
               minSize={15}
               maxSize={70}
               onResize={setTimeline}
-              className="min-h-0 px-2 pb-2"
+              className="min-h-0 px-3 pb-3"
             >
               <Timeline />
             </ResizablePanel>

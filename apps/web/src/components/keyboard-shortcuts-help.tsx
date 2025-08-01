@@ -96,7 +96,7 @@ const EditableShortcutKey = ({
       className={`inline-flex font-sans text-xs rounded px-2 min-w-6 min-h-6 leading-none items-center justify-center shadow-xs border mr-1 cursor-pointer hover:bg-opacity-80 ${
         isRecording
           ? "border-primary bg-primary/10"
-          : "border-white/10 bg-black/20"
+          : "border bg-accent"
       }`}
       onClick={handleClick}
       title={

@@ -1,7 +1,14 @@
 "use client";
 
 import { Button } from "./ui/button";
-import { ChevronDown, ArrowLeft, Download, SquarePen, Trash } from "lucide-react";
+import {
+  ChevronDown,
+  ArrowLeft,
+  Download,
+  SquarePen,
+  Trash,
+  Sun,
+} from "lucide-react";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { HeaderBase } from "./header-base";
 import { formatTimeCode } from "@/lib/time";
@@ -19,14 +26,18 @@ import Link from "next/link";
 import { RenameProjectDialog } from "./rename-project-dialog";
 import { DeleteProjectDialog } from "./delete-project-dialog";
 import { useRouter } from "next/navigation";
-import { FaDiscord, FaGithub } from "react-icons/fa6";
+import { FaDiscord } from "react-icons/fa6";
+import { useTheme } from "next-themes";
+import { usePlaybackStore } from "@/stores/playback-store";
 
 export function EditorHeader() {
   const { getTotalDuration } = useTimelineStore();
+  const { currentTime } = usePlaybackStore();
   const { activeProject, renameProject, deleteProject } = useProjectStore();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
 
   const handleExport = () => {
     // TODO: Implement export functionality
@@ -120,7 +131,11 @@ export function EditorHeader() {
 
   const centerContent = (
     <div className="flex items-center gap-2 text-xs">
-      <span>
+      <span className="text-foreground tabular-nums">
+        {formatTimeCode(currentTime, "HH:MM:SS:FF", activeProject?.fps || 30)}
+      </span>
+      <span className="text-foreground/50">/</span>
+      <span className="text-foreground/50 tabular-nums">
         {formatTimeCode(
           getTotalDuration(),
           "HH:MM:SS:FF",
@@ -135,11 +150,20 @@ export function EditorHeader() {
       <KeyboardShortcutsHelp />
       <Button
         size="sm"
-        className="h-7 text-xs !bg-linear-to-r from-cyan-400 to-blue-500 text-white hover:opacity-85 transition-opacity"
+        className="h-8 text-xs !bg-linear-to-r from-cyan-400 to-blue-500 text-white hover:opacity-85 transition-opacity"
         onClick={handleExport}
       >
         <Download className="h-4 w-4" />
-        <span className="text-sm">Export</span>
+        <span className="text-sm pr-1">Export</span>
+      </Button>
+      <Button
+        size="icon"
+        variant="text"
+        className="h-7"
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      >
+        <Sun className="!size-[1.1rem]" />
+        <span className="sr-only">{theme === "dark" ? "Light" : "Dark"}</span>
       </Button>
     </nav>
   );
@@ -149,7 +173,7 @@ export function EditorHeader() {
       leftContent={leftContent}
       centerContent={centerContent}
       rightContent={rightContent}
-      className="bg-background h-[3.2rem] px-4 items-center"
+      className="bg-background h-[3.2rem] px-3 items-center mt-0.5"
     />
   );
 }
