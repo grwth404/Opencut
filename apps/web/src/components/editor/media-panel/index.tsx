@@ -6,6 +6,7 @@ import { useMediaPanelStore, Tab } from "./store";
 import { TextView } from "./views/text";
 import { AudioView } from "./views/audio";
 import { Separator } from "@/components/ui/separator";
+import { SettingsView } from "./views/settings";
 
 export function MediaPanel() {
   const { activeTab } = useMediaPanelStore();
@@ -44,6 +45,7 @@ export function MediaPanel() {
         Adjustment view coming soon...
       </div>
     ),
+    settings: <SettingsView />,
   };
 
   return (

@@ -17,7 +17,7 @@ export function PropertyItem({
         "flex gap-2",
         direction === "row"
           ? "items-center justify-between gap-6"
-          : "flex-col gap-1",
+          : "flex-col gap-1.5",
         className
       )}
     >
@@ -33,7 +33,11 @@ export function PropertyItemLabel({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <label className={cn("text-xs", className)}>{children}</label>;
+  return (
+    <label className={cn("text-xs text-muted-foreground", className)}>
+      {children}
+    </label>
+  );
 }
 
 export function PropertyItemValue({
@@ -43,5 +47,5 @@ export function PropertyItemValue({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <div className={cn("flex-1", className)}>{children}</div>;
+  return <div className={cn("flex-1 text-sm", className)}>{children}</div>;
 }
