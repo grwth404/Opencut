@@ -221,17 +221,34 @@ export function useTimelineElementResize({
         }
       } else {
         // Normal trimming within original duration
-        const maxTrimEnd = element.duration - resizing.initialTrimStart - 0.1; // Leave at least 0.1s visible
-        const newTrimEnd = snapTimeToFrame(
-          Math.max(0, Math.min(maxTrimEnd, calculated)),
-          projectFps
+        // Calculate the desired end time based on mouse movement
+        const currentEndTime =
+          element.startTime +
+          element.duration -
+          element.trimStart -
+          element.trimEnd;
+        const desiredEndTime = currentEndTime + deltaTime;
+
+        // Snap the desired end time to frame
+        const snappedEndTime = snapTimeToFrame(desiredEndTime, projectFps);
+
+        // Calculate what trimEnd should be to achieve this snapped end time
+        const newTrimEnd = Math.max(
+          0,
+          element.duration -
+            element.trimStart -
+            (snappedEndTime - element.startTime)
         );
+
+        // Ensure we don't trim more than available content (leave at least 0.1s visible)
+        const maxTrimEnd = element.duration - element.trimStart - 0.1;
+        const finalTrimEnd = Math.min(maxTrimEnd, newTrimEnd);
 
         updateElementTrim(
           track.id,
           element.id,
-          resizing.initialTrimStart,
-          newTrimEnd,
+          element.trimStart,
+          finalTrimEnd,
           false
         );
       }
