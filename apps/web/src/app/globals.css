@@ -11,7 +11,7 @@
   /* Custom colors - light mode (default) */
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(0 0% 11%);
-  --card: hsl(0 0% 85.1%);
+  --card: hsl(216, 8%, 86%);
   --card-foreground: hsl(0 0% 2%);
   --popover: hsl(0, 0%, 100%);
   --popover-foreground: hsl(0 0% 2%);
@@ -20,7 +20,7 @@
   --secondary: hsl(216, 13%, 92%);
   --secondary-foreground: hsl(0 0% 2%);
   --muted: hsl(0 0% 85.1%);
-  --muted-foreground: hsl(0 0% 36.1%);
+  --muted-foreground: hsl(0 0% 50%);
   --accent: hsl(216, 13%, 92%);
   --accent-foreground: hsl(0 0% 2%);
   --destructive: hsl(0 100% 40%);
