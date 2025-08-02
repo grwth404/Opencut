@@ -22,9 +22,11 @@ import { useEditorStore } from "@/stores/editor-store";
 import { useAspectRatio } from "@/hooks/use-aspect-ratio";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { colors } from "@/data/colors";
+import { colors } from "@/data/colors/solid";
+import { patternCraftGradients } from "@/data/colors/pattern-craft";
 import { PipetteIcon } from "lucide-react";
 import { useMemo, memo, useCallback } from "react";
+import { syntaxUIGradients } from "@/data/colors/syntax-ui";
 
 export function SettingsView() {
   return <ProjectSettingsTabs />;
@@ -137,8 +139,8 @@ const BlurPreview = memo(
   }) => (
     <div
       className={cn(
-        "w-full aspect-square rounded-sm cursor-pointer hover:outline-2 hover:outline-primary relative overflow-hidden",
-        isSelected && "outline-2 outline-primary"
+        "w-full aspect-square rounded-sm cursor-pointer border border-foreground/15 hover:border-primary relative overflow-hidden",
+        isSelected && "border-2 border-primary"
       )}
       onClick={onSelect}
     >
@@ -160,6 +162,57 @@ const BlurPreview = memo(
 );
 
 BlurPreview.displayName = "BlurPreview";
+
+const BackgroundPreviews = memo(
+  ({
+    backgrounds,
+    currentBackgroundColor,
+    isColorBackground,
+    handleColorSelect,
+    useBackgroundColor = false,
+  }: {
+    backgrounds: string[];
+    currentBackgroundColor: string;
+    isColorBackground: boolean;
+    handleColorSelect: (bg: string) => void;
+    useBackgroundColor?: boolean;
+  }) => {
+    return useMemo(
+      () =>
+        backgrounds.map((bg) => (
+          <div
+            key={bg}
+            className={cn(
+              "w-full aspect-square rounded-sm cursor-pointer border border-foreground/15 hover:border-primary",
+              isColorBackground &&
+                bg === currentBackgroundColor &&
+                "border-2 border-primary"
+            )}
+            style={
+              useBackgroundColor
+                ? { backgroundColor: bg }
+                : {
+                    background: bg,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                  }
+            }
+            onClick={() => handleColorSelect(bg)}
+          />
+        )),
+      [
+        backgrounds,
+        isColorBackground,
+        currentBackgroundColor,
+        handleColorSelect,
+        useBackgroundColor,
+      ]
+    );
+  }
+);
+
+BackgroundPreviews.displayName = "BackgroundPreviews";
 
 function BackgroundView() {
   const { activeProject, updateBackgroundType } = useProjectStore();
@@ -205,36 +258,46 @@ function BackgroundView() {
     [blurLevels, isBlurBackground, currentBlurIntensity, handleBlurSelect]
   );
 
-  const colorPreviews = useMemo(
-    () =>
-      colors.map((color) => (
-        <div
-          key={color}
-          className={cn(
-            "w-full aspect-square rounded-sm cursor-pointer hover:border-2 hover:border-primary",
-            isColorBackground &&
-              color === currentBackgroundColor &&
-              "border-2 border-primary"
-          )}
-          style={{ backgroundColor: color }}
-          onClick={() => handleColorSelect(color)}
-        />
-      )),
-    [isColorBackground, currentBackgroundColor, handleColorSelect]
-  );
-
   return (
     <div className="flex flex-col gap-5">
-      <PropertyGroup title="Blur">
+      <PropertyGroup title="Blur" defaultExpanded={false}>
         <div className="grid grid-cols-4 gap-2 w-full">{blurPreviews}</div>
       </PropertyGroup>
 
-      <PropertyGroup title="Colors">
+      <PropertyGroup title="Colors" defaultExpanded={false}>
         <div className="grid grid-cols-4 gap-2 w-full">
           <div className="w-full aspect-square rounded-sm cursor-pointer border border-foreground/15 hover:border-primary flex items-center justify-center">
             <PipetteIcon className="size-4" />
           </div>
-          {colorPreviews}
+          <BackgroundPreviews
+            backgrounds={colors}
+            currentBackgroundColor={currentBackgroundColor}
+            isColorBackground={isColorBackground}
+            handleColorSelect={handleColorSelect}
+            useBackgroundColor={true}
+          />
+        </div>
+      </PropertyGroup>
+
+      <PropertyGroup title="Pattern Craft" defaultExpanded={false}>
+        <div className="grid grid-cols-4 gap-2 w-full">
+          <BackgroundPreviews
+            backgrounds={patternCraftGradients}
+            currentBackgroundColor={currentBackgroundColor}
+            isColorBackground={isColorBackground}
+            handleColorSelect={handleColorSelect}
+          />
+        </div>
+      </PropertyGroup>
+
+      <PropertyGroup title="Syntax UI" defaultExpanded={false}>
+        <div className="grid grid-cols-4 gap-2 w-full">
+          <BackgroundPreviews
+            backgrounds={syntaxUIGradients}
+            currentBackgroundColor={currentBackgroundColor}
+            isColorBackground={isColorBackground}
+            handleColorSelect={handleColorSelect}
+          />
         </div>
       </PropertyGroup>
     </div>

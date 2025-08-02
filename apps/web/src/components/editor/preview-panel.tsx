@@ -480,7 +480,7 @@ export function PreviewPanel() {
               style={{
                 width: previewDimensions.width,
                 height: previewDimensions.height,
-                backgroundColor:
+                background:
                   activeProject?.backgroundType === "blur"
                     ? "transparent"
                     : activeProject?.backgroundColor || "#000000",
@@ -742,7 +742,7 @@ function FullscreenPreview({
           style={{
             width: previewDimensions.width,
             height: previewDimensions.height,
-            backgroundColor:
+            background:
               activeProject?.backgroundType === "blur"
                 ? "#1a1a1a"
                 : activeProject?.backgroundColor || "#1a1a1a",

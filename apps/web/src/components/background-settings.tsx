@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { BackgroundIcon } from "./icons";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { colors } from "@/data/colors";
+import { colors } from "@/data/colors/solid";
 import { useProjectStore } from "@/stores/project-store";
 import { PipetteIcon } from "lucide-react";
 
