@@ -61,7 +61,7 @@ export function TabBar() {
   }, []);
 
   return (
-    <div className="flex pt-4">
+    <div className="flex">
       <ScrollButton
         direction="left"
         onClick={scrollToStart}
@@ -69,7 +69,7 @@ export function TabBar() {
       />
       <div
         ref={scrollContainerRef}
-        className="h-full px-4 flex flex-col justify-start items-center gap-5 overflow-x-auto scrollbar-x-hidden relative w-full"
+        className="h-full px-4 flex flex-col justify-start items-center gap-5 overflow-x-auto scrollbar-x-hidden relative w-full py-4"
       >
         {(Object.keys(tabs) as Tab[]).map((tabKey) => {
           const tab = tabs[tabKey];
