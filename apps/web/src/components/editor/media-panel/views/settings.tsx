@@ -229,7 +229,7 @@ function BackgroundView() {
         <div className="grid grid-cols-4 gap-2 w-full">{blurPreviews}</div>
       </PropertyGroup>
 
-      <PropertyGroup title="Color">
+      <PropertyGroup title="Colors">
         <div className="grid grid-cols-4 gap-2 w-full">
           <div className="w-full aspect-square rounded-sm cursor-pointer border border-foreground/15 hover:border-primary flex items-center justify-center">
             <PipetteIcon className="size-4" />
