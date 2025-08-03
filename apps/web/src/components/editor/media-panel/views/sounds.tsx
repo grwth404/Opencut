@@ -19,11 +19,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  PropertyGroup,
-  PropertyItem,
-  PropertyItemValue,
-} from "@/components/editor/properties-panel/property-item";
 
 export function SoundsView() {
   return (
