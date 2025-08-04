@@ -237,8 +237,85 @@ export default function Editor() {
               className="h-full w-full gap-[0.18rem] px-3 pb-3"
             >
               <ResizablePanel
+                defaultSize={100 - propertiesPanel}
+                minSize={30}
+                onResize={(size) => setPropertiesPanel(100 - size)}
+                className="min-w-0 min-h-0"
+              >
+                <ResizablePanelGroup
+                  direction="vertical"
+                  className="h-full w-full gap-[0.18rem]"
+                >
+                  <ResizablePanel
+                    defaultSize={mainContent}
+                    minSize={30}
+                    maxSize={85}
+                    onResize={setMainContent}
+                    className="min-h-0"
+                  >
+                    <ResizablePanelGroup
+                      direction="horizontal"
+                      className="h-full w-full gap-[0.19rem]"
+                    >
+                      <ResizablePanel
+                        defaultSize={toolsPanel}
+                        minSize={15}
+                        maxSize={40}
+                        onResize={setToolsPanel}
+                        className="min-w-0 rounded-sm"
+                      >
+                        <MediaPanel />
+                      </ResizablePanel>
+
+                      <ResizableHandle withHandle />
+
+                      <ResizablePanel
+                        defaultSize={previewPanel}
+                        minSize={30}
+                        onResize={setPreviewPanel}
+                        className="min-w-0 min-h-0 flex-1"
+                      >
+                        <PreviewPanel />
+                      </ResizablePanel>
+                    </ResizablePanelGroup>
+                  </ResizablePanel>
+
+                  <ResizableHandle withHandle />
+
+                  <ResizablePanel
+                    defaultSize={timeline}
+                    minSize={15}
+                    maxSize={70}
+                    onResize={setTimeline}
+                    className="min-h-0"
+                  >
+                    <Timeline />
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+              </ResizablePanel>
+
+              <ResizableHandle withHandle />
+
+              <ResizablePanel
+                defaultSize={propertiesPanel}
+                minSize={15}
+                maxSize={40}
+                onResize={setPropertiesPanel}
+                className="min-w-0 min-h-0"
+              >
+                <PropertiesPanel />
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          ) : activePreset === "vertical-preview" ? (
+            <ResizablePanelGroup
+              key={`vertical-preview-${activePreset}-${resetCounter}`}
+              direction="horizontal"
+              className="h-full w-full gap-[0.18rem] px-3 pb-3"
+            >
+              <ResizablePanel
                 defaultSize={100 - previewPanel}
-                minSize={60}
+                minSize={30}
+                onResize={(size) => setPreviewPanel(100 - size)}
                 className="min-w-0 min-h-0"
               >
                 <ResizablePanelGroup
