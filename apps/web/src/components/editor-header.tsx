@@ -78,7 +78,7 @@ export function EditorHeader() {
             <span className="text-[0.85rem] mr-2">{activeProject?.name}</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-40">
+        <DropdownMenuContent align="start" className="w-40 z-100">
           <Link href="/projects">
             <DropdownMenuItem className="flex items-center gap-1.5">
               <ArrowLeft className="h-4 w-4" />
