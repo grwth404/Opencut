@@ -155,7 +155,6 @@ export default function Editor() {
       <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
         <EditorHeader />
         <div className="flex-1 min-h-0 min-w-0">
-
           {activePreset === "media" ? (
             <ResizablePanelGroup
               key={`media-${activePreset}-${resetCounter}`}
@@ -301,7 +300,7 @@ export default function Editor() {
                 minSize={15}
                 maxSize={40}
                 onResize={setPropertiesPanel}
-                className="min-w-0"
+                className="min-w-0 rounded-sm"
               >
                 <PropertiesPanel />
               </ResizablePanel>
@@ -429,7 +428,7 @@ export default function Editor() {
                     minSize={15}
                     maxSize={40}
                     onResize={setPropertiesPanel}
-                    className="min-w-0"
+                    className="min-w-0 rounded-sm"
                   >
                     <PropertiesPanel />
                   </ResizablePanel>

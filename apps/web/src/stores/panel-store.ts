@@ -1,7 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type PanelPreset = "default" | "media" | "inspector" | "vertical-preview";
+export type PanelPreset =
+  | "default"
+  | "media"
+  | "inspector"
+  | "vertical-preview";
 
 interface PanelSizes {
   toolsPanel: number;
@@ -56,7 +60,7 @@ interface PanelState extends PanelSizes {
   setMainContent: (size: number) => void;
   setTimeline: (size: number) => void;
   setMediaViewMode: (mode: "grid" | "list") => void;
-  
+
   // Preset actions
   setActivePreset: (preset: PanelPreset) => void;
   resetPreset: (preset: PanelPreset) => void;
@@ -80,7 +84,7 @@ export const usePanelStore = create<PanelState>()(
 
       setToolsPanel: (size) => {
         const { activePreset, presetCustomSizes } = get();
-        set({ 
+        set({
           toolsPanel: size,
           presetCustomSizes: {
             ...presetCustomSizes,
@@ -93,7 +97,7 @@ export const usePanelStore = create<PanelState>()(
       },
       setPreviewPanel: (size) => {
         const { activePreset, presetCustomSizes } = get();
-        set({ 
+        set({
           previewPanel: size,
           presetCustomSizes: {
             ...presetCustomSizes,
@@ -106,7 +110,7 @@ export const usePanelStore = create<PanelState>()(
       },
       setPropertiesPanel: (size) => {
         const { activePreset, presetCustomSizes } = get();
-        set({ 
+        set({
           propertiesPanel: size,
           presetCustomSizes: {
             ...presetCustomSizes,
@@ -119,7 +123,7 @@ export const usePanelStore = create<PanelState>()(
       },
       setMainContent: (size) => {
         const { activePreset, presetCustomSizes } = get();
-        set({ 
+        set({
           mainContent: size,
           presetCustomSizes: {
             ...presetCustomSizes,
@@ -132,7 +136,7 @@ export const usePanelStore = create<PanelState>()(
       },
       setTimeline: (size) => {
         const { activePreset, presetCustomSizes } = get();
-        set({ 
+        set({
           timeline: size,
           presetCustomSizes: {
             ...presetCustomSizes,
@@ -144,18 +148,18 @@ export const usePanelStore = create<PanelState>()(
         });
       },
       setMediaViewMode: (mode) => set({ mediaViewMode: mode }),
-      
+
       setActivePreset: (preset) => {
-        const { 
-          activePreset: currentPreset, 
-          presetCustomSizes, 
-          toolsPanel, 
-          previewPanel, 
-          propertiesPanel, 
-          mainContent, 
-          timeline 
+        const {
+          activePreset: currentPreset,
+          presetCustomSizes,
+          toolsPanel,
+          previewPanel,
+          propertiesPanel,
+          mainContent,
+          timeline,
         } = get();
-        
+
         const updatedPresetCustomSizes = {
           ...presetCustomSizes,
           [currentPreset]: {
@@ -166,42 +170,54 @@ export const usePanelStore = create<PanelState>()(
             timeline,
           },
         };
-        
+
         const defaultSizes = PRESET_CONFIGS[preset];
         const customSizes = updatedPresetCustomSizes[preset] || {};
         const finalSizes = { ...defaultSizes, ...customSizes };
-        
+
         set({
           activePreset: preset,
           presetCustomSizes: updatedPresetCustomSizes,
           ...finalSizes,
         });
       },
-      
+
       resetPreset: (preset) => {
         const { presetCustomSizes, activePreset, resetCounter } = get();
         const defaultSizes = PRESET_CONFIGS[preset];
-        
+
         const newPresetCustomSizes = {
           ...presetCustomSizes,
           [preset]: {},
         };
-        
+
         const updates: Partial<PanelState> = {
           presetCustomSizes: newPresetCustomSizes,
           resetCounter: resetCounter + 1,
         };
-        
+
         if (preset === activePreset) {
           Object.assign(updates, defaultSizes);
         }
-        
+
         set(updates);
       },
-      
+
       getCurrentPresetSizes: () => {
-        const { toolsPanel, previewPanel, propertiesPanel, mainContent, timeline } = get();
-        return { toolsPanel, previewPanel, propertiesPanel, mainContent, timeline };
+        const {
+          toolsPanel,
+          previewPanel,
+          propertiesPanel,
+          mainContent,
+          timeline,
+        } = get();
+        return {
+          toolsPanel,
+          previewPanel,
+          propertiesPanel,
+          mainContent,
+          timeline,
+        };
       },
     }),
     {
