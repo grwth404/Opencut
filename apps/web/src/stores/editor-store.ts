@@ -2,6 +2,15 @@ import { create } from "zustand";
 import { CanvasSize, CanvasPreset } from "@/types/editor";
 
 type CanvasMode = "preset" | "original" | "custom";
+export type PlatformLayout = "tiktok";
+
+export const PLATFORM_LAYOUTS: Record<PlatformLayout, string> = {
+  tiktok: "TikTok",
+};
+
+interface LayoutGuideSettings {
+  platform: PlatformLayout | null;
+}
 
 interface EditorState {
   // Loading states
@@ -12,6 +21,7 @@ interface EditorState {
   canvasSize: CanvasSize;
   canvasMode: CanvasMode;
   canvasPresets: CanvasPreset[];
+  layoutGuide: LayoutGuideSettings;
 
   // Actions
   setInitializing: (loading: boolean) => void;
@@ -20,6 +30,8 @@ interface EditorState {
   setCanvasSize: (size: CanvasSize) => void;
   setCanvasSizeToOriginal: (aspectRatio: number) => void;
   setCanvasSizeFromAspectRatio: (aspectRatio: number) => void;
+  setLayoutGuide: (settings: Partial<LayoutGuideSettings>) => void;
+  toggleLayoutGuide: (platform: PlatformLayout) => void;
 }
 
 const DEFAULT_CANVAS_PRESETS: CanvasPreset[] = [
@@ -70,6 +82,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   canvasSize: { width: 1920, height: 1080 }, // Default 16:9 HD
   canvasMode: "preset" as CanvasMode,
   canvasPresets: DEFAULT_CANVAS_PRESETS,
+  layoutGuide: {
+    platform: null,
+  },
 
   // Actions
   setInitializing: (loading) => {
@@ -100,5 +115,22 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setCanvasSizeFromAspectRatio: (aspectRatio) => {
     const newCanvasSize = findBestCanvasPreset(aspectRatio);
     set({ canvasSize: newCanvasSize, canvasMode: "custom" });
+  },
+
+  setLayoutGuide: (settings) => {
+    set((state) => ({
+      layoutGuide: {
+        ...state.layoutGuide,
+        ...settings,
+      },
+    }));
+  },
+
+  toggleLayoutGuide: (platform) => {
+    set((state) => ({
+      layoutGuide: {
+        platform: state.layoutGuide.platform === platform ? null : platform,
+      },
+    }));
   },
 }));
