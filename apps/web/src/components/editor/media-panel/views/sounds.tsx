@@ -5,11 +5,23 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlayIcon, PauseIcon, HeartIcon, PlusIcon } from "lucide-react";
+import {
+  PlayIcon,
+  PauseIcon,
+  HeartIcon,
+  PlusIcon,
+  ListFilter,
+} from "lucide-react";
 import { useSoundsStore } from "@/stores/sounds-store";
 import { useSoundSearch } from "@/hooks/use-sound-search";
 import type { SoundEffect, SavedSound } from "@/types/sounds";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 export function SoundsView() {
   return (
@@ -66,6 +79,8 @@ function SoundEffectsView() {
     loadSavedSounds,
     isSoundSaved,
     toggleSavedSound,
+    showCommercialOnly,
+    toggleCommercialFilter,
   } = useSoundsStore();
   const {
     results: searchResults,
@@ -73,7 +88,7 @@ function SoundEffectsView() {
     loadMore,
     hasNextPage,
     isLoadingMore,
-  } = useSoundSearch(searchQuery);
+  } = useSoundSearch(searchQuery, showCommercialOnly);
 
   // Audio playback state
   const [playingId, setPlayingId] = useState<number | null>(null);
@@ -144,14 +159,41 @@ function SoundEffectsView() {
 
   return (
     <div className="flex flex-col gap-5 mt-1 h-full">
-      <Input
-        placeholder="Search sound effects"
-        className="bg-panel-accent"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        showClearIcon
-        onClear={() => setSearchQuery("")}
-      />
+      <div className="flex items-center gap-3">
+        <Input
+          placeholder="Search sound effects"
+          className="bg-panel-accent w-full"
+          containerClassName="w-full"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          showClearIcon
+          onClear={() => setSearchQuery("")}
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="text"
+              size="icon"
+              className={cn(showCommercialOnly && "text-primary")}
+            >
+              <ListFilter className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuCheckboxItem
+              checked={showCommercialOnly}
+              onCheckedChange={toggleCommercialFilter}
+            >
+              Show only commercially licensed
+            </DropdownMenuCheckboxItem>
+            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+              {showCommercialOnly
+                ? "Only showing sounds licensed for commercial use"
+                : "Showing all sounds regardless of license"}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <div className="relative h-full overflow-hidden">
         <ScrollArea

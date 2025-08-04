@@ -13,6 +13,10 @@ interface SoundsStore {
   error: string | null;
   hasLoaded: boolean;
 
+  // Filter state
+  showCommercialOnly: boolean;
+  toggleCommercialFilter: () => void;
+
   // Search state
   searchQuery: string;
   searchResults: SoundEffect[];
@@ -72,6 +76,11 @@ export const useSoundsStore = create<SoundsStore>((set, get) => ({
   isLoading: false,
   error: null,
   hasLoaded: false,
+  showCommercialOnly: true,
+
+  toggleCommercialFilter: () => {
+    set((state) => ({ showCommercialOnly: !state.showCommercialOnly }));
+  },
 
   // Search state
   searchQuery: "",

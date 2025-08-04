@@ -12,6 +12,7 @@ const searchParamsSchema = z.object({
     .enum(["downloads", "rating", "created", "score"])
     .default("downloads"),
   min_rating: z.coerce.number().min(0).max(5).default(3),
+  commercial_only: z.coerce.boolean().default(true),
 });
 
 const freesoundResultSchema = z.object({
@@ -124,6 +125,7 @@ export async function GET(request: NextRequest) {
       page_size: pageSize,
       sort,
       min_rating,
+      commercial_only,
     } = validationResult.data;
 
     if (type === "songs") {
@@ -160,6 +162,15 @@ export async function GET(request: NextRequest) {
     if (type === "effects" || !type) {
       params.append("filter", "duration:[* TO 30.0]");
       params.append("filter", `avg_rating:[${min_rating} TO *]`);
+
+      // Filter by license if commercial_only is true
+      if (commercial_only) {
+        params.append(
+          "filter",
+          'license:("Attribution" OR "Creative Commons 0" OR "Attribution Noncommercial" OR "Attribution Commercial")'
+        );
+      }
+
       params.append(
         "filter",
         "tag:sound-effect OR tag:sfx OR tag:foley OR tag:ambient OR tag:nature OR tag:mechanical OR tag:electronic OR tag:impact OR tag:whoosh OR tag:explosion"

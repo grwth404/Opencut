@@ -9,6 +9,7 @@ interface InputProps extends React.ComponentProps<"input"> {
   onShowPasswordChange?: (show: boolean) => void;
   showClearIcon?: boolean;
   onClear?: () => void;
+  containerClassName?: string;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
@@ -16,6 +17,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     {
       className,
       type,
+      containerClassName,
       showPassword,
       onShowPasswordChange,
       showClearIcon,
@@ -45,7 +47,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       iconCount === 2 ? "pr-20" : iconCount === 1 ? "pr-10" : "";
 
     return (
-      <div className={hasIcons ? "relative w-full" : ""}>
+      <div className={cn(hasIcons ? "relative w-full" : "", containerClassName)}>
         <input
           type={inputType}
           className={cn(

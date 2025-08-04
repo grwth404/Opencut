@@ -9,7 +9,7 @@ import { useSoundsStore } from "@/stores/sounds-store";
  * - Proper error handling
  */
 
-export function useSoundSearch(query: string) {
+export function useSoundSearch(query: string, commercialOnly: boolean) {
   const {
     searchResults,
     isSearching,
@@ -49,6 +49,7 @@ export function useSoundSearch(query: string) {
         searchParams.set("q", query);
       }
 
+      searchParams.set("commercial_only", commercialOnly.toString());
       const response = await fetch(
         `/api/sounds/search?${searchParams.toString()}`
       );
