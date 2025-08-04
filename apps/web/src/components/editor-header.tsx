@@ -29,6 +29,7 @@ import { useRouter } from "next/navigation";
 import { FaDiscord } from "react-icons/fa6";
 import { useTheme } from "next-themes";
 import { usePlaybackStore } from "@/stores/playback-store";
+import { PanelPresetSelector } from "./panel-preset-selector";
 
 export function EditorHeader() {
   const { getTotalDuration } = useTimelineStore();
@@ -147,6 +148,7 @@ export function EditorHeader() {
 
   const rightContent = (
     <nav className="flex items-center gap-2">
+      <PanelPresetSelector />
       <KeyboardShortcutsHelp />
       <Button
         size="sm"
