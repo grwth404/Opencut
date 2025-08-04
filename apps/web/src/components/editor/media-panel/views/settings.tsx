@@ -57,14 +57,18 @@ function ProjectSettingsTabs() {
 }
 
 function ProjectInfoView() {
-  const { activeProject, updateProjectFps } = useProjectStore();
-  const { canvasPresets, setCanvasSize } = useEditorStore();
+  const { activeProject, updateProjectFps, updateCanvasSize } =
+    useProjectStore();
+  const { canvasPresets } = useEditorStore();
   const { getDisplayName } = useAspectRatio();
 
   const handleAspectRatioChange = (value: string) => {
     const preset = canvasPresets.find((p) => p.name === value);
     if (preset) {
-      setCanvasSize({ width: preset.width, height: preset.height });
+      updateCanvasSize(
+        { width: preset.width, height: preset.height },
+        "preset"
+      );
     }
   };
 
