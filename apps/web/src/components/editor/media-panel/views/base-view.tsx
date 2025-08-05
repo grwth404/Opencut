@@ -3,7 +3,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface BaseViewProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   defaultTab?: string;
   tabs?: {
     value: string;
