@@ -6,10 +6,11 @@ import { DEFAULT_CANVAS_SIZE, useProjectStore } from "@/stores/project-store";
 export function useAspectRatio() {
   const { canvasPresets } = useEditorStore();
   const { activeProject } = useProjectStore();
-  const canvasSize = activeProject?.canvasSize || DEFAULT_CANVAS_SIZE;
-  const canvasMode = activeProject?.canvasMode || "preset";
   const { mediaItems } = useMediaStore();
   const { tracks } = useTimelineStore();
+
+  const canvasSize = activeProject?.canvasSize || DEFAULT_CANVAS_SIZE;
+  const canvasMode = activeProject?.canvasMode || "preset";
 
   // Find the current preset based on canvas size
   const currentPreset = canvasPresets.find(
