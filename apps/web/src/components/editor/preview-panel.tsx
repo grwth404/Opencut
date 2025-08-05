@@ -835,12 +835,25 @@ function PreviewToolbar({
       className="flex justify-end gap-2 h-auto pb-5 pr-5 pt-4 w-full"
     >
       <div className="flex items-center gap-2">
+        <Button
+          variant="text"
+          size="icon"
+          onClick={toggle}
+          disabled={!hasAnyElements}
+          className="h-auto p-0"
+        >
+          {isPlaying ? (
+            <Pause className="h-3 w-3" />
+          ) : (
+            <Play className="h-3 w-3" />
+          )}
+        </Button>
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="text"
               size="icon"
-              className="h-auto p-0"
+              className="h-auto p-0 mr-1"
               title="Toggle layout guide"
             >
               <SocialsIcon className="!size-6" />
@@ -883,19 +896,6 @@ function PreviewToolbar({
             </div>
           </PopoverContent>
         </Popover>
-        <Button
-          variant="text"
-          size="icon"
-          onClick={toggle}
-          disabled={!hasAnyElements}
-          className="h-auto p-0"
-        >
-          {isPlaying ? (
-            <Pause className="h-3 w-3" />
-          ) : (
-            <Play className="h-3 w-3" />
-          )}
-        </Button>
         <Button
           variant="text"
           size="icon"
