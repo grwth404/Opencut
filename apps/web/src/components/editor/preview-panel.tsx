@@ -832,7 +832,7 @@ function PreviewToolbar({
   return (
     <div
       data-toolbar
-      className="flex justify-end gap-2 h-auto pb-5 pr-5 w-full"
+      className="flex justify-end gap-2 h-auto pb-5 pr-5 pt-4 w-full"
     >
       <div className="flex items-center gap-2">
         <Popover>
