@@ -257,7 +257,7 @@ function BackgroundView() {
   );
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <PropertyGroup title="Blur" defaultExpanded={false}>
         <div className="grid grid-cols-4 gap-2 w-full">{blurPreviews}</div>
       </PropertyGroup>
