@@ -1,11 +1,16 @@
 import { useEditorStore } from "@/stores/editor-store";
 import { useMediaStore, getMediaAspectRatio } from "@/stores/media-store";
 import { useTimelineStore } from "@/stores/timeline-store";
+import { useProjectStore } from "@/stores/project-store";
 
 export function useAspectRatio() {
-  const { canvasSize, canvasMode, canvasPresets } = useEditorStore();
+  const { canvasPresets } = useEditorStore();
+  const { activeProject } = useProjectStore();
   const { mediaItems } = useMediaStore();
   const { tracks } = useTimelineStore();
+
+  const canvasSize = activeProject?.canvasSize || { width: 1920, height: 1080 };
+  const canvasMode = activeProject?.canvasMode || "preset";
 
   // Find the current preset based on canvas size
   const currentPreset = canvasPresets.find(
