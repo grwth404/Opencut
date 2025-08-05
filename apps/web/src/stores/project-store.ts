@@ -7,6 +7,8 @@ import { useTimelineStore } from "./timeline-store";
 import { generateUUID } from "@/lib/utils";
 import { CanvasSize, CanvasMode } from "@/types/editor";
 
+export const DEFAULT_CANVAS_SIZE: CanvasSize = { width: 1920, height: 1080 };
+
 const DEFAULT_PROJECT: TProject = {
   id: generateUUID(),
   name: "Untitled",
@@ -18,7 +20,7 @@ const DEFAULT_PROJECT: TProject = {
   blurIntensity: 8,
   bookmarks: [],
   fps: 30,
-  canvasSize: { width: 1920, height: 1080 },
+  canvasSize: DEFAULT_CANVAS_SIZE,
   canvasMode: "preset",
 };
 

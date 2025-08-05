@@ -8,20 +8,13 @@ import { useEditorStore } from "@/stores/editor-store";
 import { VideoPlayer } from "@/components/ui/video-player";
 import { AudioPlayer } from "@/components/ui/audio-player";
 import { Button } from "@/components/ui/button";
-import {
-  Play,
-  Pause,
-  Expand,
-  SkipBack,
-  SkipForward,
-  LayoutGrid,
-} from "lucide-react";
+import { Play, Pause, Expand, SkipBack, SkipForward } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { formatTimeCode } from "@/lib/time";
 import { EditableTimecode } from "@/components/ui/editable-timecode";
 import { FONT_CLASS_MAP } from "@/lib/font-config";
-import { useProjectStore } from "@/stores/project-store";
+import { DEFAULT_CANVAS_SIZE, useProjectStore } from "@/stores/project-store";
 import { TextElementDragState } from "@/types/editor";
 import {
   Popover,
@@ -43,8 +36,8 @@ interface ActiveElement {
 export function PreviewPanel() {
   const { tracks, getTotalDuration, updateTextElement } = useTimelineStore();
   const { mediaItems } = useMediaStore();
-  const { currentTime, toggle, setCurrentTime, isPlaying } = usePlaybackStore();
-  const { canvasSize } = useEditorStore();
+  const { currentTime, toggle, setCurrentTime } = usePlaybackStore();
+  const { activeProject } = useProjectStore();
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [previewDimensions, setPreviewDimensions] = useState({
@@ -52,7 +45,8 @@ export function PreviewPanel() {
     height: 0,
   });
   const [isExpanded, setIsExpanded] = useState(false);
-  const { activeProject } = useProjectStore();
+
+  const canvasSize = activeProject?.canvasSize || DEFAULT_CANVAS_SIZE;
   const [dragState, setDragState] = useState<TextElementDragState>({
     isDragging: false,
     elementId: null,
@@ -867,7 +861,9 @@ function PreviewToolbar({
                   <Checkbox
                     id="none"
                     checked={layoutGuide.platform === null}
-                    onCheckedChange={() => toggleLayoutGuide(layoutGuide.platform || "tiktok")} 
+                    onCheckedChange={() =>
+                      toggleLayoutGuide(layoutGuide.platform || "tiktok")
+                    }
                   />
                   <Label htmlFor="none">None</Label>
                 </div>
@@ -875,8 +871,10 @@ function PreviewToolbar({
                   <div key={platform} className="flex items-center space-x-2">
                     <Checkbox
                       id={platform}
-                      checked={layoutGuide.platform === platform} 
-                      onCheckedChange={() => toggleLayoutGuide(platform as PlatformLayout)}
+                      checked={layoutGuide.platform === platform}
+                      onCheckedChange={() =>
+                        toggleLayoutGuide(platform as PlatformLayout)
+                      }
                     />
                     <Label htmlFor={platform}>{label}</Label>
                   </div>
