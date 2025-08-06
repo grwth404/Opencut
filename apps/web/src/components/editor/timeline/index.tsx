@@ -53,7 +53,7 @@ import { SelectionBox } from "../selection-box";
 import { useSelectionBox } from "@/hooks/use-selection-box";
 import { SnapIndicator } from "../snap-indicator";
 import { SnapPoint } from "@/hooks/use-timeline-snapping";
-import type { DragData, TimelineTrack } from "@/types/timeline";
+import type { DragData, TimelineTrack, TrackType } from "@/types/timeline";
 import {
   getTrackHeight,
   getCumulativeHeightBefore,
@@ -490,7 +490,21 @@ export function Timeline() {
               item.name === processedItem.name && item.url === processedItem.url
           );
           if (addedItem) {
-            useTimelineStore.getState().addMediaToNewTrack(addedItem);
+            const trackType: TrackType =
+              addedItem.type === "audio" ? "audio" : "media";
+            const targetTrackId = useTimelineStore
+              .getState()
+              .insertTrackAt(trackType, 0);
+
+            useTimelineStore.getState().addElementToTrack(targetTrackId, {
+              type: "media",
+              mediaId: addedItem.id,
+              name: addedItem.name,
+              duration: addedItem.duration || 5,
+              startTime: currentTime,
+              trimStart: 0,
+              trimEnd: 0,
+            });
           }
         }
       } catch (error) {

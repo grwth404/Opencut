@@ -15,6 +15,7 @@ import { usePlaybackStore } from "@/stores/playback-store";
 import type {
   TimelineElement as TimelineElementType,
   DragData,
+  TrackType,
 } from "@/types/timeline";
 import {
   snapTimeToFrame,
@@ -1061,7 +1062,7 @@ export function TimelineTrackContent({
           return;
         }
 
-        // Process and add files to timeline at the drop position
+        // Process and add files to new timeline tracks at playhead position
         processMediaFiles(e.dataTransfer.files)
           .then(async (processedItems) => {
             for (const processedItem of processedItems) {
@@ -1074,13 +1075,16 @@ export function TimelineTrackContent({
               );
 
               if (addedItem) {
-                // Add to current track at the drop position
-                addElementToTrack(track.id, {
+                const trackType: TrackType =
+                  addedItem.type === "audio" ? "audio" : "media";
+                const targetTrackId = insertTrackAt(trackType, 0);
+
+                addElementToTrack(targetTrackId, {
                   type: "media",
                   mediaId: addedItem.id,
                   name: addedItem.name,
                   duration: addedItem.duration || 5,
-                  startTime: snappedTime,
+                  startTime: currentTime,
                   trimStart: 0,
                   trimEnd: 0,
                 });
