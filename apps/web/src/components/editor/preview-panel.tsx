@@ -508,13 +508,6 @@ export function PreviewPanel() {
                 )
               )}
               <LayoutGuideOverlay />
-              {activeProject?.backgroundType === "blur" &&
-                blurBackgroundElements.length === 0 &&
-                activeElements.length > 0 && (
-                  <div className="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-xs p-2 rounded">
-                    Add a video or image to use blur background
-                  </div>
-                )}
             </div>
           ) : null}
 
@@ -771,13 +764,6 @@ function FullscreenPreview({
             )
           )}
           <LayoutGuideOverlay />
-          {activeProject?.backgroundType === "blur" &&
-            blurBackgroundElements.length === 0 &&
-            activeElements.length > 0 && (
-              <div className="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-xs p-2 rounded">
-                Add a video or image to use blur background
-              </div>
-            )}
         </div>
       </div>
       <div className="p-4 bg-background">
