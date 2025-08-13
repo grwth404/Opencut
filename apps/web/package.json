@@ -7,8 +7,6 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "test": "vitest",
-    "test:run": "vitest run",
     "lint": "biome check src/",
     "lint:fix": "biome check src/ --write",
     "format": "biome format src/ --write",
@@ -76,9 +74,6 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",
     "@tailwindcss/typography": "^0.5.16",
-    "@testing-library/jest-dom": "^6.4.0",
-    "@testing-library/react": "^15.0.7",
-    "@testing-library/user-event": "^14.5.2",
     "@types/bun": "latest",
     "@types/node": "^24.2.1",
     "@types/pg": "^8.15.4",
@@ -86,11 +81,9 @@
     "@types/react-dom": "^18.2.18",
     "cross-env": "^7.0.3",
     "drizzle-kit": "^0.31.4",
-    "jsdom": "^26.0.0",
     "postcss": "^8",
     "tailwindcss": "^4.1.11",
     "tsx": "^4.7.1",
-    "typescript": "^5.8.3",
-    "vitest": "^2.1.8"
+    "typescript": "^5.8.3"
   }
 }
