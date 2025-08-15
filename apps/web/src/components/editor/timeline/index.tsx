@@ -40,7 +40,7 @@ import {
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
-import { useProjectStore } from "@/stores/project-store";
+import { DEFAULT_FPS, useProjectStore } from "@/stores/project-store";
 
 import { useTimelineZoom } from "@/hooks/use-timeline-zoom";
 import { processMediaFiles } from "@/lib/media-processing";
@@ -65,6 +65,8 @@ import {
   snapTimeToFrame,
 } from "@/constants/timeline-constants";
 import { Slider } from "@/components/ui/slider";
+import { formatTimeCode } from "@/lib/time";
+import { EditableTimecode } from "@/components/ui/editable-timecode";
 
 export function Timeline() {
   // Timeline shows all tracks (video, audio, effects) and their elements.
@@ -610,11 +612,7 @@ export function Timeline() {
       onMouseEnter={() => setIsInTimeline(true)}
       onMouseLeave={() => setIsInTimeline(false)}
     >
-      <TimelineToolbar
-        zoomLevel={zoomLevel}
-        setZoomLevel={setZoomLevel}
-        seek={seek}
-      />
+      <TimelineToolbar zoomLevel={zoomLevel} setZoomLevel={setZoomLevel} />
 
       {/* Timeline Container */}
       <div
@@ -938,11 +936,9 @@ function TrackIcon({ track }: { track: TimelineTrack }) {
 function TimelineToolbar({
   zoomLevel,
   setZoomLevel,
-  seek,
 }: {
   zoomLevel: number;
   setZoomLevel: (zoom: number) => void;
-  seek: (time: number) => void;
 }) {
   const {
     tracks,
@@ -961,8 +957,8 @@ function TimelineToolbar({
     rippleEditingEnabled,
     toggleRippleEditing,
   } = useTimelineStore();
-  const { currentTime, duration, isPlaying, toggle } = usePlaybackStore();
-  const { toggleBookmark, isBookmarked } = useProjectStore();
+  const { currentTime, duration, isPlaying, toggle, seek } = usePlaybackStore();
+  const { toggleBookmark, isBookmarked, activeProject } = useProjectStore();
 
   const handleSplitSelected = () => {
     if (selectedElements.length === 0) return;
@@ -1133,11 +1129,22 @@ function TimelineToolbar({
             <TooltipContent>Return to Start (Home / Enter)</TooltipContent>
           </Tooltip>
           <div className="w-px h-6 bg-border mx-1" />
-          <div
-            className="text-xs text-muted-foreground font-mono px-2"
-            style={{ minWidth: "18ch", textAlign: "center" }}
-          >
-            {currentTime.toFixed(1)}s / {duration.toFixed(1)}s
+          {/* Time Display */}
+          <div className="flex flex-row items-center justify-center px-2">
+            <EditableTimecode
+              time={currentTime}
+              duration={duration}
+              format="HH:MM:SS:FF"
+              fps={activeProject?.fps ?? DEFAULT_FPS}
+              onTimeChange={seek}
+              className="text-center"
+            />
+            <div className="text-xs text-muted-foreground font-mono px-2">
+              /
+            </div>
+            <div className="text-xs text-muted-foreground font-mono text-center">
+              {formatTimeCode(duration, "HH:MM:SS:FF")}
+            </div>
           </div>
           {tracks.length === 0 && (
             <>
