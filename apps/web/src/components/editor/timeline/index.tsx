@@ -22,8 +22,8 @@ import {
   ZoomOut,
   Bookmark,
   Eye,
-  MicOff,
-  Mic,
+  VolumeOff,
+  Volume2,
 } from "lucide-react";
 import {
   Tooltip,
@@ -41,8 +41,10 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useProjectStore } from "@/stores/project-store";
+
 import { useTimelineZoom } from "@/hooks/use-timeline-zoom";
 import { processMediaFiles } from "@/lib/media-processing";
+
 import { toast } from "sonner";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { TimelineTrackContent } from "./timeline-track";
@@ -803,12 +805,12 @@ export function Timeline() {
                     >
                       <div className="flex items-center justify-end flex-1 min-w-0 gap-2">
                         {track.muted ? (
-                          <MicOff
+                          <VolumeOff
                             className="h-4 w-4 text-destructive cursor-pointer"
                             onClick={() => toggleTrackMute(track.id)}
                           />
                         ) : (
-                          <Mic
+                          <Volume2
                             className="h-4 w-4 text-muted-foreground cursor-pointer"
                             onClick={() => toggleTrackMute(track.id)}
                           />
