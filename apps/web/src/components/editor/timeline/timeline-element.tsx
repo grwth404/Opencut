@@ -305,7 +305,7 @@ export function TimelineElement({
                   <div className="w-[0.2rem] h-[1.5rem] bg-foreground/75 rounded-full" />
                 </div>
                 <div
-                  className="absolute right-0 top-0 bottom-0 w-[0.6em] cursor-e-resize bg-primary z-50 flex items-center justify-center"
+                  className="absolute right-0 top-0 bottom-0 w-[0.6rem] cursor-e-resize bg-primary z-50 flex items-center justify-center"
                   onMouseDown={(e) => handleResizeStart(e, element.id, "right")}
                 >
                   <div className="w-[0.2rem] h-[1.5rem] bg-foreground/75 rounded-full" />
