@@ -27,6 +27,7 @@ export interface DraggableMediaItemProps {
   rounded?: boolean;
   variant?: "card" | "compact";
   isDraggable?: boolean;
+  isHighlighted?: boolean;
 }
 
 export function DraggableMediaItem({
@@ -43,6 +44,7 @@ export function DraggableMediaItem({
   rounded = true,
   variant = "card",
   isDraggable = true,
+  isHighlighted = false,
 }: DraggableMediaItemProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
@@ -50,6 +52,7 @@ export function DraggableMediaItem({
   const currentTime = isDraggable
     ? usePlaybackStore((state) => state.currentTime)
     : 0;
+  const highlightClassName = "ring-2 ring-primary rounded-sm bg-primary/10";
 
   const handleAddToTimeline = () => {
     onAddToTimeline?.(currentTime);
@@ -102,7 +105,11 @@ export function DraggableMediaItem({
           className={cn("relative group", containerClassName ?? "w-28 h-28")}
         >
           <div
-            className={`flex flex-col gap-1 p-0 h-auto w-full relative cursor-default ${className}`}
+            className={cn(
+              "flex flex-col gap-1 p-1 h-auto w-full relative cursor-default",
+              className,
+              isHighlighted && highlightClassName
+            )}
           >
             <AspectRatio
               ratio={aspectRatio}
@@ -137,10 +144,16 @@ export function DraggableMediaItem({
           </div>
         </div>
       ) : (
-        <div ref={dragRef} className="relative group w-full">
+        <div
+          ref={dragRef}
+          className={cn(
+            "relative group w-full",
+            isHighlighted && highlightClassName
+          )}
+        >
           <div
             className={cn(
-              "h-10 flex items-center gap-3 cursor-default w-full",
+              "h-8 flex items-center gap-3 cursor-default w-full px-1",
               isDraggable && "[&::-webkit-drag-ghost]:opacity-0",
               className
             )}
@@ -148,7 +161,7 @@ export function DraggableMediaItem({
             onDragStart={isDraggable ? handleDragStart : undefined}
             onDragEnd={isDraggable ? handleDragEnd : undefined}
           >
-            <div className="w-6 h-6 flex-shrink-0 rounded overflow-hidden">
+            <div className="w-6 h-6 flex-shrink-0 rounded-[0.35rem] overflow-hidden">
               {preview}
             </div>
             <span className="text-sm truncate flex-1 w-full">{name}</span>

@@ -4,6 +4,7 @@ import {
   Scissors,
   Trash2,
   Copy,
+  Search,
   RefreshCw,
   EyeOff,
   Eye,
@@ -29,6 +30,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "../../ui/context-menu";
+import { useMediaPanelStore } from "../media-panel/store";
 
 export function TimelineElement({
   element,
@@ -68,6 +70,8 @@ export function TimelineElement({
       onUpdateTrim: updateElementTrim,
       onUpdateDuration: updateElementDuration,
     });
+
+  const { requestRevealMedia } = useMediaPanelStore.getState();
 
   const effectiveDuration =
     element.duration - element.trimStart - element.trimEnd;
@@ -164,6 +168,16 @@ export function TimelineElement({
       }
     };
     input.click();
+  };
+
+  const handleRevealInMedia = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (element.type !== "media") {
+      toast.error("Reveal is only available for media clips");
+      return;
+    }
+
+    requestRevealMedia(element.mediaId);
   };
 
   const renderElementContent = () => {
@@ -348,10 +362,16 @@ export function TimelineElement({
           Duplicate {element.type === "text" ? "text" : "clip"}
         </ContextMenuItem>
         {element.type === "media" && (
-          <ContextMenuItem onClick={handleReplaceClip}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Replace clip
-          </ContextMenuItem>
+          <>
+            <ContextMenuItem onClick={handleRevealInMedia}>
+              <Search className="h-4 w-4 mr-2" />
+              Reveal in media
+            </ContextMenuItem>
+            <ContextMenuItem onClick={handleReplaceClip}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Replace clip
+            </ContextMenuItem>
+          </>
         )}
         <ContextMenuSeparator />
         <ContextMenuItem
