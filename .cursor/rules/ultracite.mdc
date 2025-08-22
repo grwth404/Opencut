@@ -42,9 +42,13 @@ Ultracite enforces strict type safety, accessibility standards, and consistent c
 - Don't insert comments as text nodes.
 - Use `<>...</>` instead of `<Fragment>...</Fragment>`.
 
+### Function Parameters and Props
+- Always use destructured props objects instead of individual parameters in functions.
+- Example: `function helloWorld({ prop }: { prop: string })` instead of `function helloWorld(param: string)`.
+- This applies to all functions, not just React components.
+
 ### Correctness and Safety
 - Don't assign a value to itself.
-- Use props instead of parameters in all functions.
 - Avoid unused imports and variables.
 - Don't use await inside loops.
 - Don't hardcode sensitive data like API keys and tokens.
