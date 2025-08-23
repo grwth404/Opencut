@@ -6,7 +6,7 @@ import {
   getImageDimensions,
   type MediaItem,
 } from "@/stores/media-store";
-import { generateThumbnail, getVideoInfo } from "./ffmpeg-utils";
+import { generateThumbnail, getVideoInfo } from "./mediabunny-utils";
 
 export interface ProcessedMediaItem extends Omit<MediaItem, "id"> {}
 
@@ -37,33 +37,23 @@ export async function processMediaFiles(
 
     try {
       if (fileType === "image") {
-        // Get image dimensions
         const dimensions = await getImageDimensions(file);
         width = dimensions.width;
         height = dimensions.height;
       } else if (fileType === "video") {
         try {
-          // Use FFmpeg for comprehensive video info extraction
-          const videoInfo = await getVideoInfo(file);
+          const videoInfo = await getVideoInfo({ videoFile: file });
           duration = videoInfo.duration;
           width = videoInfo.width;
           height = videoInfo.height;
           fps = videoInfo.fps;
 
-          // Generate thumbnail using FFmpeg
-          thumbnailUrl = await generateThumbnail(file, 1);
+          thumbnailUrl = await generateThumbnail({
+            videoFile: file,
+            timeInSeconds: 1,
+          });
         } catch (error) {
-          console.warn(
-            "FFmpeg processing failed, falling back to basic processing:",
-            error
-          );
-          // Fallback to basic processing
-          const videoResult = await generateVideoThumbnail(file);
-          thumbnailUrl = videoResult.thumbnailUrl;
-          width = videoResult.width;
-          height = videoResult.height;
-          duration = await getMediaDuration(file);
-          // FPS will remain undefined for fallback
+          console.warn("Video processing failed", error);
         }
       } else if (fileType === "audio") {
         // For audio, we don't set width/height/fps (they'll be undefined)
@@ -82,7 +72,6 @@ export async function processMediaFiles(
         fps,
       });
 
-      // Yield back to the event loop to keep the UI responsive
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       completed += 1;

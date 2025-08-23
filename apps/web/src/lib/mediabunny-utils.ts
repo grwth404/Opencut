@@ -1,7 +1,7 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { toBlobURL } from "@ffmpeg/util";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
+import { Input, ALL_FORMATS, BlobSource, VideoSampleSink } from "mediabunny";
 
 let ffmpeg: FFmpeg | null = null;
 
@@ -14,256 +14,99 @@ export const initFFmpeg = async (): Promise<FFmpeg> => {
   return ffmpeg;
 };
 
-export const generateThumbnail = async (
-  videoFile: File,
-  timeInSeconds = 1
-): Promise<string> => {
-  const ffmpeg = await initFFmpeg();
+export async function generateThumbnail({
+  videoFile,
+  timeInSeconds,
+}: {
+  videoFile: File;
+  timeInSeconds: number;
+}): Promise<string> {
+  const input = new Input({
+    source: new BlobSource(videoFile),
+    formats: ALL_FORMATS,
+  });
 
-  const inputName = "input.mp4";
-  const outputName = "thumbnail.jpg";
-
-  // Write input file
-  await ffmpeg.writeFile(
-    inputName,
-    new Uint8Array(await videoFile.arrayBuffer())
-  );
-
-  // Generate thumbnail at specific time
-  await ffmpeg.exec([
-    "-i",
-    inputName,
-    "-ss",
-    timeInSeconds.toString(),
-    "-vframes",
-    "1",
-    "-vf",
-    "scale=320:240",
-    "-q:v",
-    "2",
-    outputName,
-  ]);
-
-  // Read output file
-  const data = await ffmpeg.readFile(outputName);
-  const blob = new Blob([data], { type: "image/jpeg" });
-
-  // Cleanup
-  await ffmpeg.deleteFile(inputName);
-  await ffmpeg.deleteFile(outputName);
-
-  return URL.createObjectURL(blob);
-};
-
-export const trimVideo = async (
-  videoFile: File,
-  startTime: number,
-  endTime: number,
-  onProgress?: (progress: number) => void
-): Promise<Blob> => {
-  const ffmpeg = await initFFmpeg();
-
-  const inputName = "input.mp4";
-  const outputName = "output.mp4";
-
-  // Set up progress callback
-  if (onProgress) {
-    ffmpeg.on("progress", ({ progress }) => {
-      onProgress(progress * 100);
-    });
+  const videoTrack = await input.getPrimaryVideoTrack();
+  if (!videoTrack) {
+    throw new Error("No video track found in the file");
   }
 
-  // Write input file
-  await ffmpeg.writeFile(
-    inputName,
-    new Uint8Array(await videoFile.arrayBuffer())
-  );
+  // Check if we can decode this video
+  const canDecode = await videoTrack.canDecode();
+  if (!canDecode) {
+    throw new Error("Video codec not supported for decoding");
+  }
 
-  const duration = endTime - startTime;
+  const sink = new VideoSampleSink(videoTrack);
 
-  // Trim video
-  await ffmpeg.exec([
-    "-i",
-    inputName,
-    "-ss",
-    startTime.toString(),
-    "-t",
-    duration.toString(),
-    "-c",
-    "copy", // Use stream copy for faster processing
-    outputName,
-  ]);
+  const frame = await sink.getSample(timeInSeconds);
 
-  // Read output file
-  const data = await ffmpeg.readFile(outputName);
-  const blob = new Blob([data], { type: "video/mp4" });
+  if (!frame) {
+    throw new Error("Could not get frame at specified time");
+  }
 
-  // Cleanup
-  await ffmpeg.deleteFile(inputName);
-  await ffmpeg.deleteFile(outputName);
+  const canvas = document.createElement("canvas");
+  canvas.width = 320;
+  canvas.height = 240;
+  const ctx = canvas.getContext("2d");
 
-  return blob;
-};
+  if (!ctx) {
+    throw new Error("Could not get canvas context");
+  }
 
-export const getVideoInfo = async (
-  videoFile: File
-): Promise<{
+  frame.draw(ctx, 0, 0, 320, 240);
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(URL.createObjectURL(blob));
+        } else {
+          reject(new Error("Failed to create thumbnail blob"));
+        }
+      },
+      "image/jpeg",
+      0.8
+    );
+  });
+}
+
+export async function getVideoInfo({
+  videoFile,
+}: {
+  videoFile: File;
+}): Promise<{
   duration: number;
   width: number;
   height: number;
   fps: number;
-}> => {
-  const ffmpeg = await initFFmpeg();
+}> {
+  const input = new Input({
+    source: new BlobSource(videoFile),
+    formats: ALL_FORMATS,
+  });
 
-  const inputName = "input.mp4";
+  const duration = await input.computeDuration();
+  const videoTrack = await input.getPrimaryVideoTrack();
 
-  // Write input file
-  await ffmpeg.writeFile(
-    inputName,
-    new Uint8Array(await videoFile.arrayBuffer())
-  );
-
-  // Capture FFmpeg stderr output with a one-time listener pattern
-  let ffmpegOutput = "";
-  let listening = true;
-  const listener = (data: string) => {
-    if (listening) ffmpegOutput += data;
-  };
-  ffmpeg.on("log", ({ message }) => listener(message));
-
-  // Run ffmpeg to get info (stderr will contain the info)
-  try {
-    await ffmpeg.exec(["-i", inputName, "-f", "null", "-"]);
-  } catch (error) {
-    listening = false;
-    await ffmpeg.deleteFile(inputName);
-    console.error("FFmpeg execution failed:", error);
-    throw new Error(
-      "Failed to extract video info. The file may be corrupted or in an unsupported format."
-    );
+  if (!videoTrack) {
+    throw new Error("No video track found in the file");
   }
 
-  // Disable listener after exec completes
-  listening = false;
-
-  // Cleanup
-  await ffmpeg.deleteFile(inputName);
-
-  // Parse output for duration, resolution, and fps
-  // Example: Duration: 00:00:10.00, start: 0.000000, bitrate: 1234 kb/s
-  // Example: Stream #0:0: Video: h264 (High), yuv420p(progressive), 1920x1080 [SAR 1:1 DAR 16:9], 30 fps, 30 tbr, 90k tbn, 60 tbc
-
-  const durationMatch = ffmpegOutput.match(/Duration: (\d+):(\d+):([\d.]+)/);
-  let duration = 0;
-  if (durationMatch) {
-    const [, h, m, s] = durationMatch;
-    duration = parseInt(h) * 3600 + parseInt(m) * 60 + parseFloat(s);
-  }
-
-  const videoStreamMatch = ffmpegOutput.match(
-    /Video:.* (\d+)x(\d+)[^,]*, ([\d.]+) fps/
-  );
-  let width = 0,
-    height = 0,
-    fps = 0;
-  if (videoStreamMatch) {
-    width = parseInt(videoStreamMatch[1]);
-    height = parseInt(videoStreamMatch[2]);
-    fps = parseFloat(videoStreamMatch[3]);
-  }
+  // Get frame rate from packet statistics
+  const packetStats = await videoTrack.computePacketStats(100);
+  const fps = packetStats.averagePacketRate;
 
   return {
     duration,
-    width,
-    height,
+    width: videoTrack.displayWidth,
+    height: videoTrack.displayHeight,
     fps,
   };
-};
+}
 
-export const convertToWebM = async (
-  videoFile: File,
-  onProgress?: (progress: number) => void
-): Promise<Blob> => {
-  const ffmpeg = await initFFmpeg();
-
-  const inputName = "input.mp4";
-  const outputName = "output.webm";
-
-  // Set up progress callback
-  if (onProgress) {
-    ffmpeg.on("progress", ({ progress }) => {
-      onProgress(progress * 100);
-    });
-  }
-
-  // Write input file
-  await ffmpeg.writeFile(
-    inputName,
-    new Uint8Array(await videoFile.arrayBuffer())
-  );
-
-  // Convert to WebM
-  await ffmpeg.exec([
-    "-i",
-    inputName,
-    "-c:v",
-    "libvpx-vp9",
-    "-crf",
-    "30",
-    "-b:v",
-    "0",
-    "-c:a",
-    "libopus",
-    outputName,
-  ]);
-
-  // Read output file
-  const data = await ffmpeg.readFile(outputName);
-  const blob = new Blob([data], { type: "video/webm" });
-
-  // Cleanup
-  await ffmpeg.deleteFile(inputName);
-  await ffmpeg.deleteFile(outputName);
-
-  return blob;
-};
-
-export const extractAudio = async (
-  videoFile: File,
-  format: "mp3" | "wav" = "mp3"
-): Promise<Blob> => {
-  const ffmpeg = await initFFmpeg();
-
-  const inputName = "input.mp4";
-  const outputName = `output.${format}`;
-
-  // Write input file
-  await ffmpeg.writeFile(
-    inputName,
-    new Uint8Array(await videoFile.arrayBuffer())
-  );
-
-  // Extract audio
-  await ffmpeg.exec([
-    "-i",
-    inputName,
-    "-vn", // Disable video
-    "-acodec",
-    format === "mp3" ? "libmp3lame" : "pcm_s16le",
-    outputName,
-  ]);
-
-  // Read output file
-  const data = await ffmpeg.readFile(outputName);
-  const blob = new Blob([data], { type: `audio/${format}` });
-
-  // Cleanup
-  await ffmpeg.deleteFile(inputName);
-  await ffmpeg.deleteFile(outputName);
-
-  return blob;
-};
-
+// Audio mixing for timeline - keeping FFmpeg for now due to complexity
+// TODO: Replace with Mediabunny audio processing when implementing canvas preview
 export const extractTimelineAudio = async (
   onProgress?: (progress: number) => void
 ): Promise<Blob> => {

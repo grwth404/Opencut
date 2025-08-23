@@ -3,7 +3,7 @@ import { PropertyGroup } from "../../properties-panel/property-item";
 import { BaseView } from "./base-view";
 import { Language, LanguageSelect } from "@/components/language-select";
 import { useState, useRef, useEffect } from "react";
-import { extractTimelineAudio } from "@/lib/ffmpeg-utils";
+import { extractTimelineAudio } from "@/lib/mediabunny-utils";
 import { encryptWithRandomKey, arrayBufferToBase64 } from "@/lib/zk-encryption";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { Loader2, Shield, Trash2, Upload } from "lucide-react";

@@ -5,16 +5,19 @@ import { TimelineElement, TimelineTrack } from "@/types/timeline";
 import { useMediaStore, type MediaItem } from "@/stores/media-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useEditorStore } from "@/stores/editor-store";
-import { VideoPlayer } from "@/components/ui/video-player";
-import { AudioPlayer } from "@/components/ui/audio-player";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Expand, SkipBack, SkipForward } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { VideoSampleSink } from "mediabunny";
+import { renderTimelineFrame } from "@/lib/timeline-renderer";
 import { cn } from "@/lib/utils";
 import { formatTimeCode } from "@/lib/time";
 import { EditableTimecode } from "@/components/ui/editable-timecode";
-import { FONT_CLASS_MAP } from "@/lib/font-config";
-import { DEFAULT_CANVAS_SIZE, DEFAULT_FPS, useProjectStore } from "@/stores/project-store";
+import {
+  DEFAULT_CANVAS_SIZE,
+  DEFAULT_FPS,
+  useProjectStore,
+} from "@/stores/project-store";
 import { TextElementDragState } from "@/types/editor";
 import {
   Popover,
@@ -37,8 +40,20 @@ export function PreviewPanel() {
   const { tracks, getTotalDuration, updateTextElement } = useTimelineStore();
   const { mediaItems } = useMediaStore();
   const { currentTime, toggle, setCurrentTime } = usePlaybackStore();
+  const { isPlaying, volume, muted } = usePlaybackStore();
   const { activeProject } = useProjectStore();
   const previewRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const lastFrameTimeRef = useRef(0);
+  const renderSeqRef = useRef(0);
+  const offscreenCanvasRef = useRef<OffscreenCanvas | HTMLCanvasElement | null>(
+    null
+  );
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioGainRef = useRef<GainNode | null>(null);
+  const audioBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
+  const playingSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const [previewDimensions, setPreviewDimensions] = useState({
     width: 0,
@@ -262,6 +277,296 @@ export function PreviewPanel() {
 
   const activeElements = getActiveElements();
 
+  // Ensure first frame after mount/seek renders immediately
+  useEffect(() => {
+    const onSeek = () => {
+      lastFrameTimeRef.current = -Infinity;
+      renderSeqRef.current++;
+    };
+    window.addEventListener("playback-seek", onSeek as EventListener);
+    lastFrameTimeRef.current = -Infinity;
+    return () => {
+      window.removeEventListener("playback-seek", onSeek as EventListener);
+    };
+  }, []);
+
+  // Web Audio: schedule only on play/pause/seek/volume/mute changes
+  useEffect(() => {
+    const stopAll = () => {
+      for (const src of playingSourcesRef.current) {
+        try {
+          src.stop();
+        } catch {}
+      }
+      playingSourcesRef.current.clear();
+    };
+
+    type WebAudioWindow = Window & {
+      AudioContext?: typeof AudioContext;
+      webkitAudioContext?: typeof AudioContext;
+    };
+    const ensureAudioGraph = async () => {
+      if (!audioContextRef.current) {
+        const win = window as WebAudioWindow;
+        const Ctx = win.AudioContext ?? win.webkitAudioContext;
+        if (!Ctx) return;
+        audioContextRef.current = new Ctx();
+      }
+      if (!audioGainRef.current) {
+        audioGainRef.current = audioContextRef.current!.createGain();
+        audioGainRef.current.connect(audioContextRef.current!.destination);
+      }
+      if (audioContextRef.current!.state === "suspended") {
+        try {
+          await audioContextRef.current!.resume();
+        } catch {}
+      }
+      const gainValue = muted ? 0 : Math.max(0, Math.min(1, volume));
+      audioGainRef.current!.gain.setValueAtTime(
+        gainValue,
+        audioContextRef.current!.currentTime
+      );
+    };
+
+    const scheduleNow = async () => {
+      await ensureAudioGraph();
+      const audioCtx = audioContextRef.current!;
+      const gain = audioGainRef.current!;
+
+      const tracksSnapshot = useTimelineStore.getState().tracks;
+      const mediaList = useMediaStore.getState().mediaItems;
+      const idToMedia = new Map(mediaList.map((m) => [m.id, m] as const));
+      const playbackNow = usePlaybackStore.getState().currentTime;
+
+      const audible: Array<{
+        id: string;
+        elementStart: number;
+        trimStart: number;
+        trimEnd: number;
+        duration: number;
+        muted: boolean;
+        trackMuted: boolean;
+      }> = [];
+      const uniqueIds = new Set<string>();
+      for (const track of tracksSnapshot) {
+        for (const element of track.elements) {
+          if (element.type !== "media") continue;
+          const media = idToMedia.get(element.mediaId);
+          if (!media || media.type !== "audio") continue;
+          const visibleDuration =
+            element.duration - element.trimStart - element.trimEnd;
+          if (visibleDuration <= 0) continue;
+          const localTime = playbackNow - element.startTime + element.trimStart;
+          if (localTime < 0 || localTime >= visibleDuration) continue;
+          audible.push({
+            id: media.id,
+            elementStart: element.startTime,
+            trimStart: element.trimStart,
+            trimEnd: element.trimEnd,
+            duration: element.duration,
+            muted: !!element.muted,
+            trackMuted: !!track.muted,
+          });
+          uniqueIds.add(media.id);
+        }
+      }
+
+      if (audible.length === 0) return;
+
+      // Decode buffers as needed
+      const decodePromises: Array<Promise<void>> = [];
+      for (const id of uniqueIds) {
+        if (!audioBuffersRef.current.has(id)) {
+          const mediaItem = idToMedia.get(id);
+          if (!mediaItem) continue;
+          const p = (async () => {
+            const arr = await mediaItem.file.arrayBuffer();
+            const buf = await audioCtx.decodeAudioData(arr.slice(0));
+            audioBuffersRef.current.set(id, buf);
+          })();
+          decodePromises.push(p);
+        }
+      }
+      await Promise.all(decodePromises);
+
+      const startAt = audioCtx.currentTime + 0.02;
+      for (const entry of audible) {
+        if (entry.muted || entry.trackMuted) continue;
+        const buffer = audioBuffersRef.current.get(entry.id);
+        if (!buffer) continue;
+        const visibleDuration =
+          entry.duration - entry.trimStart - entry.trimEnd;
+        const localTime = Math.max(
+          0,
+          playbackNow - entry.elementStart + entry.trimStart
+        );
+        const playDuration = Math.max(0, visibleDuration - localTime);
+        if (playDuration <= 0) continue;
+        const src = audioCtx.createBufferSource();
+        src.buffer = buffer;
+        src.connect(gain);
+        try {
+          src.start(startAt, localTime, playDuration);
+          playingSourcesRef.current.add(src);
+        } catch {}
+      }
+    };
+
+    const onSeek = () => {
+      if (!isPlaying) return;
+      for (const src of playingSourcesRef.current) {
+        try {
+          src.stop();
+        } catch {}
+      }
+      playingSourcesRef.current.clear();
+      void scheduleNow();
+    };
+
+    // Apply volume/mute changes immediately
+    void ensureAudioGraph();
+
+    // Start/stop on play state changes
+    for (const src of playingSourcesRef.current) {
+      try {
+        src.stop();
+      } catch {}
+    }
+    playingSourcesRef.current.clear();
+    if (isPlaying) {
+      void scheduleNow();
+    }
+
+    window.addEventListener("playback-seek", onSeek as EventListener);
+    return () => {
+      window.removeEventListener("playback-seek", onSeek as EventListener);
+      for (const src of playingSourcesRef.current) {
+        try {
+          src.stop();
+        } catch {}
+      }
+      playingSourcesRef.current.clear();
+    };
+  }, [isPlaying, volume, muted, mediaItems]);
+
+  // Canvas: draw current frame for visible elements using offscreen compositing
+  useEffect(() => {
+    const draw = async () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const mainCtx = canvas.getContext("2d");
+      if (!mainCtx) return;
+
+      // Set canvas internal resolution to avoid blurry scaling
+      const displayWidth = Math.max(1, Math.floor(previewDimensions.width));
+      const displayHeight = Math.max(1, Math.floor(previewDimensions.height));
+      if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+        canvas.width = displayWidth;
+        canvas.height = displayHeight;
+      }
+
+      // Throttle rendering to project FPS during playback only
+      const fps = activeProject?.fps || DEFAULT_FPS;
+      const minDelta = 1 / fps;
+      if (isPlaying) {
+        if (currentTime - lastFrameTimeRef.current < minDelta) {
+          return;
+        }
+        lastFrameTimeRef.current = currentTime;
+      }
+
+      // Invalidate older async renders when user scrubs rapidly
+      const mySeq = (renderSeqRef.current += 1);
+
+      // Offscreen buffer to avoid flicker (reuse canvas)
+      if (!offscreenCanvasRef.current) {
+        const hasOffscreen =
+          typeof (globalThis as unknown as { OffscreenCanvas?: unknown })
+            .OffscreenCanvas !== "undefined";
+        if (hasOffscreen) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          offscreenCanvasRef.current = new (globalThis as any).OffscreenCanvas(
+            displayWidth,
+            displayHeight
+          ) as OffscreenCanvas;
+        } else {
+          const c = document.createElement("canvas");
+          c.width = displayWidth;
+          c.height = displayHeight;
+          offscreenCanvasRef.current = c;
+        }
+      }
+      // Ensure size matches
+      if (
+        offscreenCanvasRef.current &&
+        (offscreenCanvasRef.current as HTMLCanvasElement).getContext
+      ) {
+        const c = offscreenCanvasRef.current as HTMLCanvasElement;
+        if (c.width !== displayWidth || c.height !== displayHeight) {
+          c.width = displayWidth;
+          c.height = displayHeight;
+        }
+      } else {
+        const c = offscreenCanvasRef.current as OffscreenCanvas;
+        // @ts-ignore width/height exist on OffscreenCanvas in modern browsers
+        if (
+          (c as unknown as { width: number }).width !== displayWidth ||
+          (c as unknown as { height: number }).height !== displayHeight
+        ) {
+          // @ts-ignore
+          (c as unknown as { width: number }).width = displayWidth;
+          // @ts-ignore
+          (c as unknown as { height: number }).height = displayHeight;
+        }
+      }
+      const offscreenCanvas = offscreenCanvasRef.current as
+        | HTMLCanvasElement
+        | OffscreenCanvas;
+      const offCtx = (offscreenCanvas as HTMLCanvasElement).getContext
+        ? (offscreenCanvas as HTMLCanvasElement).getContext("2d")
+        : (offscreenCanvas as OffscreenCanvas).getContext("2d");
+      if (!offCtx) return;
+
+      await renderTimelineFrame({
+        ctx: offCtx as CanvasRenderingContext2D,
+        time: currentTime,
+        canvasWidth: displayWidth,
+        canvasHeight: displayHeight,
+        tracks,
+        mediaItems,
+        backgroundColor:
+          activeProject?.backgroundType === "blur"
+            ? "transparent"
+            : activeProject?.backgroundColor || "#000000",
+        useCache: false,
+        fps: activeProject?.fps || DEFAULT_FPS,
+      });
+
+      // Blit offscreen to visible canvas
+      mainCtx.clearRect(0, 0, displayWidth, displayHeight);
+      if ((offscreenCanvas as HTMLCanvasElement).getContext) {
+        mainCtx.drawImage(offscreenCanvas as HTMLCanvasElement, 0, 0);
+      } else {
+        mainCtx.drawImage(
+          offscreenCanvas as unknown as CanvasImageSource,
+          0,
+          0
+        );
+      }
+    };
+
+    void draw();
+  }, [
+    activeElements,
+    currentTime,
+    previewDimensions.width,
+    previewDimensions.height,
+    canvasSize.width,
+    canvasSize.height,
+    activeProject?.backgroundType,
+    activeProject?.backgroundColor,
+  ]);
+
   // Get media elements for blur background (video/image only)
   const getBlurBackgroundElements = (): ActiveElement[] => {
     return activeElements.filter(
@@ -275,213 +580,11 @@ export function PreviewPanel() {
 
   const blurBackgroundElements = getBlurBackgroundElements();
 
-  // Render blur background layer
-  const renderBlurBackground = () => {
-    if (
-      !activeProject?.backgroundType ||
-      activeProject.backgroundType !== "blur" ||
-      blurBackgroundElements.length === 0
-    ) {
-      return null;
-    }
+  // Render blur background layer (handled by canvas now)
+  const renderBlurBackground = () => null;
 
-    // Use the first media element for background (could be enhanced to use primary/focused element)
-    const backgroundElement = blurBackgroundElements[0];
-    const { element, mediaItem } = backgroundElement;
-
-    if (!mediaItem) return null;
-
-    const blurIntensity = activeProject.blurIntensity || 8;
-
-    if (mediaItem.type === "video") {
-      return (
-        <div
-          key={`blur-${element.id}`}
-          className="absolute inset-0 overflow-hidden"
-          style={{
-            filter: `blur(${blurIntensity}px)`,
-            transform: "scale(1.1)", // Slightly zoom to avoid blur edge artifacts
-            transformOrigin: "center",
-          }}
-        >
-          <VideoPlayer
-            src={mediaItem.url!}
-            poster={mediaItem.thumbnailUrl}
-            clipStartTime={element.startTime}
-            trimStart={element.trimStart}
-            trimEnd={element.trimEnd}
-            clipDuration={element.duration}
-            className="w-full h-full object-cover"
-            trackMuted={true}
-          />
-        </div>
-      );
-    }
-
-    if (mediaItem.type === "image") {
-      return (
-        <div
-          key={`blur-${element.id}`}
-          className="absolute inset-0 overflow-hidden"
-          style={{
-            filter: `blur(${blurIntensity}px)`,
-            transform: "scale(1.1)", // Slightly zoom to avoid blur edge artifacts
-            transformOrigin: "center",
-          }}
-        >
-          <img
-            src={mediaItem.url!}
-            alt={mediaItem.name}
-            className="w-full h-full object-cover"
-            draggable={false}
-          />
-        </div>
-      );
-    }
-
-    return null;
-  };
-
-  // Render an element
-  const renderElement = (elementData: ActiveElement, index: number) => {
-    const { element, mediaItem } = elementData;
-
-    // Text elements
-    if (element.type === "text") {
-      const fontClassName =
-        FONT_CLASS_MAP[element.fontFamily as keyof typeof FONT_CLASS_MAP] || "";
-
-      const scaleRatio = previewDimensions.width / canvasSize.width;
-
-      return (
-        <div
-          key={element.id}
-          className="absolute cursor-grab"
-          onMouseDown={(e) =>
-            handleTextMouseDown(e, element, elementData.track.id)
-          }
-          style={{
-            left: `${
-              50 +
-              ((dragState.isDragging && dragState.elementId === element.id
-                ? dragState.currentX
-                : element.x) /
-                canvasSize.width) *
-                100
-            }%`,
-            top: `${
-              50 +
-              ((dragState.isDragging && dragState.elementId === element.id
-                ? dragState.currentY
-                : element.y) /
-                canvasSize.height) *
-                100
-            }%`,
-            transform: `translate(-50%, -50%) rotate(${element.rotation}deg)`,
-            opacity: element.opacity,
-            zIndex: 100 + index, // Text elements on top
-          }}
-        >
-          <div
-            className={fontClassName}
-            style={{
-              fontSize: `${element.fontSize * scaleRatio}px`,
-              color: element.color,
-              backgroundColor: element.backgroundColor,
-              textAlign: element.textAlign,
-              fontWeight: element.fontWeight,
-              fontStyle: element.fontStyle,
-              textDecoration: element.textDecoration,
-              padding: `${4 * scaleRatio}px ${8 * scaleRatio}px`,
-              borderRadius: `${2 * scaleRatio}px`,
-              whiteSpace: "nowrap",
-              // Fallback for system fonts that don't have classes
-              ...(fontClassName === "" && { fontFamily: element.fontFamily }),
-            }}
-          >
-            {element.content}
-          </div>
-        </div>
-      );
-    }
-
-    // Media elements
-    if (element.type === "media") {
-      // Test elements
-      if (!mediaItem || element.mediaId === "test") {
-        return (
-          <div
-            key={element.id}
-            className="absolute inset-0 bg-linear-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center"
-          >
-            <div className="text-center">
-              <div className="text-2xl mb-2">🎬</div>
-              <p className="text-xs text-foreground">{element.name}</p>
-            </div>
-          </div>
-        );
-      }
-
-      // Video elements
-      if (mediaItem.type === "video") {
-        return (
-          <div
-            key={element.id}
-            className="absolute inset-0 flex items-center justify-center"
-          >
-            <VideoPlayer
-              src={mediaItem.url!}
-              poster={mediaItem.thumbnailUrl}
-              clipStartTime={element.startTime}
-              trimStart={element.trimStart}
-              trimEnd={element.trimEnd}
-              clipDuration={element.duration}
-              trackMuted={element.muted || elementData.track.muted}
-            />
-          </div>
-        );
-      }
-
-      // Image elements
-      if (mediaItem.type === "image") {
-        return (
-          <div
-            key={element.id}
-            className="absolute inset-0 flex items-center justify-center"
-          >
-            <img
-              src={mediaItem.url!}
-              alt={mediaItem.name}
-              className="max-w-full max-h-full object-contain"
-              draggable={false}
-            />
-          </div>
-        );
-      }
-
-      // Audio elements (no visual representation)
-      if (mediaItem.type === "audio") {
-        return (
-          <div
-            key={element.id}
-            className="absolute inset-0"
-            style={{ pointerEvents: "none" }}
-          >
-            <AudioPlayer
-              src={mediaItem.url!}
-              clipStartTime={element.startTime}
-              trimStart={element.trimStart}
-              trimEnd={element.trimEnd}
-              clipDuration={element.duration}
-              trackMuted={element.muted || elementData.track.muted}
-            />
-          </div>
-        );
-      }
-    }
-
-    return null;
-  };
+  // Render an element (canvas handles visuals now). Audio playback to be implemented via Web Audio.
+  const renderElement = (_elementData: ActiveElement) => null;
 
   return (
     <>
@@ -505,14 +608,23 @@ export function PreviewPanel() {
               }}
             >
               {renderBlurBackground()}
+              <canvas
+                ref={canvasRef}
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  width: previewDimensions.width,
+                  height: previewDimensions.height,
+                }}
+                aria-label="Video preview canvas"
+              />
               {activeElements.length === 0 ? (
                 <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
                   No elements at current time
                 </div>
               ) : (
-                activeElements.map((elementData, index) =>
-                  renderElement(elementData, index)
-                )
+                activeElements.map((elementData) => renderElement(elementData))
               )}
               <LayoutGuideOverlay />
             </div>
