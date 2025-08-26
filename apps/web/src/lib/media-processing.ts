@@ -1,14 +1,13 @@
 import { toast } from "sonner";
 import {
   getFileType,
-  generateVideoThumbnail,
   getMediaDuration,
   getImageDimensions,
-  type MediaItem,
 } from "@/stores/media-store";
+import { MediaFile } from "@/types/media";
 import { generateThumbnail, getVideoInfo } from "./mediabunny-utils";
 
-export interface ProcessedMediaItem extends Omit<MediaItem, "id"> {}
+export interface ProcessedMediaItem extends Omit<MediaFile, "id"> {}
 
 export async function processMediaFiles(
   files: FileList | File[],

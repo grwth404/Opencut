@@ -35,10 +35,10 @@ import {
   ICONIFY_HOSTS,
   POPULAR_COLLECTIONS,
 } from "@/lib/iconify-api";
-import { cn, generateUUID } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 import Image from "next/image";
-import type { MediaItem } from "@/stores/media-store";
+import type { MediaFile } from "@/types/media";
 import { DraggableMediaItem } from "@/components/ui/draggable-item";
 import { InputWithBack } from "@/components/ui/input-with-back";
 import { StickerCategory } from "@/stores/stickers-store";
@@ -186,9 +186,9 @@ function EmptyView({ message }: { message: string }) {
 
 function StickersContentView({ category }: { category: StickerCategory }) {
   const { activeProject } = useProjectStore();
-  const { addMediaAtTime } = useTimelineStore();
+  const { addElementAtTime } = useTimelineStore();
   const { currentTime } = usePlaybackStore();
-  const { addMediaItem } = useMediaStore();
+  const { addMediaFile } = useMediaStore();
   const {
     searchQuery,
     selectedCollection,
@@ -287,7 +287,7 @@ function StickersContentView({ category }: { category: StickerCategory }) {
         throw new Error("Failed to download sticker");
       }
 
-      const mediaItem: Omit<MediaItem, "id"> = {
+      const mediaItem: Omit<MediaFile, "id"> = {
         name: iconName.replace(":", "-"),
         type: "image",
         file,
@@ -298,16 +298,16 @@ function StickersContentView({ category }: { category: StickerCategory }) {
         ephemeral: false,
       };
 
-      await addMediaItem(activeProject.id, mediaItem);
+      await addMediaFile(activeProject.id, mediaItem);
 
       const added = useMediaStore
         .getState()
-        .mediaItems.find(
+        .mediaFiles.find(
           (m) => m.url === mediaItem.url && m.name === mediaItem.name
         );
       if (!added) throw new Error("Sticker not in media store");
 
-      addMediaAtTime(added, currentTime);
+      addElementAtTime(added, currentTime);
 
       toast.success(`Added "${iconName}" to timeline`);
     } catch (error) {
@@ -640,8 +640,8 @@ function StickerItem({
             name={displayName}
             preview={preview}
             dragData={{
-              type: "sticker",
-              iconName: iconName,
+              id: "sticker-placeholder",
+              type: "image",
               name: displayName,
             }}
             onAddToTimeline={() => onAdd(iconName)}

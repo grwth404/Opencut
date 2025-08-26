@@ -1,6 +1,6 @@
 import { Input, ALL_FORMATS, BlobSource, VideoSampleSink } from "mediabunny";
 import type { TimelineTrack } from "@/types/timeline";
-import type { MediaItem } from "@/stores/media-store";
+import type { MediaFile } from "@/types/media";
 
 export interface RenderContext {
   ctx: CanvasRenderingContext2D;
@@ -8,25 +8,8 @@ export interface RenderContext {
   canvasWidth: number;
   canvasHeight: number;
   tracks: TimelineTrack[];
-  mediaItems: MediaItem[];
+  mediaFiles: MediaFile[];
   backgroundColor?: string;
-  useCache?: boolean;
-  cache?: Map<
-    string,
-    Map<
-      number,
-      {
-        draw: (
-          c: CanvasRenderingContext2D,
-          x: number,
-          y: number,
-          w: number,
-          h: number
-        ) => void;
-      }
-    >
-  >;
-  fps: number;
 }
 
 export async function renderTimelineFrame({
@@ -35,11 +18,8 @@ export async function renderTimelineFrame({
   canvasWidth,
   canvasHeight,
   tracks,
-  mediaItems,
+  mediaFiles,
   backgroundColor,
-  useCache = true,
-  cache,
-  fps,
 }: RenderContext): Promise<void> {
   // Background
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
@@ -50,11 +30,11 @@ export async function renderTimelineFrame({
 
   const scaleX = 1;
   const scaleY = 1;
-  const idToMedia = new Map(mediaItems.map((m) => [m.id, m] as const));
+  const idToMedia = new Map(mediaFiles.map((m) => [m.id, m] as const));
   const active: Array<{
     track: TimelineTrack;
     element: TimelineTrack["elements"][number];
-    mediaItem: MediaItem | null;
+    mediaItem: MediaFile | null;
   }> = [];
 
   for (let t = tracks.length - 1; t >= 0; t -= 1) {
@@ -66,7 +46,7 @@ export async function renderTimelineFrame({
         element.startTime +
         (element.duration - element.trimStart - element.trimEnd);
       if (time >= elementStart && time < elementEnd) {
-        let mediaItem: MediaItem | null = null;
+        let mediaItem: MediaFile | null = null;
         if (element.type === "media") {
           mediaItem =
             element.mediaId === "test"

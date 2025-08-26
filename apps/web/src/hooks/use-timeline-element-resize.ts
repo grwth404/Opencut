@@ -9,28 +9,15 @@ interface UseTimelineElementResizeProps {
   element: TimelineElement;
   track: TimelineTrack;
   zoomLevel: number;
-  onUpdateTrim: (
-    trackId: string,
-    elementId: string,
-    trimStart: number,
-    trimEnd: number
-  ) => void;
-  onUpdateDuration: (
-    trackId: string,
-    elementId: string,
-    duration: number
-  ) => void;
 }
 
 export function useTimelineElementResize({
   element,
   track,
   zoomLevel,
-  onUpdateTrim,
-  onUpdateDuration,
 }: UseTimelineElementResizeProps) {
   const [resizing, setResizing] = useState<ResizeState | null>(null);
-  const { mediaItems } = useMediaStore();
+  const { mediaFiles } = useMediaStore();
   const {
     updateElementStartTime,
     updateElementTrim,
@@ -88,11 +75,11 @@ export function useTimelineElementResize({
 
     // Media elements - check the media type
     if (element.type === "media") {
-      const mediaItem = mediaItems.find((item) => item.id === element.mediaId);
-      if (!mediaItem) return false;
+      const mediaFile = mediaFiles.find((file) => file.id === element.mediaId);
+      if (!mediaFile) return false;
 
       // Images can be extended (static content)
-      if (mediaItem.type === "image") {
+      if (mediaFile.type === "image") {
         return true;
       }
 

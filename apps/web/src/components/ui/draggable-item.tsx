@@ -12,11 +12,12 @@ import { createPortal } from "react-dom";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePlaybackStore } from "@/stores/playback-store";
+import { DragData } from "@/types/timeline";
 
 export interface DraggableMediaItemProps {
   name: string;
   preview: ReactNode;
-  dragData: Record<string, any>;
+  dragData: DragData;
   onDragStart?: (e: React.DragEvent) => void;
   onAddToTimeline?: (currentTime: number) => void;
   aspectRatio?: number;

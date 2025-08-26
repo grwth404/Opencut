@@ -12,6 +12,7 @@ import {
   canElementGoOnTrack,
 } from "@/types/timeline";
 import { usePlaybackStore } from "@/stores/playback-store";
+import { DEFAULT_TEXT_ELEMENT } from "@/constants/text-constants";
 import type {
   TimelineElement as TimelineElementType,
   DragData,
@@ -33,7 +34,7 @@ export function TimelineTrackContent({
   zoomLevel: number;
   onSnapPointChange?: (snapPoint: SnapPoint | null) => void;
 }) {
-  const { mediaItems } = useMediaStore();
+  const { mediaFiles } = useMediaStore();
   const {
     tracks,
     addTrack,
@@ -537,7 +538,7 @@ export function TimelineTrackContent({
             });
           } else {
             // Media elements
-            const mediaItem = mediaItems.find(
+            const mediaItem = mediaFiles.find(
               (item) => item.id === dragData.id
             );
             if (mediaItem) {
@@ -890,29 +891,14 @@ export function TimelineTrackContent({
           }
 
           addElementToTrack(targetTrackId, {
-            type: "text",
-            name: dragData.name || "Text",
-            content: dragData.content || "Default Text",
-            duration: TIMELINE_CONSTANTS.DEFAULT_TEXT_DURATION,
+            ...DEFAULT_TEXT_ELEMENT,
+            name: dragData.name || DEFAULT_TEXT_ELEMENT.name,
+            content: dragData.content || DEFAULT_TEXT_ELEMENT.content,
             startTime: textSnappedTime,
-            trimStart: 0,
-            trimEnd: 0,
-            fontSize: 48,
-            fontFamily: "Arial",
-            color: "#ffffff",
-            backgroundColor: "transparent",
-            textAlign: "center",
-            fontWeight: "normal",
-            fontStyle: "normal",
-            textDecoration: "none",
-            x: 0,
-            y: 0,
-            rotation: 0,
-            opacity: 1,
           });
         } else {
           // Handle media items
-          const mediaItem = mediaItems.find((item) => item.id === dragData.id);
+          const mediaItem = mediaFiles.find((item) => item.id === dragData.id);
 
           if (!mediaItem) {
             toast.error("Media item not found");
@@ -1054,7 +1040,7 @@ export function TimelineTrackContent({
       } else if (hasFiles) {
         // External file drops
         const { activeProject } = useProjectStore.getState();
-        const { addMediaItem } = useMediaStore.getState();
+        const { addMediaFile } = useMediaStore.getState();
         const { addElementToTrack } = useTimelineStore.getState();
 
         if (!activeProject) {
@@ -1066,9 +1052,9 @@ export function TimelineTrackContent({
         processMediaFiles(e.dataTransfer.files)
           .then(async (processedItems) => {
             for (const processedItem of processedItems) {
-              await addMediaItem(activeProject.id, processedItem);
-              const currentMediaItems = useMediaStore.getState().mediaItems;
-              const addedItem = currentMediaItems.find(
+              await addMediaFile(activeProject.id, processedItem);
+              const currentMediaFiles = mediaFiles;
+              const addedItem = currentMediaFiles.find(
                 (item) =>
                   item.name === processedItem.name &&
                   item.url === processedItem.url

@@ -151,14 +151,14 @@ export const extractTimelineAudio = async (
 
     for (const element of track.elements) {
       if (element.type === "media") {
-        const mediaItem = mediaStore.mediaItems.find(
+        const mediaFile = mediaStore.mediaFiles.find(
           (m) => m.id === element.mediaId
         );
-        if (!mediaItem) continue;
+        if (!mediaFile) continue;
 
-        if (mediaItem.type === "video" || mediaItem.type === "audio") {
+        if (mediaFile.type === "video" || mediaFile.type === "audio") {
           audioElements.push({
-            file: mediaItem.file,
+            file: mediaFile.file,
             startTime: element.startTime,
             duration: element.duration,
             trimStart: element.trimStart,

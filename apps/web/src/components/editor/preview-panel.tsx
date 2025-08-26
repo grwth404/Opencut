@@ -2,13 +2,13 @@
 
 import { useTimelineStore } from "@/stores/timeline-store";
 import { TimelineElement, TimelineTrack } from "@/types/timeline";
-import { useMediaStore, type MediaItem } from "@/stores/media-store";
+import { useMediaStore } from "@/stores/media-store";
+import { MediaFile } from "@/types/media";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useEditorStore } from "@/stores/editor-store";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Expand, SkipBack, SkipForward } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { VideoSampleSink } from "mediabunny";
 import { renderTimelineFrame } from "@/lib/timeline-renderer";
 import { cn } from "@/lib/utils";
 import { formatTimeCode } from "@/lib/time";
@@ -33,12 +33,12 @@ import { PLATFORM_LAYOUTS, type PlatformLayout } from "@/stores/editor-store";
 interface ActiveElement {
   element: TimelineElement;
   track: TimelineTrack;
-  mediaItem: MediaItem | null;
+  mediaItem: MediaFile | null;
 }
 
 export function PreviewPanel() {
   const { tracks, getTotalDuration, updateTextElement } = useTimelineStore();
-  const { mediaItems } = useMediaStore();
+  const { mediaFiles } = useMediaStore();
   const { currentTime, toggle, setCurrentTime } = usePlaybackStore();
   const { isPlaying, volume, muted } = usePlaybackStore();
   const { activeProject } = useProjectStore();
@@ -264,7 +264,7 @@ export function PreviewPanel() {
             mediaItem =
               element.mediaId === "test"
                 ? null
-                : mediaItems.find((item) => item.id === element.mediaId) ||
+                : mediaFiles.find((item) => item.id === element.mediaId) ||
                   null;
           }
           activeElements.push({ element, track, mediaItem });
@@ -334,7 +334,7 @@ export function PreviewPanel() {
       const gain = audioGainRef.current!;
 
       const tracksSnapshot = useTimelineStore.getState().tracks;
-      const mediaList = useMediaStore.getState().mediaItems;
+      const mediaList = mediaFiles;
       const idToMedia = new Map(mediaList.map((m) => [m.id, m] as const));
       const playbackNow = usePlaybackStore.getState().currentTime;
 
@@ -447,7 +447,7 @@ export function PreviewPanel() {
       }
       playingSourcesRef.current.clear();
     };
-  }, [isPlaying, volume, muted, mediaItems]);
+  }, [isPlaying, volume, muted, mediaFiles]);
 
   // Canvas: draw current frame for visible elements using offscreen compositing
   useEffect(() => {
@@ -533,13 +533,11 @@ export function PreviewPanel() {
         canvasWidth: displayWidth,
         canvasHeight: displayHeight,
         tracks,
-        mediaItems,
+        mediaFiles,
         backgroundColor:
           activeProject?.backgroundType === "blur"
             ? "transparent"
             : activeProject?.backgroundColor || "#000000",
-        useCache: false,
-        fps: activeProject?.fps || DEFAULT_FPS,
       });
 
       // Blit offscreen to visible canvas
