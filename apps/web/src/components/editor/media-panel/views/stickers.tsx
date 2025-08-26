@@ -38,6 +38,7 @@ import {
 import { cn, generateUUID } from "@/lib/utils";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 import Image from "next/image";
+import type { MediaItem } from "@/stores/media-store";
 import { DraggableMediaItem } from "@/components/ui/draggable-item";
 import { InputWithBack } from "@/components/ui/input-with-back";
 import { StickerCategory } from "@/stores/stickers-store";
@@ -286,9 +287,9 @@ function StickersContentView({ category }: { category: StickerCategory }) {
         throw new Error("Failed to download sticker");
       }
 
-      const mediaItem = {
+      const mediaItem: Omit<MediaItem, "id"> = {
         name: iconName.replace(":", "-"),
-        type: "image" as const,
+        type: "image",
         file,
         url: URL.createObjectURL(file),
         width: 200,
@@ -565,7 +566,12 @@ interface StickerItemProps {
   capSize?: boolean;
 }
 
-function StickerItem({ iconName, onAdd, isAdding, capSize = false }: StickerItemProps) {
+function StickerItem({
+  iconName,
+  onAdd,
+  isAdding,
+  capSize = false,
+}: StickerItemProps) {
   const [imageError, setImageError] = useState(false);
   const [hostIndex, setHostIndex] = useState(0);
 
@@ -601,7 +607,10 @@ function StickerItem({ iconName, onAdd, isAdding, capSize = false }: StickerItem
         className="w-full h-full object-contain"
         style={
           capSize
-            ? { maxWidth: "var(--sticker-max, 160px)", maxHeight: "var(--sticker-max, 160px)" }
+            ? {
+                maxWidth: "var(--sticker-max, 160px)",
+                maxHeight: "var(--sticker-max, 160px)",
+              }
             : undefined
         }
         onError={() => {
