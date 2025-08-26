@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { PropertyGroup } from "../../properties-panel/property-item";
-import { BaseView } from "./base-view";
+import { PanelBaseView as BaseView } from "@/components/editor/panel-base-view";
 import { Language, LanguageSelect } from "@/components/language-select";
 import { useState, useRef, useEffect } from "react";
 import { extractTimelineAudio } from "@/lib/mediabunny-utils";

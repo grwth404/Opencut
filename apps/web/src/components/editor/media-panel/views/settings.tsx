@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BaseView } from "./base-view";
+import { PanelBaseView as BaseView } from "@/components/editor/panel-base-view";
 import {
   PropertyItem,
   PropertyItemLabel,

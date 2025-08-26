@@ -1,5 +1,5 @@
 import { DraggableMediaItem } from "@/components/ui/draggable-item";
-import { BaseView } from "./base-view";
+import { PanelBaseView as BaseView } from "@/components/editor/panel-base-view";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { DEFAULT_TEXT_ELEMENT } from "@/constants/text-constants";
 

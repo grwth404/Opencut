@@ -538,6 +538,7 @@ export function PreviewPanel() {
           activeProject?.backgroundType === "blur"
             ? "transparent"
             : activeProject?.backgroundColor || "#000000",
+        projectCanvasSize: canvasSize,
       });
 
       // Blit offscreen to visible canvas

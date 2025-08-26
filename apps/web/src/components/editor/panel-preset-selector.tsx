@@ -1,13 +1,13 @@
 "use client";
 
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+} from "../ui/dropdown-menu";
 import { ChevronDown, RotateCcw, LayoutPanelTop } from "lucide-react";
 import { usePanelStore, type PanelPreset } from "@/stores/panel-store";
 

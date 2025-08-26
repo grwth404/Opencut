@@ -10,6 +10,7 @@ export interface RenderContext {
   tracks: TimelineTrack[];
   mediaFiles: MediaFile[];
   backgroundColor?: string;
+  projectCanvasSize?: { width: number; height: number };
 }
 
 export async function renderTimelineFrame({
@@ -20,6 +21,7 @@ export async function renderTimelineFrame({
   tracks,
   mediaFiles,
   backgroundColor,
+  projectCanvasSize,
 }: RenderContext): Promise<void> {
   // Background
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
@@ -28,8 +30,10 @@ export async function renderTimelineFrame({
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
   }
 
-  const scaleX = 1;
-  const scaleY = 1;
+  const scaleX = projectCanvasSize ? canvasWidth / projectCanvasSize.width : 1;
+  const scaleY = projectCanvasSize
+    ? canvasHeight / projectCanvasSize.height
+    : 1;
   const idToMedia = new Map(mediaFiles.map((m) => [m.id, m] as const));
   const active: Array<{
     track: TimelineTrack;
