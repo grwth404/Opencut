@@ -37,7 +37,10 @@ const hexToHsv = (hex: string) => {
     }
   }
 
-  return [h * 60, s, v];
+  h = (h * 60 + 360) % 360;
+  if (isNaN(h)) h = 0;
+
+  return [h, s, v];
 };
 
 const hsvToHex = (h: number, s: number, v: number) => {
@@ -92,12 +95,20 @@ const ColorPicker = React.forwardRef<HTMLDivElement, ColorPickerProps>(
       right: 0,
       bottom: 0,
     });
+    const [internalHue, setInternalHue] = React.useState(0);
+    const [inputValue, setInputValue] = React.useState(value);
+
     const pickerRef = React.useRef<HTMLDivElement>(null);
     const saturationRef = React.useRef<HTMLDivElement>(null);
     const hueRef = React.useRef<HTMLDivElement>(null);
     const triggerRef = React.useRef<HTMLDivElement>(null);
 
     const [h, s, v] = hexToHsv(value);
+    const displayHue = s > 0 ? h : internalHue;
+
+    React.useEffect(() => {
+      setInputValue(value);
+    }, [value]);
 
     React.useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
@@ -130,10 +141,9 @@ const ColorPicker = React.forwardRef<HTMLDivElement, ColorPickerProps>(
             0,
             Math.min(1, (e.clientY - rect.top) / rect.height)
           );
-
           const newS = x;
           const newV = 1 - y;
-          const newHex = hsvToHex(h, newS, newV);
+          const newHex = hsvToHex(displayHue, newS, newV);
           onChange?.(newHex);
         }
 
@@ -144,8 +154,11 @@ const ColorPicker = React.forwardRef<HTMLDivElement, ColorPickerProps>(
             Math.min(1, (e.clientX - rect.left) / rect.width)
           );
           const newH = x * 360;
-          const newHex = hsvToHex(newH, s, v);
-          onChange?.(newHex);
+          setInternalHue(newH);
+          if (s > 0) {
+            const newHex = hsvToHex(newH, s, v);
+            onChange?.(newHex);
+          }
         }
       };
 
@@ -161,36 +174,32 @@ const ColorPicker = React.forwardRef<HTMLDivElement, ColorPickerProps>(
           document.removeEventListener("mouseup", handleMouseUp);
         };
       }
-    }, [isDragging, h, s, v, onChange]);
+    }, [isDragging, displayHue, s, v, onChange]);
 
     const handleSaturationMouseDown = (e: React.MouseEvent) => {
       e.preventDefault();
       setIsDragging("saturation");
-
       const rect = saturationRef.current!.getBoundingClientRect();
       const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
       const newS = x;
       const newV = 1 - y;
-      const newHex = hsvToHex(h, newS, newV);
+      const newHex = hsvToHex(displayHue, newS, newV);
       onChange?.(newHex);
     };
 
     const handleHueMouseDown = (e: React.MouseEvent) => {
+      e.preventDefault();
       setIsDragging("hue");
-
       const rect = hueRef.current!.getBoundingClientRect();
       const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
       const newH = x * 360;
-      const newHex = hsvToHex(newH, s, v);
-      onChange?.(newHex);
+      setInternalHue(newH);
+      if (s > 0) {
+        const newHex = hsvToHex(newH, s, v);
+        onChange?.(newHex);
+      }
     };
-
-    const [inputValue, setInputValue] = React.useState(value);
-
-    React.useEffect(() => {
-      setInputValue(value);
-    }, [value]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const hex = e.target.value.replace("#", "");
@@ -209,7 +218,7 @@ const ColorPicker = React.forwardRef<HTMLDivElement, ColorPickerProps>(
     };
 
     const saturationStyle = {
-      background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${h}, 100%, 50%))`,
+      background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${displayHue}, 100%, 50%))`,
     };
 
     const hueStyle = {
@@ -235,7 +244,6 @@ const ColorPicker = React.forwardRef<HTMLDivElement, ColorPickerProps>(
               if (!isOpen && triggerRef.current && containerRef?.current) {
                 const containerRect =
                   containerRef.current.getBoundingClientRect();
-
                 setPickerPosition({
                   right: window.innerWidth - containerRect.left - 8,
                   bottom: window.innerHeight - containerRect.bottom,
@@ -246,7 +254,7 @@ const ColorPicker = React.forwardRef<HTMLDivElement, ColorPickerProps>(
           />
           <div className="flex-1 flex items-center">
             <Input
-              className="bg-transparent p-0 !ring-0 !ring-offset-0 !border-0 "
+              className="bg-transparent p-0 !ring-0 !ring-offset-0 !border-0"
               containerClassName="w-full"
               value={inputValue}
               onChange={handleInputChange}
@@ -287,7 +295,10 @@ const ColorPicker = React.forwardRef<HTMLDivElement, ColorPickerProps>(
               >
                 <ColorCircle
                   size="md"
-                  position={{ left: `${(h / 360) * 100}%`, top: "50%" }}
+                  position={{
+                    left: `${(displayHue / 360) * 100}%`,
+                    top: "50%",
+                  }}
                   color={`#${value}`}
                 />
               </div>
@@ -310,7 +321,7 @@ const ColorCircle = ({
   color: string;
 }) => (
   <div
-    className={`absolute border-3 border-accent rounded-full shadow-lg pointer-events-none ${
+    className={`absolute border-3 border-white rounded-full shadow-lg pointer-events-none ${
       size === "sm" ? "w-3 h-3" : "w-4 h-4"
     }`}
     style={{
