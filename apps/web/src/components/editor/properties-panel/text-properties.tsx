@@ -129,14 +129,14 @@ export function TextProperties({
               <Textarea
                 placeholder="Name"
                 defaultValue={element.content}
-                className="min-h-18 resize-none bg-background/50"
+                className="min-h-18 resize-none bg-panel-accent"
                 onChange={(e) =>
                   updateTextElement(trackId, element.id, {
                     content: e.target.value,
                   })
                 }
               />
-              <PropertyItem direction="row">
+              <PropertyItem direction="column">
                 <PropertyItemLabel>Font</PropertyItemLabel>
                 <PropertyItemValue>
                   <FontPicker
@@ -150,83 +150,83 @@ export function TextProperties({
                 </PropertyItemValue>
               </PropertyItem>
               <PropertyItem direction="column">
-                <PropertyItem direction="row">
-                  <PropertyItemLabel>Style</PropertyItemLabel>
-                  <PropertyItemValue>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant={
-                          element.fontWeight === "bold" ? "default" : "outline"
-                        }
-                        size="sm"
-                        onClick={() =>
-                          updateTextElement(trackId, element.id, {
-                            fontWeight:
-                              element.fontWeight === "bold" ? "normal" : "bold",
-                          })
-                        }
-                        className="h-8 px-3 font-bold"
-                      >
-                        B
-                      </Button>
-                      <Button
-                        variant={
-                          element.fontStyle === "italic" ? "default" : "outline"
-                        }
-                        size="sm"
-                        onClick={() =>
-                          updateTextElement(trackId, element.id, {
-                            fontStyle:
-                              element.fontStyle === "italic"
-                                ? "normal"
-                                : "italic",
-                          })
-                        }
-                        className="h-8 px-3 italic"
-                      >
-                        I
-                      </Button>
-                      <Button
-                        variant={
-                          element.textDecoration === "underline"
-                            ? "default"
-                            : "outline"
-                        }
-                        size="sm"
-                        onClick={() =>
-                          updateTextElement(trackId, element.id, {
-                            textDecoration:
-                              element.textDecoration === "underline"
-                                ? "none"
-                                : "underline",
-                          })
-                        }
-                        className="h-8 px-3 underline"
-                      >
-                        U
-                      </Button>
-                      <Button
-                        variant={
-                          element.textDecoration === "line-through"
-                            ? "default"
-                            : "outline"
-                        }
-                        size="sm"
-                        onClick={() =>
-                          updateTextElement(trackId, element.id, {
-                            textDecoration:
-                              element.textDecoration === "line-through"
-                                ? "none"
-                                : "line-through",
-                          })
-                        }
-                        className="h-8 px-3 line-through"
-                      >
-                        S
-                      </Button>
-                    </div>
-                  </PropertyItemValue>
-                </PropertyItem>
+                <PropertyItemLabel>Style</PropertyItemLabel>
+                <PropertyItemValue>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={
+                        element.fontWeight === "bold" ? "default" : "outline"
+                      }
+                      size="sm"
+                      onClick={() =>
+                        updateTextElement(trackId, element.id, {
+                          fontWeight:
+                            element.fontWeight === "bold" ? "normal" : "bold",
+                        })
+                      }
+                      className="h-8 px-3 font-bold"
+                    >
+                      B
+                    </Button>
+                    <Button
+                      variant={
+                        element.fontStyle === "italic" ? "default" : "outline"
+                      }
+                      size="sm"
+                      onClick={() =>
+                        updateTextElement(trackId, element.id, {
+                          fontStyle:
+                            element.fontStyle === "italic"
+                              ? "normal"
+                              : "italic",
+                        })
+                      }
+                      className="h-8 px-3 italic"
+                    >
+                      I
+                    </Button>
+                    <Button
+                      variant={
+                        element.textDecoration === "underline"
+                          ? "default"
+                          : "outline"
+                      }
+                      size="sm"
+                      onClick={() =>
+                        updateTextElement(trackId, element.id, {
+                          textDecoration:
+                            element.textDecoration === "underline"
+                              ? "none"
+                              : "underline",
+                        })
+                      }
+                      className="h-8 px-3 underline"
+                    >
+                      U
+                    </Button>
+                    <Button
+                      variant={
+                        element.textDecoration === "line-through"
+                          ? "default"
+                          : "outline"
+                      }
+                      size="sm"
+                      onClick={() =>
+                        updateTextElement(trackId, element.id, {
+                          textDecoration:
+                            element.textDecoration === "line-through"
+                              ? "none"
+                              : "line-through",
+                        })
+                      }
+                      className="h-8 px-3 line-through"
+                    >
+                      S
+                    </Button>
+                  </div>
+                </PropertyItemValue>
+              </PropertyItem>
+              <PropertyItem direction="column">
                 <PropertyItemLabel>Font size</PropertyItemLabel>
                 <PropertyItemValue>
                   <div className="flex items-center gap-2">
@@ -250,7 +250,7 @@ export function TextProperties({
                       max={300}
                       onChange={(e) => handleFontSizeChange(e.target.value)}
                       onBlur={handleFontSizeBlur}
-                      className="w-12 !text-xs h-7 rounded-sm text-center
+                      className="w-12 px-2 !text-xs h-7 rounded-sm text-center
                [appearance:textfield]
                [&::-webkit-outer-spin-button]:appearance-none
                [&::-webkit-inner-spin-button]:appearance-none"
@@ -258,7 +258,7 @@ export function TextProperties({
                   </div>
                 </PropertyItemValue>
               </PropertyItem>
-              <PropertyItem direction="row">
+              <PropertyItem direction="column">
                 <PropertyItemLabel>Color</PropertyItemLabel>
                 <PropertyItemValue>
                   <Input
