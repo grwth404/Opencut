@@ -190,6 +190,22 @@ export function useSelectionBox({
     };
   }, [selectionBox, selectElementsInBox]);
 
+  useEffect(() => {
+    if (!selectionBox?.isActive) return;
+
+    const previousBodyUserSelect = document.body.style.userSelect;
+    const container = containerRef.current;
+    const previousContainerUserSelect = container?.style.userSelect ?? "";
+
+    document.body.style.userSelect = "none";
+    if (container) container.style.userSelect = "none";
+
+    return () => {
+      document.body.style.userSelect = previousBodyUserSelect;
+      if (container) container.style.userSelect = previousContainerUserSelect;
+    };
+  }, [selectionBox?.isActive, containerRef]);
+
   return {
     selectionBox,
     handleMouseDown,
