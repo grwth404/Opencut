@@ -6,7 +6,6 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { useState, useRef } from "react";
 import { PanelBaseView } from "@/components/editor/panel-base-view";
 import {
@@ -19,6 +18,14 @@ import {
   PropertyItemLabel,
   PropertyItemValue,
 } from "./property-item";
+import { ColorPicker } from "@/components/ui/color-picker";
+import { cn, uppercase } from "@/lib/utils";
+import { Grid2x2 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function TextProperties({
   element,
@@ -29,7 +36,7 @@ export function TextProperties({
 }) {
   const { updateTextElement } = useTimelineStore();
   const { activeTab, setActiveTab } = useTextPropertiesStore();
-
+  const containerRef = useRef<HTMLDivElement>(null);
   // Local state for input values to allow temporary empty/invalid states
   const [fontSizeInput, setFontSizeInput] = useState(
     element.fontSize.toString()
@@ -118,6 +125,7 @@ export function TextProperties({
       onValueChange={(v) => {
         if (isTextPropertiesTab(v)) setActiveTab(v);
       }}
+      ref={containerRef}
       tabs={TEXT_PROPERTIES_TABS.map((t) => ({
         value: t.value,
         label: t.label,
@@ -250,7 +258,7 @@ export function TextProperties({
                       max={300}
                       onChange={(e) => handleFontSizeChange(e.target.value)}
                       onBlur={handleFontSizeBlur}
-                      className="w-12 px-2 !text-xs h-7 rounded-sm text-center
+                      className="w-12 px-2 !text-xs h-7 rounded-sm text-center bg-panel-accent
                [appearance:textfield]
                [&::-webkit-outer-spin-button]:appearance-none
                [&::-webkit-inner-spin-button]:appearance-none"
@@ -261,14 +269,16 @@ export function TextProperties({
               <PropertyItem direction="column">
                 <PropertyItemLabel>Color</PropertyItemLabel>
                 <PropertyItemValue>
-                  <Input
-                    type="color"
-                    value={element.color || "#ffffff"}
-                    onChange={(e) => {
-                      const color = e.target.value;
-                      updateTextElement(trackId, element.id, { color });
+                  <ColorPicker
+                    value={uppercase(
+                      (element.color || "FFFFFF").replace("#", "")
+                    )}
+                    onChange={(color) => {
+                      updateTextElement(trackId, element.id, {
+                        color: `#${color}`,
+                      });
                     }}
-                    className="w-full cursor-pointer rounded-full"
+                    containerRef={containerRef}
                   />
                 </PropertyItemValue>
               </PropertyItem>
@@ -296,7 +306,7 @@ export function TextProperties({
                       max={100}
                       onChange={(e) => handleOpacityChange(e.target.value)}
                       onBlur={handleOpacityBlur}
-                      className="w-12 !text-xs h-7 rounded-sm text-center
+                      className="w-12 !text-xs h-7 rounded-sm text-center bg-panel-accent
                [appearance:textfield]
                [&::-webkit-outer-spin-button]:appearance-none
                [&::-webkit-inner-spin-button]:appearance-none"
@@ -305,34 +315,51 @@ export function TextProperties({
                 </PropertyItemValue>
               </PropertyItem>
               <PropertyItem direction="column">
-                <div className="flex items-center justify-between">
-                  <PropertyItemLabel>Background</PropertyItemLabel>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="transparent-bg-toggle"
-                      checked={element.backgroundColor === "transparent"}
-                      onCheckedChange={handleTransparentToggle}
-                    />
-                    <label
-                      htmlFor="transparent-bg-toggle"
-                      className="text-sm font-medium"
-                    >
-                      Transparent
-                    </label>
-                  </div>
-                </div>
+                <PropertyItemLabel>Background</PropertyItemLabel>
                 <PropertyItemValue>
-                  <Input
-                    type="color"
-                    value={
-                      element.backgroundColor === "transparent"
-                        ? lastSelectedColor.current
-                        : element.backgroundColor || "#000000"
-                    }
-                    onChange={(e) => handleColorChange(e.target.value)}
-                    className="w-full cursor-pointer rounded-full"
-                    disabled={element.backgroundColor === "transparent"}
-                  />
+                  <div className="flex items-center gap-2">
+                    <ColorPicker
+                      value={uppercase(
+                        element.backgroundColor === "transparent"
+                          ? lastSelectedColor.current.replace("#", "")
+                          : (element.backgroundColor || "#000000").replace(
+                              "#",
+                              ""
+                            )
+                      )}
+                      onChange={(color) => handleColorChange(`#${color}`)}
+                      containerRef={containerRef}
+                      className={
+                        element.backgroundColor === "transparent"
+                          ? "opacity-50 pointer-events-none"
+                          : ""
+                      }
+                    />
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() =>
+                            handleTransparentToggle(
+                              element.backgroundColor !== "transparent"
+                            )
+                          }
+                          className="size-9 rounded-full bg-panel-accent p-0 overflow-hidden"
+                        >
+                          <Grid2x2
+                            className={cn(
+                              "text-foreground",
+                              element.backgroundColor === "transparent" &&
+                                "text-primary"
+                            )}
+                          />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Transparent background</TooltipContent>
+                    </Tooltip>
+                  </div>
                 </PropertyItemValue>
               </PropertyItem>
             </div>

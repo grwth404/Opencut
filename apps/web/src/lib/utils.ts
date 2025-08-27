@@ -7,6 +7,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function uppercase(str: string) {
+  return str.toUpperCase();
+}
+
 /**
  * Generates a UUID v4 string
  * Uses crypto.randomUUID() if available, otherwise falls back to a custom implementation
