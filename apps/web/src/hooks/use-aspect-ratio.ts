@@ -6,7 +6,7 @@ import { DEFAULT_CANVAS_SIZE, useProjectStore } from "@/stores/project-store";
 export function useAspectRatio() {
   const { canvasPresets } = useEditorStore();
   const { activeProject } = useProjectStore();
-  const { mediaItems } = useMediaStore();
+  const { mediaFiles } = useMediaStore();
   const { tracks } = useTimelineStore();
 
   const canvasSize = activeProject?.canvasSize || DEFAULT_CANVAS_SIZE;
@@ -24,14 +24,14 @@ export function useAspectRatio() {
     for (const track of tracks) {
       for (const element of track.elements) {
         if (element.type === "media") {
-          const mediaItem = mediaItems.find(
-            (item) => item.id === element.mediaId
+          const mediaFile = mediaFiles.find(
+            (file) => file.id === element.mediaId
           );
           if (
-            mediaItem &&
-            (mediaItem.type === "video" || mediaItem.type === "image")
+            mediaFile &&
+            (mediaFile.type === "video" || mediaFile.type === "image")
           ) {
-            return getMediaAspectRatio(mediaItem);
+            return getMediaAspectRatio(mediaFile);
           }
         }
       }

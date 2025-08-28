@@ -2,9 +2,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-interface BaseViewProps {
+interface PanelBaseViewProps {
   children?: React.ReactNode;
   defaultTab?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
   tabs?: {
     value: string;
     label: string;
@@ -28,29 +30,38 @@ function ViewContent({
   );
 }
 
-export function BaseView({
+export function PanelBaseView({
   children,
   defaultTab,
+  value,
+  onValueChange,
   tabs,
   className = "",
   ref,
-}: BaseViewProps) {
+}: PanelBaseViewProps) {
   return (
     <div className={`h-full flex flex-col ${className}`} ref={ref}>
       {!tabs || tabs.length === 0 ? (
         <ViewContent className={className}>{children}</ViewContent>
       ) : (
-        <Tabs defaultValue={defaultTab} className="flex flex-col h-full">
-          <div className="px-3 pt-4 pb-0">
-            <TabsList>
-              {tabs.map((tab) => (
-                <TabsTrigger key={tab.value} value={tab.value}>
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+        <Tabs
+          defaultValue={defaultTab}
+          value={value}
+          onValueChange={onValueChange}
+          className="flex flex-col h-full"
+        >
+          <div className="sticky top-0 z-10 bg-panel">
+            <div className="px-3 pt-3.5 pb-0">
+              <TabsList>
+                {tabs.map((tab) => (
+                  <TabsTrigger key={tab.value} value={tab.value}>
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+            <Separator className="mt-3.5" />
           </div>
-          <Separator className="mt-4" />
           {tabs.map((tab) => (
             <TabsContent
               key={tab.value}

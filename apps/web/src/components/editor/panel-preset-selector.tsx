@@ -1,13 +1,13 @@
 "use client";
 
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+} from "../ui/dropdown-menu";
 import { ChevronDown, RotateCcw, LayoutPanelTop } from "lucide-react";
 import { usePanelStore, type PanelPreset } from "@/stores/panel-store";
 
@@ -51,7 +51,7 @@ export function PanelPresetSelector() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
-        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+        <div className="px-3 py-2 text-xs font-medium text-muted-foreground">
           Panel Presets
         </div>
         <DropdownMenuSeparator />
@@ -59,7 +59,7 @@ export function PanelPresetSelector() {
           <DropdownMenuItem
             key={preset}
             onClick={() => handlePresetChange(preset)}
-            className="flex items-start justify-between gap-2 py-2 cursor-pointer"
+            className="flex items-start justify-between gap-2 py-2 px-3 cursor-pointer"
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">

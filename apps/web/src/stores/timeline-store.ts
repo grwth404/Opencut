@@ -10,17 +10,15 @@ import {
   ensureMainTrack,
   validateElementTrackCompatibility,
 } from "@/types/timeline";
-import {
-  useMediaStore,
-  getMediaAspectRatio,
-  type MediaItem,
-} from "./media-store";
+import { useMediaStore, getMediaAspectRatio } from "./media-store";
+import { MediaFile } from "@/types/media";
 import { findBestCanvasPreset } from "@/lib/editor-utils";
 import { storageService } from "@/lib/storage/storage-service";
 import { useProjectStore } from "./project-store";
 import { generateUUID } from "@/lib/utils";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 import { checkElementOverlaps, resolveElementOverlaps } from "@/lib/timeline";
+import { DEFAULT_TEXT_ELEMENT } from "@/constants/text-constants";
 
 // Helper function to manage element naming with suffixes
 const getElementNameWithSuffix = (
@@ -42,6 +40,11 @@ interface TimelineStore {
   _tracks: TimelineTrack[];
   history: TimelineTrack[][];
   redoStack: TimelineTrack[][];
+
+  // Clipboard buffer
+  clipboard: {
+    items: Array<{ trackType: TrackType; element: CreateTimelineElement }>;
+  } | null;
 
   // Always returns properly ordered tracks with main track ensured
   tracks: TimelineTrack[];
@@ -178,6 +181,10 @@ interface TimelineStore {
   loadProjectTimeline: (projectId: string) => Promise<void>;
   saveProjectTimeline: (projectId: string) => Promise<void>;
   clearTimeline: () => void;
+
+  // Clipboard actions
+  copySelected: () => void;
+  pasteAtTime: (time: number) => void;
   updateTextElement: (
     trackId: string,
     elementId: string,
@@ -207,10 +214,11 @@ interface TimelineStore {
     excludeElementId?: string
   ) => boolean;
   findOrCreateTrack: (trackType: TrackType) => string;
-  addMediaAtTime: (item: MediaItem, currentTime?: number) => boolean;
-  addTextAtTime: (item: TextElement, currentTime?: number) => boolean;
-  addMediaToNewTrack: (item: MediaItem) => boolean;
-  addTextToNewTrack: (item: TextElement | DragData) => boolean;
+  addElementAtTime: (
+    item: MediaFile | TextElement,
+    currentTime?: number
+  ) => boolean;
+  addElementToNewTrack: (item: MediaFile | TextElement | DragData) => boolean;
 }
 
 export const useTimelineStore = create<TimelineStore>((set, get) => {
@@ -254,6 +262,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     redoStack: [],
     selectedElements: [],
     rippleEditingEnabled: false,
+    clipboard: null,
 
     // Snapping settings defaults
     snappingEnabled: true,
@@ -494,15 +503,17 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       const newElement: TimelineElement = {
         ...elementData,
         id: generateUUID(),
-        startTime: elementData.startTime || 0,
-        trimStart: 0,
-        trimEnd: 0,
-        ...(elementData.type === "media" ? { muted: false } : {}),
+        startTime: elementData.startTime,
+        trimStart: elementData.trimStart ?? 0,
+        trimEnd: elementData.trimEnd ?? 0,
+        ...(elementData.type === "media"
+          ? { muted: elementData.muted ?? false }
+          : {}),
       } as TimelineElement;
 
       if (isFirstElement && newElement.type === "media") {
         const mediaStore = useMediaStore.getState();
-        const mediaItem = mediaStore.mediaItems.find(
+        const mediaItem = mediaStore.mediaFiles.find(
           (item) => item.id === newElement.mediaId
         );
 
@@ -1144,7 +1155,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
         }
 
         try {
-          await mediaStore.addMediaItem(
+          await mediaStore.addMediaFile(
             projectStore.activeProject.id,
             mediaData
           );
@@ -1155,7 +1166,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
           };
         }
 
-        const newMediaItem = mediaStore.mediaItems.find(
+        const newMediaItem = mediaStore.mediaFiles.find(
           (item) => item.file === newFile
         );
 
@@ -1219,7 +1230,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     getProjectThumbnail: async (projectId) => {
       try {
         const tracks = await storageService.loadTimeline(projectId);
-        const mediaItems = await storageService.loadAllMediaItems(projectId);
+        const mediaItems = await storageService.loadAllMediaFiles(projectId);
 
         if (!tracks || !mediaItems.length) return null;
 
@@ -1230,20 +1241,20 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
         if (!firstMediaElement) return null;
 
-        const mediaItem = mediaItems.find(
+        const mediaFile = mediaItems.find(
           (item) => item.id === firstMediaElement.mediaId
         );
-        if (!mediaItem) return null;
+        if (!mediaFile) return null;
 
-        if (mediaItem.type === "video" && mediaItem.file) {
+        if (mediaFile.type === "video" && mediaFile.file) {
           const { generateVideoThumbnail } = await import(
             "@/stores/media-store"
           );
-          const { thumbnailUrl } = await generateVideoThumbnail(mediaItem.file);
+          const { thumbnailUrl } = await generateVideoThumbnail(mediaFile.file);
           return thumbnailUrl;
         }
-        if (mediaItem.type === "image" && mediaItem.url) {
-          return mediaItem.url;
+        if (mediaFile.type === "image" && mediaFile.url) {
+          return mediaFile.url;
         }
 
         return null;
@@ -1348,7 +1359,12 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     clearTimeline: () => {
       const defaultTracks = ensureMainTrack([]);
       updateTracks(defaultTracks);
-      set({ history: [], redoStack: [], selectedElements: [] });
+      set({
+        history: [],
+        redoStack: [],
+        selectedElements: [],
+        clipboard: null,
+      });
     },
 
     // Snapping actions
@@ -1401,116 +1417,165 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       return get().addTrack(trackType);
     },
 
-    addMediaAtTime: (item, currentTime = 0) => {
-      const trackType = item.type === "audio" ? "audio" : "media";
-      const duration =
-        item.duration || TIMELINE_CONSTANTS.DEFAULT_IMAGE_DURATION;
+    addElementAtTime: (item: MediaFile | TextElement, currentTime = 0) => {
+      if (item.type === "text") {
+        const targetTrackId = get().insertTrackAt("text", 0);
+        get().addElementToTrack(
+          targetTrackId,
+          buildTextElement(item, currentTime)
+        );
+        return true;
+      }
 
-      const tracks = get()._tracks.filter((t) => t.type === trackType);
+      const media = item as MediaFile;
+      const trackType = media.type === "audio" ? "audio" : "media";
+      const targetTrackId = get().insertTrackAt(trackType, 0);
+      get().addElementToTrack(targetTrackId, {
+        type: "media",
+        mediaId: media.id,
+        name: media.name,
+        duration: media.duration || TIMELINE_CONSTANTS.DEFAULT_IMAGE_DURATION,
+        startTime: currentTime,
+        trimStart: 0,
+        trimEnd: 0,
+        muted: false,
+      });
+      return true;
+    },
 
-      let targetTrackId = null;
-      for (const track of tracks) {
-        if (!get().checkElementOverlap(track.id, currentTime, duration)) {
-          targetTrackId = track.id;
-          break;
+    addElementToNewTrack: (item) => {
+      if (item.type === "text") {
+        const targetTrackId = get().insertTrackAt("text", 0);
+        get().addElementToTrack(
+          targetTrackId,
+          buildTextElement(item as TextElement | DragData, 0)
+        );
+        return true;
+      }
+
+      const media = item as MediaFile;
+      const trackType = media.type === "audio" ? "audio" : "media";
+      const targetTrackId = get().insertTrackAt(trackType, 0);
+      get().addElementToTrack(targetTrackId, {
+        type: "media",
+        mediaId: media.id,
+        name: media.name,
+        duration: media.duration || TIMELINE_CONSTANTS.DEFAULT_IMAGE_DURATION,
+        startTime: 0,
+        trimStart: 0,
+        trimEnd: 0,
+        muted: false,
+      });
+      return true;
+    },
+
+    copySelected: () => {
+      const { selectedElements, _tracks } = get();
+      if (selectedElements.length === 0) return;
+
+      const items: Array<{
+        trackType: TrackType;
+        element: CreateTimelineElement;
+      }> = [];
+
+      for (const { trackId, elementId } of selectedElements) {
+        const track = _tracks.find((t) => t.id === trackId);
+        const element = track?.elements.find((e) => e.id === elementId);
+        if (!track || !element) continue;
+
+        // Prepare a creation-friendly copy without id
+        const { id: _id, ...rest } = element as TimelineElement;
+        items.push({
+          trackType: track.type,
+          element: rest as CreateTimelineElement,
+        });
+      }
+
+      set({ clipboard: { items } });
+    },
+
+    pasteAtTime: (time) => {
+      const { clipboard } = get();
+      if (!clipboard || clipboard.items.length === 0) return;
+
+      // Determine reference start time offset based on earliest element in clipboard
+      const minStart = Math.min(
+        ...clipboard.items.map((x) => x.element.startTime)
+      );
+
+      get().pushHistory();
+
+      for (const item of clipboard.items) {
+        const targetTrackId = get().findOrCreateTrack(item.trackType);
+        const relativeOffset = item.element.startTime - minStart;
+        const startTime = Math.max(0, time + relativeOffset);
+
+        // Ensure no overlap on target track
+        const duration =
+          item.element.duration - item.element.trimStart - item.element.trimEnd;
+        const hasOverlap = get().checkElementOverlap(
+          targetTrackId,
+          startTime,
+          duration
+        );
+        if (hasOverlap) {
+          // If overlap, nudge forward slightly until free (simple resolve)
+          let candidate = startTime;
+          let safety = 0;
+          while (
+            get().checkElementOverlap(targetTrackId, candidate, duration) &&
+            safety < 1000
+          ) {
+            candidate += 0.01;
+            safety += 1;
+          }
+          get().addElementToTrack(targetTrackId, {
+            ...item.element,
+            startTime: candidate,
+          });
+        } else {
+          get().addElementToTrack(targetTrackId, {
+            ...item.element,
+            startTime,
+          });
         }
       }
-
-      if (!targetTrackId) {
-        targetTrackId = get().addTrack(trackType);
-      }
-
-      get().addElementToTrack(targetTrackId, {
-        type: "media",
-        mediaId: item.id,
-        name: item.name,
-        duration,
-        startTime: currentTime,
-        trimStart: 0,
-        trimEnd: 0,
-        muted: false,
-      });
-      return true;
-    },
-
-    addTextAtTime: (item, currentTime = 0) => {
-      const targetTrackId = get().insertTrackAt("text", 0);
-
-      get().addElementToTrack(targetTrackId, {
-        type: "text",
-        name: item.name || "Text",
-        content: item.content || "Default Text",
-        duration: item.duration || TIMELINE_CONSTANTS.DEFAULT_TEXT_DURATION,
-        startTime: currentTime,
-        trimStart: 0,
-        trimEnd: 0,
-        fontSize: item.fontSize || 48,
-        fontFamily: item.fontFamily || "Arial",
-        color: item.color || "#ffffff",
-        backgroundColor: item.backgroundColor || "transparent",
-        textAlign: item.textAlign || "center",
-        fontWeight: item.fontWeight || "normal",
-        fontStyle: item.fontStyle || "normal",
-        textDecoration: item.textDecoration || "none",
-        x: item.x || 0,
-        y: item.y || 0,
-        rotation: item.rotation || 0,
-        opacity: item.opacity !== undefined ? item.opacity : 1,
-      });
-      return true;
-    },
-
-    addMediaToNewTrack: (item) => {
-      const trackType = item.type === "audio" ? "audio" : "media";
-      const targetTrackId = get().findOrCreateTrack(trackType);
-
-      get().addElementToTrack(targetTrackId, {
-        type: "media",
-        mediaId: item.id,
-        name: item.name,
-        duration: item.duration || TIMELINE_CONSTANTS.DEFAULT_IMAGE_DURATION,
-        startTime: 0,
-        trimStart: 0,
-        trimEnd: 0,
-        muted: false,
-      });
-      return true;
-    },
-
-    addTextToNewTrack: (item) => {
-      const targetTrackId = get().insertTrackAt("text", 0);
-
-      get().addElementToTrack(targetTrackId, {
-        type: "text",
-        name: item.name || "Text",
-        content:
-          ("content" in item ? item.content : "Default Text") || "Default Text",
-        duration: TIMELINE_CONSTANTS.DEFAULT_TEXT_DURATION,
-        startTime: 0,
-        trimStart: 0,
-        trimEnd: 0,
-        fontSize: ("fontSize" in item ? item.fontSize : 48) || 48,
-        fontFamily:
-          ("fontFamily" in item ? item.fontFamily : "Arial") || "Arial",
-        color: ("color" in item ? item.color : "#ffffff") || "#ffffff",
-        backgroundColor:
-          ("backgroundColor" in item ? item.backgroundColor : "transparent") ||
-          "transparent",
-        textAlign:
-          ("textAlign" in item ? item.textAlign : "center") || "center",
-        fontWeight:
-          ("fontWeight" in item ? item.fontWeight : "normal") || "normal",
-        fontStyle:
-          ("fontStyle" in item ? item.fontStyle : "normal") || "normal",
-        textDecoration:
-          ("textDecoration" in item ? item.textDecoration : "none") || "none",
-        x: ("x" in item ? item.x : 0) || 0,
-        y: ("y" in item ? item.y : 0) || 0,
-        rotation: ("rotation" in item ? item.rotation : 0) || 0,
-        opacity:
-          "opacity" in item && item.opacity !== undefined ? item.opacity : 1,
-      });
-      return true;
     },
   };
 });
+
+function buildTextElement(
+  raw: TextElement | DragData,
+  startTime: number
+): CreateTimelineElement {
+  const t = raw as Partial<TextElement>;
+
+  return {
+    type: "text",
+    name: t.name ?? DEFAULT_TEXT_ELEMENT.name,
+    content: t.content ?? DEFAULT_TEXT_ELEMENT.content,
+    duration: t.duration ?? TIMELINE_CONSTANTS.DEFAULT_TEXT_DURATION,
+    startTime,
+    trimStart: 0,
+    trimEnd: 0,
+    fontSize:
+      typeof t.fontSize === "number"
+        ? t.fontSize
+        : DEFAULT_TEXT_ELEMENT.fontSize,
+    fontFamily: t.fontFamily ?? DEFAULT_TEXT_ELEMENT.fontFamily,
+    color: t.color ?? DEFAULT_TEXT_ELEMENT.color,
+    backgroundColor: t.backgroundColor ?? DEFAULT_TEXT_ELEMENT.backgroundColor,
+    textAlign: t.textAlign ?? DEFAULT_TEXT_ELEMENT.textAlign,
+    fontWeight: t.fontWeight ?? DEFAULT_TEXT_ELEMENT.fontWeight,
+    fontStyle: t.fontStyle ?? DEFAULT_TEXT_ELEMENT.fontStyle,
+    textDecoration: t.textDecoration ?? DEFAULT_TEXT_ELEMENT.textDecoration,
+    x: typeof t.x === "number" ? t.x : DEFAULT_TEXT_ELEMENT.x,
+    y: typeof t.y === "number" ? t.y : DEFAULT_TEXT_ELEMENT.y,
+    rotation:
+      typeof t.rotation === "number"
+        ? t.rotation
+        : DEFAULT_TEXT_ELEMENT.rotation,
+    opacity:
+      typeof t.opacity === "number" ? t.opacity : DEFAULT_TEXT_ELEMENT.opacity,
+  };
+}

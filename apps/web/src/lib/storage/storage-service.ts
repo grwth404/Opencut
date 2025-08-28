@@ -1,5 +1,5 @@
 import { TProject } from "@/types/project";
-import { MediaItem } from "@/stores/media-store";
+import { MediaFile } from "@/types/media";
 import { IndexedDBAdapter } from "./indexeddb-adapter";
 import { OPFSAdapter } from "./opfs-adapter";
 import {
@@ -124,8 +124,8 @@ class StorageService {
     await this.projectsAdapter.remove(id);
   }
 
-  // Media operations - now project-specific
-  async saveMediaItem(projectId: string, mediaItem: MediaItem): Promise<void> {
+  // Media operations
+  async saveMediaFile(projectId: string, mediaItem: MediaFile): Promise<void> {
     const { mediaMetadataAdapter, mediaFilesAdapter } =
       this.getProjectMediaAdapters(projectId);
 
@@ -148,10 +148,10 @@ class StorageService {
     await mediaMetadataAdapter.set(mediaItem.id, metadata);
   }
 
-  async loadMediaItem(
+  async loadMediaFile(
     projectId: string,
     id: string
-  ): Promise<MediaItem | null> {
+  ): Promise<MediaFile | null> {
     const { mediaMetadataAdapter, mediaFilesAdapter } =
       this.getProjectMediaAdapters(projectId);
 
@@ -192,14 +192,14 @@ class StorageService {
     };
   }
 
-  async loadAllMediaItems(projectId: string): Promise<MediaItem[]> {
+  async loadAllMediaFiles(projectId: string): Promise<MediaFile[]> {
     const { mediaMetadataAdapter } = this.getProjectMediaAdapters(projectId);
 
     const mediaIds = await mediaMetadataAdapter.list();
-    const mediaItems: MediaItem[] = [];
+    const mediaItems: MediaFile[] = [];
 
     for (const id of mediaIds) {
-      const item = await this.loadMediaItem(projectId, id);
+      const item = await this.loadMediaFile(projectId, id);
       if (item) {
         mediaItems.push(item);
       }
@@ -208,7 +208,7 @@ class StorageService {
     return mediaItems;
   }
 
-  async deleteMediaItem(projectId: string, id: string): Promise<void> {
+  async deleteMediaFile(projectId: string, id: string): Promise<void> {
     const { mediaMetadataAdapter, mediaFilesAdapter } =
       this.getProjectMediaAdapters(projectId);
 

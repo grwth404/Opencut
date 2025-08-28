@@ -10,7 +10,7 @@ import { SquareSlashIcon } from "lucide-react";
 
 export function PropertiesPanel() {
   const { selectedElements, tracks } = useTimelineStore();
-  const { mediaItems } = useMediaStore();
+  const { mediaFiles } = useMediaStore();
 
   return (
     <>
@@ -28,11 +28,11 @@ export function PropertiesPanel() {
               );
             }
             if (element?.type === "media") {
-              const mediaItem = mediaItems.find(
-                (item) => item.id === element.mediaId
+              const mediaFile = mediaFiles.find(
+                (file) => file.id === element.mediaId
               );
 
-              if (mediaItem?.type === "audio") {
+              if (mediaFile?.type === "audio") {
                 return <AudioProperties key={elementId} element={element} />;
               }
 

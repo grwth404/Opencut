@@ -23,6 +23,8 @@ export const defaultKeybindings: KeybindingConfig = {
   n: "toggle-snapping",
   "ctrl+a": "select-all",
   "ctrl+d": "duplicate-selected",
+  "ctrl+c": "copy-selected",
+  "ctrl+v": "paste-selected",
   "ctrl+z": "undo",
   "ctrl+shift+z": "redo",
   "ctrl+y": "redo",
@@ -162,7 +164,7 @@ export const useKeybindingsStore = create<KeybindingsState>()(
     }),
     {
       name: "opencut-keybindings",
-      version: 1,
+      version: 2,
     }
   )
 );

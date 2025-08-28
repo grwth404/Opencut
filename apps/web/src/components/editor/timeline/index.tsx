@@ -82,13 +82,11 @@ export function Timeline() {
     toggleTrackMute,
     dragState,
   } = useTimelineStore();
-  const { mediaItems, addMediaItem } = useMediaStore();
+  const { mediaFiles, addMediaFile } = useMediaStore();
   const { activeProject } = useProjectStore();
-  const { currentTime, duration, seek, setDuration, isPlaying, toggle } =
-    usePlaybackStore();
+  const { currentTime, duration, seek, setDuration } = usePlaybackStore();
   const [isDragOver, setIsDragOver] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const { addElementToNewTrack } = useTimelineStore();
   const dragCounterRef = useRef(0);
   const timelineRef = useRef<HTMLDivElement>(null);
   const rulerRef = useRef<HTMLDivElement>(null);
@@ -456,10 +454,10 @@ export function Timeline() {
 
         if (dragData.type === "text") {
           // Always create new text track to avoid overlaps
-          useTimelineStore.getState().addTextToNewTrack(dragData);
+          addElementToNewTrack(dragData);
         } else {
           // Handle media items
-          const mediaItem = mediaItems.find(
+          const mediaItem = mediaFiles.find(
             (item: any) => item.id === dragData.id
           );
           if (!mediaItem) {
@@ -467,7 +465,7 @@ export function Timeline() {
             return;
           }
 
-          useTimelineStore.getState().addMediaToNewTrack(mediaItem);
+          addElementToNewTrack(mediaItem);
         }
       } catch (error) {
         console.error("Error parsing dropped item data:", error);
@@ -480,17 +478,12 @@ export function Timeline() {
         return;
       }
 
-      setIsProcessing(true);
-      setProgress(0);
       try {
-        const processedItems = await processMediaFiles(
-          e.dataTransfer.files,
-          (p) => setProgress(p)
-        );
+        const processedItems = await processMediaFiles(e.dataTransfer.files);
         for (const processedItem of processedItems) {
-          await addMediaItem(activeProject.id, processedItem);
-          const currentMediaItems = useMediaStore.getState().mediaItems;
-          const addedItem = currentMediaItems.find(
+          await addMediaFile(activeProject.id, processedItem);
+          const currentMediaFiles = mediaFiles;
+          const addedItem = currentMediaFiles.find(
             (item) =>
               item.name === processedItem.name && item.url === processedItem.url
           );
@@ -516,9 +509,6 @@ export function Timeline() {
         // Show error if file processing fails
         console.error("Error processing external files:", error);
         toast.error("Failed to process dropped files");
-      } finally {
-        setIsProcessing(false);
-        setProgress(0);
       }
     }
   };

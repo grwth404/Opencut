@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { PropertyGroup } from "../../properties-panel/property-item";
-import { BaseView } from "./base-view";
+import { PanelBaseView as BaseView } from "@/components/editor/panel-base-view";
 import { Language, LanguageSelect } from "@/components/language-select";
 import { useState, useRef, useEffect } from "react";
-import { extractTimelineAudio } from "@/lib/ffmpeg-utils";
+import { extractTimelineAudio } from "@/lib/mediabunny-utils";
 import { encryptWithRandomKey, arrayBufferToBase64 } from "@/lib/zk-encryption";
 import { useTimelineStore } from "@/stores/timeline-store";
+import { DEFAULT_TEXT_ELEMENT } from "@/constants/text-constants";
 import { Loader2, Shield, Trash2, Upload } from "lucide-react";
 import {
   Dialog,
@@ -162,24 +163,13 @@ export function Captions() {
       // Add all caption elements to the same track
       shortCaptions.forEach((caption, index) => {
         addElementToTrack(captionTrackId, {
-          type: "text",
+          ...DEFAULT_TEXT_ELEMENT,
           name: `Caption ${index + 1}`,
           content: caption.text,
           duration: caption.duration,
           startTime: caption.startTime,
-          trimStart: 0,
-          trimEnd: 0,
-          fontSize: 65,
-          fontFamily: "Arial",
-          color: "#ffffff",
-          textAlign: "center",
-          fontWeight: "bold",
-          fontStyle: "normal",
-          textDecoration: "none",
-          x: 0,
-          y: 0,
-          rotation: 0,
-          opacity: 1,
+          fontSize: 65, // Larger for captions
+          fontWeight: "bold", // Bold for captions
         } as TextElement);
       });
 

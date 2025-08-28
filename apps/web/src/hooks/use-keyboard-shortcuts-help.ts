@@ -63,6 +63,14 @@ const actionDescriptions: Record<
   "toggle-snapping": { description: "Toggle snapping", category: "Editing" },
   undo: { description: "Undo", category: "History" },
   redo: { description: "Redo", category: "History" },
+  "copy-selected": {
+    description: "Copy selected elements",
+    category: "Editing",
+  },
+  "paste-selected": {
+    description: "Paste elements at playhead",
+    category: "Editing",
+  },
 };
 
 // Convert key binding format to display format

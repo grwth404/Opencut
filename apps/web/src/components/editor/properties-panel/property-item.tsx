@@ -57,6 +57,7 @@ interface PropertyGroupProps {
   children: React.ReactNode;
   defaultExpanded?: boolean;
   className?: string;
+  titleClassName?: string;
 }
 
 export function PropertyGroup({
@@ -64,6 +65,7 @@ export function PropertyGroup({
   children,
   defaultExpanded = true,
   className,
+  titleClassName,
 }: PropertyGroupProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
@@ -73,7 +75,7 @@ export function PropertyGroup({
         className="flex items-center gap-1.5 cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <PropertyItemLabel className="cursor-pointer">
+        <PropertyItemLabel className={cn("cursor-pointer", titleClassName)}>
           {title}
         </PropertyItemLabel>
         <ChevronDown className={cn("size-3", !isExpanded && "-rotate-90")} />

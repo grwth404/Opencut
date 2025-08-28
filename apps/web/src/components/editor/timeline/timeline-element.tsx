@@ -40,10 +40,8 @@ export function TimelineElement({
   onElementMouseDown,
   onElementClick,
 }: TimelineElementProps) {
-  const { mediaItems } = useMediaStore();
+  const { mediaFiles } = useMediaStore();
   const {
-    updateElementTrim,
-    updateElementDuration,
     removeElementFromTrack,
     removeElementFromTrackWithRipple,
     dragState,
@@ -53,12 +51,13 @@ export function TimelineElement({
     rippleEditingEnabled,
     toggleElementHidden,
     toggleElementMuted,
+    copySelected,
   } = useTimelineStore();
   const { currentTime } = usePlaybackStore();
 
   const mediaItem =
     element.type === "media"
-      ? mediaItems.find((item) => item.id === element.mediaId)
+      ? mediaFiles.find((file) => file.id === element.mediaId)
       : null;
   const hasAudio = mediaItem?.type === "audio" || mediaItem?.type === "video";
 
@@ -67,8 +66,6 @@ export function TimelineElement({
       element,
       track,
       zoomLevel,
-      onUpdateTrim: updateElementTrim,
-      onUpdateDuration: updateElementDuration,
     });
 
   const { requestRevealMedia } = useMediaPanelStore.getState();
@@ -118,6 +115,11 @@ export function TimelineElement({
         (element.duration - element.trimStart - element.trimEnd) +
         0.1,
     });
+  };
+
+  const handleElementCopyContext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    copySelected();
   };
 
   const handleElementDeleteContext = (e: React.MouseEvent) => {
@@ -190,7 +192,7 @@ export function TimelineElement({
     }
 
     // Render media element ->
-    const mediaItem = mediaItems.find((item) => item.id === element.mediaId);
+    const mediaItem = mediaFiles.find((file) => file.id === element.mediaId);
     if (!mediaItem) {
       return (
         <span className="text-xs text-foreground/80 truncate">
@@ -333,6 +335,10 @@ export function TimelineElement({
         <ContextMenuItem onClick={handleElementSplitContext}>
           <Scissors className="h-4 w-4 mr-2" />
           Split at playhead
+        </ContextMenuItem>
+        <ContextMenuItem onClick={handleElementCopyContext}>
+          <Copy className="h-4 w-4 mr-2" />
+          Copy element
         </ContextMenuItem>
         <ContextMenuItem onClick={handleToggleElementContext}>
           {hasAudio ? (

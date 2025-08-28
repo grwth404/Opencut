@@ -35,9 +35,10 @@ import {
   ICONIFY_HOSTS,
   POPULAR_COLLECTIONS,
 } from "@/lib/iconify-api";
-import { cn, generateUUID } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 import Image from "next/image";
+import type { MediaFile } from "@/types/media";
 import { DraggableMediaItem } from "@/components/ui/draggable-item";
 import { InputWithBack } from "@/components/ui/input-with-back";
 import { StickerCategory } from "@/stores/stickers-store";
@@ -185,9 +186,9 @@ function EmptyView({ message }: { message: string }) {
 
 function StickersContentView({ category }: { category: StickerCategory }) {
   const { activeProject } = useProjectStore();
-  const { addMediaAtTime } = useTimelineStore();
+  const { addElementAtTime } = useTimelineStore();
   const { currentTime } = usePlaybackStore();
-  const { addMediaItem } = useMediaStore();
+  const { addMediaFile } = useMediaStore();
   const {
     searchQuery,
     selectedCollection,
@@ -286,9 +287,9 @@ function StickersContentView({ category }: { category: StickerCategory }) {
         throw new Error("Failed to download sticker");
       }
 
-      const mediaItem = {
+      const mediaItem: Omit<MediaFile, "id"> = {
         name: iconName.replace(":", "-"),
-        type: "image" as const,
+        type: "image",
         file,
         url: URL.createObjectURL(file),
         width: 200,
@@ -297,16 +298,16 @@ function StickersContentView({ category }: { category: StickerCategory }) {
         ephemeral: false,
       };
 
-      await addMediaItem(activeProject.id, mediaItem);
+      await addMediaFile(activeProject.id, mediaItem);
 
       const added = useMediaStore
         .getState()
-        .mediaItems.find(
+        .mediaFiles.find(
           (m) => m.url === mediaItem.url && m.name === mediaItem.name
         );
       if (!added) throw new Error("Sticker not in media store");
 
-      addMediaAtTime(added, currentTime);
+      addElementAtTime(added, currentTime);
 
       toast.success(`Added "${iconName}" to timeline`);
     } catch (error) {
@@ -565,7 +566,12 @@ interface StickerItemProps {
   capSize?: boolean;
 }
 
-function StickerItem({ iconName, onAdd, isAdding, capSize = false }: StickerItemProps) {
+function StickerItem({
+  iconName,
+  onAdd,
+  isAdding,
+  capSize = false,
+}: StickerItemProps) {
   const [imageError, setImageError] = useState(false);
   const [hostIndex, setHostIndex] = useState(0);
 
@@ -601,7 +607,10 @@ function StickerItem({ iconName, onAdd, isAdding, capSize = false }: StickerItem
         className="w-full h-full object-contain"
         style={
           capSize
-            ? { maxWidth: "var(--sticker-max, 160px)", maxHeight: "var(--sticker-max, 160px)" }
+            ? {
+                maxWidth: "var(--sticker-max, 160px)",
+                maxHeight: "var(--sticker-max, 160px)",
+              }
             : undefined
         }
         onError={() => {
@@ -631,8 +640,8 @@ function StickerItem({ iconName, onAdd, isAdding, capSize = false }: StickerItem
             name={displayName}
             preview={preview}
             dragData={{
-              type: "sticker",
-              iconName: iconName,
+              id: "sticker-placeholder",
+              type: "image",
               name: displayName,
             }}
             onAddToTimeline={() => onAdd(iconName)}

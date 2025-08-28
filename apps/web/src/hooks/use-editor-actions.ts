@@ -203,6 +203,23 @@ export function useEditorActions() {
   );
 
   useActionHandler(
+    "copy-selected",
+    () => {
+      if (selectedElements.length === 0) return;
+      useTimelineStore.getState().copySelected();
+    },
+    undefined
+  );
+
+  useActionHandler(
+    "paste-selected",
+    () => {
+      useTimelineStore.getState().pasteAtTime(currentTime);
+    },
+    undefined
+  );
+
+  useActionHandler(
     "toggle-snapping",
     () => {
       toggleSnapping();

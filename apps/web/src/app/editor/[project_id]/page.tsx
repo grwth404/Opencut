@@ -6,17 +6,17 @@ import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
-} from "../../../components/ui/resizable";
-import { MediaPanel } from "../../../components/editor/media-panel";
-import { PropertiesPanel } from "../../../components/editor/properties-panel";
-import { Timeline } from "../../../components/editor/timeline";
-import { PreviewPanel } from "../../../components/editor/preview-panel";
-import { EditorHeader } from "@/components/editor-header";
+} from "@/components/ui/resizable";
+import { MediaPanel } from "@/components/editor/media-panel";
+import { PropertiesPanel } from "@/components/editor/properties-panel";
+import { Timeline } from "@/components/editor/timeline";
+import { PreviewPanel } from "@/components/editor/preview-panel";
+import { EditorHeader } from "@/components/editor/editor-header";
 import { usePanelStore } from "@/stores/panel-store";
 import { useProjectStore } from "@/stores/project-store";
-import { EditorProvider } from "@/components/editor-provider";
+import { EditorProvider } from "@/components/providers/editor-provider";
 import { usePlaybackControls } from "@/hooks/use-playback-controls";
-import { Onboarding } from "@/components/onboarding";
+import { Onboarding } from "@/components/editor/onboarding";
 
 export default function Editor() {
   const {

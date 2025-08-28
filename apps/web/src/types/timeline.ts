@@ -1,4 +1,4 @@
-import { MediaType } from "@/stores/media-store";
+import { MediaType } from "@/types/media";
 import { generateUUID } from "@/lib/utils";
 
 export type TrackType = "media" | "text" | "audio";

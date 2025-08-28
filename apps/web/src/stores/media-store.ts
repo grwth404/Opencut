@@ -2,44 +2,21 @@ import { create } from "zustand";
 import { storageService } from "@/lib/storage/storage-service";
 import { useTimelineStore } from "./timeline-store";
 import { generateUUID } from "@/lib/utils";
-
-export type MediaType = "image" | "video" | "audio";
-
-export interface MediaItem {
-  id: string;
-  name: string;
-  type: MediaType;
-  file: File;
-  url?: string; // Object URL for preview
-  thumbnailUrl?: string; // For video thumbnails
-  duration?: number; // For video/audio duration
-  width?: number; // For video/image width
-  height?: number; // For video/image height
-  fps?: number; // For video frame rate
-  // Ephemeral items are used by timeline directly and should not appear in the media library or be persisted
-  ephemeral?: boolean;
-  // Text-specific properties
-  content?: string; // Text content
-  fontSize?: number; // Font size
-  fontFamily?: string; // Font family
-  color?: string; // Text color
-  backgroundColor?: string; // Background color
-  textAlign?: "left" | "center" | "right"; // Text alignment
-}
+import { MediaType, MediaFile } from "@/types/media";
 
 interface MediaStore {
-  mediaItems: MediaItem[];
+  mediaFiles: MediaFile[];
   isLoading: boolean;
 
-  // Actions - now require projectId
-  addMediaItem: (
+  // Actions
+  addMediaFile: (
     projectId: string,
-    item: Omit<MediaItem, "id">
+    file: Omit<MediaFile, "id">
   ) => Promise<void>;
-  removeMediaItem: (projectId: string, id: string) => Promise<void>;
+  removeMediaFile: (projectId: string, id: string) => Promise<void>;
   loadProjectMedia: (projectId: string) => Promise<void>;
   clearProjectMedia: (projectId: string) => Promise<void>;
-  clearAllMedia: () => void; // Clear local state only
+  clearAllMedia: () => void;
 }
 
 // Helper function to determine file type
@@ -150,8 +127,7 @@ export const getMediaDuration = (file: File): Promise<number> => {
   });
 };
 
-// Helper to get aspect ratio from MediaItem
-export const getMediaAspectRatio = (item: MediaItem): number => {
+export const getMediaAspectRatio = (item: MediaFile): number => {
   if (item.width && item.height) {
     return item.width / item.height;
   }
@@ -159,35 +135,35 @@ export const getMediaAspectRatio = (item: MediaItem): number => {
 };
 
 export const useMediaStore = create<MediaStore>((set, get) => ({
-  mediaItems: [],
+  mediaFiles: [],
   isLoading: false,
 
-  addMediaItem: async (projectId, item) => {
-    const newItem: MediaItem = {
-      ...item,
+  addMediaFile: async (projectId, file) => {
+    const newItem: MediaFile = {
+      ...file,
       id: generateUUID(),
     };
 
     // Add to local state immediately for UI responsiveness
     set((state) => ({
-      mediaItems: [...state.mediaItems, newItem],
+      mediaFiles: [...state.mediaFiles, newItem],
     }));
 
     // Save to persistent storage in background
     try {
-      await storageService.saveMediaItem(projectId, newItem);
+      await storageService.saveMediaFile(projectId, newItem);
     } catch (error) {
       console.error("Failed to save media item:", error);
       // Remove from local state if save failed
       set((state) => ({
-        mediaItems: state.mediaItems.filter((media) => media.id !== newItem.id),
+        mediaFiles: state.mediaFiles.filter((media) => media.id !== newItem.id),
       }));
     }
   },
 
-  removeMediaItem: async (projectId: string, id: string) => {
+  removeMediaFile: async (projectId: string, id: string) => {
     const state = get();
-    const item = state.mediaItems.find((media) => media.id === id);
+    const item = state.mediaFiles.find((media) => media.id === id);
 
     // Cleanup object URLs to prevent memory leaks
     if (item?.url) {
@@ -199,7 +175,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
 
     // 1) Remove from local state immediately
     set((state) => ({
-      mediaItems: state.mediaItems.filter((media) => media.id !== id),
+      mediaFiles: state.mediaFiles.filter((media) => media.id !== id),
     }));
 
     // 2) Cascade into the timeline: remove any elements using this media ID
@@ -238,7 +214,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
 
     // 3) Remove from persistent storage
     try {
-      await storageService.deleteMediaItem(projectId, id);
+      await storageService.deleteMediaFile(projectId, id);
     } catch (error) {
       console.error("Failed to delete media item:", error);
     }
@@ -248,7 +224,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      const mediaItems = await storageService.loadAllMediaItems(projectId);
+      const mediaItems = await storageService.loadAllMediaFiles(projectId);
 
       // Regenerate thumbnails for video items
       const updatedMediaItems = await Promise.all(
@@ -275,7 +251,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
         })
       );
 
-      set({ mediaItems: updatedMediaItems });
+      set({ mediaFiles: updatedMediaItems });
     } catch (error) {
       console.error("Failed to load media items:", error);
     } finally {
@@ -287,7 +263,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
     const state = get();
 
     // Cleanup all object URLs
-    state.mediaItems.forEach((item) => {
+    state.mediaFiles.forEach((item) => {
       if (item.url) {
         URL.revokeObjectURL(item.url);
       }
@@ -297,13 +273,13 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
     });
 
     // Clear local state
-    set({ mediaItems: [] });
+    set({ mediaFiles: [] });
 
     // Clear persistent storage
     try {
-      const mediaIds = state.mediaItems.map((item) => item.id);
+      const mediaIds = state.mediaFiles.map((item) => item.id);
       await Promise.all(
-        mediaIds.map((id) => storageService.deleteMediaItem(projectId, id))
+        mediaIds.map((id) => storageService.deleteMediaFile(projectId, id))
       );
     } catch (error) {
       console.error("Failed to clear media items from storage:", error);
@@ -314,7 +290,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
     const state = get();
 
     // Cleanup all object URLs
-    state.mediaItems.forEach((item) => {
+    state.mediaFiles.forEach((item) => {
       if (item.url) {
         URL.revokeObjectURL(item.url);
       }
@@ -324,6 +300,6 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
     });
 
     // Clear local state
-    set({ mediaItems: [] });
+    set({ mediaFiles: [] });
   },
 }));

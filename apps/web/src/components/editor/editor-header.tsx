@@ -1,10 +1,10 @@
 "use client";
 
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import { ChevronDown, ArrowLeft, SquarePen, Trash, Sun } from "lucide-react";
-import { HeaderBase } from "./header-base";
+import { HeaderBase } from "../header-base";
 import { useProjectStore } from "@/stores/project-store";
-import { KeyboardShortcutsHelp } from "./keyboard-shortcuts-help";
+import { KeyboardShortcutsHelp } from "../keyboard-shortcuts-help";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -12,10 +12,10 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+} from "../ui/dropdown-menu";
 import Link from "next/link";
-import { RenameProjectDialog } from "./rename-project-dialog";
-import { DeleteProjectDialog } from "./delete-project-dialog";
+import { RenameProjectDialog } from "../rename-project-dialog";
+import { DeleteProjectDialog } from "../delete-project-dialog";
 import { useRouter } from "next/navigation";
 import { FaDiscord } from "react-icons/fa6";
 import { useTheme } from "next-themes";
