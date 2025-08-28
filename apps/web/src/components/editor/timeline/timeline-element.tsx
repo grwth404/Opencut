@@ -51,6 +51,7 @@ export function TimelineElement({
     rippleEditingEnabled,
     toggleElementHidden,
     toggleElementMuted,
+    copySelected,
   } = useTimelineStore();
   const { currentTime } = usePlaybackStore();
 
@@ -114,6 +115,11 @@ export function TimelineElement({
         (element.duration - element.trimStart - element.trimEnd) +
         0.1,
     });
+  };
+
+  const handleElementCopyContext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    copySelected();
   };
 
   const handleElementDeleteContext = (e: React.MouseEvent) => {
@@ -329,6 +335,10 @@ export function TimelineElement({
         <ContextMenuItem onClick={handleElementSplitContext}>
           <Scissors className="h-4 w-4 mr-2" />
           Split at playhead
+        </ContextMenuItem>
+        <ContextMenuItem onClick={handleElementCopyContext}>
+          <Copy className="h-4 w-4 mr-2" />
+          Copy element
         </ContextMenuItem>
         <ContextMenuItem onClick={handleToggleElementContext}>
           {hasAudio ? (

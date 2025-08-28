@@ -41,6 +41,11 @@ interface TimelineStore {
   history: TimelineTrack[][];
   redoStack: TimelineTrack[][];
 
+  // Clipboard buffer
+  clipboard: {
+    items: Array<{ trackType: TrackType; element: CreateTimelineElement }>;
+  } | null;
+
   // Always returns properly ordered tracks with main track ensured
   tracks: TimelineTrack[];
 
@@ -176,6 +181,10 @@ interface TimelineStore {
   loadProjectTimeline: (projectId: string) => Promise<void>;
   saveProjectTimeline: (projectId: string) => Promise<void>;
   clearTimeline: () => void;
+
+  // Clipboard actions
+  copySelected: () => void;
+  pasteAtTime: (time: number) => void;
   updateTextElement: (
     trackId: string,
     elementId: string,
@@ -253,6 +262,7 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     redoStack: [],
     selectedElements: [],
     rippleEditingEnabled: false,
+    clipboard: null,
 
     // Snapping settings defaults
     snappingEnabled: true,
@@ -493,10 +503,12 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       const newElement: TimelineElement = {
         ...elementData,
         id: generateUUID(),
-        startTime: elementData.startTime || 0,
-        trimStart: 0,
-        trimEnd: 0,
-        ...(elementData.type === "media" ? { muted: false } : {}),
+        startTime: elementData.startTime,
+        trimStart: elementData.trimStart ?? 0,
+        trimEnd: elementData.trimEnd ?? 0,
+        ...(elementData.type === "media"
+          ? { muted: elementData.muted ?? false }
+          : {}),
       } as TimelineElement;
 
       if (isFirstElement && newElement.type === "media") {
@@ -1347,7 +1359,12 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
     clearTimeline: () => {
       const defaultTracks = ensureMainTrack([]);
       updateTracks(defaultTracks);
-      set({ history: [], redoStack: [], selectedElements: [] });
+      set({
+        history: [],
+        redoStack: [],
+        selectedElements: [],
+        clipboard: null,
+      });
     },
 
     // Snapping actions
@@ -1450,6 +1467,79 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
         muted: false,
       });
       return true;
+    },
+
+    copySelected: () => {
+      const { selectedElements, _tracks } = get();
+      if (selectedElements.length === 0) return;
+
+      const items: Array<{
+        trackType: TrackType;
+        element: CreateTimelineElement;
+      }> = [];
+
+      for (const { trackId, elementId } of selectedElements) {
+        const track = _tracks.find((t) => t.id === trackId);
+        const element = track?.elements.find((e) => e.id === elementId);
+        if (!track || !element) continue;
+
+        // Prepare a creation-friendly copy without id
+        const { id: _id, ...rest } = element as TimelineElement;
+        items.push({
+          trackType: track.type,
+          element: rest as CreateTimelineElement,
+        });
+      }
+
+      set({ clipboard: { items } });
+    },
+
+    pasteAtTime: (time) => {
+      const { clipboard } = get();
+      if (!clipboard || clipboard.items.length === 0) return;
+
+      // Determine reference start time offset based on earliest element in clipboard
+      const minStart = Math.min(
+        ...clipboard.items.map((x) => x.element.startTime)
+      );
+
+      get().pushHistory();
+
+      for (const item of clipboard.items) {
+        const targetTrackId = get().findOrCreateTrack(item.trackType);
+        const relativeOffset = item.element.startTime - minStart;
+        const startTime = Math.max(0, time + relativeOffset);
+
+        // Ensure no overlap on target track
+        const duration =
+          item.element.duration - item.element.trimStart - item.element.trimEnd;
+        const hasOverlap = get().checkElementOverlap(
+          targetTrackId,
+          startTime,
+          duration
+        );
+        if (hasOverlap) {
+          // If overlap, nudge forward slightly until free (simple resolve)
+          let candidate = startTime;
+          let safety = 0;
+          while (
+            get().checkElementOverlap(targetTrackId, candidate, duration) &&
+            safety < 1000
+          ) {
+            candidate += 0.01;
+            safety += 1;
+          }
+          get().addElementToTrack(targetTrackId, {
+            ...item.element,
+            startTime: candidate,
+          });
+        } else {
+          get().addElementToTrack(targetTrackId, {
+            ...item.element,
+            startTime,
+          });
+        }
+      }
     },
   };
 });

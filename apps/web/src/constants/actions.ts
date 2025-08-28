@@ -45,7 +45,9 @@ export type Action =
   | "duplicate-selected" // Duplicate selected element
   | "toggle-snapping" // Toggle snapping
   | "undo" // Undo last action
-  | "redo"; // Redo last undone action
+  | "redo" // Redo last undone action
+  | "copy-selected" // Copy selected elements to clipboard
+  | "paste-selected"; // Paste elements from clipboard at playhead
 
 /**
  * Defines the arguments, if present for a given type that is required to be passed on
