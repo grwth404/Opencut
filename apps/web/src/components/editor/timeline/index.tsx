@@ -878,6 +878,8 @@ export function Timeline() {
                               track={track}
                               zoomLevel={zoomLevel}
                               onSnapPointChange={handleSnapPointChange}
+                              rulerScrollRef={rulerScrollRef}
+                              tracksScrollRef={tracksScrollRef}
                             />
                           </div>
                         </ContextMenuTrigger>
