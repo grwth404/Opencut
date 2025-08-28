@@ -4,6 +4,7 @@ import {
   WebMOutputFormat,
   BufferTarget,
   CanvasSource,
+  AudioBufferSource,
   QUALITY_LOW,
   QUALITY_MEDIUM,
   QUALITY_HIGH,
@@ -19,6 +20,7 @@ import { ExportOptions, ExportResult } from "@/types/export";
 export const DEFAULT_EXPORT_OPTIONS: ExportOptions = {
   format: "mp4",
   quality: "high",
+  includeAudio: true,
 };
 
 const qualityMap = {
@@ -28,10 +30,124 @@ const qualityMap = {
   very_high: QUALITY_VERY_HIGH,
 };
 
+interface AudioElement {
+  buffer: AudioBuffer;
+  startTime: number;
+  duration: number;
+  trimStart: number;
+  trimEnd: number;
+  muted: boolean;
+}
+
+async function createTimelineAudioBuffer(
+  tracks: any[],
+  mediaFiles: any[],
+  duration: number,
+  sampleRate: number = 44100
+): Promise<AudioBuffer | null> {
+  // Get Web Audio context
+  const audioContext = new (window.AudioContext ||
+    (window as any).webkitAudioContext)();
+
+  // Collect all audio elements from timeline
+  const audioElements: AudioElement[] = [];
+  const mediaMap = new Map(mediaFiles.map((m) => [m.id, m]));
+
+  for (const track of tracks) {
+    if (track.muted) continue;
+
+    for (const element of track.elements) {
+      if (element.type !== "media") continue;
+
+      const mediaItem = mediaMap.get(element.mediaId);
+      if (!mediaItem || mediaItem.type !== "audio") continue;
+
+      const visibleDuration =
+        element.duration - element.trimStart - element.trimEnd;
+      if (visibleDuration <= 0) continue;
+
+      try {
+        // Decode audio file
+        const arrayBuffer = await mediaItem.file.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(
+          arrayBuffer.slice(0)
+        );
+
+        audioElements.push({
+          buffer: audioBuffer,
+          startTime: element.startTime,
+          duration: element.duration,
+          trimStart: element.trimStart,
+          trimEnd: element.trimEnd,
+          muted: element.muted || track.muted || false,
+        });
+      } catch (error) {
+        console.warn(`Failed to decode audio file ${mediaItem.name}:`, error);
+      }
+    }
+  }
+
+  if (audioElements.length === 0) {
+    return null; // No audio to mix
+  }
+
+  // Create output buffer
+  const outputChannels = 2; // Stereo
+  const outputLength = Math.ceil(duration * sampleRate);
+  const outputBuffer = audioContext.createBuffer(
+    outputChannels,
+    outputLength,
+    sampleRate
+  );
+
+  // Mix all audio elements
+  for (const element of audioElements) {
+    if (element.muted) continue;
+
+    const {
+      buffer,
+      startTime,
+      trimStart,
+      trimEnd,
+      duration: elementDuration,
+    } = element;
+
+    // Calculate timing
+    const sourceStartSample = Math.floor(trimStart * buffer.sampleRate);
+    const sourceDuration = elementDuration - trimStart - trimEnd;
+    const sourceLengthSamples = Math.floor(sourceDuration * buffer.sampleRate);
+    const outputStartSample = Math.floor(startTime * sampleRate);
+
+    // Resample if needed (simple approach)
+    const resampleRatio = sampleRate / buffer.sampleRate;
+    const resampledLength = Math.floor(sourceLengthSamples * resampleRatio);
+
+    // Mix each channel
+    for (let channel = 0; channel < outputChannels; channel++) {
+      const outputData = outputBuffer.getChannelData(channel);
+      const sourceChannel = Math.min(channel, buffer.numberOfChannels - 1);
+      const sourceData = buffer.getChannelData(sourceChannel);
+
+      for (let i = 0; i < resampledLength; i++) {
+        const outputIndex = outputStartSample + i;
+        if (outputIndex >= outputLength) break;
+
+        // Simple resampling (could be improved with proper interpolation)
+        const sourceIndex = sourceStartSample + Math.floor(i / resampleRatio);
+        if (sourceIndex >= sourceData.length) break;
+
+        outputData[outputIndex] += sourceData[sourceIndex];
+      }
+    }
+  }
+
+  return outputBuffer;
+}
+
 export async function exportProject(
   options: ExportOptions
 ): Promise<ExportResult> {
-  const { format, quality, fps, onProgress, onCancel } = options;
+  const { format, quality, fps, includeAudio, onProgress, onCancel } = options;
 
   try {
     const timelineStore = useTimelineStore.getState();
@@ -81,8 +197,37 @@ export async function exportProject(
 
     output.addVideoTrack(videoSource, { frameRate: exportFps });
 
-    // Start the output
+    // Add audio track if requested (but don't add data yet)
+    let audioSource: AudioBufferSource | null = null;
+    let audioBuffer: AudioBuffer | null = null;
+
+    if (includeAudio) {
+      onProgress?.(0.05); // 5% for audio processing
+
+      audioBuffer = await createTimelineAudioBuffer(
+        tracks,
+        mediaFiles,
+        duration
+      );
+
+      if (audioBuffer) {
+        audioSource = new AudioBufferSource({
+          codec: format === "webm" ? "opus" : "aac", // Opus for WebM, AAC for MP4
+          bitrate: qualityMap[quality], // Use same quality for audio
+        });
+
+        output.addAudioTrack(audioSource);
+      }
+    }
+
+    // Start the output (after all tracks are added)
     await output.start();
+
+    // Now add audio data after starting
+    if (audioSource && audioBuffer) {
+      await audioSource.add(audioBuffer);
+      audioSource.close();
+    }
 
     const totalFrames = Math.ceil(duration * exportFps);
     let cancelled = false;
@@ -114,7 +259,11 @@ export async function exportProject(
       const frameDuration = 1 / exportFps;
       await videoSource.add(time, frameDuration);
 
-      onProgress?.(frameIndex / totalFrames);
+      // Adjust progress to account for audio processing (5% at start)
+      const videoProgress = includeAudio
+        ? 0.05 + (frameIndex / totalFrames) * 0.95
+        : frameIndex / totalFrames;
+      onProgress?.(videoProgress);
     }
 
     if (cancelled) {

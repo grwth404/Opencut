@@ -7,6 +7,7 @@ import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Progress } from "../ui/progress";
+import { Checkbox } from "../ui/checkbox";
 import { cn } from "@/lib/utils";
 import {
   exportProject,
@@ -75,6 +76,9 @@ function ExportPopover({
   const [quality, setQuality] = useState<ExportQuality>(
     DEFAULT_EXPORT_OPTIONS.quality
   );
+  const [includeAudio, setIncludeAudio] = useState<boolean>(
+    DEFAULT_EXPORT_OPTIONS.includeAudio || true
+  );
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [exportResult, setExportResult] = useState<ExportResult | null>(null);
@@ -90,6 +94,7 @@ function ExportPopover({
       format,
       quality,
       fps: activeProject.fps,
+      includeAudio,
       onProgress: setProgress,
       onCancel: () => false, // TODO: Add cancel functionality
     });
@@ -196,6 +201,23 @@ function ExportPopover({
                       </Label>
                     </div>
                   </RadioGroup>
+                </PropertyGroup>
+
+                <PropertyGroup
+                  title="Audio"
+                  titleClassName="text-sm"
+                  defaultExpanded={false}
+                >
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="include-audio"
+                      checked={includeAudio}
+                      onCheckedChange={(checked) => setIncludeAudio(!!checked)}
+                    />
+                    <Label htmlFor="include-audio">
+                      Include audio in export
+                    </Label>
+                  </div>
                 </PropertyGroup>
               </div>
 
