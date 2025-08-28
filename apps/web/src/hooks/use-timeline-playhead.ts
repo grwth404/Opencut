@@ -2,6 +2,7 @@ import { snapTimeToFrame } from "@/constants/timeline-constants";
 import { DEFAULT_FPS, useProjectStore } from "@/stores/project-store";
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useEdgeAutoScroll } from "@/hooks/use-edge-auto-scroll";
 
 interface UseTimelinePlayheadProps {
   currentTime: number;
@@ -31,9 +32,6 @@ export function useTimelinePlayhead({
   // Ruler drag detection state
   const [isDraggingRuler, setIsDraggingRuler] = useState(false);
   const [hasDraggedRuler, setHasDraggedRuler] = useState(false);
-
-  // Auto-scroll state during dragging
-  const autoScrollRef = useRef<number | null>(null);
   const lastMouseXRef = useRef<number>(0);
 
   const playheadPosition =
@@ -117,59 +115,13 @@ export function useTimelinePlayhead({
     [duration, zoomLevel, seek, rulerRef]
   );
 
-  // Auto-scroll function during dragging
-  const performAutoScroll = useCallback(() => {
-    const rulerViewport = rulerScrollRef.current;
-    const tracksViewport = tracksScrollRef.current;
-
-    if (!rulerViewport || !tracksViewport || !isScrubbing) return;
-
-    const viewportRect = rulerViewport.getBoundingClientRect();
-    const mouseX = lastMouseXRef.current;
-    const mouseXRelative = mouseX - viewportRect.left;
-
-    const edgeThreshold = 100; // pixels from edge to start scrolling
-    const maxScrollSpeed = 15; // max pixels per frame
-    const viewportWidth = rulerViewport.clientWidth;
-
-    // Calculate timeline content boundaries
-    const timelineContentWidth = duration * 50 * zoomLevel; // TIMELINE_CONSTANTS.PIXELS_PER_SECOND = 50
-    const scrollMax = Math.max(0, timelineContentWidth - viewportWidth);
-
-    let scrollSpeed = 0;
-
-    // Check if near left edge (and can scroll left)
-    if (mouseXRelative < edgeThreshold && rulerViewport.scrollLeft > 0) {
-      const edgeDistance = Math.max(0, mouseXRelative);
-      const intensity = 1 - edgeDistance / edgeThreshold;
-      scrollSpeed = -maxScrollSpeed * intensity;
-    }
-    // Check if near right edge (and can scroll right, and haven't reached timeline end)
-    else if (
-      mouseXRelative > viewportWidth - edgeThreshold &&
-      rulerViewport.scrollLeft < scrollMax
-    ) {
-      const edgeDistance = Math.max(
-        0,
-        viewportWidth - edgeThreshold - mouseXRelative
-      );
-      const intensity = 1 - edgeDistance / edgeThreshold;
-      scrollSpeed = maxScrollSpeed * intensity;
-    }
-
-    if (scrollSpeed !== 0) {
-      const newScrollLeft = Math.max(
-        0,
-        Math.min(scrollMax, rulerViewport.scrollLeft + scrollSpeed)
-      );
-      rulerViewport.scrollLeft = newScrollLeft;
-      tracksViewport.scrollLeft = newScrollLeft;
-    }
-
-    if (isScrubbing) {
-      autoScrollRef.current = requestAnimationFrame(performAutoScroll);
-    }
-  }, [isScrubbing, rulerScrollRef, tracksScrollRef, duration, zoomLevel]);
+  useEdgeAutoScroll({
+    isActive: isScrubbing,
+    getMouseClientX: () => lastMouseXRef.current,
+    rulerScrollRef,
+    tracksScrollRef,
+    contentWidth: duration * 50 * zoomLevel,
+  });
 
   // Mouse move/up event handlers
   useEffect(() => {
@@ -188,12 +140,6 @@ export function useTimelinePlayhead({
       if (scrubTime !== null) seek(scrubTime); // finalize seek
       setScrubTime(null);
 
-      // Stop auto-scrolling
-      if (autoScrollRef.current) {
-        cancelAnimationFrame(autoScrollRef.current);
-        autoScrollRef.current = null;
-      }
-
       // Handle ruler click vs drag
       if (isDraggingRuler) {
         setIsDraggingRuler(false);
@@ -208,16 +154,12 @@ export function useTimelinePlayhead({
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
 
-    // Start auto-scrolling
-    autoScrollRef.current = requestAnimationFrame(performAutoScroll);
+    // Edge auto-scroll is handled by useEdgeAutoScroll
 
     return () => {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
-      if (autoScrollRef.current) {
-        cancelAnimationFrame(autoScrollRef.current);
-        autoScrollRef.current = null;
-      }
+      // nothing to cleanup for edge auto scroll
     };
   }, [
     isScrubbing,
@@ -226,7 +168,7 @@ export function useTimelinePlayhead({
     handleScrub,
     isDraggingRuler,
     hasDraggedRuler,
-    performAutoScroll,
+    // edge auto scroll hook is independent
   ]);
 
   // --- Playhead auto-scroll effect (only during playback) ---

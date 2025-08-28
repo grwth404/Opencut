@@ -24,15 +24,20 @@ import {
 } from "@/constants/timeline-constants";
 import { DEFAULT_FPS, useProjectStore } from "@/stores/project-store";
 import { useTimelineSnapping, SnapPoint } from "@/hooks/use-timeline-snapping";
+import { useEdgeAutoScroll } from "@/hooks/use-edge-auto-scroll";
 
 export function TimelineTrackContent({
   track,
   zoomLevel,
   onSnapPointChange,
+  rulerScrollRef,
+  tracksScrollRef,
 }: {
   track: TimelineTrack;
   zoomLevel: number;
   onSnapPointChange?: (snapPoint: SnapPoint | null) => void;
+  rulerScrollRef: React.RefObject<HTMLDivElement>;
+  tracksScrollRef: React.RefObject<HTMLDivElement>;
 }) {
   const { mediaFiles } = useMediaStore();
   const {
@@ -54,7 +59,7 @@ export function TimelineTrackContent({
     rippleEditingEnabled,
   } = useTimelineStore();
 
-  const { currentTime } = usePlaybackStore();
+  const { currentTime, duration } = usePlaybackStore();
 
   // Initialize snapping hook
   const { snapElementPosition, snapElementEdge } = useTimelineSnapping({
@@ -126,12 +131,15 @@ export function TimelineTrackContent({
     y: number;
   } | null>(null);
 
+  const lastMouseXRef = useRef(0);
+
   // Set up mouse event listeners for drag
   useEffect(() => {
     if (!dragState.isDragging) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!timelineRef.current) return;
+      lastMouseXRef.current = e.clientX;
 
       // On first mouse move during drag, ensure the element is selected
       if (dragState.elementId && dragState.trackId) {
@@ -401,6 +409,14 @@ export function TimelineTrackContent({
     selectElement,
     onSnapPointChange,
   ]);
+
+  useEdgeAutoScroll({
+    isActive: dragState.isDragging,
+    getMouseClientX: () => lastMouseXRef.current,
+    rulerScrollRef,
+    tracksScrollRef,
+    contentWidth: duration * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel,
+  });
 
   const handleElementMouseDown = (
     e: React.MouseEvent,
