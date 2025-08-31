@@ -16,6 +16,8 @@ import { useMediaStore } from "@/stores/media-store";
 import { useProjectStore } from "@/stores/project-store";
 import { DEFAULT_FPS } from "@/stores/project-store";
 import { ExportOptions, ExportResult } from "@/types/export";
+import { TimelineTrack } from "@/types/timeline";
+import { MediaFile } from "@/types/media";
 
 export const DEFAULT_EXPORT_OPTIONS: ExportOptions = {
   format: "mp4",
@@ -40,8 +42,8 @@ interface AudioElement {
 }
 
 async function createTimelineAudioBuffer(
-  tracks: any[],
-  mediaFiles: any[],
+  tracks: TimelineTrack[],
+  mediaFiles: MediaFile[],
   duration: number,
   sampleRate: number = 44100
 ): Promise<AudioBuffer | null> {
@@ -51,7 +53,7 @@ async function createTimelineAudioBuffer(
 
   // Collect all audio elements from timeline
   const audioElements: AudioElement[] = [];
-  const mediaMap = new Map(mediaFiles.map((m) => [m.id, m]));
+  const mediaMap = new Map<string, MediaFile>(mediaFiles.map((m) => [m.id, m]));
 
   for (const track of tracks) {
     if (track.muted) continue;
@@ -59,11 +61,12 @@ async function createTimelineAudioBuffer(
     for (const element of track.elements) {
       if (element.type !== "media") continue;
 
-      const mediaItem = mediaMap.get(element.mediaId);
+      const mediaElement = element;
+      const mediaItem = mediaMap.get(mediaElement.mediaId);
       if (!mediaItem || mediaItem.type !== "audio") continue;
 
       const visibleDuration =
-        element.duration - element.trimStart - element.trimEnd;
+        mediaElement.duration - mediaElement.trimStart - mediaElement.trimEnd;
       if (visibleDuration <= 0) continue;
 
       try {
@@ -75,11 +78,11 @@ async function createTimelineAudioBuffer(
 
         audioElements.push({
           buffer: audioBuffer,
-          startTime: element.startTime,
-          duration: element.duration,
-          trimStart: element.trimStart,
-          trimEnd: element.trimEnd,
-          muted: element.muted || track.muted || false,
+          startTime: mediaElement.startTime,
+          duration: mediaElement.duration,
+          trimStart: mediaElement.trimStart,
+          trimEnd: mediaElement.trimEnd,
+          muted: mediaElement.muted || track.muted || false,
         });
       } catch (error) {
         console.warn(`Failed to decode audio file ${mediaItem.name}:`, error);

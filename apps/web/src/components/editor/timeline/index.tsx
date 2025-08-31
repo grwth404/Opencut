@@ -57,6 +57,9 @@ import { useSelectionBox } from "@/hooks/use-selection-box";
 import { SnapIndicator } from "../snap-indicator";
 import { SnapPoint } from "@/hooks/use-timeline-snapping";
 import type { DragData, TimelineTrack, TrackType } from "@/types/timeline";
+import { TimelineCacheIndicator } from "./timeline-cache-indicator";
+import { TimelineMarker } from "./timeline-marker";
+import { useFrameCache } from "@/hooks/use-frame-cache";
 import {
   getTrackHeight,
   getCumulativeHeightBefore,
@@ -85,6 +88,7 @@ export function Timeline() {
   const { mediaFiles, addMediaFile } = useMediaStore();
   const { activeProject } = useProjectStore();
   const { currentTime, duration, seek, setDuration } = usePlaybackStore();
+  const { getRenderStatus } = useFrameCache();
   const [isDragOver, setIsDragOver] = useState(false);
   const { addElementToNewTrack } = useTimelineStore();
   const dragCounterRef = useRef(0);
@@ -637,7 +641,7 @@ export function Timeline() {
         {/* Timeline Header with Ruler */}
         <div className="flex bg-panel sticky top-0 z-10">
           {/* Track Labels Header */}
-          <div className="w-28 shrink-0 bg-panel border-r flex items-center justify-between px-3 py-2">
+          <div className="w-28 shrink-0 bg-panel border-r border-t flex items-center justify-between px-3 py-2">
             {/* Empty space */}
             <span className="text-sm font-medium text-muted-foreground opacity-0">
               .
@@ -658,7 +662,21 @@ export function Timeline() {
             onClick={handleTimelineContentClick}
             data-ruler-area
           >
-            <ScrollArea className="w-full" ref={rulerScrollRef}>
+            <ScrollArea
+              className="w-full"
+              ref={rulerScrollRef}
+              onScroll={(e) => {
+                if (isUpdatingRef.current) return;
+                isUpdatingRef.current = true;
+                const tracksViewport = tracksScrollRef.current;
+                if (tracksViewport) {
+                  tracksViewport.scrollLeft = (
+                    e.currentTarget as HTMLDivElement
+                  ).scrollLeft;
+                }
+                isUpdatingRef.current = false;
+              }}
+            >
               <div
                 ref={rulerRef}
                 className="relative h-10 select-none cursor-default"
@@ -667,6 +685,14 @@ export function Timeline() {
                 }}
                 onMouseDown={handleRulerMouseDown}
               >
+                <TimelineCacheIndicator
+                  duration={duration}
+                  zoomLevel={zoomLevel}
+                  tracks={tracks}
+                  mediaFiles={mediaFiles}
+                  activeProject={activeProject}
+                  getRenderStatus={getRenderStatus}
+                />
                 {/* Time markers */}
                 {(() => {
                   // Calculate appropriate time interval based on zoom level
@@ -693,55 +719,13 @@ export function Timeline() {
                       time % (interval >= 1 ? Math.max(1, interval) : 1) === 0;
 
                     return (
-                      <div
+                      <TimelineMarker
                         key={i}
-                        className={`absolute top-0 h-4 ${
-                          isMainMarker
-                            ? "border-l border-muted-foreground/40"
-                            : "border-l border-muted-foreground/20"
-                        }`}
-                        style={{
-                          left: `${
-                            time *
-                            TIMELINE_CONSTANTS.PIXELS_PER_SECOND *
-                            zoomLevel
-                          }px`,
-                        }}
-                      >
-                        <span
-                          className={`absolute top-1 left-1 text-[0.6rem] ${
-                            isMainMarker
-                              ? "text-muted-foreground font-medium"
-                              : "text-muted-foreground/70"
-                          }`}
-                        >
-                          {(() => {
-                            const formatTime = (seconds: number) => {
-                              const hours = Math.floor(seconds / 3600);
-                              const minutes = Math.floor((seconds % 3600) / 60);
-                              const secs = seconds % 60;
-
-                              if (hours > 0) {
-                                return `${hours}:${minutes
-                                  .toString()
-                                  .padStart(2, "0")}:${Math.floor(secs)
-                                  .toString()
-                                  .padStart(2, "0")}`;
-                              }
-                              if (minutes > 0) {
-                                return `${minutes}:${Math.floor(secs)
-                                  .toString()
-                                  .padStart(2, "0")}`;
-                              }
-                              if (interval >= 1) {
-                                return `${Math.floor(secs)}s`;
-                              }
-                              return `${secs.toFixed(1)}s`;
-                            };
-                            return formatTime(time);
-                          })()}
-                        </span>
-                      </div>
+                        time={time}
+                        zoomLevel={zoomLevel}
+                        interval={interval}
+                        isMainMarker={isMainMarker}
+                      />
                     );
                   }).filter(Boolean);
                 })()}
@@ -836,7 +820,21 @@ export function Timeline() {
               containerRef={tracksContainerRef}
               isActive={selectionBox?.isActive || false}
             />
-            <ScrollArea className="w-full h-full" ref={tracksScrollRef}>
+            <ScrollArea
+              className="w-full h-full"
+              ref={tracksScrollRef}
+              onScroll={(e) => {
+                if (isUpdatingRef.current) return;
+                isUpdatingRef.current = true;
+                const rulerViewport = rulerScrollRef.current;
+                if (rulerViewport) {
+                  rulerViewport.scrollLeft = (
+                    e.currentTarget as HTMLDivElement
+                  ).scrollLeft;
+                }
+                isUpdatingRef.current = false;
+              }}
+            >
               <div
                 className="relative flex-1"
                 style={{
@@ -1085,7 +1083,7 @@ function TimelineToolbar({
 
   const currentBookmarked = isBookmarked(currentTime);
   return (
-    <div className="border-b flex items-center justify-between px-2 py-1">
+    <div className=" flex items-center justify-between px-2 py-1">
       <div className="flex items-center gap-1 w-full">
         <TooltipProvider delayDuration={500}>
           <Tooltip>
