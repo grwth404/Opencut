@@ -132,7 +132,7 @@ function ExportPopover({
   };
 
   return (
-    <PopoverContent className="w-80 mr-4 flex flex-col gap-3">
+    <PopoverContent className="w-80 mr-4 flex flex-col gap-3 bg-background">
       <>
         <div className="flex items-center justify-between">
           <h3 className=" font-medium">
