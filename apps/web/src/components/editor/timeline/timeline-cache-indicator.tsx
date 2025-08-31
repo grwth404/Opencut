@@ -97,7 +97,7 @@ export function TimelineCacheIndicator({
             key={index}
             className={cn(
               "absolute top-0 h-px",
-              segment.cached ? "bg-primary" : "bg-border"
+              segment.cached ? "bg-primary" : "bg-transparent"
             )}
             style={{
               left: `${startX}px`,
