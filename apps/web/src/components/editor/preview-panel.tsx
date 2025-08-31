@@ -260,6 +260,7 @@ export function PreviewPanel() {
   }, []);
 
   const hasAnyElements = tracks.some((track) => track.elements.length > 0);
+  const shouldRenderPreview = hasAnyElements || activeProject?.backgroundType;
   const getActiveElements = (): ActiveElement[] => {
     const activeElements: ActiveElement[] = [];
 
@@ -701,7 +702,7 @@ export function PreviewPanel() {
           className="flex-1 flex flex-col items-center justify-center min-h-0 min-w-0"
         >
           <div className="flex-1" />
-          {hasAnyElements ? (
+          {shouldRenderPreview ? (
             <div
               ref={previewRef}
               className="relative overflow-hidden border"
@@ -727,9 +728,7 @@ export function PreviewPanel() {
                 aria-label="Video preview canvas"
               />
               {activeElements.length === 0 ? (
-                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                  No elements at current time
-                </div>
+                <></>
               ) : (
                 activeElements.map((elementData) => renderElement(elementData))
               )}

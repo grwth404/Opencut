@@ -58,13 +58,9 @@ export async function renderTimelineFrame({
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
   }
 
-  // If backgroundColor is a CSS gradient string, draw it using JS (no foreignObject) to avoid CORS tainting
+  // If backgroundColor is a CSS gradient string, draw it
   if (backgroundColor && backgroundColor.includes("gradient")) {
-    try {
-      drawCssBackground(ctx, canvasWidth, canvasHeight, backgroundColor);
-    } catch {
-      // best-effort; ignore failures
-    }
+    drawCssBackground(ctx, canvasWidth, canvasHeight, backgroundColor);
   }
 
   const scaleX = projectCanvasSize ? canvasWidth / projectCanvasSize.width : 1;

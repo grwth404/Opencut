@@ -1,6 +1,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 interface PanelBaseViewProps {
   children?: React.ReactNode;
@@ -25,7 +26,7 @@ function ViewContent({
 }) {
   return (
     <ScrollArea className="flex-1">
-      <div className={`p-5 h-full ${className}`}>{children}</div>
+      <div className={cn("p-5", className)}>{children}</div>
     </ScrollArea>
   );
 }
@@ -40,7 +41,7 @@ export function PanelBaseView({
   ref,
 }: PanelBaseViewProps) {
   return (
-    <div className={`h-full flex flex-col ${className}`} ref={ref}>
+    <div className={cn("h-full flex flex-col", className)} ref={ref}>
       {!tabs || tabs.length === 0 ? (
         <ViewContent className={className}>{children}</ViewContent>
       ) : (

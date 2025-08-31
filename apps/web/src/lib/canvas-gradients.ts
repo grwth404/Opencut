@@ -15,10 +15,15 @@ function splitBackgroundLayers(input: string): string[] {
   return layers;
 }
 
-function extractColorFromStop(stop: string): string {
+function parseColorStop(stop: string): { color: string; position?: number } {
   const s = stop.trim();
-  const funcs = ["rgba(", "rgb(", "hsla(", "hsl("] as const;
-  for (const fn of funcs) {
+
+  // Handle functional colors like rgba(), rgb(), hsla(), hsl()
+  const colorFunctions = ["rgba(", "rgb(", "hsla(", "hsl("];
+  let color = "";
+  let remaining = "";
+
+  for (const fn of colorFunctions) {
     if (s.startsWith(fn)) {
       let depth = 0;
       for (let i = 0; i < s.length; i += 1) {
@@ -27,33 +32,52 @@ function extractColorFromStop(stop: string): string {
         else if (ch === ")") {
           depth -= 1;
           if (depth === 0) {
-            return s.slice(0, i + 1);
+            color = s.slice(0, i + 1);
+            remaining = s.slice(i + 1).trim();
+            break;
           }
         }
       }
-      return s;
+      break;
     }
   }
-  const firstToken = s.split(" ")[0] as string;
-  return firstToken;
+
+  if (!color) {
+    const parts = s.split(/\s+/);
+    color = parts[0] as string;
+    remaining = parts.slice(1).join(" ");
+  }
+
+  // Convert transparent to transparent white for better blending
+  if (color === "transparent") {
+    color = "rgba(255, 255, 255, 0)";
+  }
+
+  // Parse position if present
+  let position: number | undefined;
+  if (remaining) {
+    const posMatch = remaining.match(/(\d+(?:\.\d+)?)%/);
+    if (posMatch) {
+      position = parseFloat(posMatch[1] as string) / 100;
+    }
+  }
+
+  return { color, position };
 }
 
-function drawLinearGradient(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  layer: string
-): void {
+function parseLinearGradient(layer: string, width: number, height: number) {
   const inside = layer.slice(layer.indexOf("(") + 1, layer.lastIndexOf(")"));
   const parts = splitBackgroundLayers(inside);
   const dir = (parts.shift() || "").trim();
+
   let x0 = 0,
     y0 = 0,
     x1 = width,
-    y1 = 0;
+    y1 = 0; // default: to right
+
   if (dir.endsWith("deg")) {
     const deg = parseFloat(dir);
-    const rad = ((90 - deg) * Math.PI) / 180;
+    const rad = (deg * Math.PI) / 180;
     const cx = width / 2;
     const cy = height / 2;
     const r = Math.hypot(width, height) / 2;
@@ -85,63 +109,53 @@ function drawLinearGradient(
       y1 = 0;
     }
   } else {
+    // No direction specified, treat as first color
     parts.unshift(dir);
   }
-  const grad = ctx.createLinearGradient(x0, y0, x1, y1);
-  const colorStops = parts;
-  const n = Math.max(1, colorStops.length - 1);
-  for (let i = 0; i < colorStops.length; i += 1) {
-    const color = extractColorFromStop(colorStops[i] as string);
-    grad.addColorStop(Math.min(1, Math.max(0, i / n)), color);
-  }
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, width, height);
+
+  return { x0, y0, x1, y1, colors: parts };
 }
 
-function drawRadialGradient(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  layer: string
-): void {
+function parseRadialGradient(layer: string, width: number, height: number) {
   const inside = layer.slice(layer.indexOf("(") + 1, layer.lastIndexOf(")"));
   const parts = splitBackgroundLayers(inside);
   const first = (parts.shift() || "").trim();
+
   let cx = width / 2;
   let cy = height / 2;
+
   if (first.startsWith("circle at")) {
     const pos = first.replace("circle at", "").trim();
-    const [px, py] = pos.split(" ");
-    const parsePos = (p?: string, full?: number): number => {
-      if (!p) return (full || 0) / 2;
-      if (p.endsWith("%")) return (parseFloat(p) / 100) * (full || 0);
-      if (p === "left") return 0;
-      if (p === "right") return full || 0;
-      if (p === "top") return 0;
-      if (p === "bottom") return full || 0;
-      if (p === "center") return (full || 0) / 2;
-      return (full || 0) / 2;
-    };
-    if (px && py) {
-      cx = parsePos(px, width);
-      cy = parsePos(py, height);
-    } else if (px) {
-      cx = parsePos(px, width);
-      cy = parsePos(px, height);
+    const coords = pos.split(/\s+/);
+
+    for (let i = 0; i < coords.length; i += 1) {
+      const coord = coords[i] as string;
+      if (coord.endsWith("%")) {
+        const val = parseFloat(coord) / 100;
+        if (i === 0) cx = val * width;
+        else if (i === 1) cy = val * height;
+      } else if (coord === "left") cx = 0;
+      else if (coord === "right") cx = width;
+      else if (coord === "top") cy = 0;
+      else if (coord === "bottom") cy = height;
+      else if (coord === "center") {
+        if (i === 0) cx = width / 2;
+        else if (i === 1) cy = height / 2;
+      }
     }
   } else {
     parts.unshift(first);
   }
-  const r = Math.hypot(width, height);
-  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-  const colorStops = parts;
-  const n = Math.max(1, colorStops.length - 1);
-  for (let i = 0; i < colorStops.length; i += 1) {
-    const color = extractColorFromStop(colorStops[i] as string);
-    grad.addColorStop(Math.min(1, Math.max(0, i / n)), color);
-  }
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, width, height);
+
+  // Use farthest-corner for radius
+  const r = Math.max(
+    Math.hypot(cx, cy),
+    Math.hypot(width - cx, cy),
+    Math.hypot(cx, height - cy),
+    Math.hypot(width - cx, height - cy)
+  );
+
+  return { cx, cy, r, colors: parts };
 }
 
 export function drawCssBackground(
@@ -151,19 +165,55 @@ export function drawCssBackground(
   css: string
 ): void {
   const layers = splitBackgroundLayers(css).filter(Boolean);
+
+  // Draw layers from last to first (CSS background order)
   for (let i = layers.length - 1; i >= 0; i -= 1) {
     const layer = layers[i] as string;
+
     if (layer.startsWith("linear-gradient(")) {
-      drawLinearGradient(ctx, width, height, layer);
+      const { x0, y0, x1, y1, colors } = parseLinearGradient(
+        layer,
+        width,
+        height
+      );
+      const grad = ctx.createLinearGradient(x0, y0, x1, y1);
+      const colorStops = colors.map((c) => parseColorStop(c as string));
+
+      // Handle positions properly
+      for (let j = 0; j < colorStops.length; j += 1) {
+        const stop = colorStops[j] as { color: string; position?: number };
+        const pos = stop.position ?? j / Math.max(1, colorStops.length - 1);
+        grad.addColorStop(Math.max(0, Math.min(1, pos)), stop.color);
+      }
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
     } else if (layer.startsWith("radial-gradient(")) {
-      drawRadialGradient(ctx, width, height, layer);
+      const { cx, cy, r, colors } = parseRadialGradient(layer, width, height);
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      const colorStops = colors.map((c) => parseColorStop(c as string));
+
+      // Handle positions properly
+      for (let j = 0; j < colorStops.length; j += 1) {
+        const stop = colorStops[j] as { color: string; position?: number };
+        const pos = stop.position ?? j / Math.max(1, colorStops.length - 1);
+        grad.addColorStop(Math.max(0, Math.min(1, pos)), stop.color);
+      }
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
     } else if (
       layer.startsWith("#") ||
       layer.startsWith("rgb") ||
-      layer.startsWith("hsl")
+      layer.startsWith("hsl") ||
+      layer === "transparent" ||
+      layer === "white" ||
+      layer === "black"
     ) {
-      ctx.fillStyle = layer;
-      ctx.fillRect(0, 0, width, height);
+      if (layer !== "transparent") {
+        ctx.fillStyle = layer;
+        ctx.fillRect(0, 0, width, height);
+      }
     }
   }
 }
