@@ -69,7 +69,7 @@ export function PanelBaseView({
               value={tab.value}
               className="mt-0 flex-1 flex flex-col min-h-0"
             >
-              <ViewContent>{tab.content}</ViewContent>
+              <ViewContent className={className}>{tab.content}</ViewContent>
             </TabsContent>
           ))}
         </Tabs>
