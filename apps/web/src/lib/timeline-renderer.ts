@@ -2,6 +2,7 @@ import type { TimelineTrack } from "@/types/timeline";
 import type { MediaFile } from "@/types/media";
 import type { BlurIntensity } from "@/types/project";
 import { videoCache } from "./video-cache";
+import { drawCssBackground } from "./canvas-gradients";
 
 export interface RenderContext {
   ctx: CanvasRenderingContext2D;
@@ -48,9 +49,22 @@ export async function renderTimelineFrame({
 }: RenderContext): Promise<void> {
   // Background
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-  if (backgroundColor && backgroundColor !== "transparent") {
+  if (
+    backgroundColor &&
+    backgroundColor !== "transparent" &&
+    !backgroundColor.includes("gradient")
+  ) {
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+  }
+
+  // If backgroundColor is a CSS gradient string, draw it using JS (no foreignObject) to avoid CORS tainting
+  if (backgroundColor && backgroundColor.includes("gradient")) {
+    try {
+      drawCssBackground(ctx, canvasWidth, canvasHeight, backgroundColor);
+    } catch {
+      // best-effort; ignore failures
+    }
   }
 
   const scaleX = projectCanvasSize ? canvasWidth / projectCanvasSize.width : 1;

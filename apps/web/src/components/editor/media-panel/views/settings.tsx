@@ -178,9 +178,9 @@ const BackgroundPreviews = memo(
   }) => {
     return useMemo(
       () =>
-        backgrounds.map((bg) => (
+        backgrounds.map((bg, index) => (
           <div
-            key={bg}
+            key={`${index}-${bg}`}
             className={cn(
               "w-full aspect-square rounded-sm cursor-pointer border border-foreground/15 hover:border-primary",
               isColorBackground &&
