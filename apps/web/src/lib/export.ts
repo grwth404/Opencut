@@ -14,7 +14,7 @@ import { renderTimelineFrame } from "./timeline-renderer";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useMediaStore } from "@/stores/media-store";
 import { useProjectStore } from "@/stores/project-store";
-import { DEFAULT_FPS } from "@/stores/project-store";
+import { DEFAULT_FPS, DEFAULT_CANVAS_SIZE } from "@/stores/project-store";
 import { ExportOptions, ExportResult } from "@/types/export";
 import { TimelineTrack } from "@/types/timeline";
 import { MediaFile } from "@/types/media";
@@ -171,7 +171,7 @@ export async function exportProject(
     }
 
     const exportFps = fps || activeProject.fps || DEFAULT_FPS;
-    const canvasSize = activeProject.canvasSize;
+    const canvasSize = activeProject.canvasSize || DEFAULT_CANVAS_SIZE;
 
     const outputFormat =
       format === "webm" ? new WebMOutputFormat() : new Mp4OutputFormat();
