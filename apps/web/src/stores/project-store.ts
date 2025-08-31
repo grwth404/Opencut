@@ -1,4 +1,4 @@
-import { TProject } from "@/types/project";
+import { TProject, BlurIntensity } from "@/types/project";
 import { create } from "zustand";
 import { storageService } from "@/lib/storage/storage-service";
 import { toast } from "sonner";
@@ -44,7 +44,7 @@ interface ProjectStore {
   updateProjectBackground: (backgroundColor: string) => Promise<void>;
   updateBackgroundType: (
     type: "color" | "blur",
-    options?: { backgroundColor?: string; blurIntensity?: number }
+    options?: { backgroundColor?: string; blurIntensity?: BlurIntensity }
   ) => Promise<void>;
   updateProjectFps: (fps: number) => Promise<void>;
   updateCanvasSize: (size: CanvasSize, mode: CanvasMode) => Promise<void>;
@@ -399,7 +399,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   updateBackgroundType: async (
     type: "color" | "blur",
-    options?: { backgroundColor?: string; blurIntensity?: number }
+    options?: { backgroundColor?: string; blurIntensity?: BlurIntensity }
   ) => {
     const { activeProject } = get();
     if (!activeProject) return;
@@ -410,7 +410,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       ...(options?.backgroundColor && {
         backgroundColor: options.backgroundColor,
       }),
-      ...(options?.blurIntensity && { blurIntensity: options.blurIntensity }),
+      ...(options?.blurIntensity !== undefined && {
+        blurIntensity: options.blurIntensity,
+      }),
       updatedAt: new Date(),
     };
 

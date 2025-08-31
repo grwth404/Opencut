@@ -252,9 +252,11 @@ export async function exportProject(
         canvasHeight: canvas.height,
         tracks,
         mediaFiles,
+        backgroundType: activeProject.backgroundType,
+        blurIntensity: activeProject.blurIntensity,
         backgroundColor:
           activeProject.backgroundType === "blur"
-            ? "transparent"
+            ? undefined
             : activeProject.backgroundColor || "#000000",
         projectCanvasSize: canvasSize,
       });

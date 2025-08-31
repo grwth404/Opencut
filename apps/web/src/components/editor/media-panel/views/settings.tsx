@@ -16,6 +16,7 @@ import {
 } from "../../properties-panel/property-item";
 import { FPS_PRESETS } from "@/constants/timeline-constants";
 import { useProjectStore } from "@/stores/project-store";
+import type { BlurIntensity } from "@/types/project";
 import { useEditorStore } from "@/stores/editor-store";
 import { useAspectRatio } from "@/hooks/use-aspect-ratio";
 import Image from "next/image";
@@ -215,7 +216,7 @@ BackgroundPreviews.displayName = "BackgroundPreviews";
 function BackgroundView() {
   const { activeProject, updateBackgroundType } = useProjectStore();
 
-  const blurLevels = useMemo(
+  const blurLevels = useMemo<Array<{ label: string; value: BlurIntensity }>>(
     () => [
       { label: "Light", value: 4 },
       { label: "Medium", value: 8 },
@@ -225,7 +226,7 @@ function BackgroundView() {
   );
 
   const handleBlurSelect = useCallback(
-    async (blurIntensity: number) => {
+    async (blurIntensity: BlurIntensity) => {
       await updateBackgroundType("blur", { blurIntensity });
     },
     [updateBackgroundType]

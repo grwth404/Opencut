@@ -521,9 +521,11 @@ export function PreviewPanel() {
                 canvasHeight: displayHeight,
                 tracks,
                 mediaFiles,
+                backgroundType: activeProject?.backgroundType,
+                blurIntensity: activeProject?.blurIntensity,
                 backgroundColor:
                   activeProject?.backgroundType === "blur"
-                    ? "transparent"
+                    ? undefined
                     : activeProject?.backgroundColor || "#000000",
                 projectCanvasSize: canvasSize,
               });
@@ -553,9 +555,11 @@ export function PreviewPanel() {
                 canvasHeight: displayHeight,
                 tracks,
                 mediaFiles,
+                backgroundType: activeProject?.backgroundType,
+                blurIntensity: activeProject?.blurIntensity,
                 backgroundColor:
                   activeProject?.backgroundType === "blur"
-                    ? "transparent"
+                    ? undefined
                     : activeProject?.backgroundColor || "#000000",
                 projectCanvasSize: canvasSize,
               });
@@ -624,9 +628,11 @@ export function PreviewPanel() {
         canvasHeight: displayHeight,
         tracks,
         mediaFiles,
+        backgroundType: activeProject?.backgroundType,
+        blurIntensity: activeProject?.blurIntensity,
         backgroundColor:
           activeProject?.backgroundType === "blur"
-            ? "transparent"
+            ? undefined
             : activeProject?.backgroundColor || "#000000",
         projectCanvasSize: canvasSize,
       });

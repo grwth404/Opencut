@@ -1,5 +1,7 @@
 import { CanvasSize } from "./editor";
 
+export type BlurIntensity = 4 | 8 | 18;
+
 export interface TProject {
   id: string;
   name: string;
@@ -9,7 +11,7 @@ export interface TProject {
   mediaItems?: string[];
   backgroundColor?: string;
   backgroundType?: "color" | "blur";
-  blurIntensity?: number; // in pixels (4, 8, 18)
+  blurIntensity?: BlurIntensity;
   fps?: number;
   bookmarks?: number[];
   canvasSize: CanvasSize;
