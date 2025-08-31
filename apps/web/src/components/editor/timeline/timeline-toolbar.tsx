@@ -201,7 +201,6 @@ export function TimelineToolbar({
                 variant="text"
                 size="icon"
                 onClick={toggle}
-                className="mr-2"
               >
                 {isPlaying ? (
                   <Pause className="h-4 w-4" />
@@ -220,7 +219,6 @@ export function TimelineToolbar({
                 variant="text"
                 size="icon"
                 onClick={() => seek(0)}
-                className="mr-2"
               >
                 <SkipBack className="h-4 w-4" />
               </Button>
