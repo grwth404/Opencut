@@ -25,7 +25,14 @@ import {
   ArrowRightToLine,
   SplitSquareHorizontal,
   Scissors,
+  LayersIcon,
 } from "lucide-react";
+import {
+  SplitButton,
+  SplitButtonLeft,
+  SplitButtonRight,
+  SplitButtonSeparator,
+} from "@/components/ui/split-button";
 import { Slider } from "@/components/ui/slider";
 import { DEFAULT_FPS } from "@/stores/project-store";
 import { formatTimeCode } from "@/lib/time";
@@ -192,16 +199,12 @@ export function TimelineToolbar({
 
   const currentBookmarked = isBookmarked(currentTime);
   return (
-    <div className=" flex items-center justify-between px-2 py-1 border-b">
-      <div className="flex items-center gap-1 w-full">
+    <div className="flex items-center justify-between px-2 py-1 border-b h-10">
+      <div className="flex items-center gap-1">
         <TooltipProvider delayDuration={500}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="text"
-                size="icon"
-                onClick={toggle}
-              >
+              <Button variant="text" size="icon" onClick={toggle}>
                 {isPlaying ? (
                   <Pause className="h-4 w-4" />
                 ) : (
@@ -215,11 +218,7 @@ export function TimelineToolbar({
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="text"
-                size="icon"
-                onClick={() => seek(0)}
-              >
+              <Button variant="text" size="icon" onClick={() => seek(0)}>
                 <SkipBack className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -355,6 +354,15 @@ export function TimelineToolbar({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+      </div>
+      <div>
+        <SplitButton>
+          <SplitButtonLeft>Main scene</SplitButtonLeft>
+          <SplitButtonSeparator />
+          <SplitButtonRight onClick={() => {}}>
+            <LayersIcon />
+          </SplitButtonRight>
+        </SplitButton>
       </div>
       <div className="flex items-center gap-1">
         <TooltipProvider delayDuration={500}>
