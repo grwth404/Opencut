@@ -3,6 +3,7 @@ import { storageService } from "@/lib/storage/storage-service";
 import { useTimelineStore } from "./timeline-store";
 import { generateUUID } from "@/lib/utils";
 import { MediaType, MediaFile } from "@/types/media";
+import { videoCache } from "@/lib/video-cache";
 
 interface MediaStore {
   mediaFiles: MediaFile[];
@@ -165,6 +166,8 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
     const state = get();
     const item = state.mediaFiles.find((media) => media.id === id);
 
+    videoCache.clearVideo(id);
+
     // Cleanup object URLs to prevent memory leaks
     if (item?.url) {
       URL.revokeObjectURL(item.url);
@@ -288,6 +291,8 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
 
   clearAllMedia: () => {
     const state = get();
+
+    videoCache.clearAll();
 
     // Cleanup all object URLs
     state.mediaFiles.forEach((item) => {

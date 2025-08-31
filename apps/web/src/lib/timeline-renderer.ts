@@ -1,6 +1,6 @@
-import { Input, ALL_FORMATS, BlobSource, VideoSampleSink } from "mediabunny";
 import type { TimelineTrack } from "@/types/timeline";
 import type { MediaFile } from "@/types/media";
+import { videoCache } from "./video-cache";
 
 export interface RenderContext {
   ctx: CanvasRenderingContext2D;
@@ -65,31 +65,34 @@ export async function renderTimelineFrame({
   for (const { element, mediaItem } of active) {
     if (element.type === "media" && mediaItem) {
       if (mediaItem.type === "video") {
-        const input = new Input({
-          source: new BlobSource(mediaItem.file),
-          formats: ALL_FORMATS,
-        });
-        const track = await input.getPrimaryVideoTrack();
-        if (!track) continue;
-        const decodable = await track.canDecode();
-        if (!decodable) continue;
-        const sink = new VideoSampleSink(track);
+        try {
+          const localTime = time - element.startTime + element.trimStart;
 
-        const localTime = time - element.startTime + element.trimStart;
-        const sample = await sink.getSample(localTime);
-        if (!sample) continue;
+          const frame = await videoCache.getFrameAt(
+            mediaItem.id,
+            mediaItem.file,
+            localTime
+          );
+          if (!frame) continue;
 
-        const mediaW = Math.max(1, mediaItem.width || canvasWidth);
-        const mediaH = Math.max(1, mediaItem.height || canvasHeight);
-        const containScale = Math.min(
-          canvasWidth / mediaW,
-          canvasHeight / mediaH
-        );
-        const drawW = mediaW * containScale;
-        const drawH = mediaH * containScale;
-        const drawX = (canvasWidth - drawW) / 2;
-        const drawY = (canvasHeight - drawH) / 2;
-        sample.draw(ctx, drawX, drawY, drawW, drawH);
+          const mediaW = Math.max(1, mediaItem.width || canvasWidth);
+          const mediaH = Math.max(1, mediaItem.height || canvasHeight);
+          const containScale = Math.min(
+            canvasWidth / mediaW,
+            canvasHeight / mediaH
+          );
+          const drawW = mediaW * containScale;
+          const drawH = mediaH * containScale;
+          const drawX = (canvasWidth - drawW) / 2;
+          const drawY = (canvasHeight - drawH) / 2;
+
+          ctx.drawImage(frame.canvas, drawX, drawY, drawW, drawH);
+        } catch (error) {
+          console.warn(
+            `Failed to render video frame for ${mediaItem.name}:`,
+            error
+          );
+        }
       }
       if (mediaItem.type === "image") {
         const img = new Image();
