@@ -308,8 +308,6 @@ function StickersContentView({ category }: { category: StickerCategory }) {
       if (!added) throw new Error("Sticker not in media store");
 
       addElementAtTime(added, currentTime);
-
-      toast.success(`Added "${iconName}" to timeline`);
     } catch (error) {
       console.error("Failed to add sticker:", error);
       toast.error("Failed to add sticker to timeline");
