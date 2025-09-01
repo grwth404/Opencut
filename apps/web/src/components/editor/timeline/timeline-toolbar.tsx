@@ -202,7 +202,7 @@ export function TimelineToolbar({
 
   const currentBookmarked = isBookmarked(currentTime);
   return (
-    <div className="flex items-center justify-between px-2 py-1 border-b-px h-10">
+    <div className="flex items-center justify-between px-2 py-1 border-b h-10">
       <div className="flex items-center gap-1">
         <TooltipProvider delayDuration={500}>
           <Tooltip>
