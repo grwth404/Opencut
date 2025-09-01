@@ -358,6 +358,7 @@ function StickersContentView({ category }: { category: StickerCategory }) {
           }
           value={localSearchQuery}
           onChange={setLocalSearchQuery}
+          disableAnimation={true}
         />
       </div>
 
