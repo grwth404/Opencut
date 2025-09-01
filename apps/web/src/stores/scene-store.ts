@@ -9,6 +9,33 @@ export function getMainScene({ scenes }: { scenes: Scene[] }): Scene | null {
   return scenes.find((scene) => scene.isMain) || null;
 }
 
+export function getBackgroundScene({
+  scenes,
+}: {
+  scenes: Scene[];
+}): Scene | null {
+  return scenes.find((scene) => scene.isBackground) || null;
+}
+
+export function createBackgroundScene(): Scene {
+  return {
+    id: generateUUID(),
+    name: "Background",
+    isMain: false,
+    isBackground: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
+
+function ensureBackgroundScene({ scenes }: { scenes: Scene[] }): Scene[] {
+  const hasBackground = scenes.some((scene) => scene.isBackground);
+  if (!hasBackground) {
+    return [...scenes, createBackgroundScene()];
+  }
+  return scenes;
+}
+
 interface SceneStore {
   // Current scene state
   currentScene: Scene | null;
@@ -58,6 +85,7 @@ export const useSceneStore = create<SceneStore>((set, get) => ({
       id: generateUUID(),
       name,
       isMain,
+      isBackground: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -198,16 +226,36 @@ export const useSceneStore = create<SceneStore>((set, get) => ({
     scenes: Scene[];
     currentSceneId?: string;
   }) => {
+    const ensuredScenes = ensureBackgroundScene({ scenes });
     const currentScene = currentSceneId
-      ? scenes.find((s) => s.id === currentSceneId)
+      ? ensuredScenes.find((s) => s.id === currentSceneId)
       : null;
 
-    const fallbackScene = getMainScene({ scenes });
+    const fallbackScene = getMainScene({ scenes: ensuredScenes });
 
     set({
-      scenes,
+      scenes: ensuredScenes,
       currentScene: currentScene || fallbackScene,
     });
+
+    if (ensuredScenes.length > scenes.length) {
+      const projectStore = useProjectStore.getState();
+      const { activeProject } = projectStore;
+      
+      if (activeProject) {
+        const updatedProject = {
+          ...activeProject,
+          scenes: ensuredScenes,
+          updatedAt: new Date(),
+        };
+        
+        storageService.saveProject({ project: updatedProject }).then(() => {
+          useProjectStore.setState({ activeProject: updatedProject });
+        }).catch(error => {
+          console.error("Failed to save project with background scene:", error);
+        });
+      }
+    }
   },
 
   clearScenes: () => {

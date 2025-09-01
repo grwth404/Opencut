@@ -4,7 +4,7 @@ import { storageService } from "@/lib/storage/storage-service";
 import { toast } from "sonner";
 import { useMediaStore } from "./media-store";
 import { useTimelineStore } from "./timeline-store";
-import { useSceneStore } from "./scene-store";
+import { createBackgroundScene, useSceneStore } from "./scene-store";
 import { generateUUID } from "@/lib/utils";
 import { CanvasSize, CanvasMode } from "@/types/editor";
 
@@ -16,6 +16,7 @@ export function createMainScene(): Scene {
     id: generateUUID(),
     name: "Main scene",
     isMain: true,
+    isBackground: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -23,13 +24,15 @@ export function createMainScene(): Scene {
 
 const createDefaultProject = (name: string): TProject => {
   const mainScene = createMainScene();
+  const backgroundScene = createBackgroundScene();
+
   return {
     id: generateUUID(),
     name,
     thumbnail: "",
     createdAt: new Date(),
     updatedAt: new Date(),
-    scenes: [mainScene],
+    scenes: [mainScene, backgroundScene],
     currentSceneId: mainScene.id,
     backgroundColor: "#000000",
     backgroundType: "color",
@@ -226,14 +229,18 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       if (project) {
         set({ activeProject: project });
 
+        let currentScene = null;
         if (project.scenes && project.scenes.length > 0) {
           sceneStore.initializeScenes({
             scenes: project.scenes,
             currentSceneId: project.currentSceneId,
           });
+          // Get current scene directly from project data (don't rely on store state)
+          currentScene =
+            project.scenes.find((s) => s.id === project.currentSceneId) ||
+            project.scenes.find((s) => s.isMain) ||
+            project.scenes[0];
         }
-
-        const currentScene = sceneStore.currentScene;
 
         await Promise.all([
           mediaStore.loadProjectMedia(id),

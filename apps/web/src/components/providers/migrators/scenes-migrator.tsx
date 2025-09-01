@@ -88,11 +88,27 @@ export function ScenesMigrator({ children }: { children: React.ReactNode }) {
 
   const migrateLegacyProject = async (project: TProject) => {
     try {
-      const mainScene = createMainScene();
+      const mainScene: Scene = {
+        id: generateUUID(),
+        name: "Main Scene",
+        isMain: true,
+        isBackground: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const backgroundScene: Scene = {
+        id: generateUUID(),
+        name: "Background",
+        isMain: false,
+        isBackground: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
       const migratedProject: TProject = {
         ...project,
-        scenes: [mainScene],
+        scenes: [mainScene, backgroundScene],
         currentSceneId: mainScene.id,
         updatedAt: new Date(),
       };

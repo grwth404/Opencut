@@ -260,6 +260,15 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       } catch (error) {
         console.error("Failed to auto-save timeline:", error);
       }
+    } else {
+      console.warn(
+        "Auto-save skipped - missing activeProject or currentScene:",
+        {
+          hasProject: !!activeProject,
+          hasScene: !!currentScene,
+          sceneName: currentScene?.name,
+        }
+      );
     }
   };
 
