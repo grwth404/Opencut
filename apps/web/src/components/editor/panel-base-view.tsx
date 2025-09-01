@@ -11,6 +11,7 @@ interface PanelBaseViewProps {
   tabs?: {
     value: string;
     label: string;
+    icon?: React.ReactNode;
     content: React.ReactNode;
   }[];
   className?: string;
@@ -56,6 +57,11 @@ export function PanelBaseView({
               <TabsList>
                 {tabs.map((tab) => (
                   <TabsTrigger key={tab.value} value={tab.value}>
+                    {tab.icon ? (
+                      <span className="inline-flex items-center mr-1">
+                        {tab.icon}
+                      </span>
+                    ) : null}
                     {tab.label}
                   </TabsTrigger>
                 ))}

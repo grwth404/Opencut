@@ -20,8 +20,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
+import { PanelBaseView as BaseView } from "@/components/editor/panel-base-view";
 import {
   Tooltip,
   TooltipContent,
@@ -48,63 +47,41 @@ export function StickersView() {
   const { selectedCategory, setSelectedCategory } = useStickersStore();
 
   return (
-    <div className="h-full flex flex-col">
-      <Tabs
-        value={selectedCategory}
-        onValueChange={(v) => {
-          if (["all", "general", "brands", "emoji"].includes(v)) {
-            setSelectedCategory(v as StickerCategory);
-          }
-        }}
-        className="flex flex-col h-full"
-      >
-        <div className="px-3 pt-4 pb-0">
-          <TabsList>
-            <TabsTrigger value="all" className="gap-1">
-              <Grid3X3 className="h-3 w-3" />
-              All
-            </TabsTrigger>
-            <TabsTrigger value="general" className="gap-1">
-              <Sparkles className="h-3 w-3" />
-              Icons
-            </TabsTrigger>
-            <TabsTrigger value="brands" className="gap-1">
-              <Hash className="h-3 w-3" />
-              Brands
-            </TabsTrigger>
-            <TabsTrigger value="emoji" className="gap-1">
-              <Smile className="h-3 w-3" />
-              Emoji
-            </TabsTrigger>
-          </TabsList>
-        </div>
-        <Separator className="my-4" />
-        <TabsContent
-          value="all"
-          className="px-3 pt-0 mt-0 flex-1 flex flex-col min-h-0"
-        >
-          <StickersContentView category="all" />
-        </TabsContent>
-        <TabsContent
-          value="general"
-          className="px-3 pt-0 mt-0 flex-1 flex flex-col min-h-0"
-        >
-          <StickersContentView category="general" />
-        </TabsContent>
-        <TabsContent
-          value="brands"
-          className="px-3 pt-0 mt-0 flex-1 flex flex-col min-h-0"
-        >
-          <StickersContentView category="brands" />
-        </TabsContent>
-        <TabsContent
-          value="emoji"
-          className="px-3 pt-0 mt-0 flex-1 flex flex-col min-h-0"
-        >
-          <StickersContentView category="emoji" />
-        </TabsContent>
-      </Tabs>
-    </div>
+    <BaseView
+      value={selectedCategory}
+      onValueChange={(v) => {
+        if (["all", "general", "brands", "emoji"].includes(v)) {
+          setSelectedCategory(v as StickerCategory);
+        }
+      }}
+      tabs={[
+        {
+          value: "all",
+          label: "All",
+          icon: <Grid3X3 className="h-3 w-3" />,
+          content: <StickersContentView category="all" />,
+        },
+        {
+          value: "general",
+          label: "Icons",
+          icon: <Sparkles className="h-3 w-3" />,
+          content: <StickersContentView category="general" />,
+        },
+        {
+          value: "brands",
+          label: "Brands",
+          icon: <Hash className="h-3 w-3" />,
+          content: <StickersContentView category="brands" />,
+        },
+        {
+          value: "emoji",
+          label: "Emoji",
+          icon: <Smile className="h-3 w-3" />,
+          content: <StickersContentView category="emoji" />,
+        },
+      ]}
+      className="flex flex-col h-full p-0 overflow-hidden"
+    />
   );
 }
 
@@ -361,7 +338,7 @@ function StickersContentView({ category }: { category: StickerCategory }) {
   }, [isInCollection]);
 
   return (
-    <div className="flex flex-col gap-5 mt-1 h-full">
+    <div className="flex flex-col gap-5 mt-1 h-full p-4">
       <div className="space-y-3">
         <InputWithBack
           isExpanded={isInCollection}
