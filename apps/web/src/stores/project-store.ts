@@ -4,7 +4,7 @@ import { storageService } from "@/lib/storage/storage-service";
 import { toast } from "sonner";
 import { useMediaStore } from "./media-store";
 import { useTimelineStore } from "./timeline-store";
-import { createBackgroundScene, useSceneStore } from "./scene-store";
+import { useSceneStore } from "./scene-store";
 import { generateUUID } from "@/lib/utils";
 import { CanvasSize, CanvasMode } from "@/types/editor";
 
@@ -14,9 +14,8 @@ export const DEFAULT_FPS = 30;
 export function createMainScene(): Scene {
   return {
     id: generateUUID(),
-    name: "Main scene",
+    name: "Main Scene",
     isMain: true,
-    isBackground: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -24,7 +23,6 @@ export function createMainScene(): Scene {
 
 const createDefaultProject = (name: string): TProject => {
   const mainScene = createMainScene();
-  const backgroundScene = createBackgroundScene();
 
   return {
     id: generateUUID(),
@@ -32,7 +30,7 @@ const createDefaultProject = (name: string): TProject => {
     thumbnail: "",
     createdAt: new Date(),
     updatedAt: new Date(),
-    scenes: [mainScene, backgroundScene],
+    scenes: [mainScene],
     currentSceneId: mainScene.id,
     backgroundColor: "#000000",
     backgroundType: "color",

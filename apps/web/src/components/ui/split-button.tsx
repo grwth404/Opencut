@@ -39,7 +39,7 @@ const SplitButtonSide = forwardRef<
       ref={ref}
       variant="text"
       className={cn(
-        "h-full rounded-none bg-panel-accent !opacity-100 border-0 gap-0 font-normal transition-colors",
+        "h-full rounded-none bg-panel-accent !opacity-100 border-0 gap-0 font-normal transition-colors disabled:text-muted-foreground",
         onClick
           ? "hover:bg-foreground/10 hover:opacity-100 cursor-pointer"
           : "cursor-default select-text",

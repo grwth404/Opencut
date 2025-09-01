@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { formatTimeCode } from "@/lib/time";
 import { EditableTimecode } from "@/components/ui/editable-timecode";
 import { useFrameCache } from "@/hooks/use-frame-cache";
+import { useSceneStore } from "@/stores/scene-store";
 import {
   DEFAULT_CANVAS_SIZE,
   DEFAULT_FPS,
@@ -43,6 +44,7 @@ export function PreviewPanel() {
   const { currentTime, toggle, setCurrentTime } = usePlaybackStore();
   const { isPlaying, volume, muted } = usePlaybackStore();
   const { activeProject } = useProjectStore();
+  const { currentScene } = useSceneStore();
   const previewRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { getCachedFrame, cacheFrame, invalidateCache, preRenderNearbyFrames } =
@@ -219,11 +221,10 @@ export function PreviewPanel() {
     };
   }, [dragState, previewDimensions, canvasSize, updateTextElement]);
 
-  // Invalidate cache when timeline changes
+  // Clear the frame cache when background settings change since they affect rendering
   useEffect(() => {
     invalidateCache();
   }, [
-    tracks,
     mediaFiles,
     activeProject?.backgroundColor,
     activeProject?.backgroundType,
@@ -494,7 +495,8 @@ export function PreviewPanel() {
         currentTime,
         tracks,
         mediaFiles,
-        activeProject
+        activeProject,
+        currentScene?.id
       );
       if (cachedFrame) {
         mainCtx.putImageData(cachedFrame, 0, 0);
@@ -532,7 +534,9 @@ export function PreviewPanel() {
               });
 
               return tempCtx.getImageData(0, 0, displayWidth, displayHeight);
-            }
+            },
+            currentScene?.id,
+            3
           );
         } else {
           // Small lookahead while playing
@@ -567,6 +571,7 @@ export function PreviewPanel() {
 
               return tempCtx.getImageData(0, 0, displayWidth, displayHeight);
             },
+            currentScene?.id,
             1
           );
         }
@@ -644,7 +649,14 @@ export function PreviewPanel() {
         displayWidth,
         displayHeight
       );
-      cacheFrame(currentTime, imageData, tracks, mediaFiles, activeProject);
+      cacheFrame(
+        currentTime,
+        imageData,
+        tracks,
+        mediaFiles,
+        activeProject,
+        currentScene?.id
+      );
 
       // Blit offscreen to visible canvas
       mainCtx.clearRect(0, 0, displayWidth, displayHeight);

@@ -37,7 +37,8 @@ export function useFrameCache(options: FrameCacheOptions = {}) {
       time: number,
       tracks: TimelineTrack[],
       mediaFiles: MediaFile[],
-      activeProject: TProject | null
+      activeProject: TProject | null,
+      sceneId?: string
     ): string => {
       // Get elements that are active at this time
       const activeElements: Array<{
@@ -117,11 +118,13 @@ export function useFrameCache(options: FrameCacheOptions = {}) {
         canvasSize: activeProject?.canvasSize,
       };
 
-      return JSON.stringify({
+      const hash = {
         activeElements,
         projectState,
-        time: Math.floor(time * cacheResolution) / cacheResolution, // Quantize time
-      });
+        sceneId,
+        time: Math.floor(time * cacheResolution) / cacheResolution,
+      };
+      return JSON.stringify(hash);
     },
     [cacheResolution]
   );
@@ -132,7 +135,8 @@ export function useFrameCache(options: FrameCacheOptions = {}) {
       time: number,
       tracks: TimelineTrack[],
       mediaFiles: MediaFile[],
-      activeProject: TProject | null
+      activeProject: TProject | null,
+      sceneId?: string
     ): boolean => {
       const frameKey = Math.floor(time * cacheResolution);
       const cached = frameCacheRef.current.get(frameKey);
@@ -143,7 +147,8 @@ export function useFrameCache(options: FrameCacheOptions = {}) {
         time,
         tracks,
         mediaFiles,
-        activeProject
+        activeProject,
+        sceneId
       );
       return cached.timelineHash === currentHash;
     },
@@ -156,21 +161,33 @@ export function useFrameCache(options: FrameCacheOptions = {}) {
       time: number,
       tracks: TimelineTrack[],
       mediaFiles: MediaFile[],
-      activeProject: TProject | null
+      activeProject: TProject | null,
+      sceneId?: string
     ): ImageData | null => {
       const frameKey = Math.floor(time * cacheResolution);
       const cached = frameCacheRef.current.get(frameKey);
 
-      if (!cached) return null;
+      if (!cached) {
+        return null;
+      }
 
       const currentHash = getTimelineHash(
         time,
         tracks,
         mediaFiles,
-        activeProject
+        activeProject,
+        sceneId
       );
+      console.log(cached.timelineHash === currentHash);
       if (cached.timelineHash !== currentHash) {
         // Cache is stale, remove it
+        console.log(
+          "Cache miss - hash mismatch:",
+          JSON.stringify({
+            cachedHash: cached.timelineHash.slice(0, 100),
+            currentHash: currentHash.slice(0, 100),
+          })
+        );
         frameCacheRef.current.delete(frameKey);
         return null;
       }
@@ -187,14 +204,16 @@ export function useFrameCache(options: FrameCacheOptions = {}) {
       imageData: ImageData,
       tracks: TimelineTrack[],
       mediaFiles: MediaFile[],
-      activeProject: TProject | null
+      activeProject: TProject | null,
+      sceneId?: string
     ): void => {
       const frameKey = Math.floor(time * cacheResolution);
       const timelineHash = getTimelineHash(
         time,
         tracks,
         mediaFiles,
-        activeProject
+        activeProject,
+        sceneId
       );
 
       // Enforce cache size limit (LRU eviction)
@@ -230,9 +249,10 @@ export function useFrameCache(options: FrameCacheOptions = {}) {
       time: number,
       tracks: TimelineTrack[],
       mediaFiles: MediaFile[],
-      activeProject: TProject | null
+      activeProject: TProject | null,
+      sceneId?: string
     ): "cached" | "not-cached" => {
-      return isFrameCached(time, tracks, mediaFiles, activeProject)
+      return isFrameCached(time, tracks, mediaFiles, activeProject, sceneId)
         ? "cached"
         : "not-cached";
     },
@@ -247,6 +267,7 @@ export function useFrameCache(options: FrameCacheOptions = {}) {
       mediaFiles: MediaFile[],
       activeProject: TProject | null,
       renderFunction: (time: number) => Promise<ImageData>,
+      sceneId?: string,
       range: number = 3 // seconds
     ) => {
       const framesToPreRender: number[] = [];
@@ -260,7 +281,7 @@ export function useFrameCache(options: FrameCacheOptions = {}) {
         const time = currentTime + offset;
         if (time < 0) continue;
 
-        if (!isFrameCached(time, tracks, mediaFiles, activeProject)) {
+        if (!isFrameCached(time, tracks, mediaFiles, activeProject, sceneId)) {
           framesToPreRender.push(time);
         }
       }
@@ -276,7 +297,7 @@ export function useFrameCache(options: FrameCacheOptions = {}) {
         for (let k = 0; k < cacheResolution; k++) {
           const t = s + k / cacheResolution;
           if (t < 0) continue;
-          if (!isFrameCached(t, tracks, mediaFiles, activeProject)) {
+          if (!isFrameCached(t, tracks, mediaFiles, activeProject, sceneId)) {
             expandedTimes.push(t);
           }
         }
@@ -298,7 +319,14 @@ export function useFrameCache(options: FrameCacheOptions = {}) {
         requestIdleCallback(async () => {
           try {
             const imageData = await renderFunction(time);
-            cacheFrame(time, imageData, tracks, mediaFiles, activeProject);
+            cacheFrame(
+              time,
+              imageData,
+              tracks,
+              mediaFiles,
+              activeProject,
+              sceneId
+            );
           } catch (error) {
             console.warn(`Pre-render failed for time ${time}:`, error);
           }

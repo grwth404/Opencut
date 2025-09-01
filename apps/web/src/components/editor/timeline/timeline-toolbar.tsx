@@ -67,7 +67,7 @@ export function TimelineToolbar({
   } = useTimelineStore();
   const { currentTime, duration, isPlaying, toggle, seek } = usePlaybackStore();
   const { toggleBookmark, isBookmarked, activeProject } = useProjectStore();
-  const { currentScene } = useSceneStore();
+  const { scenes, currentScene } = useSceneStore();
 
   const handleSplitSelected = () => {
     if (selectedElements.length === 0) return;
@@ -359,11 +359,11 @@ export function TimelineToolbar({
         </TooltipProvider>
       </div>
       <div>
-        <SplitButton>
+        <SplitButton className="border border-foreground/10">
           <SplitButtonLeft>{currentScene?.name || "No Scene"}</SplitButtonLeft>
           <SplitButtonSeparator />
           <ScenesView>
-            <SplitButtonRight onClick={() => {}}>
+            <SplitButtonRight disabled={scenes.length === 1} onClick={() => {}}>
               <LayersIcon />
             </SplitButtonRight>
           </ScenesView>

@@ -5,6 +5,7 @@ import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 import { TimelineTrack } from "@/types/timeline";
 import { MediaFile } from "@/types/media";
 import { TProject } from "@/types/project";
+import { useSceneStore } from "@/stores/scene-store";
 
 interface CacheSegment {
   startTime: number;
@@ -22,7 +23,8 @@ interface TimelineCacheIndicatorProps {
     time: number,
     tracks: TimelineTrack[],
     mediaFiles: MediaFile[],
-    activeProject: TProject | null
+    activeProject: TProject | null,
+    sceneId?: string
   ) => "cached" | "not-cached";
 }
 
@@ -34,6 +36,8 @@ export function TimelineCacheIndicator({
   activeProject,
   getRenderStatus,
 }: TimelineCacheIndicatorProps) {
+  const { currentScene } = useSceneStore();
+
   // Calculate cache segments by sampling the timeline
   const calculateCacheSegments = (): CacheSegment[] => {
     const segments: CacheSegment[] = [];
@@ -49,7 +53,13 @@ export function TimelineCacheIndicator({
     for (let i = 0; i <= totalSamples; i++) {
       const time = i / sampleRate;
       const cached =
-        getRenderStatus(time, tracks, mediaFiles, activeProject) === "cached";
+        getRenderStatus(
+          time,
+          tracks,
+          mediaFiles,
+          activeProject,
+          currentScene?.id
+        ) === "cached";
 
       if (!currentSegment) {
         // Start first segment

@@ -78,7 +78,6 @@ class StorageService {
       id: scene.id,
       name: scene.name,
       isMain: scene.isMain,
-      isBackground: scene.isBackground,
       createdAt: scene.createdAt.toISOString(),
       updatedAt: scene.updatedAt.toISOString(),
     }));
@@ -114,7 +113,6 @@ class StorageService {
         id: scene.id,
         name: scene.name,
         isMain: scene.isMain,
-        isBackground: scene.isBackground || false, // Default for legacy scenes
         createdAt: new Date(scene.createdAt),
         updatedAt: new Date(scene.updatedAt),
       })) || [];

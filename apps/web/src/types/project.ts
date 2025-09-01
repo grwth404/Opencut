@@ -6,7 +6,6 @@ export interface Scene {
   id: string;
   name: string;
   isMain: boolean;
-  isBackground: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

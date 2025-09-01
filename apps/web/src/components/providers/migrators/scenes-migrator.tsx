@@ -92,23 +92,13 @@ export function ScenesMigrator({ children }: { children: React.ReactNode }) {
         id: generateUUID(),
         name: "Main Scene",
         isMain: true,
-        isBackground: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const backgroundScene: Scene = {
-        id: generateUUID(),
-        name: "Background",
-        isMain: false,
-        isBackground: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
       const migratedProject: TProject = {
         ...project,
-        scenes: [mainScene, backgroundScene],
+        scenes: [mainScene],
         currentSceneId: mainScene.id,
         updatedAt: new Date(),
       };

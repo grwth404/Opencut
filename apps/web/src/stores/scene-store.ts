@@ -9,29 +9,17 @@ export function getMainScene({ scenes }: { scenes: Scene[] }): Scene | null {
   return scenes.find((scene) => scene.isMain) || null;
 }
 
-export function getBackgroundScene({
-  scenes,
-}: {
-  scenes: Scene[];
-}): Scene | null {
-  return scenes.find((scene) => scene.isBackground) || null;
-}
-
-export function createBackgroundScene(): Scene {
-  return {
-    id: generateUUID(),
-    name: "Background",
-    isMain: false,
-    isBackground: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-}
-
-function ensureBackgroundScene({ scenes }: { scenes: Scene[] }): Scene[] {
-  const hasBackground = scenes.some((scene) => scene.isBackground);
-  if (!hasBackground) {
-    return [...scenes, createBackgroundScene()];
+function ensureMainScene(scenes: Scene[]): Scene[] {
+  const hasMain = scenes.some((scene) => scene.isMain);
+  if (!hasMain) {
+    const mainScene: Scene = {
+      id: generateUUID(),
+      name: "Main scene",
+      isMain: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    return [mainScene, ...scenes];
   }
   return scenes;
 }
@@ -49,6 +37,7 @@ interface SceneStore {
     name: string;
     isMain: boolean;
   }) => Promise<string>;
+  deleteScene: ({ sceneId }: { sceneId: string }) => Promise<void>;
   renameScene: ({
     sceneId,
     name,
@@ -111,6 +100,62 @@ export const useSceneStore = create<SceneStore>((set, get) => ({
       return newScene.id;
     } catch (error) {
       console.error("Failed to create scene:", error);
+      throw error;
+    }
+  },
+
+  deleteScene: async ({ sceneId }: { sceneId: string }) => {
+    const { scenes, currentScene } = get();
+    const sceneToDelete = scenes.find((s) => s.id === sceneId);
+
+    if (!sceneToDelete) {
+      throw new Error("Scene not found");
+    }
+
+    if (sceneToDelete.isMain) {
+      throw new Error("Cannot delete main scene");
+    }
+
+    const updatedScenes = scenes.filter((s) => s.id !== sceneId);
+
+    // Determine new current scene if we're deleting the current one
+    let newCurrentScene = currentScene;
+    if (currentScene?.id === sceneId) {
+      newCurrentScene = getMainScene({ scenes: updatedScenes });
+    }
+
+    // Update project
+    const projectStore = useProjectStore.getState();
+    const { activeProject } = projectStore;
+
+    if (!activeProject) {
+      throw new Error("No active project");
+    }
+
+    const updatedProject = {
+      ...activeProject,
+      scenes: updatedScenes,
+      updatedAt: new Date(),
+    };
+
+    try {
+      await storageService.saveProject({ project: updatedProject });
+      useProjectStore.setState({ activeProject: updatedProject });
+      set({
+        scenes: updatedScenes,
+        currentScene: newCurrentScene,
+      });
+
+      // If we switched scenes, load the new scene's timeline
+      if (newCurrentScene && newCurrentScene.id !== currentScene?.id) {
+        const timelineStore = useTimelineStore.getState();
+        await timelineStore.loadProjectTimeline({
+          projectId: activeProject.id,
+          sceneId: newCurrentScene.id,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to delete scene:", error);
       throw error;
     }
   },
@@ -226,7 +271,7 @@ export const useSceneStore = create<SceneStore>((set, get) => ({
     scenes: Scene[];
     currentSceneId?: string;
   }) => {
-    const ensuredScenes = ensureBackgroundScene({ scenes });
+    const ensuredScenes = ensureMainScene(scenes);
     const currentScene = currentSceneId
       ? ensuredScenes.find((s) => s.id === currentSceneId)
       : null;
@@ -241,19 +286,25 @@ export const useSceneStore = create<SceneStore>((set, get) => ({
     if (ensuredScenes.length > scenes.length) {
       const projectStore = useProjectStore.getState();
       const { activeProject } = projectStore;
-      
+
       if (activeProject) {
         const updatedProject = {
           ...activeProject,
           scenes: ensuredScenes,
           updatedAt: new Date(),
         };
-        
-        storageService.saveProject({ project: updatedProject }).then(() => {
-          useProjectStore.setState({ activeProject: updatedProject });
-        }).catch(error => {
-          console.error("Failed to save project with background scene:", error);
-        });
+
+        storageService
+          .saveProject({ project: updatedProject })
+          .then(() => {
+            useProjectStore.setState({ activeProject: updatedProject });
+          })
+          .catch((error) => {
+            console.error(
+              "Failed to save project with background scene:",
+              error
+            );
+          });
       }
     }
   },
