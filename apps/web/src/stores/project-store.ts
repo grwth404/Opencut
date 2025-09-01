@@ -14,7 +14,7 @@ export const DEFAULT_FPS = 30;
 export function createMainScene(): Scene {
   return {
     id: generateUUID(),
-    name: "Main Scene",
+    name: "Main scene",
     isMain: true,
     createdAt: new Date(),
     updatedAt: new Date(),
