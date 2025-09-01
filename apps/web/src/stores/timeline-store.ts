@@ -15,6 +15,7 @@ import { MediaFile } from "@/types/media";
 import { findBestCanvasPreset } from "@/lib/editor-utils";
 import { storageService } from "@/lib/storage/storage-service";
 import { useProjectStore } from "./project-store";
+import { useSceneStore } from "./scene-store";
 import { generateUUID } from "@/lib/utils";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 import { checkElementOverlaps, resolveElementOverlaps } from "@/lib/timeline";
@@ -178,8 +179,20 @@ interface TimelineStore {
   pushHistory: () => void;
 
   // Persistence actions
-  loadProjectTimeline: (projectId: string) => Promise<void>;
-  saveProjectTimeline: (projectId: string) => Promise<void>;
+  loadProjectTimeline: ({
+    projectId,
+    sceneId,
+  }: {
+    projectId: string;
+    sceneId?: string;
+  }) => Promise<void>;
+  saveProjectTimeline: ({
+    projectId,
+    sceneId,
+  }: {
+    projectId: string;
+    sceneId?: string;
+  }) => Promise<void>;
   clearTimeline: () => void;
 
   // Clipboard actions
@@ -235,9 +248,15 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
   // Helper to auto-save timeline changes
   const autoSaveTimeline = async () => {
     const activeProject = useProjectStore.getState().activeProject;
-    if (activeProject) {
+    const currentScene = useSceneStore.getState().currentScene;
+
+    if (activeProject && currentScene) {
       try {
-        await storageService.saveTimeline(activeProject.id, get()._tracks);
+        await storageService.saveTimeline({
+          projectId: activeProject.id,
+          tracks: get()._tracks,
+          sceneId: currentScene.id,
+        });
       } catch (error) {
         console.error("Failed to auto-save timeline:", error);
       }
@@ -1229,8 +1248,24 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
 
     getProjectThumbnail: async (projectId) => {
       try {
-        const tracks = await storageService.loadTimeline(projectId);
-        const mediaItems = await storageService.loadAllMediaFiles(projectId);
+        const project = await storageService.loadProject({ id: projectId });
+        if (!project) return null;
+
+        // For scene-based projects, use main scene timeline
+        // For legacy projects, use legacy timeline format
+        let sceneId: string | undefined;
+        if (project.scenes && project.scenes.length > 0) {
+          const mainScene = project.scenes.find((s) => s.isMain);
+          sceneId = mainScene?.id;
+        }
+
+        const tracks = await storageService.loadTimeline({
+          projectId,
+          sceneId,
+        });
+        const mediaItems = await storageService.loadAllMediaFiles({
+          projectId,
+        });
 
         if (!tracks || !mediaItems.length) return null;
 
@@ -1330,9 +1365,19 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       });
     },
 
-    loadProjectTimeline: async (projectId) => {
+    loadProjectTimeline: async ({
+      projectId,
+      sceneId,
+    }: {
+      projectId: string;
+      sceneId?: string;
+    }) => {
       try {
-        const tracks = await storageService.loadTimeline(projectId);
+        const tracks = await storageService.loadTimeline({
+          projectId,
+          sceneId,
+        });
+
         if (tracks) {
           updateTracks(tracks);
         } else {
@@ -1348,9 +1393,20 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       }
     },
 
-    saveProjectTimeline: async (projectId) => {
+    saveProjectTimeline: async ({
+      projectId,
+      sceneId,
+    }: {
+      projectId: string;
+      sceneId?: string;
+    }) => {
+      const { _tracks } = get();
       try {
-        await storageService.saveTimeline(projectId, get()._tracks);
+        await storageService.saveTimeline({
+          projectId,
+          tracks: _tracks,
+          sceneId,
+        });
       } catch (error) {
         console.error("Failed to save timeline:", error);
       }

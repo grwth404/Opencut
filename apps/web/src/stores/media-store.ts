@@ -152,7 +152,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
 
     // Save to persistent storage in background
     try {
-      await storageService.saveMediaFile(projectId, newItem);
+      await storageService.saveMediaFile({ projectId, mediaItem: newItem });
     } catch (error) {
       console.error("Failed to save media item:", error);
       // Remove from local state if save failed
@@ -217,7 +217,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
 
     // 3) Remove from persistent storage
     try {
-      await storageService.deleteMediaFile(projectId, id);
+      await storageService.deleteMediaFile({ projectId, id });
     } catch (error) {
       console.error("Failed to delete media item:", error);
     }
@@ -227,7 +227,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
     set({ isLoading: true });
 
     try {
-      const mediaItems = await storageService.loadAllMediaFiles(projectId);
+      const mediaItems = await storageService.loadAllMediaFiles({ projectId });
 
       // Regenerate thumbnails for video items
       const updatedMediaItems = await Promise.all(
@@ -282,7 +282,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
     try {
       const mediaIds = state.mediaFiles.map((item) => item.id);
       await Promise.all(
-        mediaIds.map((id) => storageService.deleteMediaFile(projectId, id))
+        mediaIds.map((id) => storageService.deleteMediaFile({ projectId, id }))
       );
     } catch (error) {
       console.error("Failed to clear media items from storage:", error);

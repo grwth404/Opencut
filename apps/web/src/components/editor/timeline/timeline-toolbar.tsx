@@ -1,6 +1,7 @@
 import { usePlaybackStore } from "@/stores/playback-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useTimelineStore } from "@/stores/timeline-store";
+import { useSceneStore } from "@/stores/scene-store";
 import { toast } from "sonner";
 import {
   TooltipProvider,
@@ -38,6 +39,7 @@ import { DEFAULT_FPS } from "@/stores/project-store";
 import { formatTimeCode } from "@/lib/time";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 import { EditableTimecode } from "@/components/ui/editable-timecode";
+import { ScenesView } from "../scenes-view";
 
 export function TimelineToolbar({
   zoomLevel,
@@ -65,6 +67,7 @@ export function TimelineToolbar({
   } = useTimelineStore();
   const { currentTime, duration, isPlaying, toggle, seek } = usePlaybackStore();
   const { toggleBookmark, isBookmarked, activeProject } = useProjectStore();
+  const { currentScene } = useSceneStore();
 
   const handleSplitSelected = () => {
     if (selectedElements.length === 0) return;
@@ -357,11 +360,13 @@ export function TimelineToolbar({
       </div>
       <div>
         <SplitButton>
-          <SplitButtonLeft>Main scene</SplitButtonLeft>
+          <SplitButtonLeft>{currentScene?.name || "No Scene"}</SplitButtonLeft>
           <SplitButtonSeparator />
-          <SplitButtonRight onClick={() => {}}>
-            <LayersIcon />
-          </SplitButtonRight>
+          <ScenesView>
+            <SplitButtonRight onClick={() => {}}>
+              <LayersIcon />
+            </SplitButtonRight>
+          </ScenesView>
         </SplitButton>
       </div>
       <div className="flex items-center gap-1">
