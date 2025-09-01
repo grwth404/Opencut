@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { createMainScene } from "@/stores/project-store";
 
 interface MigrationProgress {
   current: number;
@@ -87,13 +88,7 @@ export function ScenesMigrator({ children }: { children: React.ReactNode }) {
 
   const migrateLegacyProject = async (project: TProject) => {
     try {
-      const mainScene: Scene = {
-        id: generateUUID(),
-        name: "Main Scene",
-        isMain: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const mainScene = createMainScene();
 
       const migratedProject: TProject = {
         ...project,
