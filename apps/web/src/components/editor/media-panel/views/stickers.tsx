@@ -181,12 +181,12 @@ function StickersContentView({ category }: { category: StickerCategory }) {
     setSelectedCollection,
     loadCollections,
     searchStickers,
-    downloadSticker,
+    addStickerToTimeline,
     clearRecentStickers,
     setSelectedCategory,
+    addingSticker,
   } = useStickersStore();
 
-  const [addingSticker, setAddingSticker] = useState<string | null>(null);
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const [collectionsToShow, setCollectionsToShow] = useState(20);
   const [showCollectionItems, setShowCollectionItems] = useState(false);
@@ -250,46 +250,11 @@ function StickersContentView({ category }: { category: StickerCategory }) {
   }, [localSearchQuery]);
 
   const handleAddSticker = async (iconName: string) => {
-    if (!activeProject) {
-      toast.error("No active project");
-      return;
-    }
-
-    setAddingSticker(iconName);
-
     try {
-      const file = await downloadSticker(iconName);
-
-      if (!file) {
-        throw new Error("Failed to download sticker");
-      }
-
-      const mediaItem: Omit<MediaFile, "id"> = {
-        name: iconName.replace(":", "-"),
-        type: "image",
-        file,
-        url: URL.createObjectURL(file),
-        width: 200,
-        height: 200,
-        duration: TIMELINE_CONSTANTS.DEFAULT_IMAGE_DURATION,
-        ephemeral: false,
-      };
-
-      await addMediaFile(activeProject.id, mediaItem);
-
-      const added = useMediaStore
-        .getState()
-        .mediaFiles.find(
-          (m) => m.url === mediaItem.url && m.name === mediaItem.name
-        );
-      if (!added) throw new Error("Sticker not in media store");
-
-      addElementAtTime(added, currentTime);
+      await addStickerToTimeline(iconName);
     } catch (error) {
       console.error("Failed to add sticker:", error);
       toast.error("Failed to add sticker to timeline");
-    } finally {
-      setAddingSticker(null);
     }
   };
 
