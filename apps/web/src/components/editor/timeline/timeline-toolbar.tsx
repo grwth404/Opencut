@@ -52,11 +52,10 @@ export function TimelineToolbar({
     tracks,
     addTrack,
     addElementToTrack,
-    removeElementFromTrack,
-    removeElementFromTrackWithRipple,
     selectedElements,
     clearSelectedElements,
-    splitElement,
+    deleteSelected,
+    splitSelected,
     splitAndKeepLeft,
     splitAndKeepRight,
     separateAudio,
@@ -70,25 +69,7 @@ export function TimelineToolbar({
   const { scenes, currentScene } = useSceneStore();
 
   const handleSplitSelected = () => {
-    if (selectedElements.length === 0) return;
-    let splitCount = 0;
-    selectedElements.forEach(({ trackId, elementId }) => {
-      const track = tracks.find((t) => t.id === trackId);
-      const element = track?.elements.find((c) => c.id === elementId);
-      if (element && track) {
-        const effectiveStart = element.startTime;
-        const effectiveEnd =
-          element.startTime +
-          (element.duration - element.trimStart - element.trimEnd);
-        if (currentTime > effectiveStart && currentTime < effectiveEnd) {
-          const newElementId = splitElement(trackId, elementId, currentTime);
-          if (newElementId) splitCount++;
-        }
-      }
-    });
-    if (splitCount === 0) {
-      toast.error("Playhead must be within selected elements to split");
-    }
+    splitSelected(currentTime);
   };
 
   const handleDuplicateSelected = () => {
@@ -173,15 +154,7 @@ export function TimelineToolbar({
   };
 
   const handleDeleteSelected = () => {
-    if (selectedElements.length === 0) return;
-    selectedElements.forEach(({ trackId, elementId }) => {
-      if (rippleEditingEnabled) {
-        removeElementFromTrackWithRipple(trackId, elementId);
-      } else {
-        removeElementFromTrack(trackId, elementId);
-      }
-    });
-    clearSelectedElements();
+    deleteSelected();
   };
 
   const handleZoomIn = () => {

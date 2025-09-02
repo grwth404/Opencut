@@ -203,6 +203,12 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
 
     // If there are elements to remove, push history once before batch removal
     if (elementsToRemove.length > 0) {
+      const {
+        removeElementFromTrack,
+        removeElementFromTrackWithRipple,
+        rippleEditingEnabled,
+        pushHistory,
+      } = useTimelineStore.getState();
       pushHistory();
 
       // Remove all elements without pushing additional history entries

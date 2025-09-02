@@ -6,12 +6,13 @@ import {
   TimelineTrack,
   TextElement,
   DragData,
+  MediaElement,
   sortTracksByOrder,
   ensureMainTrack,
   validateElementTrackCompatibility,
 } from "@/types/timeline";
 import { useMediaStore, getMediaAspectRatio } from "./media-store";
-import { MediaFile } from "@/types/media";
+import { MediaFile, MediaType } from "@/types/media";
 import { findBestCanvasPreset } from "@/lib/editor-utils";
 import { storageService } from "@/lib/storage/storage-service";
 import { useProjectStore } from "./project-store";
@@ -20,6 +21,7 @@ import { generateUUID } from "@/lib/utils";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 import { checkElementOverlaps, resolveElementOverlaps } from "@/lib/timeline";
 import { DEFAULT_TEXT_ELEMENT } from "@/constants/text-constants";
+import { usePlaybackStore } from "./playback-store";
 
 // Helper function to manage element naming with suffixes
 const getElementNameWithSuffix = (
@@ -99,11 +101,7 @@ interface TimelineStore {
   removeTrack: (trackId: string) => void;
   removeTrackWithRipple: (trackId: string) => void;
   addElementToTrack: (trackId: string, element: CreateTimelineElement) => void;
-  removeElementFromTrack: (
-    trackId: string,
-    elementId: string,
-    pushHistory?: boolean
-  ) => void;
+
   moveElementToTrack: (
     fromTrackId: string,
     toTrackId: string,
@@ -129,15 +127,6 @@ interface TimelineStore {
     pushHistory?: boolean
   ) => void;
   toggleTrackMute: (trackId: string) => void;
-  toggleElementHidden: (trackId: string, elementId: string) => void;
-  toggleElementMuted: (trackId: string, elementId: string) => void;
-
-  // Split operations for elements
-  splitElement: (
-    trackId: string,
-    elementId: string,
-    splitTime: number
-  ) => string | null;
   splitAndKeepLeft: (
     trackId: string,
     elementId: string,
@@ -198,6 +187,33 @@ interface TimelineStore {
   // Clipboard actions
   copySelected: () => void;
   pasteAtTime: (time: number) => void;
+
+  // Unified selection-aware actions
+  deleteSelected: (trackId?: string, elementId?: string) => void;
+  splitSelected: (
+    splitTime: number,
+    trackId?: string,
+    elementId?: string
+  ) => void;
+  toggleSelectedHidden: (trackId?: string, elementId?: string) => void;
+  toggleSelectedMuted: (trackId?: string, elementId?: string) => void;
+  duplicateElement: (trackId: string, elementId: string) => void;
+  revealElementInMedia: (elementId: string) => void;
+  replaceElementWithFile: (
+    trackId: string,
+    elementId: string,
+    file: File
+  ) => Promise<void>;
+  getContextMenuState: (
+    trackId: string,
+    elementId: string
+  ) => {
+    isMultipleSelected: boolean;
+    isCurrentElementSelected: boolean;
+    hasAudioElements: boolean;
+    canSplitSelected: boolean;
+    currentTime: number;
+  };
   updateTextElement: (
     trackId: string,
     elementId: string,
@@ -575,16 +591,19 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       get().selectElement(trackId, newElement.id);
     },
 
-    removeElementFromTrack: (trackId, elementId, pushHistory = true) => {
-      const { rippleEditingEnabled } = get();
+    removeElementFromTrackWithRipple: (
+      trackId,
+      elementId,
+      pushHistory = true
+    ) => {
+      const { _tracks, rippleEditingEnabled } = get();
 
-      if (rippleEditingEnabled) {
-        get().removeElementFromTrackWithRipple(trackId, elementId, pushHistory);
-      } else {
+      if (!rippleEditingEnabled) {
+        // Inline non-ripple removal logic
         if (pushHistory) get().pushHistory();
         updateTracksAndSave(
-          get()
-            ._tracks.map((track) =>
+          _tracks
+            .map((track) =>
               track.id === trackId
                 ? {
                     ...track,
@@ -596,18 +615,6 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
             )
             .filter((track) => track.elements.length > 0)
         );
-      }
-    },
-
-    removeElementFromTrackWithRipple: (
-      trackId,
-      elementId,
-      pushHistory = true
-    ) => {
-      const { _tracks, rippleEditingEnabled } = get();
-
-      if (!rippleEditingEnabled) {
-        get().removeElementFromTrack(trackId, elementId, pushHistory);
         return;
       }
 
@@ -864,42 +871,6 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
       );
     },
 
-    toggleElementHidden: (trackId, elementId) => {
-      get().pushHistory();
-      updateTracksAndSave(
-        get()._tracks.map((track) =>
-          track.id === trackId
-            ? {
-                ...track,
-                elements: track.elements.map((element) =>
-                  element.id === elementId
-                    ? { ...element, hidden: !element.hidden }
-                    : element
-                ),
-              }
-            : track
-        )
-      );
-    },
-
-    toggleElementMuted: (trackId, elementId) => {
-      get().pushHistory();
-      updateTracksAndSave(
-        get()._tracks.map((track) =>
-          track.id === trackId
-            ? {
-                ...track,
-                elements: track.elements.map((element) =>
-                  element.id === elementId && element.type === "media"
-                    ? { ...element, muted: !element.muted }
-                    : element
-                ),
-              }
-            : track
-        )
-      );
-    },
-
     updateTextElement: (trackId, elementId, updates) => {
       get().pushHistory();
       updateTracksAndSave(
@@ -916,60 +887,6 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
             : track
         )
       );
-    },
-
-    splitElement: (trackId, elementId, splitTime) => {
-      const { _tracks } = get();
-      const track = _tracks.find((t) => t.id === trackId);
-      const element = track?.elements.find((c) => c.id === elementId);
-
-      if (!element) return null;
-
-      const effectiveStart = element.startTime;
-      const effectiveEnd =
-        element.startTime +
-        (element.duration - element.trimStart - element.trimEnd);
-
-      if (splitTime <= effectiveStart || splitTime >= effectiveEnd) return null;
-
-      get().pushHistory();
-
-      const relativeTime = splitTime - element.startTime;
-      const firstDuration = relativeTime;
-      const secondDuration =
-        element.duration - element.trimStart - element.trimEnd - relativeTime;
-
-      const secondElementId = generateUUID();
-
-      updateTracksAndSave(
-        get()._tracks.map((track) =>
-          track.id === trackId
-            ? {
-                ...track,
-                elements: track.elements.flatMap((c) =>
-                  c.id === elementId
-                    ? [
-                        {
-                          ...c,
-                          trimEnd: c.trimEnd + secondDuration,
-                          name: getElementNameWithSuffix(c.name, "left"),
-                        },
-                        {
-                          ...c,
-                          id: secondElementId,
-                          startTime: splitTime,
-                          trimStart: c.trimStart + firstDuration,
-                          name: getElementNameWithSuffix(c.name, "right"),
-                        },
-                      ]
-                    : [c]
-                ),
-              }
-            : track
-        )
-      );
-
-      return secondElementId;
     },
 
     // Split element and keep only the left portion
@@ -1150,9 +1067,9 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
           };
         }
 
-        const mediaData: any = {
+        const mediaData: Omit<MediaFile, "id"> = {
           name: newFile.name,
-          type: fileType,
+          type: fileType as MediaType,
           file: newFile,
           url: URL.createObjectURL(newFile),
         };
@@ -1605,6 +1522,332 @@ export const useTimelineStore = create<TimelineStore>((set, get) => {
           });
         }
       }
+    },
+
+    deleteSelected: (trackId?: string, elementId?: string) => {
+      const { selectedElements, rippleEditingEnabled } = get();
+
+      const elementsToDelete =
+        trackId && elementId
+          ? [{ trackId, elementId }]
+          : selectedElements.length > 0
+            ? selectedElements
+            : [];
+
+      if (elementsToDelete.length === 0) return;
+
+      get().pushHistory();
+
+      if (rippleEditingEnabled) {
+        for (const { trackId: tId, elementId: eId } of elementsToDelete) {
+          get().removeElementFromTrackWithRipple(tId, eId, false);
+        }
+      } else {
+        updateTracksAndSave(
+          get()
+            ._tracks.map((track) => ({
+              ...track,
+              elements: track.elements.filter(
+                (element) =>
+                  !elementsToDelete.some(
+                    ({ trackId: tId, elementId: eId }) =>
+                      track.id === tId && element.id === eId
+                  )
+              ),
+            }))
+            .filter((track) => track.elements.length > 0)
+        );
+      }
+
+      get().clearSelectedElements();
+    },
+
+    splitSelected: (splitTime, trackId?: string, elementId?: string) => {
+      const { selectedElements, _tracks } = get();
+
+      const elementsToProcess =
+        trackId && elementId
+          ? [{ trackId, elementId }]
+          : selectedElements.length > 0
+            ? selectedElements
+            : [];
+
+      if (elementsToProcess.length === 0) return;
+
+      const elementsToSplit: Array<{
+        trackId: string;
+        elementId: string;
+        element: TimelineElement;
+      }> = [];
+
+      for (const { trackId: tId, elementId: eId } of elementsToProcess) {
+        const track = _tracks.find((t) => t.id === tId);
+        const element = track?.elements.find((e) => e.id === eId);
+        if (!track || !element) continue;
+
+        const effectiveStart = element.startTime;
+        const effectiveEnd =
+          element.startTime +
+          (element.duration - element.trimStart - element.trimEnd);
+
+        if (splitTime > effectiveStart && splitTime < effectiveEnd) {
+          elementsToSplit.push({ trackId: tId, elementId: eId, element });
+        }
+      }
+
+      if (elementsToSplit.length === 0) {
+        const { toast } = require("sonner");
+        const isMultiple = elementsToProcess.length > 1;
+        toast.error(
+          isMultiple
+            ? "Playhead must be within all selected elements to split"
+            : "Playhead must be within element to split"
+        );
+        return;
+      }
+
+      get().pushHistory();
+
+      updateTracksAndSave(
+        get()._tracks.map((track) => {
+          const elementsToSplitInTrack = elementsToSplit.filter(
+            ({ trackId: tId }) => tId === track.id
+          );
+
+          if (elementsToSplitInTrack.length === 0) return track;
+
+          return {
+            ...track,
+            elements: track.elements.flatMap((c) => {
+              const elementToSplit = elementsToSplitInTrack.find(
+                ({ elementId: eId }) => eId === c.id
+              );
+
+              if (!elementToSplit) return [c];
+
+              const relativeTime = splitTime - elementToSplit.element.startTime;
+              const firstDuration = relativeTime;
+              const secondDuration =
+                elementToSplit.element.duration -
+                elementToSplit.element.trimStart -
+                elementToSplit.element.trimEnd -
+                relativeTime;
+
+              const secondElementId = generateUUID();
+
+              return [
+                {
+                  ...c,
+                  trimEnd: c.trimEnd + secondDuration,
+                  name: getElementNameWithSuffix(c.name, "left"),
+                },
+                {
+                  ...c,
+                  id: secondElementId,
+                  startTime: splitTime,
+                  trimStart: c.trimStart + firstDuration,
+                  name: getElementNameWithSuffix(c.name, "right"),
+                },
+              ];
+            }),
+          };
+        })
+      );
+    },
+
+    toggleSelectedHidden: (trackId?: string, elementId?: string) => {
+      const { selectedElements, _tracks } = get();
+
+      const elementsToProcess =
+        trackId && elementId
+          ? [{ trackId, elementId }]
+          : selectedElements.length > 0
+            ? selectedElements
+            : [];
+
+      if (elementsToProcess.length === 0) return;
+
+      get().pushHistory();
+
+      const shouldHide = elementsToProcess.some(
+        ({ trackId: tId, elementId: eId }) => {
+          const track = _tracks.find((t) => t.id === tId);
+          const element = track?.elements.find((e) => e.id === eId);
+          return element && !element.hidden;
+        }
+      );
+
+      updateTracksAndSave(
+        _tracks.map((track) => ({
+          ...track,
+          elements: track.elements.map((element) => {
+            const shouldUpdate = elementsToProcess.some(
+              ({ trackId: tId, elementId: eId }) =>
+                track.id === tId && element.id === eId
+            );
+            return shouldUpdate && element.hidden !== shouldHide
+              ? { ...element, hidden: shouldHide }
+              : element;
+          }),
+        }))
+      );
+    },
+
+    toggleSelectedMuted: (trackId?: string, elementId?: string) => {
+      const { selectedElements, _tracks } = get();
+
+      const elementsToProcess =
+        trackId && elementId
+          ? [{ trackId, elementId }]
+          : selectedElements.length > 0
+            ? selectedElements
+            : [];
+
+      if (elementsToProcess.length === 0) return;
+
+      get().pushHistory();
+
+      const audioElements = elementsToProcess.filter(
+        ({ trackId: tId, elementId: eId }) => {
+          const track = _tracks.find((t) => t.id === tId);
+          const element = track?.elements.find((e) => e.id === eId);
+          return element?.type === "media";
+        }
+      );
+
+      if (audioElements.length === 0) return;
+
+      const shouldMute = audioElements.some(
+        ({ trackId: tId, elementId: eId }) => {
+          const track = _tracks.find((t) => t.id === tId);
+          const element = track?.elements.find((e) => e.id === eId);
+          return element?.type === "media" && !element.muted;
+        }
+      );
+
+      updateTracksAndSave(
+        _tracks.map((track) => ({
+          ...track,
+          elements: track.elements.map((element) => {
+            const shouldUpdate = audioElements.some(
+              ({ trackId: tId, elementId: eId }) =>
+                track.id === tId && element.id === eId
+            );
+            return shouldUpdate &&
+              element.type === "media" &&
+              element.muted !== shouldMute
+              ? { ...element, muted: shouldMute }
+              : element;
+          }),
+        }))
+      );
+    },
+
+    duplicateElement: (trackId, elementId) => {
+      const { _tracks } = get();
+      const track = _tracks.find((t) => t.id === trackId);
+      const element = track?.elements.find((e) => e.id === elementId);
+      if (!track || !element) return;
+
+      const { id, ...elementWithoutId } = element;
+      const effectiveDuration =
+        element.duration - element.trimStart - element.trimEnd;
+
+      get().addElementToTrack(trackId, {
+        ...elementWithoutId,
+        name: `${element.name} (copy)`,
+        startTime: element.startTime + effectiveDuration + 0.1,
+      } as CreateTimelineElement);
+    },
+
+    revealElementInMedia: (elementId) => {
+      const {
+        useMediaPanelStore,
+      } = require("../components/editor/media-panel/store");
+      const { requestRevealMedia } = useMediaPanelStore.getState();
+
+      const { _tracks } = get();
+      const element = _tracks
+        .flatMap((track) => track.elements)
+        .find((el) => el.id === elementId);
+
+      if (element?.type === "media") {
+        requestRevealMedia(element.mediaId);
+      }
+    },
+
+    replaceElementWithFile: async (trackId, elementId, file) => {
+      try {
+        const result = await get().replaceElementMedia(
+          trackId,
+          elementId,
+          file
+        );
+        if (result.success) {
+          const { toast } = await import("sonner");
+          toast.success("Clip replaced successfully");
+        } else {
+          const { toast } = await import("sonner");
+          toast.error(result.error || "Failed to replace clip");
+        }
+      } catch (error) {
+        console.error("Unexpected error replacing clip:", error);
+        const { toast } = await import("sonner");
+        toast.error(
+          `Unexpected error: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+    },
+
+    getContextMenuState: (trackId, elementId) => {
+      const { selectedElements, _tracks } = get();
+      const { currentTime } = usePlaybackStore.getState();
+      const { mediaFiles } = useMediaStore.getState();
+
+      const isMultipleSelected = selectedElements.length > 1;
+      const isCurrentElementSelected = selectedElements.some(
+        (sel) => sel.trackId === trackId && sel.elementId === elementId
+      );
+
+      const hasAudioElements = selectedElements.some(
+        ({ trackId: tId, elementId: eId }) => {
+          const selectedTrack = _tracks.find((t) => t.id === tId);
+          const selectedElement = selectedTrack?.elements.find(
+            (e) => e.id === eId
+          );
+          if (selectedElement?.type !== "media") return false;
+          const mediaElement = selectedElement as MediaElement;
+          const mediaItem = mediaFiles.find(
+            (file: MediaFile) => file.id === mediaElement.mediaId
+          );
+          return mediaItem?.type === "audio" || mediaItem?.type === "video";
+        }
+      );
+
+      const canSplitSelected = selectedElements.every(
+        ({ trackId: tId, elementId: eId }) => {
+          const selectedTrack = _tracks.find((t) => t.id === tId);
+          const selectedElement = selectedTrack?.elements.find(
+            (e) => e.id === eId
+          );
+          if (!selectedElement) return false;
+          const effectiveStart = selectedElement.startTime;
+          const effectiveEnd =
+            selectedElement.startTime +
+            (selectedElement.duration -
+              selectedElement.trimStart -
+              selectedElement.trimEnd);
+          return currentTime > effectiveStart && currentTime < effectiveEnd;
+        }
+      );
+
+      return {
+        isMultipleSelected,
+        isCurrentElementSelected,
+        hasAudioElements,
+        canSplitSelected,
+        currentTime,
+      };
     },
   };
 });
