@@ -183,13 +183,7 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
 
     // 2) Cascade into the timeline: remove any elements using this media ID
     const timeline = useTimelineStore.getState();
-    const {
-      tracks,
-      removeElementFromTrack,
-      removeElementFromTrackWithRipple,
-      rippleEditingEnabled,
-      pushHistory,
-    } = timeline;
+    const { tracks, deleteSelected, setSelectedElements } = timeline;
 
     // Find all elements that reference this media
     const elementsToRemove: Array<{ trackId: string; elementId: string }> = [];
@@ -201,24 +195,10 @@ export const useMediaStore = create<MediaStore>((set, get) => ({
       }
     }
 
-    // If there are elements to remove, push history once before batch removal
+    // If there are elements to remove, use unified delete function
     if (elementsToRemove.length > 0) {
-      const {
-        removeElementFromTrack,
-        removeElementFromTrackWithRipple,
-        rippleEditingEnabled,
-        pushHistory,
-      } = useTimelineStore.getState();
-      pushHistory();
-
-      // Remove all elements without pushing additional history entries
-      for (const { trackId, elementId } of elementsToRemove) {
-        if (rippleEditingEnabled) {
-          removeElementFromTrackWithRipple(trackId, elementId, false);
-        } else {
-          removeElementFromTrack(trackId, elementId, false);
-        }
-      }
+      setSelectedElements(elementsToRemove);
+      deleteSelected();
     }
 
     // 3) Remove from persistent storage
