@@ -5,7 +5,7 @@ import {
 	upsertElementKeyframe,
 } from "@/lib/animation";
 import type { AnimationPropertyPath, ElementAnimations } from "@/types/animation";
-import type { ElementUpdatePatch } from "@/types/timeline";
+import type { TimelineElement } from "@/types/timeline";
 import { usePropertyDraft } from "./use-property-draft";
 
 export function useKeyframedNumberProperty({
@@ -29,7 +29,7 @@ export function useKeyframedNumberProperty({
 	displayValue: string;
 	parse: (input: string) => number | null;
 	valueAtPlayhead: number;
-	buildBaseUpdates: ({ value }: { value: number }) => ElementUpdatePatch;
+	buildBaseUpdates: ({ value }: { value: number }) => Partial<TimelineElement>;
 }) {
 	const editor = useEditor();
 
