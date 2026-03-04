@@ -98,7 +98,7 @@ export function DraggableItem({
 			{variant === "card" ? (
 				<div
 					ref={dragRef}
-					className={cn("group relative", containerClassName ?? "size-28")}
+					className={cn("group relative", containerClassName ?? "w-28")}
 				>
 					<div
 						className={cn(

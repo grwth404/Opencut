@@ -317,9 +317,9 @@ function MediaItemList({
 
 	return (
 		<div
-			className={cn(isGrid ? "grid gap-2" : "flex flex-col gap-1")}
+			className={cn(isGrid ? "grid gap-4" : "flex flex-col gap-1")}
 			style={
-				isGrid ? { gridTemplateColumns: "repeat(auto-fill, 160px)" } : undefined
+				isGrid ? { gridTemplateColumns: "repeat(auto-fill, 7rem)" } : undefined
 			}
 		>
 			{items.map((item) => (
