@@ -13,15 +13,70 @@ export interface SnapResult {
 	activeLines: SnapLine[];
 }
 
+type ScaleEdge = "left" | "right" | "top" | "bottom";
+
+export interface ScaleEdgePreference {
+	left?: boolean;
+	right?: boolean;
+	top?: boolean;
+	bottom?: boolean;
+}
+
+function hasPreferredEdge({
+	preferredEdges,
+	edge,
+}: {
+	preferredEdges?: ScaleEdgePreference;
+	edge: ScaleEdge;
+}): boolean {
+	return preferredEdges?.[edge] === true;
+}
+
+function pickClosestScaleCandidate<T extends { distance: number; edge: ScaleEdge }>({
+	candidates,
+	preferredEdges,
+}: {
+	candidates: T[];
+	preferredEdges?: ScaleEdgePreference;
+}): T | null {
+	if (candidates.length === 0) {
+		return null;
+	}
+
+	return candidates.reduce((bestCandidate, candidate) => {
+		if (candidate.distance < bestCandidate.distance) {
+			return candidate;
+		}
+		if (candidate.distance > bestCandidate.distance) {
+			return bestCandidate;
+		}
+
+		const shouldPreferCandidate = hasPreferredEdge({
+			preferredEdges,
+			edge: candidate.edge,
+		});
+		const shouldPreferBestCandidate = hasPreferredEdge({
+			preferredEdges,
+			edge: bestCandidate.edge,
+		});
+
+		return shouldPreferCandidate && !shouldPreferBestCandidate
+			? candidate
+			: bestCandidate;
+	});
+}
+
 export function snapPosition({
 	proposedPosition,
 	canvasSize,
 	elementSize,
+	rotation = 0,
 	snapThreshold,
 }: {
 	proposedPosition: { x: number; y: number };
 	canvasSize: { width: number; height: number };
 	elementSize: { width: number; height: number };
+	rotation?: number;
 	snapThreshold: { x: number; y: number };
 }): SnapResult {
 	const centerX = 0;
@@ -31,8 +86,11 @@ export function snapPosition({
 	const top = -canvasSize.height / 2;
 	const bottom = canvasSize.height / 2;
 
-	const halfWidth = elementSize.width / 2;
-	const halfHeight = elementSize.height / 2;
+	const rotRad = (rotation * Math.PI) / 180;
+	const cosR = Math.abs(Math.cos(rotRad));
+	const sinR = Math.abs(Math.sin(rotRad));
+	const halfWidth = (elementSize.width * cosR + elementSize.height * sinR) / 2;
+	const halfHeight = (elementSize.width * sinR + elementSize.height * cosR) / 2;
 	const activeLines: SnapLine[] = [];
 
 	type AxisSnapCandidate = {
@@ -59,8 +117,8 @@ export function snapPosition({
 		);
 	}
 
-	const verticalTargets = [left, centerX, right];
-	const horizontalTargets = [top, centerY, bottom];
+	const verticalTargets = [centerX, left, right];
+	const horizontalTargets = [centerY, top, bottom];
 
 	const xCandidates: AxisSnapCandidate[] = [];
 	for (const targetX of verticalTargets) {
@@ -133,15 +191,19 @@ export function snapScale({
 	position,
 	baseWidth,
 	baseHeight,
+	rotation = 0,
 	canvasSize,
 	snapThreshold,
+	preferredEdges,
 }: {
 	proposedScale: number;
 	position: { x: number; y: number };
 	baseWidth: number;
 	baseHeight: number;
+	rotation?: number;
 	canvasSize: { width: number; height: number };
 	snapThreshold: { x: number; y: number };
+	preferredEdges?: ScaleEdgePreference;
 }): ScaleSnapResult {
 	const centerX = 0;
 	const centerY = 0;
@@ -150,15 +212,22 @@ export function snapScale({
 	const top = -canvasSize.height / 2;
 	const bottom = canvasSize.height / 2;
 
-	const leftEdge = position.x - (baseWidth * proposedScale) / 2;
-	const rightEdge = position.x + (baseWidth * proposedScale) / 2;
-	const topEdge = position.y - (baseHeight * proposedScale) / 2;
-	const bottomEdge = position.y + (baseHeight * proposedScale) / 2;
+	const rotRad = (rotation * Math.PI) / 180;
+	const cosR = Math.abs(Math.cos(rotRad));
+	const sinR = Math.abs(Math.sin(rotRad));
+	const aabbBaseHalfW = (baseWidth * cosR + baseHeight * sinR) / 2;
+	const aabbBaseHalfH = (baseWidth * sinR + baseHeight * cosR) / 2;
+
+	const leftEdge = position.x - aabbBaseHalfW * proposedScale;
+	const rightEdge = position.x + aabbBaseHalfW * proposedScale;
+	const topEdge = position.y - aabbBaseHalfH * proposedScale;
+	const bottomEdge = position.y + aabbBaseHalfH * proposedScale;
 
 	interface SnapCandidate {
 		scale: number;
 		distance: number;
 		lines: SnapLine[];
+		edge: ScaleEdge;
 	}
 
 	const candidates: SnapCandidate[] = [];
@@ -175,23 +244,25 @@ export function snapScale({
 	for (const target of verticalTargets) {
 		const distanceLeft = Math.abs(leftEdge - target.position);
 		if (distanceLeft <= snapThreshold.x) {
-			const scale = (2 * (position.x - target.position)) / baseWidth;
-			if (scale > MIN_SCALE) {
+			const scale = (position.x - target.position) / aabbBaseHalfW;
+			if (Math.abs(scale) > MIN_SCALE) {
 				candidates.push({
 					scale,
 					distance: distanceLeft,
 					lines: [target.line],
+					edge: "left",
 				});
 			}
 		}
 		const distanceRight = Math.abs(rightEdge - target.position);
 		if (distanceRight <= snapThreshold.x) {
-			const scale = (2 * (target.position - position.x)) / baseWidth;
-			if (scale > MIN_SCALE) {
+			const scale = (target.position - position.x) / aabbBaseHalfW;
+			if (Math.abs(scale) > MIN_SCALE) {
 				candidates.push({
 					scale,
 					distance: distanceRight,
 					lines: [target.line],
+					edge: "right",
 				});
 			}
 		}
@@ -212,40 +283,42 @@ export function snapScale({
 	for (const target of horizontalTargets) {
 		const distanceTop = Math.abs(topEdge - target.position);
 		if (distanceTop <= snapThreshold.y) {
-			const scale = (2 * (position.y - target.position)) / baseHeight;
-			if (scale > MIN_SCALE) {
+			const scale = (position.y - target.position) / aabbBaseHalfH;
+			if (Math.abs(scale) > MIN_SCALE) {
 				candidates.push({
 					scale,
 					distance: distanceTop,
 					lines: [target.line],
+					edge: "top",
 				});
 			}
 		}
 		const distanceBottom = Math.abs(bottomEdge - target.position);
 		if (distanceBottom <= snapThreshold.y) {
-			const scale = (2 * (target.position - position.y)) / baseHeight;
-			if (scale > MIN_SCALE) {
+			const scale = (target.position - position.y) / aabbBaseHalfH;
+			if (Math.abs(scale) > MIN_SCALE) {
 				candidates.push({
 					scale,
 					distance: distanceBottom,
 					lines: [target.line],
+					edge: "bottom",
 				});
 			}
 		}
 	}
 
-	if (candidates.length === 0) {
+	const best = pickClosestScaleCandidate({
+		candidates,
+		preferredEdges,
+	});
+	if (!best) {
 		return { snappedScale: proposedScale, activeLines: [] };
 	}
 
-	const best = candidates.reduce((acc, candidate) =>
-		candidate.distance < acc.distance ? candidate : acc,
-	);
-
-	const snappedLeft = position.x - (baseWidth * best.scale) / 2;
-	const snappedRight = position.x + (baseWidth * best.scale) / 2;
-	const snappedTop = position.y - (baseHeight * best.scale) / 2;
-	const snappedBottom = position.y + (baseHeight * best.scale) / 2;
+	const snappedLeft = position.x - aabbBaseHalfW * best.scale;
+	const snappedRight = position.x + aabbBaseHalfW * best.scale;
+	const snappedTop = position.y - aabbBaseHalfH * best.scale;
+	const snappedBottom = position.y + aabbBaseHalfH * best.scale;
 
 	const activeLines: SnapLine[] = [];
 	const seenKeys = new Set<string>();
@@ -260,16 +333,26 @@ export function snapScale({
 
 	for (const target of verticalTargets) {
 		if (
-			Math.abs(snappedLeft - target.position) <= 1 ||
-			Math.abs(snappedRight - target.position) <= 1
+			(hasPreferredEdge({ preferredEdges, edge: "left" }) &&
+				Math.abs(snappedLeft - target.position) <= 1) ||
+			(hasPreferredEdge({ preferredEdges, edge: "right" }) &&
+				Math.abs(snappedRight - target.position) <= 1) ||
+			(!preferredEdges &&
+				(Math.abs(snappedLeft - target.position) <= 1 ||
+					Math.abs(snappedRight - target.position) <= 1))
 		) {
 			addLine({ line: target.line });
 		}
 	}
 	for (const target of horizontalTargets) {
 		if (
-			Math.abs(snappedTop - target.position) <= 1 ||
-			Math.abs(snappedBottom - target.position) <= 1
+			(hasPreferredEdge({ preferredEdges, edge: "top" }) &&
+				Math.abs(snappedTop - target.position) <= 1) ||
+			(hasPreferredEdge({ preferredEdges, edge: "bottom" }) &&
+				Math.abs(snappedBottom - target.position) <= 1) ||
+			(!preferredEdges &&
+				(Math.abs(snappedTop - target.position) <= 1 ||
+					Math.abs(snappedBottom - target.position) <= 1))
 		) {
 			addLine({ line: target.line });
 		}
@@ -278,6 +361,158 @@ export function snapScale({
 	return {
 		snappedScale: best.scale,
 		activeLines,
+	};
+}
+
+export interface AxisSnapResult {
+	snappedScale: number;
+	/** Infinity when no snap candidate was within threshold */
+	snapDistance: number;
+	activeLines: SnapLine[];
+}
+
+export function snapScaleAxes({
+	proposedScaleX,
+	proposedScaleY,
+	position,
+	baseWidth,
+	baseHeight,
+	rotation = 0,
+	canvasSize,
+	snapThreshold,
+	preferredEdges,
+}: {
+	proposedScaleX: number;
+	proposedScaleY: number;
+	position: { x: number; y: number };
+	baseWidth: number;
+	baseHeight: number;
+	rotation?: number;
+	canvasSize: { width: number; height: number };
+	snapThreshold: { x: number; y: number };
+	preferredEdges?: ScaleEdgePreference;
+}): { x: AxisSnapResult; y: AxisSnapResult } {
+	const canvasLeft = -canvasSize.width / 2;
+	const canvasRight = canvasSize.width / 2;
+	const canvasTop = -canvasSize.height / 2;
+	const canvasBottom = canvasSize.height / 2;
+
+	const rotRad = (rotation * Math.PI) / 180;
+	const cosR = Math.abs(Math.cos(rotRad));
+	const sinR = Math.abs(Math.sin(rotRad));
+	const EPSILON = 1e-6;
+
+	// Current AABB edges at proposed scales
+	const currentAabbHalfW = (baseWidth * proposedScaleX * cosR + baseHeight * proposedScaleY * sinR) / 2;
+	const currentAabbHalfH = (baseWidth * proposedScaleX * sinR + baseHeight * proposedScaleY * cosR) / 2;
+	const currentLeftEdge = position.x - currentAabbHalfW;
+	const currentRightEdge = position.x + currentAabbHalfW;
+	const currentTopEdge = position.y - currentAabbHalfH;
+	const currentBottomEdge = position.y + currentAabbHalfH;
+
+	interface Candidate {
+		scale: number;
+		distance: number;
+		line: SnapLine;
+		edge: ScaleEdge;
+	}
+
+	function bestCandidate({
+		candidates,
+		proposedScale,
+	}: {
+		candidates: Candidate[];
+		proposedScale: number;
+	}): AxisSnapResult {
+		const best = pickClosestScaleCandidate({
+			candidates,
+			preferredEdges,
+		});
+		if (!best) {
+			return { snappedScale: proposedScale, snapDistance: Infinity, activeLines: [] };
+		}
+		return { snappedScale: best.scale, snapDistance: best.distance, activeLines: [best.line] };
+	}
+
+	// sX candidates: snap via vertical targets (left/right AABB edges) — only valid when cosR ≠ 0
+	// snap via horizontal targets (top/bottom AABB edges) — only valid when sinR ≠ 0
+	const xCandidates: Candidate[] = [];
+	const yContribW = baseHeight * proposedScaleY * sinR;
+	const yContribH = baseHeight * proposedScaleY * cosR;
+
+	if (cosR > EPSILON) {
+		for (const T of [canvasLeft, 0, canvasRight]) {
+			const line: SnapLine = { type: "vertical", position: T };
+			const distLeft = Math.abs(currentLeftEdge - T);
+			if (distLeft <= snapThreshold.x) {
+				const scale = (2 * (position.x - T) - yContribW) / (baseWidth * cosR);
+				if (Math.abs(scale) > MIN_SCALE) xCandidates.push({ scale, distance: distLeft, line, edge: "left" });
+			}
+			const distRight = Math.abs(currentRightEdge - T);
+			if (distRight <= snapThreshold.x) {
+				const scale = (2 * (T - position.x) - yContribW) / (baseWidth * cosR);
+				if (Math.abs(scale) > MIN_SCALE) xCandidates.push({ scale, distance: distRight, line, edge: "right" });
+			}
+		}
+	}
+
+	if (sinR > EPSILON) {
+		for (const T of [canvasTop, 0, canvasBottom]) {
+			const line: SnapLine = { type: "horizontal", position: T };
+			const distTop = Math.abs(currentTopEdge - T);
+			if (distTop <= snapThreshold.y) {
+				const scale = (2 * (position.y - T) - yContribH) / (baseWidth * sinR);
+				if (Math.abs(scale) > MIN_SCALE) xCandidates.push({ scale, distance: distTop, line, edge: "top" });
+			}
+			const distBottom = Math.abs(currentBottomEdge - T);
+			if (distBottom <= snapThreshold.y) {
+				const scale = (2 * (T - position.y) - yContribH) / (baseWidth * sinR);
+				if (Math.abs(scale) > MIN_SCALE) xCandidates.push({ scale, distance: distBottom, line, edge: "bottom" });
+			}
+		}
+	}
+
+	// sY candidates: snap via vertical targets — only valid when sinR ≠ 0
+	// snap via horizontal targets — only valid when cosR ≠ 0
+	const yCandidates: Candidate[] = [];
+	const xContribW = baseWidth * proposedScaleX * cosR;
+	const xContribH = baseWidth * proposedScaleX * sinR;
+
+	if (sinR > EPSILON) {
+		for (const T of [canvasLeft, 0, canvasRight]) {
+			const line: SnapLine = { type: "vertical", position: T };
+			const distLeft = Math.abs(currentLeftEdge - T);
+			if (distLeft <= snapThreshold.x) {
+				const scale = (2 * (position.x - T) - xContribW) / (baseHeight * sinR);
+				if (Math.abs(scale) > MIN_SCALE) yCandidates.push({ scale, distance: distLeft, line, edge: "left" });
+			}
+			const distRight = Math.abs(currentRightEdge - T);
+			if (distRight <= snapThreshold.x) {
+				const scale = (2 * (T - position.x) - xContribW) / (baseHeight * sinR);
+				if (Math.abs(scale) > MIN_SCALE) yCandidates.push({ scale, distance: distRight, line, edge: "right" });
+			}
+		}
+	}
+
+	if (cosR > EPSILON) {
+		for (const T of [canvasTop, 0, canvasBottom]) {
+			const line: SnapLine = { type: "horizontal", position: T };
+			const distTop = Math.abs(currentTopEdge - T);
+			if (distTop <= snapThreshold.y) {
+				const scale = (2 * (position.y - T) - xContribH) / (baseHeight * cosR);
+				if (Math.abs(scale) > MIN_SCALE) yCandidates.push({ scale, distance: distTop, line, edge: "top" });
+			}
+			const distBottom = Math.abs(currentBottomEdge - T);
+			if (distBottom <= snapThreshold.y) {
+				const scale = (2 * (T - position.y) - xContribH) / (baseHeight * cosR);
+				if (Math.abs(scale) > MIN_SCALE) yCandidates.push({ scale, distance: distBottom, line, edge: "bottom" });
+			}
+		}
+	}
+
+	return {
+		x: bestCandidate({ candidates: xCandidates, proposedScale: proposedScaleX }),
+		y: bestCandidate({ candidates: yCandidates, proposedScale: proposedScaleY }),
 	};
 }
 

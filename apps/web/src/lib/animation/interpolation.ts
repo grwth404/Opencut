@@ -5,7 +5,10 @@ import type {
 	DiscreteValue,
 	DiscreteAnimationChannel,
 	NumberAnimationChannel,
-} from "@/types/animation";
+	VectorAnimationChannel,
+	VectorValue,
+} from "@/lib/animation/types";
+import { isVectorValue } from "./vector-channel";
 import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
 
 function byTimeAscending({
@@ -59,12 +62,7 @@ function parseHexColor({
 		const green = parseHexChannel({ hex: `${greenHex}${greenHex}` });
 		const blue = parseHexChannel({ hex: `${blueHex}${blueHex}` });
 		const alpha = parseHexChannel({ hex: `${alphaHex}${alphaHex}` });
-		if (
-			red === null ||
-			green === null ||
-			blue === null ||
-			alpha === null
-		) {
+		if (red === null || green === null || blue === null || alpha === null) {
 			return null;
 		}
 
@@ -77,12 +75,7 @@ function parseHexColor({
 		const blue = parseHexChannel({ hex: rawHex.slice(4, 6) });
 		const alphaHex = rawHex.length === 8 ? rawHex.slice(6, 8) : "ff";
 		const alpha = parseHexChannel({ hex: alphaHex });
-		if (
-			red === null ||
-			green === null ||
-			blue === null ||
-			alpha === null
-		) {
+		if (red === null || green === null || blue === null || alpha === null) {
 			return null;
 		}
 
@@ -177,7 +170,10 @@ export function normalizeChannel<TChannel extends AnimationChannel>({
 	} as TChannel;
 }
 
-function evaluateChannelValueAtTime<TKeyframe extends { time: number; value: TValue }, TValue>({
+function evaluateChannelValueAtTime<
+	TKeyframe extends { time: number; value: TValue },
+	TValue,
+>({
 	keyframes,
 	time,
 	fallbackValue,
@@ -214,7 +210,11 @@ function evaluateChannelValueAtTime<TKeyframe extends { time: number; value: TVa
 		return lastKeyframe.value;
 	}
 
-	for (let keyframeIndex = 0; keyframeIndex < keyframes.length - 1; keyframeIndex++) {
+	for (
+		let keyframeIndex = 0;
+		keyframeIndex < keyframes.length - 1;
+		keyframeIndex++
+	) {
 		const leftKeyframe = keyframes[keyframeIndex];
 		const rightKeyframe = keyframes[keyframeIndex + 1];
 
@@ -304,6 +304,36 @@ export function getColorValueAtTime({
 	});
 }
 
+export function getVectorChannelValueAtTime({
+	channel,
+	time,
+	fallbackValue,
+}: {
+	channel: VectorAnimationChannel | undefined;
+	time: number;
+	fallbackValue: VectorValue;
+}): VectorValue {
+	return evaluateChannelValueAtTime({
+		keyframes: channel?.keyframes,
+		time,
+		fallbackValue,
+		getInterpolatedValue: ({ leftKeyframe, rightKeyframe, progress }) => {
+			if (leftKeyframe.interpolation === "hold") {
+				return leftKeyframe.value;
+			}
+
+			return {
+				x:
+					leftKeyframe.value.x +
+					(rightKeyframe.value.x - leftKeyframe.value.x) * progress,
+				y:
+					leftKeyframe.value.y +
+					(rightKeyframe.value.y - leftKeyframe.value.y) * progress,
+			};
+		},
+	});
+}
+
 function getDiscreteValueAtTime({
 	channel,
 	time,
@@ -355,6 +385,17 @@ export function getChannelValueAtTime({
 			channel,
 			time,
 			fallbackValue,
+		});
+	}
+
+	if (channel.valueKind === "vector") {
+		if (!isVectorValue(fallbackValue)) {
+			return fallbackValue;
+		}
+		return getVectorChannelValueAtTime({
+			channel,
+			time,
+			fallbackValue: fallbackValue as VectorValue,
 		});
 	}
 

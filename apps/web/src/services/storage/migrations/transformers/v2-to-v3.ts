@@ -1,5 +1,3 @@
-import { getProjectDurationFromScenes } from "@/lib/scenes";
-import type { TScene } from "@/types/timeline";
 import type { MigrationResult, ProjectRecord } from "./types";
 import { getProjectId, isRecord } from "./utils";
 
@@ -18,7 +16,7 @@ export function transformProjectV2ToV3({
 	}
 
 	const scenes = getScenes({ project });
-	const duration = getProjectDurationFromScenes({ scenes });
+	const duration = getDurationFromScenes({ scenes });
 
 	const metadataValue = project.metadata;
 	const metadata = isRecord(metadataValue)
@@ -36,13 +34,42 @@ export function transformProjectV2ToV3({
 
 export { getProjectId } from "./utils";
 
-function getScenes({ project }: { project: ProjectRecord }): TScene[] {
+function getScenes({ project }: { project: ProjectRecord }): unknown[] {
 	const scenesValue = project.scenes;
 	if (!Array.isArray(scenesValue)) {
 		return [];
 	}
 
-	return scenesValue.filter(isRecord) as unknown as TScene[];
+	return scenesValue.filter(isRecord);
+}
+
+function getDurationFromScenes({ scenes }: { scenes: unknown[] }): number {
+	const mainScene =
+		scenes.find(
+			(s): s is Record<string, unknown> =>
+				isRecord(s) && s.isMain === true,
+		) ??
+		scenes.find(isRecord) ??
+		null;
+
+	if (!mainScene || !Array.isArray(mainScene.tracks)) {
+		return 0;
+	}
+
+	let maxEnd = 0;
+	for (const track of mainScene.tracks) {
+		if (!isRecord(track) || !Array.isArray(track.elements)) continue;
+		for (const element of track.elements) {
+			if (!isRecord(element)) continue;
+			const startTime =
+				typeof element.startTime === "number" ? element.startTime : 0;
+			const duration =
+				typeof element.duration === "number" ? element.duration : 0;
+			maxEnd = Math.max(maxEnd, startTime + duration);
+		}
+	}
+
+	return maxEnd;
 }
 
 function isV3Project({ project }: { project: ProjectRecord }): boolean {

@@ -1,6 +1,6 @@
 import { Command } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
-import type { TProject, TProjectSettings } from "@/types/project";
+import type { TProject, TProjectSettings } from "@/lib/project/types";
 
 export class UpdateProjectSettingsCommand extends Command {
 	private savedSettings: TProjectSettings | null = null;

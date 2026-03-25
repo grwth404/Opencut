@@ -5,7 +5,7 @@ import type {
 	MarblePost,
 	MarblePostList,
 	MarbleTagList,
-} from "@/types/blog";
+} from "@/lib/blog/types";
 import { unified } from "unified";
 import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";

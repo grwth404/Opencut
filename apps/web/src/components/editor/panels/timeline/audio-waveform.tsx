@@ -1,176 +1,167 @@
-import { useEffect, useRef, useState } from "react";
-import WaveSurfer from "wavesurfer.js";
+"use client";
 
+import { useCallback, useEffect, useRef } from "react";
+import { useResizeObserver } from "@/hooks/use-resize-observer";
+import { computeGlobalMaxRms, extractRmsRange } from "@/lib/media/audio";
+import { findScrollParent } from "@/utils/browser";
+import { cn } from "@/utils/ui";
+
+const BAR_WIDTH = 2;
+const BAR_GAP = 1;
+const BAR_STEP = BAR_WIDTH + BAR_GAP;
 interface AudioWaveformProps {
 	audioUrl?: string;
 	audioBuffer?: AudioBuffer;
-	height?: number;
+	color?: string;
 	className?: string;
-}
-
-function extractPeaks({
-	buffer,
-	length = 512,
-}: {
-	buffer: AudioBuffer;
-	length?: number;
-}): number[][] {
-	const channels = buffer.numberOfChannels;
-	const peaks: number[][] = [];
-
-	for (let c = 0; c < channels; c++) {
-		const data = buffer.getChannelData(c);
-		const step = Math.floor(data.length / length);
-		const channelPeaks: number[] = [];
-
-		for (let i = 0; i < length; i++) {
-			const start = i * step;
-			const end = Math.min(start + step, data.length);
-			let max = 0;
-			for (let j = start; j < end; j++) {
-				const abs = Math.abs(data[j]);
-				if (abs > max) max = abs;
-			}
-			channelPeaks.push(max);
-		}
-		peaks.push(channelPeaks);
-	}
-
-	return peaks;
 }
 
 export function AudioWaveform({
 	audioUrl,
 	audioBuffer,
-	height = 32,
+	color = "rgba(255, 255, 255, 0.7)",
 	className = "",
 }: AudioWaveformProps) {
-	const waveformRef = useRef<HTMLDivElement>(null);
-	const wavesurfer = useRef<WaveSurfer | null>(null);
-	const [isLoading, setIsLoading] = useState(true);
-	const [error, setError] = useState(false);
+	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const containerRef = useRef<HTMLDivElement>(null);
+	const bufferRef = useRef<AudioBuffer | null>(null);
+	const globalMaxRef = useRef<number>(1);
+	const scrollParentRef = useRef<HTMLElement | null>(null);
+	const heightRef = useRef<number>(0);
 
-	useEffect(() => {
-		let mounted = true;
-		const ws = wavesurfer.current;
+	const drawVisible = useCallback(() => {
+		const container = containerRef.current;
+		const canvas = canvasRef.current;
+		const buffer = bufferRef.current;
+		const height = heightRef.current;
 
-		const initWaveSurfer = async () => {
-			if (!waveformRef.current || (!audioUrl && !audioBuffer)) return;
+		if (!container || !canvas || !buffer || height <= 0) return;
 
-			try {
-				if (ws) {
-					wavesurfer.current = null;
-				}
+		const elementWidth = container.offsetWidth;
+		if (elementWidth <= 0) return;
 
-				const newWaveSurfer = WaveSurfer.create({
-					container: waveformRef.current,
-					waveColor: "rgba(255, 255, 255, 0.6)",
-					progressColor: "rgba(255, 255, 255, 0.9)",
-					cursorColor: "transparent",
-					barWidth: 2,
-					barGap: 1,
-					height,
-					normalize: true,
-					interact: false,
-				});
+		const containerRect = container.getBoundingClientRect();
+		const scrollParent = scrollParentRef.current;
 
-				if (mounted) {
-					wavesurfer.current = newWaveSurfer;
-				} else {
-					try {
-						newWaveSurfer.destroy();
-					} catch {}
-					return;
-				}
+		let clipLeft: number;
+		let clipRight: number;
 
-				newWaveSurfer.on("ready", () => {
-					if (mounted) {
-						setIsLoading(false);
-						setError(false);
-					}
-				});
-
-				newWaveSurfer.on("error", (err) => {
-					if (mounted) {
-						console.error("WaveSurfer error:", err);
-						setError(true);
-						setIsLoading(false);
-					}
-				});
-
-				if (audioBuffer) {
-					const peaks = extractPeaks({ buffer: audioBuffer });
-					newWaveSurfer.load("", peaks, audioBuffer.duration);
-				} else if (audioUrl) {
-					await newWaveSurfer.load(audioUrl);
-				}
-			} catch (err) {
-				if (mounted) {
-					console.error("Failed to initialize WaveSurfer:", err);
-					setError(true);
-					setIsLoading(false);
-				}
-			}
-		};
-
-		if (ws) {
-			const wsToDestroy = ws;
-			wavesurfer.current = null;
-
-			requestAnimationFrame(() => {
-				try {
-					wsToDestroy.destroy();
-				} catch {}
-				if (mounted) {
-					initWaveSurfer();
-				}
-			});
+		if (scrollParent) {
+			const parentRect = scrollParent.getBoundingClientRect();
+			clipLeft = Math.max(0, parentRect.left - containerRect.left);
+			clipRight = Math.min(elementWidth, parentRect.right - containerRect.left);
 		} else {
-			initWaveSurfer();
+			clipLeft = Math.max(0, -containerRect.left);
+			clipRight = Math.min(
+				elementWidth,
+				window.innerWidth - containerRect.left,
+			);
 		}
 
-		return () => {
-			mounted = false;
+		const visibleWidth = clipRight - clipLeft;
+		if (visibleWidth <= 0) return;
 
-			const wsToDestroy = wavesurfer.current;
+		const dpr = window.devicePixelRatio || 1;
+		const canvasW = Math.round(visibleWidth * dpr);
+		const canvasH = Math.round(height * dpr);
 
-			wavesurfer.current = null;
+		if (canvasW <= 0 || canvasH <= 0) return;
 
-			if (wsToDestroy) {
-				requestAnimationFrame(() => {
-					try {
-						wsToDestroy.destroy();
-					} catch {}
-				});
-			}
-		};
-	}, [audioUrl, audioBuffer, height]);
+		canvas.width = canvasW;
+		canvas.height = canvasH;
+		canvas.style.width = `${visibleWidth}px`;
+		canvas.style.height = `${height}px`;
+		canvas.style.left = `${clipLeft}px`;
 
-	if (error) {
-		return (
-			<div
-				className={`flex items-center justify-center ${className}`}
-				style={{ height }}
-			>
-				<span className="text-foreground/60 text-xs">Audio unavailable</span>
-			</div>
+		const barCount = Math.max(1, Math.floor(visibleWidth / BAR_STEP));
+		const startFraction = clipLeft / elementWidth;
+		const endFraction = clipRight / elementWidth;
+		const startSample = Math.floor(startFraction * buffer.length);
+		const endSample = Math.min(
+			buffer.length,
+			Math.ceil(endFraction * buffer.length),
 		);
-	}
+
+		const peaks = extractRmsRange({
+			buffer,
+			count: barCount,
+			startSample,
+			endSample,
+			globalMax: globalMaxRef.current,
+		});
+
+		const ctx = canvas.getContext("2d");
+		if (!ctx) return;
+
+		ctx.clearRect(0, 0, canvasW, canvasH);
+		ctx.scale(dpr, dpr);
+		ctx.fillStyle = color;
+
+		const maxBarHeight = height * 0.7;
+
+		for (let i = 0; i < barCount; i++) {
+			const scaled = Math.log1p(peaks[i]) / Math.log1p(1);
+			const barH = Math.max(1, scaled * maxBarHeight);
+			ctx.fillRect(i * BAR_STEP, height - barH, BAR_WIDTH, barH);
+		}
+	}, [color]);
+
+	useEffect(() => {
+		let isCancelled = false;
+
+		async function load() {
+			let buffer = audioBuffer ?? null;
+
+			if (!buffer && audioUrl) {
+				try {
+					const resp = await fetch(audioUrl);
+					const arrayBuffer = await resp.arrayBuffer();
+					const actx = new AudioContext();
+					buffer = await actx.decodeAudioData(arrayBuffer);
+					actx.close();
+				} catch {
+					return;
+				}
+			}
+
+			if (!buffer || isCancelled) return;
+
+			bufferRef.current = buffer;
+			globalMaxRef.current = computeGlobalMaxRms({ buffer });
+			drawVisible();
+		}
+
+		load();
+		return () => {
+			isCancelled = true;
+		};
+	}, [audioUrl, audioBuffer, drawVisible]);
+
+	useEffect(() => {
+		const container = containerRef.current;
+		if (!container) return;
+
+		scrollParentRef.current = findScrollParent({ element: container });
+		const scrollParent = scrollParentRef.current;
+		if (!scrollParent) return;
+
+		scrollParent.addEventListener("scroll", drawVisible, { passive: true });
+		return () => scrollParent.removeEventListener("scroll", drawVisible);
+	}, [drawVisible]);
+
+	const onResize = useCallback(
+		(entry: ResizeObserverEntry) => {
+			heightRef.current = entry.contentRect.height;
+			drawVisible();
+		},
+		[drawVisible],
+	);
+
+	useResizeObserver({ ref: containerRef, onResize });
 
 	return (
-		<div className={`relative ${className}`}>
-			{isLoading && (
-				<div className="absolute inset-0 flex items-center justify-center">
-					<span className="text-foreground/60 text-xs">Loading...</span>
-				</div>
-			)}
-			<div
-				ref={waveformRef}
-				className={`w-full ${isLoading ? "opacity-0" : "opacity-100"}`}
-				style={{ height }}
-			/>
+		<div ref={containerRef} className={cn("relative size-full", className)}>
+			<canvas ref={canvasRef} className="absolute bottom-0" />
 		</div>
 	);
 }
-
-export default AudioWaveform;

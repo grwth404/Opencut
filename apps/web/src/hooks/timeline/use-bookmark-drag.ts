@@ -15,7 +15,7 @@ import {
 	snapToNearestPoint,
 	type SnapPoint,
 } from "@/lib/timeline/snap-utils";
-import type { Bookmark } from "@/types/timeline";
+import type { Bookmark } from "@/lib/timeline";
 
 export interface BookmarkDragState {
 	isDragging: boolean;

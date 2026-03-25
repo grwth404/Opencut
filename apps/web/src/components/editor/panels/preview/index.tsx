@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { useEditor } from "@/hooks/use-editor";
 import { useRafLoop } from "@/hooks/use-raf-loop";
@@ -12,50 +12,70 @@ import { buildScene } from "@/services/renderer/scene-builder";
 import { getLastFrameTime } from "@/lib/time";
 import { PreviewInteractionOverlay } from "./preview-interaction-overlay";
 import { BookmarkNoteOverlay } from "./bookmark-note-overlay";
+import { GuideOverlay } from "./guide-overlay";
 import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { usePreviewStore } from "@/stores/preview-store";
 import { PreviewContextMenu } from "./context-menu";
 import { PreviewToolbar } from "./toolbar";
+import {
+	PreviewViewportProvider,
+	usePreviewViewportState,
+} from "./preview-viewport";
 
 function usePreviewSize() {
-	const editor = useEditor();
-	const activeProject = editor.project.getActive();
+	const canvasSize = useEditor(
+		(e) => e.project.getActive()?.settings.canvasSize,
+	);
 
 	return {
-		width: activeProject?.settings.canvasSize.width,
-		height: activeProject?.settings.canvasSize.height,
+		width: canvasSize?.width,
+		height: canvasSize?.height,
 	};
+}
+
+function normalizeWheelDelta({
+	delta,
+	deltaMode,
+	pageSize,
+}: {
+	delta: number;
+	deltaMode: number;
+	pageSize: number;
+}): number {
+	if (deltaMode === WheelEvent.DOM_DELTA_LINE) {
+		return delta * 16;
+	}
+
+	if (deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+		return delta * pageSize;
+	}
+
+	return delta;
 }
 
 export function PreviewPanel() {
 	const containerRef = useRef<HTMLDivElement>(null);
-	const { isFullscreen, toggleFullscreen } = useFullscreen({ containerRef });
+	const { toggleFullscreen } = useFullscreen({ containerRef });
 
 	return (
 		<div
 			ref={containerRef}
 			className="panel bg-background relative flex size-full min-h-0 min-w-0 flex-col rounded-sm border"
 		>
-			<div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-2 pb-0">
-				<PreviewCanvas
-					onToggleFullscreen={toggleFullscreen}
-					containerRef={containerRef}
-				/>
-				<RenderTreeController />
-			</div>
-			<PreviewToolbar
-				isFullscreen={isFullscreen}
+			<PreviewCanvas
+				containerRef={containerRef}
 				onToggleFullscreen={toggleFullscreen}
 			/>
+			<RenderTreeController />
 		</div>
 	);
 }
 
 function RenderTreeController() {
 	const editor = useEditor();
-	const tracks = editor.timeline.getTracks();
-	const mediaAssets = editor.media.getAssets();
-	const activeProject = editor.project.getActive();
+	const tracks = useEditor((e) => e.timeline.getRenderTracks());
+	const mediaAssets = useEditor((e) => e.media.getAssets());
+	const activeProject = useEditor((e) => e.project.getActive());
 
 	const { width, height } = usePreviewSize();
 
@@ -79,23 +99,30 @@ function RenderTreeController() {
 }
 
 function PreviewCanvas({
-	onToggleFullscreen,
 	containerRef,
+	onToggleFullscreen,
 }: {
-	onToggleFullscreen: () => void;
 	containerRef: React.RefObject<HTMLElement | null>;
+	onToggleFullscreen: () => void;
 }) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
-	const outerContainerRef = useRef<HTMLDivElement>(null);
-	const canvasBoundsRef = useRef<HTMLDivElement>(null);
+	const viewportRef = useRef<HTMLDivElement>(null);
 	const lastFrameRef = useRef(-1);
 	const lastSceneRef = useRef<RootNode | null>(null);
 	const renderingRef = useRef(false);
 	const { width: nativeWidth, height: nativeHeight } = usePreviewSize();
-	const containerSize = useContainerSize({ containerRef: outerContainerRef });
+	const viewportSize = useContainerSize({ containerRef: viewportRef });
 	const editor = useEditor();
-	const activeProject = editor.project.getActive();
+	const activeProject = useEditor((e) => e.project.getActive());
+	const renderTree = useEditor((e) => e.renderer.getRenderTree());
 	const { overlays } = usePreviewStore();
+	const viewport = usePreviewViewportState({
+		canvasHeight: nativeHeight,
+		canvasWidth: nativeWidth,
+		viewportHeight: viewportSize.height,
+		viewportRef,
+		viewportWidth: viewportSize.width,
+	});
 
 	const renderer = useMemo(() => {
 		return new CanvasRenderer({
@@ -104,37 +131,6 @@ function PreviewCanvas({
 			fps: activeProject.settings.fps,
 		});
 	}, [nativeWidth, nativeHeight, activeProject.settings.fps]);
-
-	const displaySize = useMemo(() => {
-		if (
-			!nativeWidth ||
-			!nativeHeight ||
-			containerSize.width === 0 ||
-			containerSize.height === 0
-		) {
-			return { width: nativeWidth ?? 0, height: nativeHeight ?? 0 };
-		}
-
-		const paddingBuffer = 4;
-		const availableWidth = containerSize.width - paddingBuffer;
-		const availableHeight = containerSize.height - paddingBuffer;
-
-		const aspectRatio = nativeWidth / nativeHeight;
-		const containerAspect = availableWidth / availableHeight;
-
-		const displayWidth =
-			containerAspect > aspectRatio
-				? availableHeight * aspectRatio
-				: availableWidth;
-		const displayHeight =
-			containerAspect > aspectRatio
-				? availableHeight
-				: availableWidth / aspectRatio;
-
-		return { width: displayWidth, height: displayHeight };
-	}, [nativeWidth, nativeHeight, containerSize.width, containerSize.height]);
-
-	const renderTree = editor.renderer.getRenderTree();
 
 	const render = useCallback(() => {
 		if (canvasRef.current && renderTree && !renderingRef.current) {
@@ -168,44 +164,130 @@ function PreviewCanvas({
 
 	useRafLoop(render);
 
+	useEffect(() => {
+		const container = viewportRef.current;
+		if (!container) return;
+
+		let pendingZoomDelta = 0;
+		let pendingPanDeltaX = 0;
+		let pendingPanDeltaY = 0;
+		let zoomRafId: ReturnType<typeof requestAnimationFrame> | null = null;
+		let panRafId: ReturnType<typeof requestAnimationFrame> | null = null;
+
+		const onWheel = (event: WheelEvent) => {
+			const normalizedDeltaX = normalizeWheelDelta({
+				delta: event.deltaX,
+				deltaMode: event.deltaMode,
+				pageSize: container.clientWidth,
+			});
+			const normalizedDeltaY = normalizeWheelDelta({
+				delta: event.deltaY,
+				deltaMode: event.deltaMode,
+				pageSize: container.clientHeight,
+			});
+			const isZoomGesture = event.ctrlKey || event.metaKey;
+			if (isZoomGesture) {
+				event.preventDefault();
+				pendingZoomDelta += normalizedDeltaY;
+
+				if (zoomRafId === null) {
+					zoomRafId = requestAnimationFrame(() => {
+						const cappedDelta =
+							Math.sign(pendingZoomDelta) *
+							Math.min(Math.abs(pendingZoomDelta), 30);
+						const zoomFactor = Math.exp(-cappedDelta / 300);
+
+						viewport.scaleZoom({ factor: zoomFactor });
+						pendingZoomDelta = 0;
+						zoomRafId = null;
+					});
+				}
+
+				return;
+			}
+
+			if (!viewport.canPan) {
+				return;
+			}
+
+			if (normalizedDeltaX === 0 && normalizedDeltaY === 0) {
+				return;
+			}
+
+			event.preventDefault();
+			pendingPanDeltaX += normalizedDeltaX;
+			pendingPanDeltaY += normalizedDeltaY;
+
+			if (panRafId === null) {
+				panRafId = requestAnimationFrame(() => {
+					viewport.panByScreenDelta({
+						deltaX: pendingPanDeltaX,
+						deltaY: pendingPanDeltaY,
+					});
+					pendingPanDeltaX = 0;
+					pendingPanDeltaY = 0;
+					panRafId = null;
+				});
+			}
+		};
+
+		container.addEventListener("wheel", onWheel, {
+			capture: true,
+			passive: false,
+		});
+
+		return () => {
+			container.removeEventListener("wheel", onWheel, {
+				capture: true,
+			});
+			if (zoomRafId !== null) {
+				cancelAnimationFrame(zoomRafId);
+			}
+			if (panRafId !== null) {
+				cancelAnimationFrame(panRafId);
+			}
+		};
+	}, [viewport.canPan, viewport.panByScreenDelta, viewport.scaleZoom]);
+
 	return (
-		<div
-			ref={outerContainerRef}
-			className="relative flex size-full items-center justify-center"
-		>
-			<ContextMenu>
-				<ContextMenuTrigger asChild>
-					<div
-						ref={canvasBoundsRef}
-						className="relative"
-						style={{ width: displaySize.width, height: displaySize.height }}
-					>
-						<canvas
-							ref={canvasRef}
-							width={nativeWidth}
-							height={nativeHeight}
-							className="block border"
-							style={{
-								width: displaySize.width,
-								height: displaySize.height,
-								background:
-									activeProject.settings.background.type === "blur"
-										? "transparent"
-										: activeProject?.settings.background.color,
-							}}
+		<PreviewViewportProvider value={viewport}>
+			<div className="flex size-full min-h-0 min-w-0 flex-col">
+				<div className="flex min-h-0 min-w-0 flex-1 p-2 pb-0">
+					<ContextMenu>
+						<ContextMenuTrigger asChild>
+							<div
+								ref={viewportRef}
+								className="relative flex size-full min-h-0 min-w-0 items-center justify-center overflow-hidden"
+							>
+								<canvas
+									ref={canvasRef}
+									width={nativeWidth}
+									height={nativeHeight}
+									className="absolute block border"
+									style={{
+										left: viewport.sceneLeft,
+										top: viewport.sceneTop,
+										width: viewport.sceneWidth,
+										height: viewport.sceneHeight,
+										background:
+											activeProject.settings.background.type === "blur"
+												? "transparent"
+												: activeProject?.settings.background.color,
+									}}
+								/>
+								<GuideOverlay />
+								<PreviewInteractionOverlay />
+								{overlays.bookmarks && <BookmarkNoteOverlay />}
+							</div>
+						</ContextMenuTrigger>
+						<PreviewContextMenu
+							onToggleFullscreen={onToggleFullscreen}
+							containerRef={containerRef}
 						/>
-						<PreviewInteractionOverlay
-							canvasRef={canvasRef}
-							containerRef={canvasBoundsRef}
-						/>
-						{overlays.bookmarks && <BookmarkNoteOverlay />}
-					</div>
-				</ContextMenuTrigger>
-				<PreviewContextMenu
-					onToggleFullscreen={onToggleFullscreen}
-					containerRef={containerRef}
-				/>
-			</ContextMenu>
-		</div>
+					</ContextMenu>
+				</div>
+				<PreviewToolbar onToggleFullscreen={onToggleFullscreen} />
+			</div>
+		</PreviewViewportProvider>
 	);
 }

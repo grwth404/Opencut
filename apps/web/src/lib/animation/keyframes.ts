@@ -2,6 +2,7 @@ import type {
 	AnimationChannel,
 	AnimationInterpolation,
 	AnimationKeyframe,
+	AnimationPath,
 	AnimationPropertyPath,
 	AnimationValue,
 	AnimationValueKind,
@@ -9,15 +10,19 @@ import type {
 	DiscreteAnimationChannel,
 	ElementAnimations,
 	NumberAnimationChannel,
-} from "@/types/animation";
+	VectorAnimationChannel,
+} from "@/lib/animation/types";
+import { isVectorValue } from "./vector-channel";
 import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
 import { generateUUID } from "@/utils/id";
+import { snapToStep } from "@/utils/math";
 import { getChannelValueAtTime, normalizeChannel } from "./interpolation";
 import {
 	coerceAnimationValueForProperty,
 	getDefaultInterpolationForProperty,
 	getAnimationPropertyDefinition,
 	isAnimationPropertyPath,
+	type NumericRange,
 } from "./property-registry";
 
 function isNearlySameTime({
@@ -126,6 +131,19 @@ function buildKeyframe({
 		};
 	}
 
+	if (channel.valueKind === "vector") {
+		if (!isVectorValue(value)) {
+			throw new Error("Vector channel keyframes require {x, y} values");
+		}
+
+		return {
+			id,
+			time,
+			value,
+			interpolation: interpolation === "hold" ? "hold" : "linear",
+		};
+	}
+
 	if (typeof value !== "string" && typeof value !== "boolean") {
 		throw new Error(
 			"Discrete channel keyframes require boolean or string values",
@@ -140,24 +158,30 @@ function buildKeyframe({
 	};
 }
 
-function createEmptyChannel({
-	propertyPath,
+function createEmptyChannelForValueKind({
+	valueKind,
 }: {
-	propertyPath: AnimationPropertyPath;
+	valueKind: AnimationValueKind;
 }): AnimationChannel {
-	const propertyDefinition = getAnimationPropertyDefinition({ propertyPath });
-	if (propertyDefinition.valueKind === "number") {
+	if (valueKind === "number") {
 		return {
 			valueKind: "number",
 			keyframes: [],
 		} satisfies NumberAnimationChannel;
 	}
 
-	if (propertyDefinition.valueKind === "color") {
+	if (valueKind === "color") {
 		return {
 			valueKind: "color",
 			keyframes: [],
 		} satisfies ColorAnimationChannel;
+	}
+
+	if (valueKind === "vector") {
+		return {
+			valueKind: "vector",
+			keyframes: [],
+		} satisfies VectorAnimationChannel;
 	}
 
 	return {
@@ -165,6 +189,146 @@ function createEmptyChannel({
 		keyframes: [],
 	} satisfies DiscreteAnimationChannel;
 }
+
+function clampNumericRange({
+	value,
+	numericRange,
+}: {
+	value: number;
+	numericRange: NumericRange | undefined;
+}): number {
+	if (!numericRange) {
+		return value;
+	}
+
+	const steppedValue =
+		numericRange.step != null
+			? snapToStep({ value, step: numericRange.step })
+			: value;
+	const minValue = numericRange.min ?? Number.NEGATIVE_INFINITY;
+	const maxValue = numericRange.max ?? Number.POSITIVE_INFINITY;
+	return Math.min(maxValue, Math.max(minValue, steppedValue));
+}
+
+function coerceAnimationValueForPath({
+	value,
+	valueKind,
+	numericRange,
+}: {
+	value: AnimationValue;
+	valueKind: AnimationValueKind;
+	numericRange?: NumericRange;
+}): AnimationValue | null {
+	if (valueKind === "number") {
+		if (typeof value !== "number" || Number.isNaN(value)) {
+			return null;
+		}
+
+		return clampNumericRange({ value, numericRange });
+	}
+
+	if (valueKind === "color") {
+		return typeof value === "string" ? value : null;
+	}
+
+	if (valueKind === "vector") {
+		return isVectorValue(value) ? value : null;
+	}
+
+	return typeof value === "string" || typeof value === "boolean" ? value : null;
+}
+
+export function upsertPathKeyframe({
+	animations,
+	propertyPath,
+	time,
+	value,
+	interpolation,
+	keyframeId,
+	valueKind,
+	defaultInterpolation,
+	numericRange,
+}: {
+	animations: ElementAnimations | undefined;
+	propertyPath: AnimationPath;
+	time: number;
+	value: AnimationValue;
+	interpolation?: AnimationInterpolation;
+	keyframeId?: string;
+	valueKind: AnimationValueKind;
+	defaultInterpolation: AnimationInterpolation;
+	numericRange?: NumericRange;
+}): ElementAnimations | undefined {
+	const coercedValue = coerceAnimationValueForPath({
+		value,
+		valueKind,
+		numericRange,
+	});
+	if (coercedValue === null) {
+		return animations;
+	}
+
+	const channel = getChannel({ animations, propertyPath });
+	const targetChannel =
+		channel && channel.valueKind === valueKind
+			? channel
+			: createEmptyChannelForValueKind({ valueKind });
+	const updatedChannel = upsertKeyframe({
+		channel: targetChannel,
+		time,
+		value: coercedValue,
+		interpolation: interpolation ?? defaultInterpolation,
+		keyframeId,
+	});
+
+	return (
+		setChannel({
+			animations,
+			propertyPath,
+			channel: updatedChannel,
+		}) ?? { channels: {} }
+	);
+}
+
+export function upsertElementKeyframe({
+	animations,
+	propertyPath,
+	time,
+	value,
+	interpolation,
+	keyframeId,
+}: {
+	animations: ElementAnimations | undefined;
+	propertyPath: AnimationPropertyPath;
+	time: number;
+	value: AnimationValue;
+	interpolation?: AnimationInterpolation;
+	keyframeId?: string;
+}): ElementAnimations | undefined {
+	const coercedValue = coerceAnimationValueForProperty({
+		propertyPath,
+		value,
+	});
+	if (coercedValue === null) {
+		return animations;
+	}
+
+	const propertyDefinition = getAnimationPropertyDefinition({ propertyPath });
+	return upsertPathKeyframe({
+		animations,
+		propertyPath,
+		time,
+		value: coercedValue,
+		interpolation,
+		keyframeId,
+		valueKind: propertyDefinition.valueKind,
+		defaultInterpolation: getDefaultInterpolationForProperty({
+			propertyPath,
+		}),
+		numericRange: propertyDefinition.numericRange,
+	});
+}
+
 
 export function upsertKeyframe({
 	channel,
@@ -516,62 +680,13 @@ export function splitAnimationsAtTime({
 	};
 }
 
-export function upsertElementKeyframe({
-	animations,
-	propertyPath,
-	time,
-	value,
-	interpolation,
-	keyframeId,
-}: {
-	animations: ElementAnimations | undefined;
-	propertyPath: AnimationPropertyPath;
-	time: number;
-	value: AnimationValue;
-	interpolation?: AnimationInterpolation;
-	keyframeId?: string;
-}): ElementAnimations | undefined {
-	const coercedValue = coerceAnimationValueForProperty({
-		propertyPath,
-		value,
-	});
-	if (coercedValue === null) {
-		return animations;
-	}
-
-	const defaultInterpolation = getDefaultInterpolationForProperty({
-		propertyPath,
-	});
-	const propertyDefinition = getAnimationPropertyDefinition({ propertyPath });
-	const channel = getChannel({ animations, propertyPath });
-	const targetChannel =
-		channel && channel.valueKind === propertyDefinition.valueKind
-			? channel
-			: createEmptyChannel({ propertyPath });
-	const updatedChannel = upsertKeyframe({
-		channel: targetChannel,
-		time,
-		value: coercedValue,
-		interpolation: interpolation ?? defaultInterpolation,
-		keyframeId,
-	});
-
-	return (
-		setChannel({
-			animations,
-			propertyPath,
-			channel: updatedChannel,
-		}) ?? { channels: {} }
-	);
-}
-
 export function removeElementKeyframe({
 	animations,
 	propertyPath,
 	keyframeId,
 }: {
 	animations: ElementAnimations | undefined;
-	propertyPath: AnimationPropertyPath;
+	propertyPath: AnimationPath;
 	keyframeId: string;
 }): ElementAnimations | undefined {
 	const channel = getChannel({ animations, propertyPath });
@@ -593,7 +708,7 @@ export function retimeElementKeyframe({
 	time,
 }: {
 	animations: ElementAnimations | undefined;
-	propertyPath: AnimationPropertyPath;
+	propertyPath: AnimationPath;
 	keyframeId: string;
 	time: number;
 }): ElementAnimations | undefined {

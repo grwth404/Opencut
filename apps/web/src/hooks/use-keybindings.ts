@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { invokeAction } from "@/lib/actions";
 import { useKeybindingsStore } from "@/stores/keybindings-store";
+import { useTimelineStore } from "@/stores/timeline-store";
+import { isTypableDOMElement } from "@/utils/browser";
 
 /**
  * a composable that hooks to the caller component's
@@ -8,31 +10,141 @@ import { useKeybindingsStore } from "@/stores/keybindings-store";
  * the appropriate actions based on keybindings
  */
 export function useKeybindingsListener() {
-	const { keybindings, getKeybindingString, keybindingsEnabled, isRecording } =
-		useKeybindingsStore();
+	const {
+		keybindings,
+		getKeybindingString,
+		overlayDepth,
+		isLoadingProject,
+		isRecording,
+	} = useKeybindingsStore();
+	const clipboard = useTimelineStore((state) => state.clipboard);
 
 	useEffect(() => {
 		const eventOptions: AddEventListenerOptions = { capture: true };
+		// #region agent log
+		fetch("http://127.0.0.1:7245/ingest/669b22f8-172b-4e65-aa3f-1c702ede83f7", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"X-Debug-Session-Id": "3997d9",
+			},
+			body: JSON.stringify({
+				sessionId: "3997d9",
+				runId: "initial",
+				hypothesisId: "H1",
+				location: "use-keybindings.ts:effect",
+				message: "Keybindings listener mounted",
+				data: {
+					overlayDepth,
+					isLoadingProject,
+					isRecording,
+					keybindingCount: Object.keys(keybindings).length,
+				},
+				timestamp: Date.now(),
+			}),
+		}).catch(() => {});
+		// #endregion
 		const handleKeyDown = (ev: KeyboardEvent) => {
-			// do not check keybinds if the mode is disabled
-			if (!keybindingsEnabled) return;
-			// ignore key events if user is changing keybindings
-			if (isRecording) return;
+			const normalizedKey = (ev.key ?? "").toLowerCase();
+			const shouldLogKey =
+				ev.code === "Space" ||
+				ev.code.startsWith("Key") ||
+				["escape", "delete", "backspace", "enter"].includes(normalizedKey);
+
+			if (overlayDepth > 0 || isLoadingProject || isRecording) {
+				if (shouldLogKey) {
+					// #region agent log
+					fetch(
+						"http://127.0.0.1:7245/ingest/669b22f8-172b-4e65-aa3f-1c702ede83f7",
+						{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+								"X-Debug-Session-Id": "3997d9",
+							},
+							body: JSON.stringify({
+								sessionId: "3997d9",
+								runId: "initial",
+								hypothesisId: "H2",
+								location: "use-keybindings.ts:blocked",
+								message: "Shortcut blocked by runtime gate",
+								data: {
+									key: ev.key,
+									code: ev.code,
+									overlayDepth,
+									isLoadingProject,
+									isRecording,
+									targetTag:
+										ev.target instanceof HTMLElement ? ev.target.tagName : null,
+								},
+								timestamp: Date.now(),
+							}),
+						},
+					).catch(() => {});
+					// #endregion
+				}
+				return;
+			}
 
 			const binding = getKeybindingString(ev);
-			if (!binding) return;
-
-			const boundAction = keybindings[binding];
-			if (!boundAction) return;
-
 			const activeElement = document.activeElement;
 			const isTextInput =
-				activeElement &&
-				(activeElement.tagName === "INPUT" ||
-					activeElement.tagName === "TEXTAREA" ||
-					(activeElement as HTMLElement).isContentEditable);
+				activeElement instanceof HTMLElement &&
+				isTypableDOMElement({ element: activeElement });
+			const boundAction = binding ? keybindings[binding] : undefined;
+
+			if (shouldLogKey || binding || boundAction) {
+				// #region agent log
+				fetch(
+					"http://127.0.0.1:7245/ingest/669b22f8-172b-4e65-aa3f-1c702ede83f7",
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"X-Debug-Session-Id": "3997d9",
+						},
+						body: JSON.stringify({
+							sessionId: "3997d9",
+							runId: "initial",
+							hypothesisId: !binding ? "H3" : isTextInput ? "H5" : "H4",
+							location: "use-keybindings.ts:keydown",
+							message: "Shortcut keydown observed",
+							data: {
+								key: ev.key,
+								code: ev.code,
+								binding,
+								boundAction: boundAction ?? null,
+								isTextInput,
+								keybindingCount: Object.keys(keybindings).length,
+								activeTag:
+									activeElement instanceof HTMLElement
+										? activeElement.tagName
+										: null,
+								targetTag:
+									ev.target instanceof HTMLElement ? ev.target.tagName : null,
+							},
+							timestamp: Date.now(),
+						}),
+					},
+				).catch(() => {});
+				// #endregion
+			}
+
+			if (normalizedKey === "escape" && isTextInput) {
+				activeElement.blur();
+				return;
+			}
+
+			if (!binding) return;
+			if (!boundAction) return;
 
 			if (isTextInput) return;
+			if (boundAction === "paste-copied") {
+				if (!clipboard?.items.length) return;
+				ev.preventDefault();
+				invokeAction("paste-copied", undefined, "keypress");
+				return;
+			}
 
 			ev.preventDefault();
 
@@ -59,17 +171,12 @@ export function useKeybindingsListener() {
 		return () => {
 			document.removeEventListener("keydown", handleKeyDown, eventOptions);
 		};
-	}, [keybindings, getKeybindingString, keybindingsEnabled, isRecording]);
-}
-
-/**
- * this composable allows for the UI component to be disabled if the component in question is mounted
- */
-export function useKeybindingDisabler() {
-	const { disableKeybindings, enableKeybindings } = useKeybindingsStore();
-
-	return {
-		disableKeybindings,
-		enableKeybindings,
-	};
+	}, [
+		keybindings,
+		getKeybindingString,
+		overlayDepth,
+		isLoadingProject,
+		isRecording,
+		clipboard,
+	]);
 }

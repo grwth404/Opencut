@@ -1,10 +1,10 @@
 import { Command } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
-import type { MediaAsset } from "@/types/assets";
+import type { MediaAsset } from "@/lib/media/types";
 import { storageService } from "@/services/storage/service";
 import { videoCache } from "@/services/video-cache/service";
 import { hasMediaId } from "@/lib/timeline/element-utils";
-import type { TimelineTrack } from "@/types/timeline";
+import type { TimelineTrack } from "@/lib/timeline";
 
 export class RemoveMediaAssetCommand extends Command {
 	private savedAssets: MediaAsset[] | null = null;
@@ -31,6 +31,13 @@ export class RemoveMediaAssetCommand extends Command {
 		if (!this.removedAsset) {
 			console.error("Media asset not found:", this.assetId);
 			return;
+		}
+
+		if (this.removedAsset.url) {
+			URL.revokeObjectURL(this.removedAsset.url);
+		}
+		if (this.removedAsset.thumbnailUrl) {
+			URL.revokeObjectURL(this.removedAsset.thumbnailUrl);
 		}
 
 		videoCache.clearVideo({ mediaId: this.assetId });
@@ -63,23 +70,30 @@ export class RemoveMediaAssetCommand extends Command {
 	undo(): void {
 		const editor = EditorCore.getInstance();
 
-		if (this.savedAssets) {
-			editor.media.setAssets({ assets: this.savedAssets });
-		}
+		if (this.savedAssets && this.removedAsset) {
+			const restoredAsset: MediaAsset = {
+				...this.removedAsset,
+				url: URL.createObjectURL(this.removedAsset.file),
+			};
 
-		if (this.savedTracks) {
-			editor.timeline.updateTracks(this.savedTracks);
-		}
+			editor.media.setAssets({
+				assets: this.savedAssets.map((a) =>
+					a.id === this.assetId ? restoredAsset : a,
+				),
+			});
 
-		if (this.removedAsset) {
 			storageService
 				.saveMediaAsset({
 					projectId: this.projectId,
-					mediaAsset: this.removedAsset,
+					mediaAsset: restoredAsset,
 				})
 				.catch((error) => {
 					console.error("Failed to restore media item on undo:", error);
 				});
+		}
+
+		if (this.savedTracks) {
+			editor.timeline.updateTracks(this.savedTracks);
 		}
 	}
 }

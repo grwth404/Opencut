@@ -6,14 +6,6 @@ import {
 } from "@/constants/project-constants";
 import { IndexedDBAdapter } from "@/services/storage/indexeddb-adapter";
 import type { MediaAssetData } from "@/services/storage/types";
-import type {
-	AudioElement,
-	ImageElement,
-	TextElement,
-	TimelineTrack,
-	Transform,
-	VideoElement,
-} from "@/types/timeline";
 import type { MigrationResult, ProjectRecord } from "./types";
 import { getProjectId, isRecord } from "./utils";
 
@@ -49,6 +41,112 @@ interface LegacyMediaTrack {
 	elements: unknown[];
 	[key: string]: unknown;
 }
+
+interface V2Transform {
+	scale: number;
+	position: { x: number; y: number };
+	rotate: number;
+}
+
+interface V2VideoElement {
+	id: string;
+	name: string;
+	type: "video";
+	mediaId: string;
+	muted: boolean;
+	hidden: boolean;
+	transform: V2Transform;
+	opacity: number;
+	duration: number;
+	startTime: number;
+	trimStart: number;
+	trimEnd: number;
+}
+
+interface V2ImageElement {
+	id: string;
+	name: string;
+	type: "image";
+	mediaId: string;
+	duration: number;
+	startTime: number;
+	trimStart: number;
+	trimEnd: number;
+	hidden: boolean;
+	transform: V2Transform;
+	opacity: number;
+}
+
+interface V2TextElement {
+	id: string;
+	name: string;
+	type: "text";
+	content: string;
+	fontSize: number;
+	fontFamily: string;
+	color: string;
+	background: {
+		enabled: boolean;
+		color: string;
+		cornerRadius: number;
+		paddingX: number;
+		paddingY: number;
+		offsetX: number;
+		offsetY: number;
+	};
+	textAlign: "left" | "center" | "right";
+	fontWeight: "normal" | "bold";
+	fontStyle: "normal" | "italic";
+	textDecoration: "none" | "underline" | "line-through";
+	hidden: boolean;
+	transform: V2Transform;
+	opacity: number;
+	duration: number;
+	startTime: number;
+	trimStart: number;
+	trimEnd: number;
+}
+
+interface V2AudioElement {
+	id: string;
+	name: string;
+	type: "audio";
+	sourceType: "upload";
+	mediaId: string;
+	volume: number;
+	duration: number;
+	startTime: number;
+	trimStart: number;
+	trimEnd: number;
+}
+
+interface V2VideoTrack {
+	id: string;
+	name: string;
+	type: "video";
+	elements: (V2VideoElement | V2ImageElement)[];
+	isMain: boolean;
+	muted: boolean;
+	hidden: boolean;
+}
+
+interface V2TextTrack {
+	id: string;
+	name: string;
+	type: "text";
+	elements: V2TextElement[];
+	hidden: boolean;
+}
+
+interface V2AudioTrack {
+	id: string;
+	name: string;
+	type: "audio";
+	elements: V2AudioElement[];
+	muted: boolean;
+}
+
+type V2TimelineTrack = V2VideoTrack | V2TextTrack | V2AudioTrack;
 
 export interface TransformV1ToV2Options {
 	loadMediaAsset?: ({
@@ -259,13 +357,13 @@ async function transformTracks({
 	}: {
 		mediaId: string;
 	}) => Promise<MediaAssetData | null>;
-}): Promise<TimelineTrack[]> {
+}): Promise<V2TimelineTrack[]> {
 	if (!Array.isArray(tracks)) {
 		return [];
 	}
 
 	let isFirstVideoTrackFound = false;
-	const transformedTracks: (TimelineTrack | null)[] = [];
+	const transformedTracks: (V2TimelineTrack | null)[] = [];
 
 	for (const track of tracks) {
 		if (!isRecord(track)) {
@@ -299,7 +397,7 @@ async function transformTracks({
 	}
 
 	return transformedTracks.filter(
-		(track): track is TimelineTrack => track !== null,
+		(track): track is V2TimelineTrack => track !== null,
 	);
 }
 
@@ -315,7 +413,7 @@ async function transformMediaTrack({
 		mediaId: string;
 	}) => Promise<MediaAssetData | null>;
 	isMain: boolean;
-}): Promise<TimelineTrack> {
+}): Promise<V2VideoTrack> {
 	const elements = Array.isArray(track.elements) ? track.elements : [];
 
 	const transformedElements = await Promise.all(
@@ -338,7 +436,7 @@ async function transformMediaTrack({
 				}
 			}
 
-			const defaultTransform: Transform = {
+			const defaultTransform: V2Transform = {
 				scale: 1,
 				position: { x: 0, y: 0 },
 				rotate: 0,
@@ -347,7 +445,7 @@ async function transformMediaTrack({
 			const muted = mediaElement.muted === true;
 
 			if (mediaType === "image") {
-				const imageElement: ImageElement = {
+				const imageElement: V2ImageElement = {
 					id: getStringValue({ value: element.id, fallback: "" }),
 					name: getStringValue({ value: element.name, fallback: "" }),
 					type: "image",
@@ -369,7 +467,7 @@ async function transformMediaTrack({
 				return imageElement;
 			}
 
-			const videoElement: VideoElement = {
+			const videoElement: V2VideoElement = {
 				id: getStringValue({ value: element.id, fallback: "" }),
 				name: getStringValue({ value: element.name, fallback: "" }),
 				type: "video",
@@ -388,7 +486,7 @@ async function transformMediaTrack({
 	);
 
 	const validElements = transformedElements.filter(
-		(element): element is VideoElement | ImageElement => element !== null,
+		(element): element is V2VideoElement | V2ImageElement => element !== null,
 	);
 
 	return {
@@ -406,11 +504,11 @@ function transformTextTrack({
 	track,
 }: {
 	track: Record<string, unknown>;
-}): TimelineTrack {
+}): V2TextTrack {
 	const elements = Array.isArray(track.elements) ? track.elements : [];
 
 	const transformedElements = elements
-		.map((element): TextElement | null => {
+		.map((element): V2TextElement | null => {
 			if (!isRecord(element) || element.type !== "text") {
 				return null;
 			}
@@ -427,7 +525,7 @@ function transformTextTrack({
 				fallback: 1,
 			});
 
-			const transform: Transform = {
+			const transform: V2Transform = {
 				scale: 1,
 				position: { x, y },
 				rotate: rotation,
@@ -487,7 +585,7 @@ function transformTextTrack({
 				trimEnd: getNumberValue({ value: element.trimEnd, fallback: 0 }),
 			};
 		})
-		.filter((element): element is TextElement => element !== null);
+		.filter((element): element is V2TextElement => element !== null);
 
 	return {
 		id: getStringValue({ value: track.id, fallback: "" }),
@@ -502,11 +600,11 @@ function transformAudioTrack({
 	track,
 }: {
 	track: Record<string, unknown>;
-}): TimelineTrack {
+}): V2AudioTrack {
 	const elements = Array.isArray(track.elements) ? track.elements : [];
 
 	const transformedElements = elements
-		.map((element): AudioElement | null => {
+		.map((element): V2AudioElement | null => {
 			if (!isRecord(element) || element.type !== "audio") {
 				return null;
 			}
@@ -530,7 +628,7 @@ function transformAudioTrack({
 				trimEnd: getNumberValue({ value: element.trimEnd, fallback: 0 }),
 			};
 		})
-		.filter((element): element is AudioElement => element !== null);
+		.filter((element): element is V2AudioElement => element !== null);
 
 	return {
 		id: getStringValue({ value: track.id, fallback: "" }),

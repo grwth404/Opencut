@@ -1,14 +1,16 @@
-import type { FontAtlas } from "@/types/fonts";
+import type { FontAtlas } from "@/lib/fonts/types";
 import { SYSTEM_FONTS } from "@/constants/font-constants";
 
 const GOOGLE_FONTS_CSS = "https://fonts.googleapis.com/css2";
+const FONT_ATLAS_PATH = "/fonts/font-atlas.json";
+const FONT_CHUNK_PATH_PREFIX = "/fonts/font-chunk-";
 
 const fullLoaded = new Set<string>();
 
 let cachedAtlas: FontAtlas | null = null;
 let atlasFetchPromise: Promise<FontAtlas | null> | null = null;
 
-function encodeFamily(family: string): string {
+function encodeGoogleFontsFamily(family: string): string {
 	return family.replace(/ /g, "+");
 }
 
@@ -19,17 +21,19 @@ export function getCachedFontAtlas(): FontAtlas | null {
 export function clearFontAtlasCache(): void {
 	cachedAtlas = null;
 	atlasFetchPromise = null;
+	fullLoaded.clear();
 }
 
-async function fetchAtlas(): Promise<FontAtlas | null> {
-	if (cachedAtlas) return cachedAtlas;
+export function loadFontAtlas(): Promise<FontAtlas | null> {
+	if (cachedAtlas) return Promise.resolve(cachedAtlas);
 	if (atlasFetchPromise) return atlasFetchPromise;
 
-	atlasFetchPromise = fetch("/fonts/font-atlas.json")
+	atlasFetchPromise = fetch(FONT_ATLAS_PATH)
 		.then(async (response) => {
 			if (!response.ok) return null;
 			const data: FontAtlas = await response.json();
 			cachedAtlas = data;
+			preloadChunkImages({ atlas: data });
 			return data;
 		})
 		.catch(() => null);
@@ -42,16 +46,10 @@ function preloadChunkImages({ atlas }: { atlas: FontAtlas }): void {
 		...Object.values(atlas.fonts).map((entry) => entry.ch),
 	);
 	for (let i = 0; i <= maxChunk; i++) {
+		// hint browser to preload chunk images without blocking
 		const img = new Image();
-		img.src = `/fonts/font-chunk-${i}.avif`;
+		img.src = `${FONT_CHUNK_PATH_PREFIX}${i}.avif`;
 	}
-}
-
-export function prefetchFontAtlas(): Promise<FontAtlas | null> {
-	return fetchAtlas().then((atlas) => {
-		if (atlas) preloadChunkImages({ atlas });
-		return atlas;
-	});
 }
 
 export async function loadFullFont({
@@ -63,7 +61,7 @@ export async function loadFullFont({
 }): Promise<void> {
 	if (fullLoaded.has(family)) return;
 
-	const url = `${GOOGLE_FONTS_CSS}?family=${encodeFamily(family)}:wght@${weights.join(";")}&display=swap`;
+	const url = `${GOOGLE_FONTS_CSS}?family=${encodeGoogleFontsFamily(family)}:wght@${weights.join(";")}&display=swap`;
 	const link = document.createElement("link");
 	link.rel = "stylesheet";
 	link.href = url;

@@ -1,20 +1,27 @@
-import type { TProject, TProjectMetadata } from "@/types/project";
+import type { TProject, TProjectMetadata } from "@/lib/project/types";
 import { getProjectDurationFromScenes } from "@/lib/scenes";
-import type { MediaAsset } from "@/types/assets";
+import type { MediaAsset } from "@/lib/media/types";
 import { IndexedDBAdapter } from "./indexeddb-adapter";
 import { OPFSAdapter } from "./opfs-adapter";
+import {
+	type StorageCapacityCheckResult,
+	StorageQuotaExceededError,
+	evaluateStorageCapacity,
+	isStorageQuotaExceededError,
+	readStorageQuotaStatus,
+} from "./quota";
 import type {
 	MediaAssetData,
 	StorageConfig,
 	SerializedProject,
 	SerializedScene,
 } from "./types";
-import type { SavedSoundsData, SavedSound, SoundEffect } from "@/types/sounds";
+import type { SavedSoundsData, SavedSound, SoundEffect } from "@/lib/sounds/types";
 import {
 	migrations,
 	runStorageMigrations,
 } from "@/services/storage/migrations";
-import type { Bookmark, TimelineTrack, TScene } from "@/types/timeline";
+import type { Bookmark, TimelineTrack, TScene } from "@/lib/timeline";
 
 function normalizeBookmarks({ raw }: { raw: unknown }): Bookmark[] {
 	if (!Array.isArray(raw)) return [];
@@ -88,6 +95,22 @@ class StorageService {
 		const mediaAssetsAdapter = new OPFSAdapter(`media-files-${projectId}`);
 
 		return { mediaMetadataAdapter, mediaAssetsAdapter };
+	}
+
+	async canStoreFile({
+		size,
+	}: {
+		size: number;
+	}): Promise<StorageCapacityCheckResult> {
+		const quotaStatus = await readStorageQuotaStatus();
+		return evaluateStorageCapacity({
+			requiredBytes: size,
+			quotaStatus,
+		});
+	}
+
+	isQuotaExceededError({ error }: { error: unknown }): boolean {
+		return isStorageQuotaExceededError({ error });
 	}
 
 	private stripAudioBuffers({
@@ -238,8 +261,6 @@ class StorageService {
 		const { mediaMetadataAdapter, mediaAssetsAdapter } =
 			this.getProjectMediaAdapters({ projectId });
 
-		await mediaAssetsAdapter.set(mediaAsset.id, mediaAsset.file);
-
 		const metadata: MediaAssetData = {
 			id: mediaAsset.id,
 			name: mediaAsset.name,
@@ -253,7 +274,24 @@ class StorageService {
 			ephemeral: mediaAsset.ephemeral,
 		};
 
-		await mediaMetadataAdapter.set(mediaAsset.id, metadata);
+		try {
+			await mediaAssetsAdapter.set(mediaAsset.id, mediaAsset.file);
+			await mediaMetadataAdapter.set(mediaAsset.id, metadata);
+		} catch (error) {
+			try {
+				await mediaAssetsAdapter.remove(mediaAsset.id);
+			} catch {
+				// Ignore cleanup failures so the original storage error is preserved.
+			}
+
+			if (this.isQuotaExceededError({ error })) {
+				throw new StorageQuotaExceededError({
+					requiredBytes: mediaAsset.file.size,
+				});
+			}
+
+			throw error;
+		}
 	}
 
 	async loadMediaAsset({

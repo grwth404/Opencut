@@ -10,6 +10,41 @@ export function clamp({
 	return Math.max(min, Math.min(max, value));
 }
 
+export function clampRound({
+	value,
+	min,
+	max,
+}: {
+	value: number;
+	min: number;
+	max: number;
+}): number {
+	return Math.round(clamp({ value, min, max }));
+}
+
+function getFractionDigitsForStep({ step }: { step: number }): number {
+	const normalizedStep = step.toString().toLowerCase();
+	if (normalizedStep.includes("e-")) {
+		return Number(normalizedStep.split("e-")[1] ?? 0);
+	}
+	const [, fractionalPart = ""] = normalizedStep.split(".");
+	return fractionalPart.length;
+}
+
+export function snapToStep({
+	value,
+	step,
+}: {
+	value: number;
+	step: number;
+}): number {
+	if (step <= 0) return value;
+	const snappedValue = Math.round(value / step) * step;
+	return Number(
+		snappedValue.toFixed(getFractionDigitsForStep({ step })),
+	);
+}
+
 export function isNearlyEqual({
 	leftValue,
 	rightValue,
@@ -20,6 +55,16 @@ export function isNearlyEqual({
 	epsilon?: number;
 }): boolean {
 	return Math.abs(leftValue - rightValue) <= epsilon;
+}
+
+export function formatNumberForDisplay({
+	value,
+	maxFractionDigits = 6,
+}: {
+	value: number;
+	maxFractionDigits?: number;
+}): string {
+	return Number(value.toFixed(maxFractionDigits)).toString();
 }
 
 export function evaluateMathExpression({

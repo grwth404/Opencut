@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
 import { timelineTimeToSnappedPixels } from "@/lib/timeline";
-import type { TimelineTrack } from "@/types/timeline";
-
+import { TRACK_LABELS_WIDTH_PX } from "@/constants/timeline-constants";
 interface UseSnapIndicatorPositionParams {
 	snapPoint: { time: number } | null;
 	zoomLevel: number;
-	tracks: TimelineTrack[];
 	timelineRef: React.RefObject<HTMLDivElement | null>;
-	trackLabelsRef?: React.RefObject<HTMLDivElement | null>;
 	tracksScrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -20,9 +17,7 @@ interface SnapIndicatorPosition {
 export function useSnapIndicatorPosition({
 	snapPoint,
 	zoomLevel,
-	tracks,
 	timelineRef,
-	trackLabelsRef,
 	tracksScrollRef,
 }: UseSnapIndicatorPositionParams): SnapIndicatorPosition {
 	const [scrollLeft, setScrollLeft] = useState(0);
@@ -45,16 +40,11 @@ export function useSnapIndicatorPosition({
 	const timelineContainerHeight = timelineRef.current?.offsetHeight || 400;
 	const totalHeight = timelineContainerHeight - 8; // 8px padding from edges
 
-	const trackLabelsWidth =
-		tracks.length > 0 && trackLabelsRef?.current
-			? trackLabelsRef.current.offsetWidth
-			: 0;
-
 	const timelinePosition = timelineTimeToSnappedPixels({
 		time: snapPoint?.time ?? 0,
 		zoomLevel,
 	});
-	const leftPosition = trackLabelsWidth + timelinePosition - scrollLeft;
+	const leftPosition = TRACK_LABELS_WIDTH_PX + timelinePosition - scrollLeft;
 
 	return {
 		leftPosition,

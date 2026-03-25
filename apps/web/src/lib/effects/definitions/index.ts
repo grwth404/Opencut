@@ -1,13 +1,13 @@
-import { hasEffect, registerEffect } from "../registry";
+import { effectsRegistry } from "../registry";
 import { blurEffectDefinition } from "./blur";
 
 const defaultEffects = [blurEffectDefinition];
 
 export function registerDefaultEffects(): void {
 	for (const definition of defaultEffects) {
-		if (hasEffect({ effectType: definition.type })) {
+		if (effectsRegistry.has(definition.type)) {
 			continue;
 		}
-		registerEffect({ definition });
+		effectsRegistry.register(definition.type, definition);
 	}
 }

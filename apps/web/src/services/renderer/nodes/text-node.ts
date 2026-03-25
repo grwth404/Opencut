@@ -1,12 +1,8 @@
 import type { CanvasRenderer } from "../canvas-renderer";
 import { createOffscreenCanvas } from "../canvas-utils";
 import { BaseNode } from "./base-node";
-import type { TextElement } from "@/types/timeline";
+import type { TextElement } from "@/lib/timeline";
 import {
-	DEFAULT_TEXT_BACKGROUND,
-	DEFAULT_TEXT_ELEMENT,
-	DEFAULT_LINE_HEIGHT,
-	FONT_SIZE_SCALE_REFERENCE,
 	CORNER_RADIUS_MAX,
 	CORNER_RADIUS_MIN,
 } from "@/constants/text-constants";
@@ -14,33 +10,19 @@ import {
 	getMetricAscent,
 	getMetricDescent,
 	getTextBackgroundRect,
-	measureTextBlock,
+	setCanvasLetterSpacing,
 } from "@/lib/text/layout";
+import { measureTextElement } from "@/lib/text/measure-element";
 import {
 	getElementLocalTime,
 	resolveColorAtTime,
-	resolveNumberAtTime,
 	resolveOpacityAtTime,
 	resolveTransformAtTime,
 } from "@/lib/animation";
 import { resolveEffectParamsAtTime } from "@/lib/animation/effect-param-channel";
-import { getEffect } from "@/lib/effects";
-import { webglEffectRenderer } from "../webgl-effect-renderer";
+import { effectsRegistry, resolveEffectPasses } from "@/lib/effects";
+import { webglEffectRenderer } from "../webgl/webgl-effect-renderer";
 import { clamp } from "@/utils/math";
-
-function scaleFontSize({
-	fontSize,
-	canvasHeight,
-}: {
-	fontSize: number;
-	canvasHeight: number;
-}): number {
-	return fontSize * (canvasHeight / FONT_SIZE_SCALE_REFERENCE);
-}
-
-function quoteFontFamily({ fontFamily }: { fontFamily: string }): string {
-	return `"${fontFamily.replace(/"/g, '\\"')}"`;
-}
 
 const TEXT_DECORATION_THICKNESS_RATIO = 0.07;
 const STRIKETHROUGH_VERTICAL_RATIO = 0.35;
@@ -64,9 +46,15 @@ function drawTextDecoration({
 }): void {
 	if (textDecoration === "none" || !textDecoration) return;
 
-	const thickness = Math.max(1, scaledFontSize * TEXT_DECORATION_THICKNESS_RATIO);
+	const thickness = Math.max(
+		1,
+		scaledFontSize * TEXT_DECORATION_THICKNESS_RATIO,
+	);
 	const ascent = getMetricAscent({ metrics, fallbackFontSize: scaledFontSize });
-	const descent = getMetricDescent({ metrics, fallbackFontSize: scaledFontSize });
+	const descent = getMetricDescent({
+		metrics,
+		fallbackFontSize: scaledFontSize,
+	});
 
 	let xStart = -lineWidth / 2;
 	if (textAlign === "left") xStart = 0;
@@ -121,19 +109,6 @@ export class TextNode extends BaseNode<TextNodeParams> {
 		const x = transform.position.x + this.params.canvasCenter.x;
 		const y = transform.position.y + this.params.canvasCenter.y;
 
-		const fontWeight = this.params.fontWeight === "bold" ? "bold" : "normal";
-		const fontStyle = this.params.fontStyle === "italic" ? "italic" : "normal";
-		const scaledFontSize = scaleFontSize({
-			fontSize: this.params.fontSize,
-			canvasHeight: this.params.canvasHeight,
-		});
-		const fontFamily = quoteFontFamily({ fontFamily: this.params.fontFamily });
-		const fontString = `${fontStyle} ${fontWeight} ${scaledFontSize}px ${fontFamily}, sans-serif`;
-		const letterSpacing = this.params.letterSpacing ?? 0;
-		const lineHeight = this.params.lineHeight ?? DEFAULT_LINE_HEIGHT;
-		const lines = this.params.content.split("\n");
-		const lineHeightPx = scaledFontSize * lineHeight;
-		const fontSizeRatio = this.params.fontSize / DEFAULT_TEXT_ELEMENT.fontSize;
 		const baseline = this.params.textBaseline ?? "middle";
 		const blendMode = (
 			this.params.blendMode && this.params.blendMode !== "normal"
@@ -141,73 +116,49 @@ export class TextNode extends BaseNode<TextNodeParams> {
 				: "source-over"
 		) as GlobalCompositeOperation;
 
-	renderer.context.save();
-		renderer.context.font = fontString;
-		renderer.context.textBaseline = baseline;
-		if ("letterSpacing" in renderer.context) {
-			(renderer.context as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${letterSpacing}px`;
-		}
-		const lineMetrics = lines.map((line) => renderer.context.measureText(line));
-		renderer.context.restore();
+		const {
+			scaledFontSize,
+			fontString,
+			letterSpacing,
+			lineHeightPx,
+			lines,
+			lineMetrics,
+			block,
+			fontSizeRatio,
+			resolvedBackground,
+		} = measureTextElement({
+			element: this.params,
+			canvasHeight: this.params.canvasHeight,
+			localTime,
+			ctx: renderer.context,
+		});
 
 		const lineCount = lines.length;
-		const block = measureTextBlock({ lineMetrics, lineHeightPx, fallbackFontSize: scaledFontSize });
 
-	const textColor = resolveColorAtTime({
+		const textColor = resolveColorAtTime({
 			baseColor: this.params.color,
 			animations: this.params.animations,
 			propertyPath: "color",
 			localTime,
 		});
-		const bg = this.params.background;
-		const resolvedBackground = {
-			...bg,
+		const resolvedBackgroundWithColor = {
+			...resolvedBackground,
 			color: resolveColorAtTime({
-				baseColor: bg.color,
+				baseColor: this.params.background.color,
 				animations: this.params.animations,
 				propertyPath: "background.color",
 				localTime,
 			}),
-			paddingX: resolveNumberAtTime({
-				baseValue: bg.paddingX ?? DEFAULT_TEXT_BACKGROUND.paddingX,
-				animations: this.params.animations,
-				propertyPath: "background.paddingX",
-				localTime,
-			}),
-			paddingY: resolveNumberAtTime({
-				baseValue: bg.paddingY ?? DEFAULT_TEXT_BACKGROUND.paddingY,
-				animations: this.params.animations,
-				propertyPath: "background.paddingY",
-				localTime,
-			}),
-			offsetX: resolveNumberAtTime({
-				baseValue: bg.offsetX ?? DEFAULT_TEXT_BACKGROUND.offsetX,
-				animations: this.params.animations,
-				propertyPath: "background.offsetX",
-				localTime,
-			}),
-			offsetY: resolveNumberAtTime({
-				baseValue: bg.offsetY ?? DEFAULT_TEXT_BACKGROUND.offsetY,
-				animations: this.params.animations,
-				propertyPath: "background.offsetY",
-				localTime,
-			}),
-			cornerRadius: resolveNumberAtTime({
-				baseValue: bg.cornerRadius ?? CORNER_RADIUS_MIN,
-				animations: this.params.animations,
-				propertyPath: "background.cornerRadius",
-				localTime,
-			}),
 		};
 
-	const drawContent = (ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) => {
+		const drawContent = (
+			ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+		) => {
 			ctx.font = fontString;
 			ctx.textAlign = this.params.textAlign;
 			ctx.textBaseline = baseline;
 			ctx.fillStyle = textColor;
-			if ("letterSpacing" in ctx) {
-				(ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${letterSpacing}px`;
-			}
+			setCanvasLetterSpacing({ ctx, letterSpacingPx: letterSpacing });
 
 			if (
 				this.params.background.enabled &&
@@ -218,17 +169,29 @@ export class TextNode extends BaseNode<TextNodeParams> {
 				const backgroundRect = getTextBackgroundRect({
 					textAlign: this.params.textAlign,
 					block,
-					background: resolvedBackground,
+					background: resolvedBackgroundWithColor,
 					fontSizeRatio,
 				});
 				if (backgroundRect) {
-					const p = clamp({ value: resolvedBackground.cornerRadius, min: CORNER_RADIUS_MIN, max: CORNER_RADIUS_MAX }) / 100;
-					const radius = Math.min(backgroundRect.width, backgroundRect.height) / 2 * p;
-				ctx.fillStyle = resolvedBackground.color;
-				ctx.beginPath();
-				ctx.roundRect(backgroundRect.left, backgroundRect.top, backgroundRect.width, backgroundRect.height, radius);
-				ctx.fill();
-				ctx.fillStyle = textColor;
+					const p =
+						clamp({
+							value: resolvedBackgroundWithColor.cornerRadius,
+							min: CORNER_RADIUS_MIN,
+							max: CORNER_RADIUS_MAX,
+						}) / 100;
+					const radius =
+						(Math.min(backgroundRect.width, backgroundRect.height) / 2) * p;
+					ctx.fillStyle = resolvedBackgroundWithColor.color;
+					ctx.beginPath();
+					ctx.roundRect(
+						backgroundRect.left,
+						backgroundRect.top,
+						backgroundRect.width,
+						backgroundRect.height,
+						radius,
+					);
+					ctx.fill();
+					ctx.fillStyle = textColor;
 				}
 			}
 
@@ -247,15 +210,18 @@ export class TextNode extends BaseNode<TextNodeParams> {
 			}
 		};
 
-		const applyTransform = (ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) => {
+		const applyTransform = (
+			ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+		) => {
 			ctx.translate(x, y);
-			ctx.scale(transform.scale, transform.scale);
+			ctx.scale(transform.scaleX, transform.scaleY);
 			if (transform.rotate) {
 				ctx.rotate((transform.rotate * Math.PI) / 180);
 			}
 		};
 
-		const enabledEffects = this.params.effects?.filter((effect) => effect.enabled) ?? [];
+		const enabledEffects =
+			this.params.effects?.filter((effect) => effect.enabled) ?? [];
 
 		if (enabledEffects.length === 0) {
 			renderer.context.save();
@@ -269,11 +235,16 @@ export class TextNode extends BaseNode<TextNodeParams> {
 
 		// Effects path: render text to a same-size offscreen canvas so the blur
 		// can spread into the surrounding transparent area without hard clipping.
-		const offscreen = createOffscreenCanvas({ width: renderer.width, height: renderer.height });
-		const offscreenCtx = offscreen.getContext("2d") as OffscreenCanvasRenderingContext2D | null;
+		const offscreen = createOffscreenCanvas({
+			width: renderer.width,
+			height: renderer.height,
+		});
+		const offscreenCtx = offscreen.getContext(
+			"2d",
+		) as OffscreenCanvasRenderingContext2D | null;
 
 		if (!offscreenCtx) {
-		renderer.context.save();
+			renderer.context.save();
 			applyTransform(renderer.context);
 			renderer.context.globalCompositeOperation = blendMode;
 			renderer.context.globalAlpha = opacity;
@@ -294,15 +265,13 @@ export class TextNode extends BaseNode<TextNodeParams> {
 				animations: this.params.animations,
 				localTime,
 			});
-			const definition = getEffect({ effectType: effect.type });
-			const passes = definition.renderer.passes.map((pass) => ({
-				fragmentShader: pass.fragmentShader,
-				uniforms: pass.uniforms({
-					effectParams: resolvedParams,
-					width: renderer.width,
-					height: renderer.height,
-				}),
-			}));
+			const definition = effectsRegistry.get(effect.type);
+			const passes = resolveEffectPasses({
+				definition,
+				effectParams: resolvedParams,
+				width: renderer.width,
+				height: renderer.height,
+			});
 			currentSource = webglEffectRenderer.applyEffect({
 				source: currentSource,
 				width: renderer.width,

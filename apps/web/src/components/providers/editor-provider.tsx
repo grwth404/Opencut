@@ -3,13 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { EditorCore } from "@/core";
 import { useEditor } from "@/hooks/use-editor";
-import {
-	useKeybindingsListener,
-	useKeybindingDisabler,
-} from "@/hooks/use-keybindings";
+import { useKeybindingsListener } from "@/hooks/use-keybindings";
+import { useKeybindingsStore } from "@/stores/keybindings-store";
 import { useEditorActions } from "@/hooks/actions/use-editor-actions";
-import { prefetchFontAtlas } from "@/lib/fonts/google-fonts";
+import { loadFontAtlas } from "@/lib/fonts/google-fonts";
 
 interface EditorProviderProps {
 	projectId: string;
@@ -17,23 +16,19 @@ interface EditorProviderProps {
 }
 
 export function EditorProvider({ projectId, children }: EditorProviderProps) {
-	const editor = useEditor();
+	const activeProject = useEditor((e) => e.project.getActiveOrNull());
 	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const { disableKeybindings, enableKeybindings } = useKeybindingDisabler();
-	const activeProject = editor.project.getActiveOrNull();
+	const { setLoadingProject } = useKeybindingsStore();
 
 	useEffect(() => {
-		if (isLoading) {
-			disableKeybindings();
-		} else {
-			enableKeybindings();
-		}
-	}, [isLoading, disableKeybindings, enableKeybindings]);
+		setLoadingProject(isLoading);
+	}, [isLoading, setLoadingProject]);
 
 	useEffect(() => {
 		let cancelled = false;
+		const editor = EditorCore.getInstance();
 
 		const loadProject = async () => {
 			try {
@@ -43,7 +38,7 @@ export function EditorProvider({ projectId, children }: EditorProviderProps) {
 				if (cancelled) return;
 
 				setIsLoading(false);
-				prefetchFontAtlas();
+				loadFontAtlas();
 			} catch (err) {
 				if (cancelled) return;
 
@@ -76,7 +71,7 @@ export function EditorProvider({ projectId, children }: EditorProviderProps) {
 		return () => {
 			cancelled = true;
 		};
-	}, [projectId, editor, router]);
+	}, [projectId, router]);
 
 	if (error) {
 		return (

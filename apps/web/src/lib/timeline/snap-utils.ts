@@ -1,4 +1,4 @@
-import type { Bookmark, TimelineTrack } from "@/types/timeline";
+import type { Bookmark, TimelineTrack } from "@/lib/timeline";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 import { BOOKMARK_TIME_EPSILON } from "@/lib/timeline/bookmarks";
 import { getElementKeyframes } from "@/lib/animation";

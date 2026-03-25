@@ -4,10 +4,27 @@ import * as React from "react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import { Check, ChevronRight, Circle } from "lucide-react";
 import { cva, type VariantProps } from "class-variance-authority";
-
 import { cn } from "@/utils/ui";
+import { useOverlayOpenChange } from "./use-overlay-open-change";
 
-const DropdownMenu = DropdownMenuPrimitive.Root;
+function DropdownMenu({
+	open,
+	onOpenChange,
+	...props
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
+	const handleOpenChange = useOverlayOpenChange({
+		source: "dropdown-menu",
+		open,
+		onOpenChange,
+	});
+	return (
+		<DropdownMenuPrimitive.Root
+			open={open}
+			onOpenChange={handleOpenChange}
+			{...props}
+		/>
+	);
+}
 
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 
@@ -118,7 +135,7 @@ const DropdownMenuItem = React.forwardRef<
 		ref,
 	) => {
 		const iconSlot = (
-			<span className="hidden size-4 shrink-0 items-center justify-center group-has-[[data-has-icon]]/menu:flex">
+			<span className="hidden size-4 shrink-0 items-center justify-center group-has-data-has-icon/menu:flex">
 				{icon}
 			</span>
 		);

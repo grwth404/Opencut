@@ -1,8 +1,8 @@
 import { Command } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import { isVisualElement, updateElementInTracks } from "@/lib/timeline";
-import type { EffectParamValues } from "@/types/effects";
-import type { TimelineTrack, VisualElement } from "@/types/timeline";
+import type { ParamValues } from "@/lib/params";
+import type { TimelineTrack, VisualElement } from "@/lib/timeline";
 
 function updateEffectParamsOnElement({
 	element,
@@ -11,7 +11,7 @@ function updateEffectParamsOnElement({
 }: {
 	element: VisualElement;
 	effectId: string;
-	params: Partial<EffectParamValues>;
+	params: Partial<ParamValues>;
 }): VisualElement {
 	const currentEffects = element.effects ?? [];
 	const updated = currentEffects.map((effect) => {
@@ -36,7 +36,7 @@ export class UpdateClipEffectParamsCommand extends Command {
 	private readonly trackId: string;
 	private readonly elementId: string;
 	private readonly effectId: string;
-	private readonly params: Partial<EffectParamValues>;
+	private readonly params: Partial<ParamValues>;
 
 	constructor({
 		trackId,
@@ -47,7 +47,7 @@ export class UpdateClipEffectParamsCommand extends Command {
 		trackId: string;
 		elementId: string;
 		effectId: string;
-		params: Partial<EffectParamValues>;
+		params: Partial<ParamValues>;
 	}) {
 		super();
 		this.trackId = trackId;
@@ -65,12 +65,12 @@ export class UpdateClipEffectParamsCommand extends Command {
 			trackId: this.trackId,
 			elementId: this.elementId,
 			elementPredicate: isVisualElement,
-		update: (element) => {
-			return updateEffectParamsOnElement({
-				element: element as VisualElement,
-				effectId: this.effectId,
-				params: this.params,
-			});
+			update: (element) => {
+				return updateEffectParamsOnElement({
+					element: element as VisualElement,
+					effectId: this.effectId,
+					params: this.params,
+				});
 			},
 		});
 

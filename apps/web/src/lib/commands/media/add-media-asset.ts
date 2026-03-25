@@ -1,8 +1,10 @@
 import { Command } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
-import type { MediaAsset } from "@/types/assets";
+import { toast } from "sonner";
+import type { MediaAsset } from "@/lib/media/types";
 import { generateUUID } from "@/utils/id";
 import { storageService } from "@/services/storage/service";
+import { hasMediaId } from "@/lib/timeline/element-utils";
 
 export class AddMediaAssetCommand extends Command {
 	private assetId: string;
@@ -37,6 +39,36 @@ export class AddMediaAssetCommand extends Command {
 			})
 			.catch((error) => {
 				console.error("Failed to save media item:", error);
+
+				const currentAssets = editor.media.getAssets();
+				editor.media.setAssets({
+					assets: currentAssets.filter((asset) => asset.id !== this.assetId),
+				});
+
+				const currentTracks = editor.timeline.getTracks();
+				const orphanedElements: Array<{ trackId: string; elementId: string }> =
+					[];
+
+				for (const track of currentTracks) {
+					for (const element of track.elements) {
+						if (hasMediaId(element) && element.mediaId === this.assetId) {
+							orphanedElements.push({
+								trackId: track.id,
+								elementId: element.id,
+							});
+						}
+					}
+				}
+
+				if (orphanedElements.length > 0) {
+					editor.timeline.deleteElements({ elements: orphanedElements });
+				}
+
+				if (storageService.isQuotaExceededError({ error })) {
+					toast.error("Not enough browser storage", {
+						description: error instanceof Error ? error.message : undefined,
+					});
+				}
 			});
 	}
 

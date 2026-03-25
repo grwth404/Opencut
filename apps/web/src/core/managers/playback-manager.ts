@@ -11,7 +11,15 @@ export class PlaybackManager {
 	private playbackTimer: number | null = null;
 	private lastUpdate = 0;
 
-	constructor(private editor: EditorCore) {}
+	constructor(private editor: EditorCore) {
+		this.editor.timeline.subscribe(() => {
+			const duration = this.editor.timeline.getTotalDuration();
+			if (this.currentTime > duration && duration > 0) {
+				this.currentTime = duration;
+				this.notify();
+			}
+		});
+	}
 
 	play(): void {
 		const duration = this.editor.timeline.getTotalDuration();
@@ -117,7 +125,9 @@ export class PlaybackManager {
 	}
 
 	private notify(): void {
-		this.listeners.forEach((fn) => fn());
+		this.listeners.forEach((fn) => {
+			fn();
+		});
 	}
 
 	private startTimer(): void {
@@ -158,7 +168,6 @@ export class PlaybackManager {
 			);
 		} else {
 			this.currentTime = newTime;
-			this.notify();
 
 			window.dispatchEvent(
 				new CustomEvent("playback-update", {

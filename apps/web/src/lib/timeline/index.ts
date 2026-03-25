@@ -1,5 +1,7 @@
-import type { TimelineTrack } from "@/types/timeline";
+import type { TimelineTrack } from "./types";
 
+export * from "./types";
+export * from "./drag";
 export * from "./track-utils";
 export * from "./track-element-update";
 export * from "./element-utils";

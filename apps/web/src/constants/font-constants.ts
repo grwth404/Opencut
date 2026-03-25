@@ -1,5 +1,3 @@
-export const DEFAULT_FONT = "Arial";
-
 export const SYSTEM_FONTS = new Set([
 	"Arial",
 	"Helvetica",

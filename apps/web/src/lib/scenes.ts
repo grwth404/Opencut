@@ -1,4 +1,4 @@
-import type { TScene } from "@/types/timeline";
+import type { TScene } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { calculateTotalDuration } from "@/lib/timeline";
 import { ensureMainTrack } from "@/lib/timeline/track-utils";

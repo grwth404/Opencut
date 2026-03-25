@@ -1,9 +1,10 @@
 import type { EditorCore } from "@/core";
-import type { MediaAsset } from "@/types/assets";
+import { toast } from "sonner";
+import type { MediaAsset } from "@/lib/media/types";
 import { storageService } from "@/services/storage/service";
 import { generateUUID } from "@/utils/id";
 import { videoCache } from "@/services/video-cache/service";
-import { hasMediaId } from "@/lib/timeline/element-utils";
+import { BatchCommand, RemoveMediaAssetCommand } from "@/lib/commands";
 
 export class MediaManager {
 	private assets: MediaAsset[] = [];
@@ -18,7 +19,7 @@ export class MediaManager {
 	}: {
 		projectId: string;
 		asset: Omit<MediaAsset, "id">;
-	}): Promise<void> {
+	}): Promise<MediaAsset | null> {
 		const newAsset: MediaAsset = {
 			...asset,
 			id: generateUUID(),
@@ -29,54 +30,46 @@ export class MediaManager {
 
 		try {
 			await storageService.saveMediaAsset({ projectId, mediaAsset: newAsset });
+			return newAsset;
 		} catch (error) {
 			console.error("Failed to save media asset:", error);
 			this.assets = this.assets.filter((asset) => asset.id !== newAsset.id);
 			this.notify();
+
+			if (storageService.isQuotaExceededError({ error })) {
+				toast.error("Not enough browser storage", {
+					description: error instanceof Error ? error.message : undefined,
+				});
+			}
+
+			return null;
 		}
 	}
 
-	async removeMediaAsset({
+	removeMediaAsset({ projectId, id }: { projectId: string; id: string }): void {
+		this.removeMediaAssets({ projectId, ids: [id] });
+	}
+
+	removeMediaAssets({
 		projectId,
-		id,
+		ids,
 	}: {
 		projectId: string;
-		id: string;
-	}): Promise<void> {
-		const asset = this.assets.find((asset) => asset.id === id);
-
-		videoCache.clearVideo({ mediaId: id });
-
-		if (asset?.url) {
-			URL.revokeObjectURL(asset.url);
-			if (asset.thumbnailUrl) {
-				URL.revokeObjectURL(asset.thumbnailUrl);
-			}
+		ids: string[];
+	}): void {
+		const uniqueIds = [...new Set(ids)];
+		if (uniqueIds.length === 0) {
+			return;
 		}
 
-		this.assets = this.assets.filter((asset) => asset.id !== id);
-		this.notify();
+		const command =
+			uniqueIds.length === 1
+				? new RemoveMediaAssetCommand(projectId, uniqueIds[0])
+				: new BatchCommand(
+						uniqueIds.map((id) => new RemoveMediaAssetCommand(projectId, id)),
+					);
 
-		const tracks = this.editor.timeline.getTracks();
-		const elementsToRemove: Array<{ trackId: string; elementId: string }> = [];
-
-		for (const track of tracks) {
-			for (const element of track.elements) {
-				if (hasMediaId(element) && element.mediaId === id) {
-					elementsToRemove.push({ trackId: track.id, elementId: element.id });
-				}
-			}
-		}
-
-		if (elementsToRemove.length > 0) {
-			this.editor.timeline.deleteElements({ elements: elementsToRemove });
-		}
-
-		try {
-			await storageService.deleteMediaAsset({ projectId, id });
-		} catch (error) {
-			console.error("Failed to delete media asset:", error);
-		}
+		this.editor.command.execute({ command });
 	}
 
 	async loadProjectMedia({ projectId }: { projectId: string }): Promise<void> {
@@ -157,6 +150,8 @@ export class MediaManager {
 	}
 
 	private notify(): void {
-		this.listeners.forEach((fn) => fn());
+		this.listeners.forEach((fn) => {
+			fn();
+		});
 	}
 }

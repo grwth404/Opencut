@@ -1,6 +1,6 @@
 import type { TActionWithOptionalArgs } from "@/lib/actions";
-import type { ShortcutKey } from "@/types/keybinding";
-import type { KeybindingConfig } from "@/types/keybinding";
+import type { ShortcutKey } from "@/lib/actions/keybinding";
+import type { KeybindingConfig } from "@/lib/actions/keybinding";
 
 interface V3State {
 	keybindings: KeybindingConfig;

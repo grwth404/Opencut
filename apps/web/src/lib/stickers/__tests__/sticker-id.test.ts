@@ -3,13 +3,13 @@ import { buildStickerId, parseStickerId } from "../sticker-id";
 
 describe("sticker-id strict mode", () => {
 	test("parses provider-prefixed IDs", () => {
-		expect(parseStickerId({ stickerId: "icons:mdi:home" })).toEqual({
-			providerId: "icons",
-			providerValue: "mdi:home",
+		expect(parseStickerId({ stickerId: "flags:US" })).toEqual({
+			providerId: "flags",
+			providerValue: "US",
 		});
-		expect(parseStickerId({ stickerId: "emoji:noto:grinning-face" })).toEqual({
-			providerId: "emoji",
-			providerValue: "noto:grinning-face",
+		expect(parseStickerId({ stickerId: "shapes:circle" })).toEqual({
+			providerId: "shapes",
+			providerValue: "circle",
 		});
 	});
 
@@ -19,7 +19,7 @@ describe("sticker-id strict mode", () => {
 
 	test("throws for malformed IDs", () => {
 		expect(() => parseStickerId({ stickerId: "" })).toThrow();
-		expect(() => parseStickerId({ stickerId: "icons:" })).toThrow();
+		expect(() => parseStickerId({ stickerId: "flags:" })).toThrow();
 		expect(() => parseStickerId({ stickerId: ":mdi:home" })).toThrow();
 	});
 

@@ -1,17 +1,12 @@
-import type { TimelineTrack, TimelineElement } from "@/types/timeline";
-import type { MediaAsset } from "@/types/assets";
+import type { TimelineTrack, TimelineElement } from "@/lib/timeline";
+import type { MediaAsset } from "@/lib/media/types";
 import { isMainTrack } from "@/lib/timeline";
-import {
-	DEFAULT_TEXT_ELEMENT,
-	DEFAULT_LINE_HEIGHT,
-	DEFAULT_TEXT_BACKGROUND,
-	FONT_SIZE_SCALE_REFERENCE,
-} from "@/constants/text-constants";
-import { getTextVisualRect, measureTextBlock } from "@/lib/text/layout";
+import { STICKER_INTRINSIC_SIZE_FALLBACK } from "@/constants/sticker-constants";
+import { DEFAULT_GRAPHIC_SOURCE_SIZE } from "@/lib/graphics";
+import { measureTextElement } from "@/lib/text/measure-element";
 import {
 	getElementLocalTime,
 	resolveTransformAtTime,
-	resolveNumberAtTime,
 } from "@/lib/animation";
 
 export interface ElementBounds {
@@ -41,7 +36,8 @@ function getVisualElementBounds({
 	sourceWidth: number;
 	sourceHeight: number;
 	transform: {
-		scale: number;
+		scaleX: number;
+		scaleY: number;
 		position: { x: number; y: number };
 		rotate: number;
 	};
@@ -50,8 +46,8 @@ function getVisualElementBounds({
 		canvasWidth / sourceWidth,
 		canvasHeight / sourceHeight,
 	);
-	const scaledWidth = sourceWidth * containScale * transform.scale;
-	const scaledHeight = sourceHeight * containScale * transform.scale;
+	const scaledWidth = sourceWidth * containScale * transform.scaleX;
+	const scaledHeight = sourceHeight * containScale * transform.scaleY;
 	const cx = canvasWidth / 2 + transform.position.x;
 	const cy = canvasHeight / 2 + transform.position.y;
 
@@ -64,7 +60,53 @@ function getVisualElementBounds({
 	};
 }
 
-export function getElementBounds({
+function getTransformedRectBounds({
+	canvasWidth,
+	canvasHeight,
+	rect,
+	transform,
+}: {
+	canvasWidth: number;
+	canvasHeight: number;
+	rect: { left: number; top: number; width: number; height: number };
+	transform: {
+		scaleX: number;
+		scaleY: number;
+		position: { x: number; y: number };
+		rotate: number;
+	};
+}): ElementBounds {
+	const localCenterX = rect.left + rect.width / 2;
+	const localCenterY = rect.top + rect.height / 2;
+	const scaledCenterX = localCenterX * transform.scaleX;
+	const scaledCenterY = localCenterY * transform.scaleY;
+	const rotationRad = (transform.rotate * Math.PI) / 180;
+	const cos = Math.cos(rotationRad);
+	const sin = Math.sin(rotationRad);
+	return {
+		cx:
+			canvasWidth / 2 +
+			transform.position.x +
+			scaledCenterX * cos -
+			scaledCenterY * sin,
+		cy:
+			canvasHeight / 2 +
+			transform.position.y +
+			scaledCenterX * sin +
+			scaledCenterY * cos,
+		width: rect.width * transform.scaleX,
+		height: rect.height * transform.scaleY,
+		rotation: transform.rotate,
+	};
+}
+
+/**
+ * Bounds policy: bounds reflect base content geometry (text glyphs + background,
+ * sticker/image/video content area) and base transform. Post-effect spill (blur,
+ * glow) and mask-clipped regions are intentionally excluded — handles manipulate
+ * the canonical element geometry, not visual effect output.
+ */
+function getElementBounds({
 	element,
 	canvasSize,
 	mediaAsset,
@@ -106,8 +148,23 @@ export function getElementBounds({
 		return getVisualElementBounds({
 			canvasWidth,
 			canvasHeight,
-			sourceWidth: 200,
-			sourceHeight: 200,
+			sourceWidth: element.intrinsicWidth ?? STICKER_INTRINSIC_SIZE_FALLBACK,
+			sourceHeight: element.intrinsicHeight ?? STICKER_INTRINSIC_SIZE_FALLBACK,
+			transform,
+		});
+	}
+
+	if (element.type === "graphic") {
+		const transform = resolveTransformAtTime({
+			baseTransform: element.transform,
+			animations: element.animations,
+			localTime,
+		});
+		return getVisualElementBounds({
+			canvasWidth,
+			canvasHeight,
+			sourceWidth: DEFAULT_GRAPHIC_SOURCE_SIZE,
+			sourceHeight: DEFAULT_GRAPHIC_SOURCE_SIZE,
 			transform,
 		});
 	}
@@ -118,109 +175,89 @@ export function getElementBounds({
 			animations: element.animations,
 			localTime,
 		});
-		const scaledFontSize =
-			element.fontSize * (canvasHeight / FONT_SIZE_SCALE_REFERENCE);
-		const letterSpacing = element.letterSpacing ?? 0;
-		const lineHeight = element.lineHeight ?? DEFAULT_LINE_HEIGHT;
-		const lineHeightPx = scaledFontSize * lineHeight;
-
-		let measuredWidth = 100;
-		let measuredHeight = scaledFontSize;
 
 		const canvas = document.createElement("canvas");
-		canvas.width = 4096;
-		canvas.height = 4096;
 		const ctx = canvas.getContext("2d");
+		if (!ctx) return null;
 
-		if (ctx) {
-			const fontWeight = element.fontWeight === "bold" ? "bold" : "normal";
-			const fontStyle = element.fontStyle === "italic" ? "italic" : "normal";
-			const fontFamily = `"${element.fontFamily.replace(/"/g, '\\"')}"`;
-			ctx.font = `${fontStyle} ${fontWeight} ${scaledFontSize}px ${fontFamily}, sans-serif`;
-			ctx.textAlign = element.textAlign as CanvasTextAlign;
-			if ("letterSpacing" in ctx) {
-				(
-					ctx as CanvasRenderingContext2D & { letterSpacing: string }
-				).letterSpacing = `${letterSpacing}px`;
-			}
+		const measured = measureTextElement({
+			element,
+			canvasHeight,
+			localTime,
+			ctx,
+		});
 
-			const lines = element.content.split("\n");
-			const lineMetrics = lines.map((line) => ctx.measureText(line));
-			const block = measureTextBlock({
-				lineMetrics,
-				lineHeightPx,
-				fallbackFontSize: scaledFontSize,
-			});
-			const fontSizeRatio = element.fontSize / DEFAULT_TEXT_ELEMENT.fontSize;
-			const resolvedBackground = {
-				...element.background,
-				paddingX: resolveNumberAtTime({
-					baseValue:
-						element.background.paddingX ?? DEFAULT_TEXT_BACKGROUND.paddingX,
-					animations: element.animations,
-					propertyPath: "background.paddingX",
-					localTime,
-				}),
-				paddingY: resolveNumberAtTime({
-					baseValue:
-						element.background.paddingY ?? DEFAULT_TEXT_BACKGROUND.paddingY,
-					animations: element.animations,
-					propertyPath: "background.paddingY",
-					localTime,
-				}),
-				offsetX: resolveNumberAtTime({
-					baseValue:
-						element.background.offsetX ?? DEFAULT_TEXT_BACKGROUND.offsetX,
-					animations: element.animations,
-					propertyPath: "background.offsetX",
-					localTime,
-				}),
-				offsetY: resolveNumberAtTime({
-					baseValue:
-						element.background.offsetY ?? DEFAULT_TEXT_BACKGROUND.offsetY,
-					animations: element.animations,
-					propertyPath: "background.offsetY",
-					localTime,
-				}),
-			};
-			const visualRect = getTextVisualRect({
-				textAlign: element.textAlign,
-				block,
-				background: resolvedBackground,
-				fontSizeRatio,
-			});
-			measuredWidth = visualRect.width;
-			measuredHeight = visualRect.height;
-			const localCenterX = visualRect.left + visualRect.width / 2;
-			const localCenterY = visualRect.top + visualRect.height / 2;
-			const scaledCenterX = localCenterX * transform.scale;
-			const scaledCenterY = localCenterY * transform.scale;
-			const rotationRad = (transform.rotate * Math.PI) / 180;
-			const cos = Math.cos(rotationRad);
-			const sin = Math.sin(rotationRad);
-			const rotatedCenterX = scaledCenterX * cos - scaledCenterY * sin;
-			const rotatedCenterY = scaledCenterX * sin + scaledCenterY * cos;
-			return {
-				cx: canvasWidth / 2 + transform.position.x + rotatedCenterX,
-				cy: canvasHeight / 2 + transform.position.y + rotatedCenterY,
-				width: measuredWidth * transform.scale,
-				height: measuredHeight * transform.scale,
-				rotation: transform.rotate,
-			};
-		}
-
-		const width = measuredWidth * transform.scale;
-		const height = measuredHeight * transform.scale;
-		return {
-			cx: canvasWidth / 2 + transform.position.x,
-			cy: canvasHeight / 2 + transform.position.y,
-			width,
-			height,
-			rotation: transform.rotate,
-		};
+		return getTransformedRectBounds({
+			canvasWidth,
+			canvasHeight,
+			rect: measured.visualRect,
+			transform,
+		});
 	}
 
 	return null;
+}
+
+export const ROTATION_HANDLE_OFFSET = 24;
+
+export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+export type Edge = "right" | "left" | "bottom";
+
+export function getCornerPosition({
+	bounds,
+	corner,
+}: {
+	bounds: ElementBounds;
+	corner: Corner;
+}): { x: number; y: number } {
+	const halfW = bounds.width / 2;
+	const halfH = bounds.height / 2;
+	const angleRad = (bounds.rotation * Math.PI) / 180;
+	const cos = Math.cos(angleRad);
+	const sin = Math.sin(angleRad);
+	const localX =
+		corner === "top-left" || corner === "bottom-left" ? -halfW : halfW;
+	const localY =
+		corner === "top-left" || corner === "top-right" ? -halfH : halfH;
+	return {
+		x: bounds.cx + (localX * cos - localY * sin),
+		y: bounds.cy + (localX * sin + localY * cos),
+	};
+}
+
+export function getEdgeHandlePosition({
+	bounds,
+	edge,
+}: {
+	bounds: ElementBounds;
+	edge: Edge;
+}): { x: number; y: number } {
+	const halfWidth = bounds.width / 2;
+	const halfHeight = bounds.height / 2;
+	const angleRad = (bounds.rotation * Math.PI) / 180;
+	const cos = Math.cos(angleRad);
+	const sin = Math.sin(angleRad);
+	const localX = edge === "right" ? halfWidth : edge === "left" ? -halfWidth : 0;
+	const localY = edge === "bottom" ? halfHeight : 0;
+	return {
+		x: bounds.cx + (localX * cos - localY * sin),
+		y: bounds.cy + (localX * sin + localY * cos),
+	};
+}
+
+export function getRotationHandlePosition({
+	bounds,
+}: {
+	bounds: ElementBounds;
+}): { x: number; y: number } {
+	const angleRad = (bounds.rotation * Math.PI) / 180;
+	const cos = Math.cos(angleRad);
+	const sin = Math.sin(angleRad);
+	const localY = -bounds.height / 2 - ROTATION_HANDLE_OFFSET;
+	return {
+		x: bounds.cx - localY * sin,
+		y: bounds.cy + localY * cos,
+	};
 }
 
 export function getVisibleElementsWithBounds({

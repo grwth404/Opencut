@@ -51,6 +51,10 @@ const nextConfig: NextConfig = {
 				protocol: "https",
 				hostname: "api.unisvg.com",
 			},
+			{
+				protocol: "https",
+				hostname: "cdn.brandfetch.io",
+			},
 		],
 	},
 };

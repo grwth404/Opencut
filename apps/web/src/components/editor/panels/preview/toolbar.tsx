@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useEditor } from "@/hooks/use-editor";
 import { formatTimeCode } from "@/lib/time";
 import { invokeAction } from "@/lib/actions";
@@ -7,74 +8,144 @@ import { EditableTimecode } from "@/components/editable-timecode";
 import { Button } from "@/components/ui/button";
 import {
 	FullScreenIcon,
+	GridTableIcon,
 	PauseIcon,
 	PlayIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { OcSocialIcon } from "@opencut/ui/icons";
+import { getGuideById } from "@/lib/guides";
 import { Separator } from "@/components/ui/separator";
+import {
+	Select,
+	SelectTrigger,
+	SelectContent,
+	SelectItem,
+	SelectSeparator,
+} from "@/components/ui/select";
+import { PREVIEW_ZOOM_PRESETS } from "@/constants/editor-constants";
+import { usePreviewViewport } from "./preview-viewport";
+import { GridPopover } from "./guide-popover";
+import { usePreviewStore } from "@/stores/preview-store";
 
 export function PreviewToolbar({
-	isFullscreen,
 	onToggleFullscreen,
 }: {
-	isFullscreen: boolean;
 	onToggleFullscreen: () => void;
 }) {
-	const editor = useEditor();
-	const isPlaying = editor.playback.getIsPlaying();
-	const currentTime = editor.playback.getCurrentTime();
-	const totalDuration = editor.timeline.getTotalDuration();
-	const fps = editor.project.getActive().settings.fps;
+	const activeGuide = usePreviewStore((state) => state.activeGuide);
+	const activeGuideDefinition = getGuideById(activeGuide);
 
 	return (
 		<div className="grid grid-cols-[1fr_auto_1fr] items-center pb-3 pt-5 px-5">
-			<div className="flex items-center">
-				<EditableTimecode
-					time={currentTime}
-					duration={totalDuration}
-					format="HH:MM:SS:FF"
-					fps={fps}
-					onTimeChange={({ time }) => editor.playback.seek({ time })}
-					className="text-center"
-				/>
-				<span className="text-muted-foreground px-2 font-mono text-xs">/</span>
-				<span className="text-muted-foreground font-mono text-xs">
-					{formatTimeCode({
-						timeInSeconds: totalDuration,
-						format: "HH:MM:SS:FF",
-						fps,
-					})}
-				</span>
-			</div>
-
-			<Button
-				variant="text"
-				size="icon"
-				onClick={() => invokeAction("toggle-play")}
-			>
-				<HugeiconsIcon icon={isPlaying ? PauseIcon : PlayIcon} />
-			</Button>
-
+			<TimecodeDisplay />
+			<PlayPauseButton />
 			<div className="justify-self-end flex items-center gap-2.5">
-				<Button
-					variant="secondary"
-					size="sm"
-					className="[&_svg]:size-auto px-1 h-7"
-					onClick={onToggleFullscreen}
-					title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-				>
-					<OcSocialIcon size={20} />
-				</Button>
+				<ZoomSelect />
 				<Separator orientation="vertical" className="h-4" />
-				<Button
-					variant="text"
-					onClick={onToggleFullscreen}
-					title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-				>
+				<GridPopover>
+					<Button
+						variant={activeGuideDefinition ? "secondary" : "text"}
+						size="icon"
+					>
+						{activeGuideDefinition ? (
+							activeGuideDefinition.renderTriggerIcon()
+						) : (
+							<HugeiconsIcon icon={GridTableIcon} />
+						)}
+					</Button>
+				</GridPopover>
+				<Button variant="text" onClick={onToggleFullscreen}>
 					<HugeiconsIcon icon={FullScreenIcon} />
 				</Button>
 			</div>
 		</div>
+	);
+}
+
+function TimecodeDisplay() {
+	const editor = useEditor();
+	const totalDuration = useEditor((e) => e.timeline.getTotalDuration());
+	const fps = useEditor((e) => e.project.getActive().settings.fps);
+	const [currentTime, setCurrentTime] = useState(() =>
+		editor.playback.getCurrentTime(),
+	);
+
+	useEffect(() => {
+		const handler = (e: Event) =>
+			setCurrentTime((e as CustomEvent<{ time: number }>).detail.time);
+		window.addEventListener("playback-update", handler);
+		window.addEventListener("playback-seek", handler);
+		return () => {
+			window.removeEventListener("playback-update", handler);
+			window.removeEventListener("playback-seek", handler);
+		};
+	}, []);
+
+	return (
+		<div className="flex items-center">
+			<EditableTimecode
+				time={currentTime}
+				duration={totalDuration}
+				format="HH:MM:SS:FF"
+				fps={fps}
+				onTimeChange={({ time }) => editor.playback.seek({ time })}
+				className="text-center"
+			/>
+			<span className="text-muted-foreground px-2 font-mono text-xs">/</span>
+			<span className="text-muted-foreground font-mono text-xs">
+				{formatTimeCode({
+					timeInSeconds: totalDuration,
+					format: "HH:MM:SS:FF",
+					fps,
+				})}
+			</span>
+		</div>
+	);
+}
+
+function ZoomSelect() {
+	const { isAtFit, zoomPercent, fitToScreen, setViewportPercent } =
+		usePreviewViewport();
+
+	const displayLabel = isAtFit ? "Fit" : `${zoomPercent}%`;
+
+	const onValueChange = (value: string) => {
+		if (value === "fit") {
+			fitToScreen();
+		} else {
+			setViewportPercent({ percent: Number(value) });
+		}
+	};
+
+	return (
+		<Select
+			value={isAtFit ? "fit" : String(zoomPercent)}
+			onValueChange={onValueChange}
+		>
+			<SelectTrigger className="tabular-nums">{displayLabel}</SelectTrigger>
+			<SelectContent>
+				<SelectItem value="fit">Fit</SelectItem>
+				<SelectSeparator />
+				{PREVIEW_ZOOM_PRESETS.map((preset) => (
+					<SelectItem key={preset} value={String(preset)}>
+						{preset}%
+					</SelectItem>
+				))}
+			</SelectContent>
+		</Select>
+	);
+}
+
+function PlayPauseButton() {
+	const isPlaying = useEditor((e) => e.playback.getIsPlaying());
+
+	return (
+		<Button
+			variant="text"
+			size="icon"
+			onClick={() => invokeAction("toggle-play")}
+		>
+			<HugeiconsIcon icon={isPlaying ? PauseIcon : PlayIcon} />
+		</Button>
 	);
 }

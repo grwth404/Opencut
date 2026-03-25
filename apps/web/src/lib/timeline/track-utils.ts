@@ -4,13 +4,15 @@ import type {
 	ElementType,
 	VideoTrack,
 	AudioTrack,
-	StickerTrack,
+	GraphicTrack,
 	TextTrack,
 	EffectTrack,
 	TimelineElement,
-} from "@/types/timeline";
+} from "@/lib/timeline";
 import {
+	ELEMENT_TRACK_MAP,
 	TRACK_CONFIG,
+	ELEMENT_TYPE_CONFIG,
 	TRACK_GAP,
 } from "@/constants/timeline-constants";
 import { generateUUID } from "@/utils/id";
@@ -23,16 +25,12 @@ export function canTracktHaveAudio(
 
 export function canTrackBeHidden(
 	track: TimelineTrack,
-): track is VideoTrack | TextTrack | StickerTrack | EffectTrack {
+): track is VideoTrack | TextTrack | GraphicTrack | EffectTrack {
 	return track.type !== "audio";
 }
 
-export function getTrackColor({ type }: { type: TrackType }) {
-	return TRACK_CONFIG[type];
-}
-
-export function getTrackClasses({ type }: { type: TrackType }) {
-	return TRACK_CONFIG[type].background.trim();
+export function getElementClasses({ type }: { type: TrackType }) {
+	return ELEMENT_TYPE_CONFIG[type].background.trim();
 }
 
 export function getTrackHeight({ type }: { type: TrackType }): number {
@@ -97,11 +95,11 @@ export function buildEmptyTrack({
 				elements: [],
 				hidden: false,
 			};
-		case "sticker":
+		case "graphic":
 			return {
 				id,
 				name: trackName,
-				type: "sticker",
+				type: "graphic",
 				elements: [],
 				hidden: false,
 			};
@@ -214,14 +212,7 @@ export function canElementGoOnTrack({
 	elementType: ElementType;
 	trackType: TrackType;
 }): boolean {
-	if (elementType === "text") return trackType === "text";
-	if (elementType === "audio") return trackType === "audio";
-	if (elementType === "sticker") return trackType === "sticker";
-	if (elementType === "effect") return trackType === "effect";
-	if (elementType === "video" || elementType === "image") {
-		return trackType === "video";
-	}
-	return false;
+	return ELEMENT_TRACK_MAP[elementType] === trackType;
 }
 
 export function validateElementTrackCompatibility({

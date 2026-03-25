@@ -47,7 +47,7 @@ function ProjectDropdown() {
 	const [isExiting, setIsExiting] = useState(false);
 	const router = useRouter();
 	const editor = useEditor();
-	const activeProject = editor.project.getActive();
+	const activeProject = useEditor((e) => e.project.getActive());
 
 	const handleExit = async () => {
 		if (isExiting) return;
@@ -136,7 +136,7 @@ function ProjectDropdown() {
 
 					<DropdownMenuSeparator />
 
-					<DropdownMenuItem asChild icon={<FaDiscord className="!size-4" />}>
+					<DropdownMenuItem asChild icon={<FaDiscord className="size-4!" />}>
 						<Link
 							href={SOCIAL_LINKS.discord}
 							target="_blank"
@@ -169,7 +169,7 @@ function ProjectDropdown() {
 
 function EditableProjectName() {
 	const editor = useEditor();
-	const activeProject = editor.project.getActive();
+	const activeProject = useEditor((e) => e.project.getActive());
 	const [isEditing, setIsEditing] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const originalNameRef = useRef("");
@@ -219,6 +219,7 @@ function EditableProjectName() {
 			event.preventDefault();
 			if (inputRef.current) {
 				inputRef.current.value = originalNameRef.current;
+				inputRef.current.setSelectionRange(0, 0);
 			}
 			setIsEditing(false);
 			inputRef.current?.blur();

@@ -1,4 +1,4 @@
-import type { TimelineElement } from "@/types/timeline";
+import type { TimelineElement } from "@/lib/timeline";
 
 export function rippleShiftElements({
 	elements,

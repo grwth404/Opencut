@@ -1,4 +1,4 @@
-import type { Bookmark } from "@/types/timeline";
+import type { Bookmark } from "@/lib/timeline";
 import { roundToFrame } from "@/lib/time";
 
 export const BOOKMARK_TIME_EPSILON = 0.001;

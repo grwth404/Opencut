@@ -1,11 +1,14 @@
 "use client";
 
 import { cn } from "@/utils/ui";
-import { useRef, useState, type ComponentProps } from "react";
+import { clamp } from "@/utils/math";
+import { useRef, useState, useLayoutEffect, type ComponentProps } from "react";
 import { useFocusLock } from "@/hooks/use-focus-lock";
 import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowTurnBackwardIcon } from "@hugeicons/core-free-icons";
+
+const SUFFIX_GAP_PX = 6;
 
 const DRAG_SENSITIVITIES = {
 	default: 1,
@@ -14,10 +17,94 @@ const DRAG_SENSITIVITIES = {
 
 type DragSensitivity = "default" | "slow";
 
+type ScrubRange = {
+	from: number;
+	to: number;
+	pixelsPerUnit: number;
+};
+
+type ScrubClamp = {
+	min?: number;
+	max?: number;
+};
+
+function clampScrubValue({
+	value,
+	min,
+	max,
+}: {
+	value: number;
+	min?: number;
+	max?: number;
+}): number {
+	if (min != null && max != null) return clamp({ value, min, max });
+	if (min != null) return Math.max(min, value);
+	if (max != null) return Math.min(max, value);
+	return value;
+}
+
+function getActiveRange({
+	value,
+	direction,
+	ranges,
+}: {
+	value: number;
+	direction: number;
+	ranges: readonly ScrubRange[];
+}): ScrubRange | undefined {
+	return ranges.find((range) =>
+		direction > 0
+			? value >= range.from && value < range.to
+			: value > range.from && value <= range.to,
+	);
+}
+
+function scrubAcrossRanges({
+	startValue,
+	pixelDelta,
+	ranges,
+	min,
+	max,
+}: {
+	startValue: number;
+	pixelDelta: number;
+	ranges: readonly ScrubRange[];
+	min?: number;
+	max?: number;
+}): number {
+	let currentValue = clampScrubValue({ value: startValue, min, max });
+	let remainingPixels = pixelDelta;
+
+	while (remainingPixels !== 0) {
+		const direction = Math.sign(remainingPixels);
+
+		const range = getActiveRange({ value: currentValue, direction, ranges });
+		if (!range) break;
+
+		const boundary = direction > 0 ? range.to : range.from;
+		const pixelsToBoundary =
+			Math.abs(boundary - currentValue) * range.pixelsPerUnit;
+
+		if (Math.abs(remainingPixels) <= pixelsToBoundary) {
+			currentValue += remainingPixels / range.pixelsPerUnit;
+			break;
+		}
+
+		currentValue = boundary;
+		remainingPixels -= direction * pixelsToBoundary;
+	}
+
+	return clampScrubValue({ value: currentValue, min, max });
+}
+
 interface NumberFieldProps
 	extends Omit<ComponentProps<"input">, "size" | "type"> {
 	icon?: React.ReactNode;
+	suffix?: string;
+	suffixClassName?: string;
 	dragSensitivity?: DragSensitivity;
+	scrubRanges?: readonly ScrubRange[];
+	scrubClamp?: ScrubClamp;
 	onScrub?: (value: number) => void;
 	onScrubEnd?: () => void;
 	allowExpressions?: boolean;
@@ -28,8 +115,12 @@ interface NumberFieldProps
 function NumberField({
 	className,
 	icon,
+	suffix,
+	suffixClassName,
 	disabled,
 	dragSensitivity = "default",
+	scrubRanges,
+	scrubClamp,
 	onScrub,
 	onScrubEnd,
 	value,
@@ -45,9 +136,18 @@ function NumberField({
 }: NumberFieldProps & { ref?: React.Ref<HTMLInputElement> }) {
 	const iconRef = useRef<HTMLSpanElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
+	const ghostRef = useRef<HTMLSpanElement>(null);
 	const startValueRef = useRef(0);
 	const cumulativeDeltaRef = useRef(0);
 	const [isInputFocused, setIsInputFocused] = useState(false);
+	const [suffixLeft, setSuffixLeft] = useState(0);
+
+	useLayoutEffect(() => {
+		if (!suffix || !ghostRef.current || !inputRef.current) return;
+		const paddingLeft =
+			parseFloat(getComputedStyle(inputRef.current).paddingLeft) || 0;
+		setSuffixLeft(paddingLeft + ghostRef.current.offsetWidth);
+	}, [value, suffix]);
 
 	const { containerRef: wrapperRef } = useFocusLock<HTMLDivElement>({
 		isActive: isInputFocused,
@@ -71,12 +171,16 @@ function NumberField({
 				return;
 			}
 			cumulativeDeltaRef.current += moveEvent.movementX;
-			const sensitivity =
-				typeof dragSensitivity === "number"
-					? dragSensitivity
-					: DRAG_SENSITIVITIES[dragSensitivity];
-			const newValue =
-				startValueRef.current + cumulativeDeltaRef.current * sensitivity;
+			const newValue = scrubRanges
+				? scrubAcrossRanges({
+						startValue: startValueRef.current,
+						pixelDelta: cumulativeDeltaRef.current,
+						ranges: scrubRanges,
+						min: scrubClamp?.min,
+						max: scrubClamp?.max,
+					})
+				: startValueRef.current +
+					cumulativeDeltaRef.current * DRAG_SENSITIVITIES[dragSensitivity];
 			onScrub(newValue);
 		};
 
@@ -93,11 +197,48 @@ function NumberField({
 
 	const canScrub = Boolean(icon && onScrub);
 
+	const inputNode = (
+		<input
+			type={allowExpressions ? "text" : "number"}
+			inputMode={allowExpressions ? "decimal" : undefined}
+			ref={inputRef}
+			disabled={disabled}
+			value={value}
+			className="text-sm leading-none bg-transparent outline-none min-w-0 flex-1 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+			onMouseDown={(event) => {
+				const inputElement = event.currentTarget;
+				const shouldPreventNativeCaretPlacement =
+					event.button === 0 && document.activeElement !== inputElement;
+				if (shouldPreventNativeCaretPlacement) {
+					event.preventDefault();
+					inputElement.focus();
+					inputElement.select();
+				}
+				onMouseDown?.(event);
+			}}
+			onFocus={(event) => {
+				setIsInputFocused(true);
+				event.currentTarget.select();
+				onFocus?.(event);
+			}}
+			onKeyDown={(event) => {
+				const shouldBlurInput = event.key === "Enter" || event.key === "Escape";
+				if (shouldBlurInput) event.currentTarget.blur();
+				onKeyDown?.(event);
+			}}
+			onBlur={(event) => {
+				setIsInputFocused(false);
+				onBlur?.(event);
+			}}
+			{...props}
+		/>
+	);
+
 	return (
 		<div
 			ref={wrapperRef}
 			className={cn(
-				"border-border bg-accent flex h-7 w-full min-w-0 items-center rounded-md border text-sm outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 focus-within:border-primary focus-within:ring-0 focus-within:ring-primary/10 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
+				"border-border bg-accent flex h-7 w-full min-w-0 items-center rounded-md border text-sm outline-none cursor-text disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 focus-within:border-primary focus-within:ring-0 focus-within:ring-primary/10 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
 				disabled && "pointer-events-none cursor-not-allowed opacity-50",
 				className,
 			)}
@@ -106,53 +247,45 @@ function NumberField({
 				<span
 					ref={iconRef}
 					className={cn(
-						"text-muted-foreground [&_svg]:!size-3.5 shrink-0 select-none pl-2.5 text-sm leading-none",
+						"text-muted-foreground [&_svg]:size-3.5! shrink-0 select-none pl-2.5 text-sm leading-none",
 						canScrub && "cursor-ew-resize",
 					)}
+					onMouseDown={canScrub ? (event) => event.preventDefault() : undefined}
 					onPointerDown={canScrub ? handleIconPointerDown : undefined}
 				>
 					{icon}
 				</span>
 			)}
-			<input
-				type={allowExpressions ? "text" : "number"}
-				inputMode={allowExpressions ? "decimal" : undefined}
-				ref={inputRef}
-				disabled={disabled}
-				value={value}
+			<span
 				className={cn(
-					"min-w-0 flex-1 text-sm leading-none bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+					"relative flex flex-1 min-w-0 items-center",
 					icon ? "px-1.5" : "pl-2.5",
 					onReset ? "pr-0" : "pr-2.5",
 				)}
-				onMouseDown={(event) => {
-					const inputElement = event.currentTarget;
-					const shouldPreventNativeCaretPlacement =
-						event.button === 0 && document.activeElement !== inputElement;
-					if (shouldPreventNativeCaretPlacement) {
-						event.preventDefault();
-						inputElement.focus();
-						inputElement.select();
-					}
-					onMouseDown?.(event);
-				}}
-				onFocus={(event) => {
-					setIsInputFocused(true);
-					event.currentTarget.select();
-					onFocus?.(event);
-				}}
-				onKeyDown={(event) => {
-					const shouldBlurInput =
-						event.key === "Enter" || event.key === "Escape";
-					if (shouldBlurInput) event.currentTarget.blur();
-					onKeyDown?.(event);
-				}}
-				onBlur={(event) => {
-					setIsInputFocused(false);
-					onBlur?.(event);
-				}}
-				{...props}
-			/>
+			>
+				{inputNode}
+				{suffix && (
+					<>
+						{/* Ghost mirrors value text to measure width for suffix positioning */}
+						<span
+							ref={ghostRef}
+							className="invisible absolute text-sm leading-none whitespace-pre pointer-events-none"
+							aria-hidden="true"
+						>
+							{value}
+						</span>
+						<span
+							className={cn(
+								"absolute top-1/2 -translate-y-1/2 select-none pointer-events-none text-sm leading-none",
+								suffixClassName,
+							)}
+							style={{ left: suffixLeft + SUFFIX_GAP_PX }}
+						>
+							{suffix}
+						</span>
+					</>
+				)}
+			</span>
 			{onReset && !isDefault && (
 				<div className="shrink-0 pr-2 flex items-center">
 					<Button
@@ -161,7 +294,7 @@ function NumberField({
 						aria-label="Reset to default"
 						onClick={onReset}
 					>
-						<HugeiconsIcon icon={ArrowTurnBackwardIcon} className="!size-3.5" />
+						<HugeiconsIcon icon={ArrowTurnBackwardIcon} className="size-3.5!" />
 					</Button>
 				</div>
 			)}

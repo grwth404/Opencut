@@ -6,7 +6,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import type { TProjectMetadata } from "@/types/project";
+import type { TProjectMetadata } from "@/lib/project/types";
 import { formatDate } from "@/utils/date";
 import { formatTimeCode } from "@/lib/time";
 import { Button } from "@/components/ui/button";

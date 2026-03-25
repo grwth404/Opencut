@@ -1,13 +1,33 @@
-import { toast } from "sonner";
-import type { MediaAsset } from "@/types/assets";
-import { getMediaTypeFromFile } from "@/lib/media/media-utils";
-import { getVideoInfo } from "./mediabunny";
 import { Input, ALL_FORMATS, BlobSource, VideoSampleSink } from "mediabunny";
+import { toast } from "sonner";
+import { getMediaTypeFromFile } from "@/lib/media/media-utils";
+import { formatStorageBytes } from "@/services/storage/quota";
+import { storageService } from "@/services/storage/service";
+import type { MediaAsset } from "@/lib/media/types";
+import { getVideoInfo } from "./mediabunny";
 
 export interface ProcessedMediaAsset extends Omit<MediaAsset, "id"> {}
 
 const THUMBNAIL_MAX_WIDTH = 1280;
 const THUMBNAIL_MAX_HEIGHT = 720;
+
+const getStorageLimitDescription = ({
+	fileSize,
+	availableBytes,
+}: {
+	fileSize: number;
+	availableBytes: number | null;
+}): string => {
+	const fileSizeLabel = formatStorageBytes({ bytes: fileSize });
+
+	if (availableBytes === null) {
+		return `File size is ${fileSizeLabel}.`;
+	}
+
+	return `File size is ${fileSizeLabel}, but only ${formatStorageBytes({
+		bytes: availableBytes,
+	})} is safely available in browser storage.`;
+};
 
 const getThumbnailSize = ({
 	width,
@@ -63,7 +83,7 @@ const renderToThumbnailDataUrl = ({
 	return canvas.toDataURL("image/jpeg", 0.8);
 };
 
-export async function generateThumbnail({
+async function generateThumbnail({
 	videoFile,
 	timeInSeconds,
 }: {
@@ -106,25 +126,29 @@ export async function generateThumbnail({
 	}
 }
 
-export async function generateImageThumbnail({
+async function generateImageThumbnail({
 	imageFile,
 }: {
 	imageFile: File;
-}): Promise<string> {
+}): Promise<{ thumbnailUrl: string; width: number; height: number }> {
 	return new Promise((resolve, reject) => {
 		const image = new window.Image();
 		const objectUrl = URL.createObjectURL(imageFile);
 
 		image.addEventListener("load", () => {
 			try {
-				const dataUrl = renderToThumbnailDataUrl({
+				const thumbnailUrl = renderToThumbnailDataUrl({
 					width: image.naturalWidth,
 					height: image.naturalHeight,
 					draw: ({ context, width, height }) => {
 						context.drawImage(image, 0, 0, width, height);
 					},
 				});
-				resolve(dataUrl);
+				resolve({
+					thumbnailUrl,
+					width: image.naturalWidth,
+					height: image.naturalHeight,
+				});
 			} catch (error) {
 				reject(
 					error instanceof Error ? error : new Error("Could not render image"),
@@ -166,19 +190,34 @@ export async function processMediaAssets({
 			continue;
 		}
 
+		const storageCheck = await storageService.canStoreFile({
+			size: file.size,
+		});
+
+		if (!storageCheck.canStore) {
+			toast.error(`Not enough browser storage for ${file.name}`, {
+				description: getStorageLimitDescription({
+					fileSize: file.size,
+					availableBytes: storageCheck.availableBytes,
+				}),
+			});
+			continue;
+		}
+
 		const url = URL.createObjectURL(file);
 		let thumbnailUrl: string | undefined;
 		let duration: number | undefined;
 		let width: number | undefined;
 		let height: number | undefined;
 		let fps: number | undefined;
+		let hasAudio: boolean | undefined;
 
 		try {
 			if (fileType === "image") {
-				const dimensions = await getImageDimensions({ file });
-				width = dimensions.width;
-				height = dimensions.height;
-				thumbnailUrl = await generateImageThumbnail({ imageFile: file });
+				const result = await generateImageThumbnail({ imageFile: file });
+				thumbnailUrl = result.thumbnailUrl;
+				width = result.width;
+				height = result.height;
 			} else if (fileType === "video") {
 				try {
 					const videoInfo = await getVideoInfo({ videoFile: file });
@@ -188,6 +227,7 @@ export async function processMediaAssets({
 					fps = Number.isFinite(videoInfo.fps)
 						? Math.round(videoInfo.fps)
 						: undefined;
+					hasAudio = videoInfo.hasAudio;
 
 					thumbnailUrl = await generateThumbnail({
 						videoFile: file,
@@ -211,6 +251,7 @@ export async function processMediaAssets({
 				width,
 				height,
 				fps,
+				hasAudio,
 			});
 
 			await new Promise((resolve) => setTimeout(resolve, 0));
@@ -229,33 +270,6 @@ export async function processMediaAssets({
 
 	return processedAssets;
 }
-
-const getImageDimensions = ({
-	file,
-}: {
-	file: File;
-}): Promise<{ width: number; height: number }> => {
-	return new Promise((resolve, reject) => {
-		const img = new window.Image();
-		const objectUrl = URL.createObjectURL(file);
-
-		img.addEventListener("load", () => {
-			const width = img.naturalWidth;
-			const height = img.naturalHeight;
-			resolve({ width, height });
-			URL.revokeObjectURL(objectUrl);
-			img.remove();
-		});
-
-		img.addEventListener("error", () => {
-			reject(new Error("Could not load image"));
-			URL.revokeObjectURL(objectUrl);
-			img.remove();
-		});
-
-		img.src = objectUrl;
-	});
-};
 
 const getMediaDuration = ({ file }: { file: File }): Promise<number> => {
 	return new Promise((resolve, reject) => {

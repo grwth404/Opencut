@@ -1,6 +1,6 @@
 import { Command } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
-import type { TimelineTrack } from "@/types/timeline";
+import type { TimelineTrack } from "@/lib/timeline";
 import { getMainTrack } from "@/lib/timeline";
 
 export class RemoveTrackCommand extends Command {

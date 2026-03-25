@@ -239,3 +239,147 @@ export function OcFontIcon({
 		</svg>
 	);
 }
+
+export function OcShapesIcon({
+	className = "",
+	size = 32,
+	strokeWidth = 1.5,
+}: {
+	className?: string;
+	size?: number;
+	strokeWidth?: number;
+}) {
+	return (
+		<svg
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+			aria-hidden
+			className={className}
+		>
+			<title>Shapes</title>
+			<defs>
+				<clipPath id="clip" clipPathUnits="userSpaceOnUse">
+					<path d="M0 0H24V24H0ZM8 8H24V24H8Z" clipRule="evenodd" />
+				</clipPath>
+			</defs>
+			<circle
+				cx="8.5"
+				cy="8.5"
+				r="7.75"
+				stroke="currentColor"
+				strokeWidth={strokeWidth}
+				clipPath="url(#clip)"
+			/>
+			<rect
+				x="8.75"
+				y="8.75"
+				width="14.5"
+				height="14.5"
+				stroke="currentColor"
+				strokeWidth={strokeWidth}
+			/>
+		</svg>
+	);
+}
+
+export function OcMirrorIcon({
+	className = "",
+	size = 32,
+}: {
+	className?: string;
+	size?: number;
+}) {
+	return (
+		<svg
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+			aria-hidden
+			className={className}
+		>
+			<title>Mirror</title>
+			<g clipPath="url(#clip0_5_41)">
+				<path
+					d="M12 23.2242C5.8043 23.2242 0.7817 18.2016 0.7817 12.0059C0.7817 5.81026 5.8043 0.787682 12 0.787682C18.1957 0.787682 23.2183 5.81026 23.2183 12.0059C23.2183 18.2016 18.1957 23.2242 12 23.2242Z"
+					stroke="black"
+					strokeWidth="1.5"
+					strokeLinecap="round"
+					strokeLinejoin="round"
+				/>
+				<path
+					d="M12 0.787682C14.9752 0.787682 17.8287 1.9696 19.9325 4.07343C22.0363 6.17726 23.2182 9.03067 23.2182 12.0059C23.2182 14.9812 22.0363 17.8346 19.9325 19.9384C17.8287 22.0423 14.9752 23.2242 12 23.2242V0.787682Z"
+					fill="black"
+				/>
+			</g>
+			<defs>
+				<clipPath id="clip0_5_41">
+					<rect width="24" height="24" fill="white" />
+				</clipPath>
+			</defs>
+		</svg>
+	);
+}
+
+export function OcSquarePlusIcon({
+	className = "",
+	size = 32,
+	strokeWidth = 1.5,
+}: {
+	className?: string;
+	size?: number;
+	strokeWidth?: number;
+}) {
+	return (
+		<svg
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+			aria-hidden
+			className={className}
+		>
+			<title>Square Plus</title>
+			<defs>
+				<mask id="frameMask" maskUnits="userSpaceOnUse">
+					<rect width="24" height="24" fill="white" />
+					<rect x="14.636" y="14.636" width="9.364" height="9.364" fill="black" />
+				</mask>
+				<clipPath id="plusClip" clipPathUnits="userSpaceOnUse">
+					<rect x="16" y="16" width="9" height="8" />
+				</clipPath>
+			</defs>
+			<rect
+				x="0.923"
+				y="0.923"
+				width="22.154"
+				height="22.154"
+				rx="2.769"
+				stroke="currentColor"
+				strokeWidth={strokeWidth}
+				mask="url(#frameMask)"
+			/>
+			<rect
+				x="19.493"
+				y="16.486"
+				width="1.503"
+				height="7.514"
+				fill="currentColor"
+				clipPath="url(#plusClip)"
+			/>
+			<rect
+				x="16.487"
+				y="19.492"
+				width="7.514"
+				height="1.503"
+				fill="currentColor"
+				clipPath="url(#plusClip)"
+			/>
+		</svg>
+	);
+}

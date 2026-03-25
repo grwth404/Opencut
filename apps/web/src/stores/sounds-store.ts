@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { SoundEffect, SavedSound } from "@/types/sounds";
+import type { SoundEffect, SavedSound } from "@/lib/sounds/types";
 import { storageService } from "@/services/storage/service";
 import { toast } from "sonner";
 import { EditorCore } from "@/core";

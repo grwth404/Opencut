@@ -1,15 +1,22 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useActionHandler } from "@/hooks/actions/use-action-handler";
 import { useEditor } from "../use-editor";
 import { useElementSelection } from "../timeline/element/use-element-selection";
 import { useKeyframeSelection } from "../timeline/element/use-keyframe-selection";
 import { getElementsAtTime } from "@/lib/timeline";
+import { cancelInteraction } from "@/lib/cancel-interaction";
+import { invokeAction } from "@/lib/actions";
+import {
+	activateScope,
+	clearActiveScope,
+	type ScopeEntry,
+} from "@/lib/selection/scope";
 
 export function useEditorActions() {
 	const editor = useEditor();
-	const activeProject = editor.project.getActive();
 	const { selectedElements, setElementSelection } = useElementSelection();
 	const { selectedKeyframes, clearKeyframeSelection } = useKeyframeSelection();
 	const clipboard = useTimelineStore((s) => s.clipboard);
@@ -17,6 +24,39 @@ export function useEditorActions() {
 	const toggleSnapping = useTimelineStore((s) => s.toggleSnapping);
 	const rippleEditingEnabled = useTimelineStore((s) => s.rippleEditingEnabled);
 	const toggleRippleEditing = useTimelineStore((s) => s.toggleRippleEditing);
+	const hasTimelineSelectionRef = useRef(false);
+	const clearTimelineSelectionRef = useRef(() => {});
+	const timelineScopeRef = useRef<ScopeEntry | null>(null);
+	const hasTimelineSelection =
+		selectedElements.length > 0 || selectedKeyframes.length > 0;
+
+	hasTimelineSelectionRef.current = hasTimelineSelection;
+	clearTimelineSelectionRef.current = () => {
+		setElementSelection({ elements: [] });
+		clearKeyframeSelection();
+	};
+
+	if (!timelineScopeRef.current) {
+		timelineScopeRef.current = {
+			hasSelection: () => hasTimelineSelectionRef.current,
+			clear: () => {
+				clearTimelineSelectionRef.current();
+			},
+		};
+	}
+
+	useEffect(() => {
+		if (!hasTimelineSelection) {
+			return;
+		}
+
+		const timelineScope = timelineScopeRef.current;
+		if (!timelineScope) {
+			return;
+		}
+
+		return activateScope({ entry: timelineScope });
+	}, [hasTimelineSelection]);
 
 	useActionHandler(
 		"toggle-play",
@@ -65,7 +105,7 @@ export function useEditorActions() {
 	useActionHandler(
 		"frame-step-forward",
 		() => {
-			const fps = activeProject.settings.fps;
+			const fps = editor.project.getActive().settings.fps;
 			editor.playback.seek({
 				time: Math.min(
 					editor.timeline.getTotalDuration(),
@@ -79,7 +119,7 @@ export function useEditorActions() {
 	useActionHandler(
 		"frame-step-backward",
 		() => {
-			const fps = activeProject.settings.fps;
+			const fps = editor.project.getActive().settings.fps;
 			editor.playback.seek({
 				time: Math.max(0, editor.playback.getCurrentTime() - 1 / fps),
 			});
@@ -241,13 +281,21 @@ export function useEditorActions() {
 	);
 
 	useActionHandler(
+		"cancel-interaction",
+		() => {
+			if (!cancelInteraction()) {
+				invokeAction("deselect-all");
+			}
+		},
+		undefined,
+	);
+
+	useActionHandler(
 		"deselect-all",
 		() => {
-			setElementSelection({ elements: [] });
-			clearKeyframeSelection();
-			const activeElement = document.activeElement;
-			if (activeElement instanceof HTMLButtonElement) {
-				activeElement.blur();
+			if (!clearActiveScope()) {
+				setElementSelection({ elements: [] });
+				clearKeyframeSelection();
 			}
 		},
 		undefined,
@@ -350,6 +398,31 @@ export function useEditorActions() {
 		"redo",
 		() => {
 			editor.command.redo();
+		},
+		undefined,
+	);
+
+	// todo: potnetially unify these two actions:
+	useActionHandler(
+		"remove-media-asset",
+		(args) => {
+			if (!args) return;
+			editor.media.removeMediaAsset({
+				projectId: args.projectId,
+				id: args.assetId,
+			});
+		},
+		undefined,
+	);
+
+	useActionHandler(
+		"remove-media-assets",
+		(args) => {
+			if (!args) return;
+			editor.media.removeMediaAssets({
+				projectId: args.projectId,
+				ids: args.assetIds,
+			});
 		},
 		undefined,
 	);

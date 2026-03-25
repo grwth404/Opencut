@@ -22,7 +22,7 @@ export function TimelineTick({
 		const label = formatRulerLabel({ timeInSeconds: time, fps });
 		return (
 			<span
-				className="text-muted-foreground/85 absolute bottom-0 select-none text-[10px] leading-none"
+				className="text-muted-foreground/85 absolute top-1 select-none text-[10px] leading-none"
 				style={{ left: `${leftPosition}px` }}
 			>
 				{label}
@@ -32,7 +32,7 @@ export function TimelineTick({
 
 	return (
 		<div
-			className="border-muted-foreground/25 absolute bottom-0.5 h-1.5 border-l"
+			className="border-muted-foreground/25 absolute top-1.5 h-1.5 border-l"
 			style={{ left: `${leftPosition}px` }}
 		/>
 	);

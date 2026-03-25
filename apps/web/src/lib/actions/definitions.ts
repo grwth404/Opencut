@@ -1,4 +1,4 @@
-import type { ShortcutKey } from "@/types/keybinding";
+import type { ShortcutKey } from "@/lib/actions/keybinding";
 
 export type TActionCategory =
 	| "playback"
@@ -7,7 +7,8 @@ export type TActionCategory =
 	| "selection"
 	| "history"
 	| "timeline"
-	| "controls";
+	| "controls"
+	| "assets";
 
 export interface TActionDefinition {
 	description: string;
@@ -114,10 +115,14 @@ export const ACTIONS = {
 		category: "selection",
 		defaultShortcuts: ["ctrl+a"],
 	},
+	"cancel-interaction": {
+		description: "Cancel current interaction",
+		category: "controls",
+		defaultShortcuts: ["escape"],
+	},
 	"deselect-all": {
 		description: "Deselect all elements",
 		category: "selection",
-		defaultShortcuts: ["escape"],
 	},
 	"duplicate-selected": {
 		description: "Duplicate selected element",
@@ -146,11 +151,25 @@ export const ACTIONS = {
 		category: "history",
 		defaultShortcuts: ["ctrl+shift+z", "ctrl+y"],
 	},
+	"remove-media-asset": {
+		description: "Remove media asset",
+		category: "assets",
+		args: { projectId: "string", assetId: "string" },
+	},
+	"remove-media-assets": {
+		description: "Remove media assets",
+		category: "assets",
+		args: { projectId: "string", assetIds: "string[]" },
+	},
 } as const satisfies Record<string, TActionDefinition>;
 
 export type TAction = keyof typeof ACTIONS;
 
-export function getActionDefinition({ action }: { action: TAction }): TActionDefinition {
+export function getActionDefinition({
+	action,
+}: {
+	action: TAction;
+}): TActionDefinition {
 	return ACTIONS[action];
 }
 

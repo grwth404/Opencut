@@ -270,6 +270,7 @@ const ColorPicker = forwardRef<HTMLDivElement, ColorPickerProps>(
 			backgroundColor: "#fff",
 		};
 
+
 		return (
 			<Popover>
 				<div
@@ -285,10 +286,10 @@ const ColorPicker = forwardRef<HTMLDivElement, ColorPickerProps>(
 						className="size-4.5 cursor-pointer border rounded-sm hover:ring-1 hover:ring-foreground/20 overflow-hidden relative"
 						type="button"
 					>
-						<span
-							className="absolute inset-0"
-							style={checkerboardStyle}
-						/>
+					<span
+						className="absolute inset-0 dark:invert"
+						style={checkerboardStyle}
+					/>
 						<span
 							className="absolute inset-0"
 							style={{ backgroundColor: `#${value}` }}
@@ -298,7 +299,7 @@ const ColorPicker = forwardRef<HTMLDivElement, ColorPickerProps>(
 					<div className="flex flex-1 items-center">
 						<Input
 							className={cn(
-								"!border-0 bg-transparent p-0 !ring-0 !ring-offset-0",
+								"border-0! bg-transparent p-0 ring-0! ring-offset-0!",
 								colorFormat === "hex" && "uppercase",
 							)}
 							size="sm"
@@ -387,10 +388,10 @@ const ColorPicker = forwardRef<HTMLDivElement, ColorPickerProps>(
 						<button
 							ref={opacityRef}
 							className="relative h-4 w-full overflow-hidden rounded-lg appearance-none border-0 p-0"
-							style={checkerboardStyle}
 							type="button"
 							onMouseDown={handleOpacityMouseDown}
 						>
+							<div className="absolute inset-0 dark:invert" style={checkerboardStyle} />
 							<div
 								className="absolute inset-0 rounded-lg"
 								style={{

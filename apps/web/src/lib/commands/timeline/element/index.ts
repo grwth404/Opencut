@@ -11,3 +11,5 @@ export { ToggleElementsMutedCommand } from "./toggle-elements-muted";
 export { MoveElementCommand } from "./move-elements";
 export * from "./keyframes";
 export * from "./effects";
+export * from "./masks";
+export * from "./retime";

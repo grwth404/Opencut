@@ -110,7 +110,7 @@ export function ShortcutsDialog({
 					<DialogTitle>Keyboard shortcuts</DialogTitle>
 				</DialogHeader>
 
-				<DialogBody className="scrollbar-thin flex-grow overflow-y-auto">
+				<DialogBody className="scrollbar-thin grow overflow-y-auto">
 					<div className="flex flex-col gap-6">
 						{categories.map((category) => (
 							<div key={category} className="flex flex-col gap-1">

@@ -2,26 +2,28 @@ import { useState, useCallback, type RefObject } from "react";
 import { useEditor } from "@/hooks/use-editor";
 import { processMediaAssets } from "@/lib/media/processing";
 import { toast } from "sonner";
+import { showMediaUploadToast } from "@/lib/media/upload-toast";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 import { snapTimeToFrame } from "@/lib/time";
 import {
 	buildTextElement,
+	buildGraphicElement,
 	buildStickerElement,
 	buildElementFromMedia,
 	buildEffectElement,
 } from "@/lib/timeline/element-utils";
-import type { Command } from "@/lib/commands/base-command";
-import { AddMediaAssetCommand } from "@/lib/commands/media";
 import { AddTrackCommand, InsertElementCommand } from "@/lib/commands/timeline";
 import { BatchCommand } from "@/lib/commands";
 import { computeDropTarget } from "@/lib/timeline/drop-utils";
 import { getDragData, hasDragData } from "@/lib/drag-data";
-import type { TrackType, DropTarget, ElementType } from "@/types/timeline";
+import { isMainTrack } from "@/lib/timeline/track-utils";
+import type { TrackType, DropTarget, ElementType } from "@/lib/timeline";
 import type {
 	MediaDragData,
+	GraphicDragData,
 	StickerDragData,
 	EffectDragData,
-} from "@/types/drag";
+} from "@/lib/timeline/drag";
 
 interface UseTimelineDragDropProps {
 	containerRef: RefObject<HTMLDivElement | null>;
@@ -41,17 +43,12 @@ export function useTimelineDragDrop({
 	const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
 	const [dragElementType, setElementType] = useState<ElementType | null>(null);
 
-	const tracks = editor.timeline.getTracks();
-	const currentTime = editor.playback.getCurrentTime();
-	const mediaAssets = editor.media.getAssets();
-	const activeProject = editor.project.getActive();
-
 	const getSnappedTime = useCallback(
 		({ time }: { time: number }) => {
-			const projectFps = activeProject.settings.fps;
+			const projectFps = editor.project.getActive().settings.fps;
 			return snapTimeToFrame({ time, fps: projectFps });
 		},
-		[activeProject.settings.fps],
+		[editor],
 	);
 
 	const getElementType = useCallback(
@@ -60,6 +57,7 @@ export function useTimelineDragDrop({
 			if (!dragData) return null;
 
 			if (dragData.type === "text") return "text";
+			if (dragData.type === "graphic") return "graphic";
 			if (dragData.type === "sticker") return "sticker";
 			if (dragData.type === "effect") return "effect";
 			if (dragData.type === "media") {
@@ -80,18 +78,20 @@ export function useTimelineDragDrop({
 		}): number => {
 			if (
 				elementType === "text" ||
+				elementType === "graphic" ||
 				elementType === "sticker" ||
 				elementType === "effect"
 			) {
 				return TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION;
 			}
 			if (mediaId) {
+				const mediaAssets = editor.media.getAssets();
 				const media = mediaAssets.find((m) => m.id === mediaId);
 				return media?.duration ?? TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION;
 			}
 			return TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION;
 		},
-		[mediaAssets],
+		[editor],
 	);
 
 	const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -148,6 +148,8 @@ export function useTimelineDragDrop({
 						? (dragData as MediaDragData).targetElementTypes
 						: undefined;
 
+			const tracks = editor.timeline.getTracks();
+			const currentTime = editor.playback.getCurrentTime();
 			const target = computeDropTarget({
 				elementType,
 				mouseX,
@@ -170,12 +172,11 @@ export function useTimelineDragDrop({
 			containerRef,
 			headerRef,
 			tracksScrollRef,
-			tracks,
-			currentTime,
 			zoomLevel,
 			getElementType,
 			getElementDuration,
 			getSnappedTime,
+			editor,
 		],
 	);
 
@@ -228,6 +229,7 @@ export function useTimelineDragDrop({
 				return;
 			}
 
+			const tracks = editor.timeline.getTracks();
 			const track = tracks[target.trackIndex];
 			if (!track) return;
 			editor.timeline.insertElement({
@@ -235,7 +237,7 @@ export function useTimelineDragDrop({
 				element,
 			});
 		},
-		[editor.command, editor.timeline, tracks],
+		[editor],
 	);
 
 	const executeStickerDrop = useCallback(
@@ -253,7 +255,7 @@ export function useTimelineDragDrop({
 			});
 
 			if (target.isNewTrack) {
-				const addTrackCmd = new AddTrackCommand("sticker", target.trackIndex);
+				const addTrackCmd = new AddTrackCommand("graphic", target.trackIndex);
 				const insertCmd = new InsertElementCommand({
 					element,
 					placement: { mode: "explicit", trackId: addTrackCmd.getTrackId() },
@@ -264,6 +266,7 @@ export function useTimelineDragDrop({
 				return;
 			}
 
+			const tracks = editor.timeline.getTracks();
 			const track = tracks[target.trackIndex];
 			if (!track) return;
 			editor.timeline.insertElement({
@@ -271,7 +274,45 @@ export function useTimelineDragDrop({
 				element,
 			});
 		},
-		[editor.command, editor.timeline, tracks],
+		[editor],
+	);
+
+	const executeGraphicDrop = useCallback(
+		({
+			target,
+			dragData,
+		}: {
+			target: DropTarget;
+			dragData: GraphicDragData;
+		}) => {
+			const element = buildGraphicElement({
+				definitionId: dragData.definitionId,
+				name: dragData.name,
+				startTime: target.xPosition,
+				params: dragData.params,
+			});
+
+			if (target.isNewTrack) {
+				const addTrackCmd = new AddTrackCommand("graphic", target.trackIndex);
+				const insertCmd = new InsertElementCommand({
+					element,
+					placement: { mode: "explicit", trackId: addTrackCmd.getTrackId() },
+				});
+				editor.command.execute({
+					command: new BatchCommand([addTrackCmd, insertCmd]),
+				});
+				return;
+			}
+
+			const tracks = editor.timeline.getTracks();
+			const track = tracks[target.trackIndex];
+			if (!track) return;
+			editor.timeline.insertElement({
+				placement: { mode: "explicit", trackId: track.id },
+				element,
+			});
+		},
+		[editor],
 	);
 
 	const executeMediaDrop = useCallback(
@@ -281,6 +322,7 @@ export function useTimelineDragDrop({
 				return;
 			}
 
+			const mediaAssets = editor.media.getAssets();
 			const mediaAsset = mediaAssets.find((m) => m.id === dragData.id);
 			if (!mediaAsset) return;
 
@@ -309,6 +351,7 @@ export function useTimelineDragDrop({
 				return;
 			}
 
+			const tracks = editor.timeline.getTracks();
 			const track = tracks[target.trackIndex];
 			if (!track) return;
 			editor.timeline.insertElement({
@@ -316,7 +359,7 @@ export function useTimelineDragDrop({
 				element,
 			});
 		},
-		[editor.command, editor.timeline, mediaAssets, tracks],
+		[editor],
 	);
 
 	const executeEffectDrop = useCallback(
@@ -336,6 +379,7 @@ export function useTimelineDragDrop({
 				return;
 			}
 
+			const tracks = editor.timeline.getTracks();
 			const effectTrack = tracks.find((t) => t.type === "effect");
 			let trackId: string;
 
@@ -370,7 +414,7 @@ export function useTimelineDragDrop({
 				element,
 			});
 		},
-		[editor.command, editor.timeline, tracks],
+		[editor],
 	);
 
 	const executeFileDrop = useCallback(
@@ -383,70 +427,98 @@ export function useTimelineDragDrop({
 			mouseX: number;
 			mouseY: number;
 		}) => {
+			const activeProject = editor.project.getActiveOrNull();
 			if (!activeProject) return;
 
-			const processedAssets = await processMediaAssets({ files });
-			const projectId = activeProject.metadata.id;
+			await showMediaUploadToast({
+				filesCount: files.length,
+				promise: async () => {
+					const processedAssets = await processMediaAssets({ files });
+					const projectId = activeProject.metadata.id;
 
-			for (const asset of processedAssets) {
-				const duration =
-					asset.duration ?? TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION;
-				const currentTracks = editor.timeline.getTracks();
-				const dropTarget = computeDropTarget({
-					elementType: asset.type,
-					mouseX,
-					mouseY,
-					tracks: currentTracks,
-					playheadTime: currentTime,
-					isExternalDrop: true,
-					elementDuration: duration,
-					pixelsPerSecond: TIMELINE_CONSTANTS.PIXELS_PER_SECOND,
-					zoomLevel,
-				});
+					for (const asset of processedAssets) {
+						const createdAsset = await editor.media.addMediaAsset({
+							projectId,
+							asset,
+						});
+						if (!createdAsset) continue;
 
-				const trackType: TrackType = asset.type === "audio" ? "audio" : "video";
-				const addMediaCmd = new AddMediaAssetCommand(projectId, asset);
-				const assetId = addMediaCmd.getAssetId();
+						const duration =
+							createdAsset.duration ?? TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION;
+						const currentTracks = editor.timeline.getTracks();
+						const currentTime = editor.playback.getCurrentTime();
+						const onlyTrack = currentTracks[0];
+						const reuseMainTrackId =
+							createdAsset.type !== "audio" &&
+							currentTracks.length === 1 &&
+							!!onlyTrack &&
+							isMainTrack(onlyTrack) &&
+							onlyTrack.elements.length === 0
+								? onlyTrack.id
+								: null;
+						const dropTarget = reuseMainTrackId
+							? null
+							: computeDropTarget({
+									elementType: createdAsset.type,
+									mouseX,
+									mouseY,
+									tracks: currentTracks,
+									playheadTime: currentTime,
+									isExternalDrop: true,
+									elementDuration: duration,
+									pixelsPerSecond: TIMELINE_CONSTANTS.PIXELS_PER_SECOND,
+									zoomLevel,
+								});
 
-				const commands: Command[] = [addMediaCmd];
+						const trackType: TrackType =
+							createdAsset.type === "audio" ? "audio" : "video";
 
-				let trackId: string | undefined;
-				if (dropTarget.isNewTrack) {
-					const addTrackCmd = new AddTrackCommand(
-						trackType,
-						dropTarget.trackIndex,
-					);
-					trackId = addTrackCmd.getTrackId();
-					commands.unshift(addTrackCmd);
-				} else {
-					trackId = currentTracks[dropTarget.trackIndex]?.id;
-				}
+						let trackId: string | undefined;
+						if (reuseMainTrackId) {
+							trackId = reuseMainTrackId;
+						} else {
+							if (!dropTarget) continue;
+							if (dropTarget.isNewTrack) {
+								const addTrackCmd = new AddTrackCommand(
+									trackType,
+									dropTarget.trackIndex,
+								);
+								trackId = addTrackCmd.getTrackId();
+								editor.command.execute({ command: addTrackCmd });
+							} else {
+								trackId = currentTracks[dropTarget.trackIndex]?.id;
+							}
+						}
 
-				if (!trackId) return;
+						if (!trackId) continue;
 
-				const element = buildElementFromMedia({
-					mediaId: assetId,
-					mediaType: asset.type,
-					name: asset.name,
-					duration,
-					startTime: dropTarget.xPosition,
-					buffer:
-						asset.type === "audio"
-							? new AudioBuffer({ length: 1, sampleRate: 44100 })
-							: undefined,
-				});
+						const element = buildElementFromMedia({
+							mediaId: createdAsset.id,
+							mediaType: createdAsset.type,
+							name: createdAsset.name,
+							duration,
+							startTime: dropTarget?.xPosition ?? currentTime,
+							buffer:
+								createdAsset.type === "audio"
+									? new AudioBuffer({ length: 1, sampleRate: 44100 })
+									: undefined,
+						});
 
-				const insertCmd = new InsertElementCommand({
-					element,
-					placement: { mode: "explicit", trackId },
-				});
-				commands.push(insertCmd);
+						const insertCmd = new InsertElementCommand({
+							element,
+							placement: { mode: "explicit", trackId },
+						});
+						editor.command.execute({ command: insertCmd });
+					}
 
-				const batchCmd = new BatchCommand(commands);
-				editor.command.execute({ command: batchCmd });
-			}
+					return {
+						uploadedCount: processedAssets.length,
+						assetNames: processedAssets.map((asset) => asset.name),
+					};
+				},
+			});
 		},
-		[activeProject, editor.command, editor.timeline, currentTime, zoomLevel],
+		[editor, zoomLevel],
 	);
 
 	const handleDrop = useCallback(
@@ -471,6 +543,11 @@ export function useTimelineDragDrop({
 
 					if (dragData.type === "text") {
 						executeTextDrop({ target: currentTarget, dragData });
+					} else if (dragData.type === "graphic") {
+						executeGraphicDrop({
+							target: currentTarget,
+							dragData: dragData as GraphicDragData,
+						});
 					} else if (dragData.type === "sticker") {
 						executeStickerDrop({ target: currentTarget, dragData });
 					} else if (dragData.type === "effect") {
@@ -502,12 +579,12 @@ export function useTimelineDragDrop({
 				}
 			} catch (err) {
 				console.error("Failed to process drop:", err);
-				toast.error("Failed to process drop");
 			}
 		},
 		[
 			dropTarget,
 			executeTextDrop,
+			executeGraphicDrop,
 			executeStickerDrop,
 			executeMediaDrop,
 			executeEffectDrop,

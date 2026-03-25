@@ -6,15 +6,12 @@ import {
 	getCenteredLineLeft,
 	TIMELINE_INDICATOR_LINE_WIDTH_PX,
 } from "@/lib/timeline";
-import type { TimelineTrack } from "@/types/timeline";
-
+import { TIMELINE_LAYERS } from "@/constants/timeline-constants";
 interface SnapIndicatorProps {
 	snapPoint: SnapPoint | null;
 	zoomLevel: number;
 	isVisible: boolean;
-	tracks: TimelineTrack[];
 	timelineRef: React.RefObject<HTMLDivElement | null>;
-	trackLabelsRef?: React.RefObject<HTMLDivElement | null>;
 	tracksScrollRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -22,17 +19,13 @@ export function SnapIndicator({
 	snapPoint,
 	zoomLevel,
 	isVisible,
-	tracks,
 	timelineRef,
-	trackLabelsRef,
 	tracksScrollRef,
 }: SnapIndicatorProps) {
 	const { leftPosition, topPosition, height } = useSnapIndicatorPosition({
 		snapPoint,
 		zoomLevel,
-		tracks,
 		timelineRef,
-		trackLabelsRef,
 		tracksScrollRef,
 	});
 
@@ -48,6 +41,7 @@ export function SnapIndicator({
 				top: topPosition,
 				height: `${height}px`,
 				width: `${TIMELINE_INDICATOR_LINE_WIDTH_PX}px`,
+				zIndex: TIMELINE_LAYERS.snapIndicator,
 			}}
 		>
 			<div className={"bg-primary/40 h-full w-0.5 opacity-80"} />

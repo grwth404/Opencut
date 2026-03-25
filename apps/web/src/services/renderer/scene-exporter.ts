@@ -13,7 +13,7 @@ import {
 	QUALITY_VERY_HIGH,
 } from "mediabunny";
 import type { RootNode } from "./nodes/root-node";
-import type { ExportFormat, ExportQuality } from "@/types/export";
+import type { ExportFormat, ExportQuality } from "@/lib/export";
 import { CanvasRenderer } from "./canvas-renderer";
 
 type ExportParams = {

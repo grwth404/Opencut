@@ -1,3 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <polygon points="28,8 72,8 94,50 72,92 28,92 6,50" fill="currentColor" />
+  <polygon
+    points="50,0 93.301,25 93.301,75 50,100 6.699,75 6.699,25"
+    fill="currentColor"
+  />
 </svg>

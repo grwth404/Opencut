@@ -2,8 +2,8 @@ import { LANGUAGES } from "@/constants/language-constants";
 import type {
 	TranscriptionModel,
 	TranscriptionModelId,
-} from "@/types/transcription";
-import type { LanguageCode } from "@/types/language";
+} from "@/lib/transcription/types";
+import type { LanguageCode } from "@/constants/language-constants";
 
 const SUPPORTED_TRANSCRIPTION_LANGS: ReadonlyArray<LanguageCode> = [
 	"en",

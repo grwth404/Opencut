@@ -1,5 +1,8 @@
 import { type JSX, useLayoutEffect, useRef } from "react";
-import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import {
+	TIMELINE_CONSTANTS,
+	TIMELINE_RULER_HEIGHT,
+} from "@/constants/timeline-constants";
 import { DEFAULT_FPS } from "@/constants/project-constants";
 import { useEditor } from "@/hooks/use-editor";
 import { getRulerConfig, shouldShowLabel } from "@/lib/timeline/ruler-utils";
@@ -27,13 +30,12 @@ export function TimelineRuler({
 	handleRulerTrackingMouseDown,
 	handleRulerMouseDown,
 }: TimelineRulerProps) {
-	const editor = useEditor();
-	const duration = editor.timeline.getTotalDuration();
+	const duration = useEditor((e) => e.timeline.getTotalDuration());
 	const pixelsPerSecond = TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
 	const visibleDuration = dynamicTimelineWidth / pixelsPerSecond;
 	const effectiveDuration = Math.max(duration, visibleDuration);
-	const project = editor.project.getActive();
-	const fps = project?.settings.fps ?? DEFAULT_FPS;
+	const fps =
+		useEditor((e) => e.project.getActiveOrNull()?.settings.fps) ?? DEFAULT_FPS;
 	const { labelIntervalSeconds, tickIntervalSeconds } = getRulerConfig({
 		zoomLevel,
 		fps,
@@ -104,17 +106,25 @@ export function TimelineRuler({
 			aria-valuemin={0}
 			aria-valuemax={effectiveDuration}
 			aria-valuenow={0}
-			className="relative h-4 flex-1 overflow-x-visible"
+			className="relative flex-1 overflow-x-visible"
+			style={{ height: TIMELINE_RULER_HEIGHT }}
 			onWheel={handleWheel}
-			onClick={handleTimelineContentClick}
+			onClick={(event) => {
+				// Ruler seek already happens on mousedown via playhead scrubbing.
+				// Forwarding the follow-up click re-enters the selection-clearing path.
+				if (event.target === event.currentTarget) {
+					handleTimelineContentClick(event);
+				}
+			}}
 			onMouseDown={handleRulerTrackingMouseDown}
 			onKeyDown={() => {}}
 		>
 			<div
 				role="none"
 				ref={rulerRef}
-				className="relative h-4 cursor-default select-none"
+				className="relative cursor-default select-none"
 				style={{
+					height: TIMELINE_RULER_HEIGHT,
 					width: `${dynamicTimelineWidth}px`,
 				}}
 				onMouseDown={handleRulerMouseDown}

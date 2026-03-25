@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useResizeObserver } from "./use-resize-observer";
 
 export function useContainerSize({
 	containerRef,
@@ -7,23 +8,12 @@ export function useContainerSize({
 }) {
 	const [size, setSize] = useState({ width: 0, height: 0 });
 
-	useEffect(() => {
-		const container = containerRef.current;
-		if (!container) return;
+	const onResize = useCallback((entry: ResizeObserverEntry) => {
+		const { width, height } = entry.contentRect;
+		setSize({ width, height });
+	}, []);
 
-		const observer = new ResizeObserver((entries) => {
-			for (const entry of entries) {
-				const { width, height } = entry.contentRect;
-				setSize({ width, height });
-			}
-		});
-
-		observer.observe(container);
-
-		return () => {
-			observer.disconnect();
-		};
-	}, [containerRef]);
+	useResizeObserver({ ref: containerRef, onResize });
 
 	return size;
 }

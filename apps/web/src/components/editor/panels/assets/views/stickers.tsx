@@ -2,81 +2,110 @@
 
 import Image from "next/image";
 import type { CSSProperties } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { PanelView } from "@/components/editor/panels/assets/views/base-view";
 import { DraggableItem } from "@/components/editor/panels/assets/draggable-item";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { useEditor } from "@/hooks/use-editor";
+import { resolveStickerIntrinsicSize } from "@/lib/stickers";
 import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-	resolveStickerId,
-	type StickerItem as StickerData,
+	buildGraphicElement,
+	buildStickerElement,
+} from "@/lib/timeline/element-utils";
+import { STICKER_CATEGORIES } from "@/constants/sticker-constants";
+import { getRegionLabel, resolveQueryToRegions } from "@/lib/stickers";
+import { parseShapeStickerId } from "@/lib/stickers/providers/shapes";
+import type { TimelineDragData } from "@/lib/timeline/drag";
+import type {
+	StickerBrowseSection,
+	StickerCategory,
+	StickerItem as StickerData,
 } from "@/lib/stickers";
 import { useStickersStore } from "@/stores/stickers-store";
 import { cn } from "@/utils/ui";
 import {
 	HappyIcon,
-	ClockIcon,
-	MultiplicationSignIcon,
-	Search01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Spinner } from "@/components/ui/spinner";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import { OcSlidersVerticalIcon } from "@opencut/ui/icons";
-import type { StickerCategory } from "@/types/stickers";
-import { STICKER_CATEGORIES } from "@/constants/sticker-constants";
-import { parseStickerId } from "@/lib/stickers/sticker-id";
 
 export function StickersView() {
-	const { selectedCategory, setSelectedCategory } = useStickersStore();
+	const {
+		browseContent,
+		browseStickers,
+		searchQuery,
+		searchStickers,
+		selectedCategory,
+		setSearchQuery,
+		setSelectedCategory,
+		viewMode,
+	} = useStickersStore();
+
+	useEffect(() => {
+		if (viewMode === "browse" && !browseContent) {
+			void browseStickers();
+		}
+	}, [browseContent, browseStickers, viewMode]);
 
 	return (
-		<PanelView
-			title="Stickers"
-			actions={
-				<div className="flex items-center">
-					<Select
-						value={selectedCategory}
-						onValueChange={(value: StickerCategory) =>
-							setSelectedCategory({ category: value })
-						}
+		<div className="flex h-full flex-col py-2">
+			<div className="px-2">
+				<Input
+					size="sm"
+					variant="default"
+					placeholder="Search..."
+					value={searchQuery}
+					onChange={(e) => {
+						setSearchQuery({ query: e.target.value });
+						void searchStickers({ query: e.target.value });
+					}}
+					showClearIcon
+					onClear={() => {
+						setSearchQuery({ query: "" });
+						void searchStickers({ query: "" });
+					}}
+					className="w-full"
+					containerClassName="w-full"
+				/>
+			</div>
+
+			<div className="mt-2 flex min-h-0 flex-1 flex-col">
+				<div className="border-b border-border px-2">
+					<div
+						role="tablist"
+						aria-label="Sticker categories"
+						className="text-muted-foreground inline-flex h-auto items-center gap-0 bg-transparent p-0"
 					>
-						<SelectTrigger variant="outline" size="sm" className="mr-1.5">
-							<SelectValue placeholder="All" />
-						</SelectTrigger>
-						<SelectContent>
-							{Object.entries(STICKER_CATEGORIES).map(([category, label]) => (
-								<SelectItem key={category} value={category}>
+						{Object.entries(STICKER_CATEGORIES).map(([key, label]) => {
+							const isActive = key === selectedCategory;
+							return (
+								<button
+									key={key}
+									type="button"
+									role="tab"
+									aria-selected={isActive}
+									onClick={() =>
+										setSelectedCategory({
+											category: key as StickerCategory,
+										})
+									}
+									className={cn(
+										"text-muted-foreground rounded-none border-b-2 border-transparent px-3 py-2 text-sm font-medium whitespace-nowrap -mb-px",
+										isActive && "text-primary border-primary",
+									)}
+								>
 									{label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-
-					<Button variant="ghost" size="icon">
-						<HugeiconsIcon icon={Search01Icon} className="!size-3.5" />
-					</Button>
-
-					<Button variant="ghost" size="icon">
-						<OcSlidersVerticalIcon className="!size-3.5" />
-					</Button>
+								</button>
+							);
+						})}
+					</div>
 				</div>
-			}
-		>
-			<StickersContentView />
-		</PanelView>
+				<div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4">
+					<StickersContentView />
+				</div>
+			</div>
+		</div>
 	);
 }
 
@@ -92,16 +121,28 @@ function StickerGrid({
 		"--sticker-max"?: string;
 	} = {
 		gridTemplateColumns: shouldCapSize
-			? "repeat(auto-fill, minmax(var(--sticker-min, 96px), var(--sticker-max, 160px)))"
-			: "repeat(auto-fit, minmax(var(--sticker-min, 96px), 1fr))",
-		"--sticker-min": "96px",
-		...(shouldCapSize ? { "--sticker-max": "160px" } : {}),
+			? "repeat(auto-fill, minmax(var(--sticker-min, 80px), var(--sticker-max, 140px)))"
+			: "repeat(auto-fill, minmax(var(--sticker-min, 80px), 1fr))",
+		"--sticker-min": "80px",
+		...(shouldCapSize ? { "--sticker-max": "140px" } : {}),
 	};
 
 	return (
 		<div className="grid gap-2" style={gridStyle}>
 			{items.map((item) => (
 				<StickerItem key={item.id} item={item} shouldCapSize={shouldCapSize} />
+			))}
+		</div>
+	);
+}
+
+function StickerRow({ items }: { items: StickerData[] }) {
+	return (
+		<div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hidden">
+			{items.map((item) => (
+				<div key={item.id} className="w-20 shrink-0">
+					<StickerItem item={item} shouldCapSize containerClassName="w-full" />
+				</div>
 			))}
 		</div>
 	);
@@ -122,88 +163,170 @@ function EmptyView({ message }: { message: string }) {
 	);
 }
 
+function RegionBanner({ region }: { region: string }) {
+	return (
+		<div className="flex h-7 items-center gap-1.5 rounded-lg border border-sky-100 bg-sky-50 px-2">
+			<svg
+				width="12"
+				height="12"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				strokeWidth="2"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				className="shrink-0 text-sky-600"
+				aria-hidden="true"
+			>
+				<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+				<circle cx="12" cy="10" r="3" />
+			</svg>
+			<span className="text-xs font-semibold text-sky-600">{region}</span>
+		</div>
+	);
+}
+
 function StickersContentView() {
 	const {
-		searchQuery,
-		viewMode,
-		searchResults,
-		recentStickers,
-		isSearching,
+		browseContent,
 		clearRecentStickers,
+		isBrowsing,
+		isSearching,
+		searchQuery,
+		searchResults,
+		selectedCategory,
+		setSelectedCategory,
+		viewMode,
 	} = useStickersStore();
 
-	const itemsToDisplay = useMemo(() => {
-		if (viewMode === "search" && searchResults) {
-			return searchResults.items;
+	if (viewMode === "search") {
+		if (isSearching) {
+			return (
+				<div className="flex items-center justify-center py-8">
+					<Spinner className="text-muted-foreground size-6" />
+				</div>
+			);
 		}
 
-		return [];
-	}, [viewMode, searchResults]);
+		if (searchResults?.items.length) {
+			const normalizedQuery = searchQuery.trim().toLowerCase();
+			const isRegionSearch =
+				selectedCategory === "flags" &&
+				resolveQueryToRegions({ query: normalizedQuery }) !== null;
+			const regionLabel = getRegionLabel({ query: normalizedQuery });
 
-	const recentStickerItems = useMemo(() => {
-		const items: StickerData[] = [];
-		for (const stickerId of recentStickers) {
-			const recentStickerItem = toRecentStickerItem({ stickerId });
-			if (recentStickerItem) {
-				items.push(recentStickerItem);
-			}
+			return (
+				<div className="flex flex-col gap-3 pb-4">
+					{isRegionSearch && <RegionBanner region={regionLabel} />}
+					<div className="flex items-center justify-between">
+						<span className="text-muted-foreground text-sm">
+							{searchResults.total} results
+						</span>
+					</div>
+					<StickerGrid items={searchResults.items} />
+				</div>
+			);
 		}
-		return items;
-	}, [recentStickers]);
+
+		// "all" tab search — sections are in browseContent, fall through to section rendering below
+		if (selectedCategory !== "all" && searchQuery) {
+			return <EmptyView message={`No stickers found for "${searchQuery}"`} />;
+		}
+	}
+
+	if (isBrowsing && !browseContent) {
+		return (
+			<div className="flex items-center justify-center py-8">
+				<Spinner className="text-muted-foreground size-6" />
+			</div>
+		);
+	}
+
+	if (!browseContent?.sections.length) {
+		const categoryLabel = STICKER_CATEGORIES[selectedCategory];
+		return (
+			<EmptyView
+				message={
+					viewMode === "search"
+						? `No stickers found for "${searchQuery}"`
+						: selectedCategory === "all"
+							? "No stickers available yet."
+							: `No stickers available in ${categoryLabel.toLowerCase()} yet.`
+				}
+			/>
+		);
+	}
 
 	return (
-		<div className="flex h-full flex-col gap-4">
-			{recentStickerItems.length > 0 && viewMode === "browse" && (
-				<div className="flex h-full flex-col gap-2">
-					<div className="flex items-center gap-2">
-						<HugeiconsIcon
-							icon={ClockIcon}
-							className="text-muted-foreground size-4"
-						/>
-						<span className="text-sm font-medium">Recent</span>
-						<TooltipProvider>
-							<Tooltip>
-								<TooltipTrigger asChild>
-									<button
-										type="button"
-										onClick={clearRecentStickers}
-										className="hover:bg-accent ml-auto flex size-5 items-center justify-center rounded p-0"
-									>
-										<HugeiconsIcon
-											icon={MultiplicationSignIcon}
-											className="text-muted-foreground size-3"
-										/>
-									</button>
-								</TooltipTrigger>
-								<TooltipContent>
-									<p>Clear recent stickers</p>
-								</TooltipContent>
-							</Tooltip>
-						</TooltipProvider>
+		<div className="flex flex-col gap-4 pb-4">
+			{browseContent.sections.map((section) => (
+				<StickerSection
+					key={section.id}
+					section={section}
+					onClearRecent={clearRecentStickers}
+					onSeeAll={(category) => {
+						setSelectedCategory({ category });
+					}}
+				/>
+			))}
+		</div>
+	);
+}
+
+function StickerSection({
+	section,
+	onClearRecent,
+	onSeeAll,
+}: {
+	section: StickerBrowseSection;
+	onClearRecent: () => void;
+	onSeeAll: (category: StickerCategory) => void;
+}) {
+	const hasHeader =
+		Boolean(section.title) || section.id === "recent" || section.action;
+
+	return (
+		<div className="flex flex-col gap-2">
+			{hasHeader && (
+				<div className="flex items-center justify-between gap-2">
+					{section.title ? (
+						<p className="text-xs text-muted-foreground">{section.title}</p>
+					) : (
+						<div />
+					)}
+
+					<div className="ml-auto flex items-center gap-2">
+						{section.id === "recent" && (
+							<Button
+								onClick={onClearRecent}
+								variant="text"
+								size="sm"
+								className="h-auto gap-1 p-0 text-xs text-muted-foreground"
+							>
+								Clear
+							</Button>
+						)}
+
+						{section.action?.type === "see-all" && section.action.category && (
+							<Button
+								variant="text"
+								size="sm"
+								className="h-auto gap-1 p-0 text-xs text-primary"
+								onClick={() => {
+									onSeeAll(section.action?.category as StickerCategory);
+								}}
+							>
+								See all
+							</Button>
+						)}
 					</div>
-					<StickerGrid items={recentStickerItems.slice(0, 12)} shouldCapSize />
 				</div>
 			)}
 
-			{viewMode === "search" && (
-				<div className="h-full">
-					{isSearching ? (
-						<div className="flex items-center justify-center py-8">
-							<Spinner className="text-muted-foreground size-6" />
-						</div>
-					) : searchResults?.items.length ? (
-						<div className="flex flex-col gap-3">
-							<div className="flex items-center justify-between">
-								<span className="text-muted-foreground text-sm">
-									{searchResults.total} results
-								</span>
-							</div>
-							<StickerGrid items={itemsToDisplay} shouldCapSize />
-						</div>
-					) : searchQuery ? (
-						<EmptyView message={`No stickers found for "${searchQuery}"`} />
-					) : null}
-				</div>
+			{section.layout === "row" ? (
+				<StickerRow items={section.items} />
+			) : (
+				<StickerGrid items={section.items} />
 			)}
 		</div>
 	);
@@ -212,64 +335,115 @@ function StickersContentView() {
 interface StickerItemProps {
 	item: StickerData;
 	shouldCapSize?: boolean;
+	containerClassName?: string;
 }
 
-function StickerItem({ item, shouldCapSize = false }: StickerItemProps) {
-	const { addingSticker, addStickerToTimeline } = useStickersStore();
-	const isAdding = addingSticker === item.id;
+function StickerItem({
+	item,
+	shouldCapSize = false,
+	containerClassName,
+}: StickerItemProps) {
+	const editor = useEditor();
+	const { addToRecentStickers } = useStickersStore();
+	const [isAdding, setIsAdding] = useState(false);
 	const [hasImageError, setHasImageError] = useState(false);
 
 	useEffect(() => {
 		if (!item.id) {
 			return;
 		}
+
 		setHasImageError(false);
 	}, [item.id]);
 
 	const displayName = item.name;
+	const shapePreset =
+		item.provider === "shapes" ? parseShapeStickerId({ stickerId: item.id }) : null;
 
 	const handleAdd = async () => {
+		setIsAdding(true);
 		try {
-			await addStickerToTimeline({
-				stickerId: item.id,
-				name: item.name,
+			const currentTime = editor.playback.getCurrentTime();
+
+			let element:
+				| ReturnType<typeof buildGraphicElement>
+				| ReturnType<typeof buildStickerElement>;
+			if (shapePreset) {
+				element = buildGraphicElement({
+					definitionId: shapePreset.definitionId,
+					name: shapePreset.name,
+					startTime: currentTime,
+					params: shapePreset.params,
+				});
+			} else {
+				const { width: intrinsicWidth, height: intrinsicHeight } =
+					await resolveStickerIntrinsicSize({ stickerId: item.id });
+				element = buildStickerElement({
+					stickerId: item.id,
+					name: item.name,
+					startTime: currentTime,
+					intrinsicWidth,
+					intrinsicHeight,
+				});
+			}
+
+			editor.timeline.insertElement({
+				placement: { mode: "auto" },
+				element,
 			});
+
+			addToRecentStickers({ stickerId: item.id });
 		} catch (error) {
 			console.error("Failed to add sticker:", error);
 			toast.error("Failed to add sticker to timeline");
+		} finally {
+			setIsAdding(false);
 		}
 	};
 
-	const preview = hasImageError ? (
-		<div className="flex size-full items-center justify-center p-2">
-			<span className="text-muted-foreground text-center text-xs break-all">
-				{displayName}
-			</span>
-		</div>
-	) : (
-		<div className="flex size-full items-center justify-center p-4">
-			<Image
-				src={item.previewUrl}
-				alt={displayName}
-				width={64}
-				height={64}
-				className="size-full object-contain"
-				style={
-					shouldCapSize
-						? {
-								maxWidth: "var(--sticker-max, 160px)",
-								maxHeight: "var(--sticker-max, 160px)",
-							}
-						: undefined
-				}
-				onError={() => {
-					setHasImageError(true);
-				}}
-				loading="lazy"
-				unoptimized
-			/>
+	const preview = (
+		<div className="flex size-full items-center justify-center p-3">
+			{hasImageError ? (
+				<span className="text-muted-foreground text-center text-xs break-all">
+					{displayName}
+				</span>
+			) : (
+				<Image
+					src={item.previewUrl}
+					alt={displayName}
+					width={64}
+					height={64}
+					className="size-full object-contain"
+					style={
+						shouldCapSize
+							? {
+									maxWidth: "var(--sticker-max, 160px)",
+									maxHeight: "var(--sticker-max, 160px)",
+								}
+							: undefined
+					}
+					onError={() => setHasImageError(true)}
+					loading="lazy"
+					unoptimized
+				/>
+			)}
 		</div>
 	);
+
+	const dragData: TimelineDragData = shapePreset
+		? {
+				id: item.id,
+				type: "graphic",
+				name: displayName,
+				definitionId: shapePreset.definitionId,
+				params: shapePreset.params ?? {},
+			}
+		: {
+				id: item.id,
+				type: "sticker",
+				name: displayName,
+				stickerId: item.id,
+			};
 
 	return (
 		<div
@@ -278,18 +452,13 @@ function StickerItem({ item, shouldCapSize = false }: StickerItemProps) {
 			<DraggableItem
 				name={displayName}
 				preview={preview}
-				dragData={{
-					id: item.id,
-					type: "sticker",
-					name: displayName,
-					stickerId: item.id,
-				}}
+				dragData={dragData}
 				onAddToTimeline={handleAdd}
 				aspectRatio={1}
 				shouldShowLabel={false}
 				isRounded
 				variant="card"
-				containerClassName="w-full"
+				containerClassName={containerClassName ?? "w-full"}
 			/>
 			{isAdding && (
 				<div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-black/60">
@@ -298,37 +467,4 @@ function StickerItem({ item, shouldCapSize = false }: StickerItemProps) {
 			)}
 		</div>
 	);
-}
-
-function getStickerNameFromId({ stickerId }: { stickerId: string }): string {
-	const stickerIdParts = stickerId.split(":");
-	if (stickerIdParts.length <= 1) {
-		return stickerId;
-	}
-	return (
-		stickerIdParts.slice(1).join(":").split(":").pop()?.replaceAll("-", " ") ??
-		stickerId
-	);
-}
-
-function toRecentStickerItem({
-	stickerId,
-}: {
-	stickerId: string;
-}): StickerData | null {
-	try {
-		const { providerId } = parseStickerId({ stickerId });
-		return {
-			id: stickerId,
-			provider: providerId,
-			name: getStickerNameFromId({ stickerId }),
-			previewUrl: resolveStickerId({
-				stickerId,
-				options: { width: 64, height: 64 },
-			}),
-			metadata: {},
-		};
-	} catch {
-		return null;
-	}
 }

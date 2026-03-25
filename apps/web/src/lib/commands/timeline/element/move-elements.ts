@@ -4,7 +4,7 @@ import type {
 	TimelineTrack,
 	TimelineElement,
 	TrackType,
-} from "@/types/timeline";
+} from "@/lib/timeline";
 import {
 	buildEmptyTrack,
 	isMainTrack,

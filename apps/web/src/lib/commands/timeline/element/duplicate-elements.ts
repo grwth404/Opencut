@@ -1,5 +1,5 @@
 import { Command } from "@/lib/commands/base-command";
-import type { TimelineElement, TimelineTrack } from "@/types/timeline";
+import type { TimelineElement, TimelineTrack } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { EditorCore } from "@/core";
 import {

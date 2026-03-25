@@ -1,90 +1,101 @@
+export interface PreviewViewportGeometry {
+	canvasHeight: number;
+	canvasWidth: number;
+	centerX: number;
+	centerY: number;
+	scale: number;
+	viewportHeight: number;
+	viewportWidth: number;
+}
+
+function getCanvasOrigin({
+	geometry,
+}: {
+	geometry: PreviewViewportGeometry;
+}): { x: number; y: number } {
+	return {
+		x: geometry.viewportWidth / 2 - geometry.centerX * geometry.scale,
+		y: geometry.viewportHeight / 2 - geometry.centerY * geometry.scale,
+	};
+}
+
 export function screenToCanvas({
 	clientX,
 	clientY,
-	canvas,
+	geometry,
+	viewportRect,
 }: {
 	clientX: number;
 	clientY: number;
-	canvas: HTMLCanvasElement;
+	geometry: PreviewViewportGeometry;
+	viewportRect: DOMRect;
 }): { x: number; y: number } {
-	const rect = canvas.getBoundingClientRect();
-	const scaleX = canvas.width / rect.width;
-	const scaleY = canvas.height / rect.height;
+	const overlayX = clientX - viewportRect.left;
+	const overlayY = clientY - viewportRect.top;
+
 	return {
-		x: (clientX - rect.left) * scaleX,
-		y: (clientY - rect.top) * scaleY,
+		x:
+			geometry.centerX +
+			(overlayX - geometry.viewportWidth / 2) / geometry.scale,
+		y:
+			geometry.centerY +
+			(overlayY - geometry.viewportHeight / 2) / geometry.scale,
 	};
 }
 
 export function canvasToOverlay({
 	canvasX,
 	canvasY,
-	canvasRect,
-	containerRect,
-	canvasSize,
+	geometry,
 }: {
 	canvasX: number;
 	canvasY: number;
-	canvasRect: DOMRect;
-	containerRect: DOMRect;
-	canvasSize: { width: number; height: number };
+	geometry: PreviewViewportGeometry;
 }): { x: number; y: number } {
-	const scaleX = canvasRect.width / canvasSize.width;
-	const scaleY = canvasRect.height / canvasSize.height;
+	const canvasOrigin = getCanvasOrigin({ geometry });
+
 	return {
-		x: canvasRect.left - containerRect.left + canvasX * scaleX,
-		y: canvasRect.top - containerRect.top + canvasY * scaleY,
+		x: canvasOrigin.x + canvasX * geometry.scale,
+		y: canvasOrigin.y + canvasY * geometry.scale,
 	};
 }
 
 export function positionToOverlay({
 	positionX,
 	positionY,
-	canvasRect,
-	containerRect,
-	canvasSize,
+	geometry,
 }: {
 	positionX: number;
 	positionY: number;
-	canvasRect: DOMRect;
-	containerRect: DOMRect;
-	canvasSize: { width: number; height: number };
+	geometry: PreviewViewportGeometry;
 }): { x: number; y: number } {
-	const scaleX = canvasRect.width / canvasSize.width;
-	const scaleY = canvasRect.height / canvasSize.height;
-	const centerScreenX =
-		canvasRect.left - containerRect.left + (canvasSize.width / 2) * scaleX;
-	const centerScreenY =
-		canvasRect.top - containerRect.top + (canvasSize.height / 2) * scaleY;
-	return {
-		x: centerScreenX + positionX * scaleX,
-		y: centerScreenY + positionY * scaleY,
-	};
+	return canvasToOverlay({
+		canvasX: geometry.canvasWidth / 2 + positionX,
+		canvasY: geometry.canvasHeight / 2 + positionY,
+		geometry,
+	});
 }
 
 export function getDisplayScale({
-	canvasRect,
-	canvasSize,
+	geometry,
 }: {
-	canvasRect: DOMRect;
-	canvasSize: { width: number; height: number };
+	geometry: PreviewViewportGeometry;
 }): { x: number; y: number } {
 	return {
-		x: canvasRect.width / canvasSize.width,
-		y: canvasRect.height / canvasSize.height,
+		x: geometry.scale,
+		y: geometry.scale,
 	};
 }
 
 export function screenPixelsToLogicalThreshold({
-	canvas,
+	geometry,
 	screenPixels,
 }: {
-	canvas: HTMLCanvasElement;
+	geometry: PreviewViewportGeometry;
 	screenPixels: number;
 }): { x: number; y: number } {
-	const canvasRect = canvas.getBoundingClientRect();
 	return {
-		x: screenPixels * (canvas.width / canvasRect.width),
-		y: screenPixels * (canvas.height / canvasRect.height),
+		x: screenPixels / geometry.scale,
+		y: screenPixels / geometry.scale,
 	};
 }

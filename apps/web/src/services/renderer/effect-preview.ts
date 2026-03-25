@@ -1,194 +1,191 @@
 import { createOffscreenCanvas } from "./canvas-utils";
-import { getEffect } from "@/lib/effects";
-import type { EffectParamValues } from "@/types/effects";
-import { applyMultiPassEffect } from "./webgl-utils";
-import type { EffectPassData } from "./webgl-utils";
+import { effectsRegistry, resolveEffectPasses } from "@/lib/effects";
+import { buildDefaultParamValues } from "@/lib/registry";
+import type { ParamValues } from "@/lib/params";
+import { applyMultiPassEffect } from "./webgl/webgl-utils";
+import type { EffectPassData } from "./webgl/webgl-utils";
 
 const PREVIEW_SIZE = 160;
 const PREVIEW_IMAGE_PATH = "/effects/preview.jpg";
 
-let previewGl: WebGLRenderingContext | null = null;
-let previewCanvas: OffscreenCanvas | HTMLCanvasElement | null = null;
-let testSourceCanvas: OffscreenCanvas | HTMLCanvasElement | null = null;
-let previewImageElement: HTMLImageElement | null = null;
-const programCache = new Map<string, WebGLProgram>();
-const onReadyCallbacks = new Set<() => void>();
+class EffectPreviewService {
+	private previewGl: WebGLRenderingContext | null = null;
+	private previewCanvas: OffscreenCanvas | HTMLCanvasElement | null = null;
+	private testSourceCanvas: OffscreenCanvas | HTMLCanvasElement | null = null;
+	private previewImageElement: HTMLImageElement | null = null;
+	private programCache = new Map<string, WebGLProgram>();
+	private onReadyCallbacks = new Set<() => void>();
 
-export function onPreviewImageReady({
-	callback,
-}: {
-	callback: () => void;
-}): () => void {
-	onReadyCallbacks.add(callback);
-	return () => onReadyCallbacks.delete(callback);
-}
+	readonly PREVIEW_SIZE = PREVIEW_SIZE;
 
-function loadPreviewImage(): void {
-	if (typeof window === "undefined") return;
-	const image = new Image();
-	image.onload = () => {
-		testSourceCanvas = null;
-		for (const callback of onReadyCallbacks) {
-			callback();
-		}
-	};
-	image.src = PREVIEW_IMAGE_PATH;
-	previewImageElement = image;
-}
-
-loadPreviewImage();
-
-function buildDefaultParams({
-	effectType,
-}: {
-	effectType: string;
-}): EffectParamValues {
-	const definition = getEffect({ effectType });
-	const params: EffectParamValues = {};
-	for (const paramDef of definition.params) {
-		params[paramDef.key] = paramDef.default;
-	}
-	return params;
-}
-
-function createTestSource({
-	width,
-	height,
-}: {
-	width: number;
-	height: number;
-}): OffscreenCanvas | HTMLCanvasElement | null {
-	const isImageReady =
-		previewImageElement?.complete &&
-		(previewImageElement.naturalWidth ?? 0) > 0;
-	if (!isImageReady || !previewImageElement) {
-		return null;
+	constructor() {
+		this.loadPreviewImage();
 	}
 
-	const canvas = createOffscreenCanvas({ width, height });
-	const ctx = canvas.getContext("2d") as
-		| CanvasRenderingContext2D
-		| OffscreenCanvasRenderingContext2D
-		| null;
-	if (!ctx) {
-		throw new Error("failed to get 2d context for test source");
+	onPreviewImageReady({
+		callback,
+	}: {
+		callback: () => void;
+	}): () => void {
+		this.onReadyCallbacks.add(callback);
+		return () => this.onReadyCallbacks.delete(callback);
 	}
-	ctx.drawImage(previewImageElement, 0, 0, width, height);
-	return canvas;
-}
 
-function getOrCreatePreviewContext({
-	width,
-	height,
-}: {
-	width: number;
-	height: number;
-}): { canvas: OffscreenCanvas | HTMLCanvasElement; gl: WebGLRenderingContext } {
-	if (!previewCanvas || !previewGl) {
-		previewCanvas = createOffscreenCanvas({ width, height });
-		previewGl = previewCanvas.getContext("webgl", {
-			premultipliedAlpha: false,
-		}) as WebGLRenderingContext | null;
-		if (!previewGl) {
-			throw new Error("WebGL not supported");
-		}
-	}
-	if (previewCanvas.width !== width || previewCanvas.height !== height) {
-		previewCanvas.width = width;
-		previewCanvas.height = height;
-	}
-	return { canvas: previewCanvas, gl: previewGl };
-}
+	renderPreview({
+		effectType,
+		params,
+		targetCanvas,
+		uniformDimensions,
+	}: {
+		effectType: string;
+		params: ParamValues;
+		targetCanvas: HTMLCanvasElement;
+		uniformDimensions?: { width: number; height: number };
+	}): void {
+		const size = PREVIEW_SIZE;
+		const source = this.getTestSource({ width: size, height: size });
+		if (!source) return;
 
-function getTestSource({
-	width,
-	height,
-}: {
-	width: number;
-	height: number;
-}): CanvasImageSource | null {
-	if (
-		!testSourceCanvas ||
-		testSourceCanvas.width !== width ||
-		testSourceCanvas.height !== height
-	) {
-		testSourceCanvas = createTestSource({ width, height });
-	}
-	return testSourceCanvas;
-}
+		const definition = effectsRegistry.get(effectType);
+		const resolvedParams =
+			Object.keys(params).length > 0
+				? params
+				: buildDefaultParamValues(definition.params);
 
-function applyWebGlEffect({
-	source,
-	width,
-	height,
-	passes,
-}: {
-	source: CanvasImageSource;
-	width: number;
-	height: number;
-	passes: EffectPassData[];
-}): OffscreenCanvas | HTMLCanvasElement {
-	const { canvas: glCanvas, gl } = getOrCreatePreviewContext({ width, height });
-
-	applyMultiPassEffect({ context: gl, source, width, height, passes, programCache });
-
-	const outputCanvas = createOffscreenCanvas({ width, height });
-	const outputCtx = outputCanvas.getContext("2d") as
-		| CanvasRenderingContext2D
-		| OffscreenCanvasRenderingContext2D
-		| null;
-	if (outputCtx) {
-		outputCtx.drawImage(glCanvas, 0, 0, width, height);
-	}
-	return outputCanvas;
-}
-
-export function renderPreview({
-	effectType,
-	params,
-	targetCanvas,
-}: {
-	effectType: string;
-	params: EffectParamValues;
-	targetCanvas: HTMLCanvasElement;
-}): void {
-	const size = PREVIEW_SIZE;
-	const source = getTestSource({ width: size, height: size });
-	if (!source) return;
-
-	const definition = getEffect({ effectType });
-	const resolvedParams =
-		Object.keys(params).length > 0
-			? params
-			: buildDefaultParams({ effectType });
-
-	const passes = definition.renderer.passes.map((pass) => ({
-		fragmentShader: pass.fragmentShader,
-		uniforms: pass.uniforms({
+		const passes = resolveEffectPasses({
+			definition,
 			effectParams: resolvedParams,
+			width: uniformDimensions?.width ?? size,
+			height: uniformDimensions?.height ?? size,
+		});
+		const result = this.applyWebGlEffect({
+			source,
 			width: size,
 			height: size,
-		}),
-	}));
-	const result = applyWebGlEffect({
-		source,
-		width: size,
-		height: size,
-		passes,
-	});
+			passes,
+		});
 
-	const targetCtx = targetCanvas.getContext(
-		"2d",
-	) as CanvasRenderingContext2D | null;
-	if (targetCtx) {
-		targetCanvas.width = size;
-		targetCanvas.height = size;
-		targetCtx.drawImage(result, 0, 0, size, size);
+		const targetCtx = targetCanvas.getContext(
+			"2d",
+		) as CanvasRenderingContext2D | null;
+		if (targetCtx) {
+			targetCanvas.width = size;
+			targetCanvas.height = size;
+			targetCtx.drawImage(result, 0, 0, size, size);
+		}
+	}
+
+	private loadPreviewImage(): void {
+		if (typeof window === "undefined") return;
+		const image = new Image();
+		image.onload = () => {
+			this.testSourceCanvas = null;
+			for (const callback of this.onReadyCallbacks) {
+				callback();
+			}
+		};
+		image.src = PREVIEW_IMAGE_PATH;
+		this.previewImageElement = image;
+	}
+
+	private createTestSource({
+		width,
+		height,
+	}: {
+		width: number;
+		height: number;
+	}): OffscreenCanvas | HTMLCanvasElement | null {
+		const isImageReady =
+			this.previewImageElement?.complete &&
+			(this.previewImageElement.naturalWidth ?? 0) > 0;
+		if (!isImageReady || !this.previewImageElement) {
+			return null;
+		}
+
+		const canvas = createOffscreenCanvas({ width, height });
+		const ctx = canvas.getContext("2d") as
+			| CanvasRenderingContext2D
+			| OffscreenCanvasRenderingContext2D
+			| null;
+		if (!ctx) {
+			throw new Error("failed to get 2d context for test source");
+		}
+		ctx.drawImage(this.previewImageElement, 0, 0, width, height);
+		return canvas;
+	}
+
+	private getOrCreatePreviewContext({
+		width,
+		height,
+	}: {
+		width: number;
+		height: number;
+	}): { canvas: OffscreenCanvas | HTMLCanvasElement; gl: WebGLRenderingContext } {
+		if (!this.previewCanvas || !this.previewGl) {
+			this.previewCanvas = createOffscreenCanvas({ width, height });
+			this.previewGl = this.previewCanvas.getContext("webgl", {
+				premultipliedAlpha: false,
+			}) as WebGLRenderingContext | null;
+			if (!this.previewGl) {
+				throw new Error("WebGL not supported");
+			}
+		}
+		if (this.previewCanvas.width !== width || this.previewCanvas.height !== height) {
+			this.previewCanvas.width = width;
+			this.previewCanvas.height = height;
+		}
+		return { canvas: this.previewCanvas, gl: this.previewGl };
+	}
+
+	private getTestSource({
+		width,
+		height,
+	}: {
+		width: number;
+		height: number;
+	}): CanvasImageSource | null {
+		if (
+			!this.testSourceCanvas ||
+			this.testSourceCanvas.width !== width ||
+			this.testSourceCanvas.height !== height
+		) {
+			this.testSourceCanvas = this.createTestSource({ width, height });
+		}
+		return this.testSourceCanvas;
+	}
+
+	private applyWebGlEffect({
+		source,
+		width,
+		height,
+		passes,
+	}: {
+		source: CanvasImageSource;
+		width: number;
+		height: number;
+		passes: EffectPassData[];
+	}): OffscreenCanvas | HTMLCanvasElement {
+		const { canvas: glCanvas, gl } = this.getOrCreatePreviewContext({ width, height });
+
+		applyMultiPassEffect({
+			context: gl,
+			source,
+			width,
+			height,
+			passes,
+			programCache: this.programCache,
+		});
+
+		const outputCanvas = createOffscreenCanvas({ width, height });
+		const outputCtx = outputCanvas.getContext("2d") as
+			| CanvasRenderingContext2D
+			| OffscreenCanvasRenderingContext2D
+			| null;
+		if (outputCtx) {
+			outputCtx.drawImage(glCanvas, 0, 0, width, height);
+		}
+		return outputCanvas;
 	}
 }
 
-export const effectPreviewService = {
-	renderPreview,
-	onPreviewImageReady,
-	PREVIEW_SIZE,
-};
+export const effectPreviewService = new EffectPreviewService();

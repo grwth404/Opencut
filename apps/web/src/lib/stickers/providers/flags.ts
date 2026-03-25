@@ -1,22 +1,16 @@
 import { buildStickerId, parseStickerId } from "../sticker-id";
 import type {
+	StickerBrowseResult,
 	StickerItem,
 	StickerProvider,
 	StickerSearchResult,
 } from "../types";
+import { REGIONS, REGION_GROUPS } from "./countries-data";
+import type { CountryRecord, RegionId } from "./countries-data";
 
 const FLAGS_PROVIDER_ID = "flags";
-const FLAGS_DATASET_URL = "/countries.json";
 const DEFAULT_SEARCH_LIMIT = 100;
 const DEFAULT_FLAGS_BASE_URL = "/flags";
-
-type CountryRecord = {
-	name: string;
-	code: string;
-	languages?: string[];
-	flag_colors?: string[];
-	region?: string;
-};
 
 let countriesPromise: Promise<CountryRecord[]> | null = null;
 
@@ -25,7 +19,7 @@ function getFlagsBaseUrl(): string {
 }
 
 function buildFlagUrl({ code }: { code: string }): string {
-	const normalizedCode = code.toUpperCase();
+	const normalizedCode = code.toLowerCase();
 	return `${getFlagsBaseUrl()}/${encodeURIComponent(normalizedCode)}.svg`;
 }
 
@@ -34,13 +28,8 @@ async function loadCountries(): Promise<CountryRecord[]> {
 		return countriesPromise;
 	}
 
-	countriesPromise = fetch(FLAGS_DATASET_URL)
-		.then(async (response) => {
-			if (!response.ok) {
-				throw new Error(`Failed to load countries: ${response.status}`);
-			}
-			return (await response.json()) as CountryRecord[];
-		})
+	countriesPromise = import("./countries-data")
+		.then((m) => m.COUNTRIES)
 		.catch((error) => {
 			console.error("Failed to load countries dataset:", error);
 			return [];
@@ -72,6 +61,44 @@ function normalizeQuery({ query }: { query: string }): string {
 	return query.trim().toLowerCase();
 }
 
+function findMatchingRegions({
+	query,
+}: {
+	query: string;
+}): (typeof REGIONS)[number][] {
+	return REGIONS.filter(
+		(r) =>
+			r.id.toLowerCase() === query ||
+			r.aliases.some((alias) => alias === query),
+	);
+}
+
+export function resolveQueryToRegions({
+	query,
+}: {
+	query: string;
+}): Set<RegionId> | null {
+	const group = REGION_GROUPS[query];
+	if (group) {
+		return new Set(group);
+	}
+
+	const matched = findMatchingRegions({ query });
+	return matched.length > 0 ? new Set(matched.map((r) => r.id)) : null;
+}
+
+export function getRegionLabel({ query }: { query: string }): string {
+	if (REGION_GROUPS[query]) {
+		return query
+			.split(" ")
+			.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+			.join(" ");
+	}
+
+	const matched = findMatchingRegions({ query });
+	return matched[0]?.id ?? query;
+}
+
 function filterCountriesByQuery({
 	countries,
 	query,
@@ -83,15 +110,16 @@ function filterCountriesByQuery({
 		return countries;
 	}
 
+	const regionIds = resolveQueryToRegions({ query });
+
+	if (regionIds) {
+		return countries.filter((country) => country.region && regionIds.has(country.region));
+	}
+
 	return countries.filter((country) => {
 		const normalizedName = country.name.toLowerCase();
 		const normalizedCode = country.code.toLowerCase();
-		const normalizedRegion = country.region?.toLowerCase() ?? "";
-		return (
-			normalizedName.includes(query) ||
-			normalizedCode.includes(query) ||
-			normalizedRegion.includes(query)
-		);
+		return normalizedName.includes(query) || normalizedCode.includes(query);
 	});
 }
 
@@ -102,13 +130,15 @@ function paginateCountries({
 	countries: CountryRecord[];
 	options?: { page?: number; limit?: number };
 }): { items: CountryRecord[]; hasMore: boolean; total: number } {
-	const page = Math.max(1, options?.page ?? 1);
-	const limit = Math.max(1, options?.limit ?? DEFAULT_SEARCH_LIMIT);
+	if (options?.limit === undefined) {
+		return { items: countries, hasMore: false, total: countries.length };
+	}
+	const page = Math.max(1, options.page ?? 1);
+	const limit = Math.max(1, options.limit);
 	const startIndex = (page - 1) * limit;
 	const endIndex = startIndex + limit;
-	const pagedItems = countries.slice(startIndex, endIndex);
 	return {
-		items: pagedItems,
+		items: countries.slice(startIndex, endIndex),
 		hasMore: endIndex < countries.length,
 		total: countries.length,
 	};
@@ -146,13 +176,18 @@ export const flagsProvider: StickerProvider = {
 		options,
 	}: {
 		options?: { page?: number; limit?: number };
-	}): Promise<StickerSearchResult> {
+	}): Promise<StickerBrowseResult> {
 		const countries = await loadCountries();
 		const paged = paginateCountries({ countries, options });
 		return {
-			items: paged.items.map((country) => toStickerItem({ country })),
-			total: paged.total,
-			hasMore: paged.hasMore,
+			sections: [
+				{
+					id: "all",
+					items: paged.items.map((country) => toStickerItem({ country })),
+					hasMore: paged.hasMore,
+					layout: "grid",
+				},
+			],
 		};
 	},
 	resolveUrl({

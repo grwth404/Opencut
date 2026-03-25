@@ -5,7 +5,10 @@ import type { EditorCore } from "@/core";
 import { useEditor } from "@/hooks/use-editor";
 import type { BookmarkDragState } from "@/hooks/timeline/use-bookmark-drag";
 import { BOOKMARK_TIME_EPSILON } from "@/lib/timeline/bookmarks";
-import { DEFAULT_BOOKMARK_COLOR } from "@/constants/timeline-constants";
+import {
+	DEFAULT_BOOKMARK_COLOR,
+	TIMELINE_BOOKMARK_ROW_HEIGHT,
+} from "@/constants/timeline-constants";
 import { DEFAULT_FPS } from "@/constants/project-constants";
 import { getSnappedSeekTime } from "@/lib/time";
 import {
@@ -13,7 +16,7 @@ import {
 	Delete02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import type { Bookmark } from "@/types/timeline";
+import type { Bookmark } from "@/lib/timeline";
 import {
 	Popover,
 	PopoverAnchor,
@@ -25,7 +28,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { uppercase } from "@/utils/string";
 import { clamp } from "@/utils/math";
-import { timelineTimeToPixels, timelineTimeToSnappedPixels } from "@/lib/timeline";
+import {
+	timelineTimeToPixels,
+	timelineTimeToSnappedPixels,
+} from "@/lib/timeline";
 
 const MIN_BOOKMARK_WIDTH_PX = 2;
 const BOOKMARK_MARKER_WIDTH_PX = 12;
@@ -72,14 +78,17 @@ export function TimelineBookmarksRow({
 	handleRulerTrackingMouseDown,
 	handleRulerMouseDown,
 }: TimelineBookmarksRowProps) {
-	const editor = useEditor();
-	const activeScene = editor.scenes.getActiveScene();
+	const bookmarks = useEditor((e) => e.scenes.getActiveScene().bookmarks);
 
 	return (
-		<div className="relative h-4 flex-1 overflow-hidden">
+		<div
+			className="relative flex-1 overflow-hidden"
+			style={{ height: TIMELINE_BOOKMARK_ROW_HEIGHT }}
+		>
 			<button
-				className="relative h-4 w-full cursor-default select-none border-0 bg-transparent p-0"
+				className="relative w-full cursor-default select-none border-0 bg-transparent p-0"
 				style={{
+					height: TIMELINE_BOOKMARK_ROW_HEIGHT,
 					width: `${dynamicTimelineWidth}px`,
 				}}
 				aria-label="Timeline ruler"
@@ -95,7 +104,7 @@ export function TimelineBookmarksRow({
 					handleRulerTrackingMouseDown(event);
 				}}
 			>
-				{activeScene.bookmarks.map((bookmark) => (
+				{bookmarks.map((bookmark) => (
 					<TimelineBookmark
 						key={`bookmark-${bookmark.time}`}
 						bookmark={bookmark}
@@ -174,7 +183,7 @@ function TimelineBookmark({
 		<Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
 			<PopoverAnchor asChild>
 				<button
-					className={`absolute top-0 h-full min-w-0.5 border-0 bg-transparent p-0 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+					className="absolute top-0 h-full min-w-0.5 border-0 bg-transparent p-0"
 					style={{
 						left: `${bookmarkLeft}px`,
 						width: `${bookmarkWidth}px`,

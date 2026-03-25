@@ -1,7 +1,16 @@
 import { generateUUID } from "@/utils/id";
-import type { SerializedScene } from "@/services/storage/types";
 import type { MigrationResult, ProjectRecord } from "./types";
 import { isRecord } from "./utils";
+
+interface V1Scene {
+	id: string;
+	name: string;
+	isMain: boolean;
+	tracks: unknown[];
+	bookmarks: unknown[];
+	createdAt: string;
+	updatedAt: string;
+}
 
 export interface TransformV0ToV1Options {
 	now?: Date;
@@ -25,7 +34,7 @@ export function transformProjectV0ToV1({
 	const sceneCreatedAt = now.toISOString();
 	const sceneUpdatedAt = now.toISOString();
 
-	const mainScene: SerializedScene = {
+	const mainScene: V1Scene = {
 		id: sceneId,
 		name: "Main scene",
 		isMain: true,

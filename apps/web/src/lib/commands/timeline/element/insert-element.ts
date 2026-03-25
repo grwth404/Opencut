@@ -6,7 +6,7 @@ import type {
 	TimelineElement,
 	TrackType,
 	ElementType,
-} from "@/types/timeline";
+} from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import {
 	requiresMediaId,
@@ -19,8 +19,9 @@ import {
 	validateElementTrackCompatibility,
 	enforceMainTrackStart,
 } from "@/lib/timeline/track-utils";
-import type { MediaAsset } from "@/types/assets";
-import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import type { MediaAsset } from "@/lib/media/types";
+import { ELEMENT_TRACK_MAP, TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import { graphicsRegistry, registerDefaultGraphics } from "@/lib/graphics";
 
 type InsertElementPlacement =
 	| { mode: "explicit"; trackId: string }
@@ -166,6 +167,14 @@ export class InsertElementCommand extends Command {
 		if (element.type === "sticker" && !element.stickerId) {
 			console.error("Sticker element must have stickerId");
 			return false;
+		}
+
+		if (element.type === "graphic") {
+			registerDefaultGraphics();
+			if (!element.definitionId || !graphicsRegistry.has(element.definitionId)) {
+				console.error("Graphic element must have a valid definitionId");
+				return false;
+			}
 		}
 
 		if (element.type === "text" && !element.content) {
@@ -344,9 +353,6 @@ export class InsertElementCommand extends Command {
 	}: {
 		element: { type: ElementType };
 	}): TrackType {
-		if (element.type === "video" || element.type === "image") {
-			return "video";
-		}
-		return element.type;
+		return ELEMENT_TRACK_MAP[element.type];
 	}
 }

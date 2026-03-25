@@ -49,7 +49,7 @@ export function TabBar() {
 		<div className="relative flex">
 			<div
 				ref={scrollRef}
-				className="scrollbar-hidden relative flex size-full p-2 flex-col items-center justify-start gap-1.5 overflow-y-auto"
+				className="scrollbar-hidden relative flex size-full p-1 flex-col items-center justify-start gap-0.5 overflow-y-auto"
 			>
 				{TAB_KEYS.map((tabKey) => {
 					const tab = tabs[tabKey];
@@ -57,12 +57,13 @@ export function TabBar() {
 						<Tooltip key={tabKey} delayDuration={10}>
 							<TooltipTrigger asChild>
 								<Button
-									variant={activeTab === tabKey ? "secondary" : "text"}
+									variant={activeTab === tabKey ? "secondary" : "ghost"}
+									size="icon"
 									aria-label={tab.label}
 									className={cn(
-										"flex-col !p-1.5 !rounded-sm !h-auto [&_svg]:size-4.5",
-										activeTab !== tabKey &&
-											"border border-transparent text-muted-foreground",
+										"shrink-0",
+										"h-8 w-8",
+										activeTab !== tabKey && "text-muted-foreground",
 									)}
 									onClick={() => setActiveTab(tabKey)}
 								>
@@ -102,8 +103,8 @@ function FadeOverlay({
 			className={cn(
 				"pointer-events-none absolute right-0 left-0 h-6",
 				direction === "top" && show
-					? "from-background top-0 bg-gradient-to-b to-transparent"
-					: "from-background bottom-0 bg-gradient-to-t to-transparent",
+					? "from-background top-0 bg-linear-to-b to-transparent"
+					: "from-background bottom-0 bg-linear-to-t to-transparent",
 			)}
 		/>
 	);

@@ -2,10 +2,10 @@ import type {
 	TimelineTrack,
 	ElementType,
 	TimelineElement,
-} from "@/types/timeline";
+} from "@/lib/timeline";
 import { TRACK_CONFIG, TRACK_GAP } from "@/constants/timeline-constants";
 import { wouldElementOverlap } from "./element-utils";
-import type { ComputeDropTargetParams, DropTarget } from "@/types/timeline";
+import type { ComputeDropTargetParams, DropTarget } from "@/lib/timeline";
 import { isMainTrack, enforceMainTrackStart } from "./track-utils";
 
 function findElementAtPosition({

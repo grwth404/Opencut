@@ -6,7 +6,7 @@ export interface ImageNodeParams extends VisualNodeParams {
 	maxSourceSize?: number;
 }
 
-interface CachedImageSource {
+export interface CachedImageSource {
 	source: HTMLImageElement | OffscreenCanvas;
 	width: number;
 	height: number;
@@ -14,7 +14,7 @@ interface CachedImageSource {
 
 const imageSourceCache = new Map<string, Promise<CachedImageSource>>();
 
-function loadImageSource(
+export function loadImageSource(
 	url: string,
 	maxSourceSize?: number,
 ): Promise<CachedImageSource> {

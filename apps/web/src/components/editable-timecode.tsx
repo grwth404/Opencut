@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatTimeCode, parseTimeCode } from "@/lib/time";
-import type { TTimeCode } from "@/types/time";
+import type { TTimeCode } from "@/lib/time";
 import { cn } from "@/utils/ui";
 
 interface EditableTimecodeProps {
@@ -66,16 +66,13 @@ export function EditableTimecode({
 		enterPressedRef.current = false;
 	};
 
-	const handleKeyDown = ({
-		key,
-		preventDefault,
-	}: React.KeyboardEvent<HTMLInputElement>) => {
-		if (key === "Enter") {
-			preventDefault();
+	const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+		if (event.key === "Enter") {
+			event.preventDefault();
 			enterPressedRef.current = true;
 			applyEdit();
-		} else if (key === "Escape") {
-			preventDefault();
+		} else if (event.key === "Escape") {
+			event.preventDefault();
 			cancelEditing();
 		}
 	};
@@ -93,14 +90,13 @@ export function EditableTimecode({
 		}
 	};
 
-	const handleDisplayKeyDown = ({
-		key,
-		preventDefault,
-	}: React.KeyboardEvent<HTMLButtonElement>) => {
+	const handleDisplayKeyDown = (
+		event: React.KeyboardEvent<HTMLButtonElement>,
+	) => {
 		if (disabled) return;
 
-		if (key === "Enter" || key === " ") {
-			preventDefault();
+		if (event.key === "Enter" || event.key === " ") {
+			event.preventDefault();
 			startEditing();
 		}
 	};

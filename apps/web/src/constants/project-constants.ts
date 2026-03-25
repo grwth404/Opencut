@@ -1,4 +1,4 @@
-import type { TCanvasSize } from "@/types/project";
+import type { TCanvasSize } from "@/lib/project/types";
 
 export const DEFAULT_CANVAS_PRESETS: TCanvasSize[] = [
 	{ width: 1920, height: 1080 },
@@ -16,12 +16,12 @@ export const FPS_PRESETS = [
 ] as const;
 
 export const BLUR_INTENSITY_PRESETS: { label: string; value: number }[] = [
-	{ label: "Light", value: 4 },
-	{ label: "Medium", value: 8 },
-	{ label: "Heavy", value: 18 },
+	{ label: "Light", value: 10 },
+	{ label: "Medium", value: 50 },
+	{ label: "Heavy", value: 100 },
 ] as const;
 
 export const DEFAULT_CANVAS_SIZE: TCanvasSize = { width: 1920, height: 1080 };
 export const DEFAULT_FPS = 30;
-export const DEFAULT_BLUR_INTENSITY = 8;
+export const DEFAULT_BLUR_INTENSITY = 10;
 export const DEFAULT_COLOR = "#000000";

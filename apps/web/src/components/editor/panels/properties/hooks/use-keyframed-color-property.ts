@@ -4,8 +4,8 @@ import {
 	hasKeyframesForPath,
 	upsertElementKeyframe,
 } from "@/lib/animation";
-import type { AnimationPropertyPath, ElementAnimations } from "@/types/animation";
-import type { TimelineElement } from "@/types/timeline";
+import type { AnimationPropertyPath, ElementAnimations } from "@/lib/animation/types";
+import type { TimelineElement } from "@/lib/timeline";
 
 export function useKeyframedColorProperty({
 	trackId,

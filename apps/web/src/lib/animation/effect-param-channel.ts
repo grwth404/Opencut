@@ -1,8 +1,10 @@
-import type { Effect, EffectParamValues } from "@/types/effects";
+import type { ParamValues } from "@/lib/params";
+import type { Effect } from "@/lib/effects/types";
 import type {
 	ElementAnimations,
+	EffectParamPath,
 	NumberAnimationChannel,
-} from "@/types/animation";
+} from "@/lib/animation/types";
 import {
 	getChannel,
 	removeKeyframe,
@@ -11,17 +13,54 @@ import {
 } from "./keyframes";
 import { getChannelValueAtTime } from "./interpolation";
 
-const EFFECT_PARAM_PATH_PREFIX = "effects.";
-const EFFECT_PARAM_PATH_SUFFIX = ".params.";
+export const EFFECT_PARAM_PATH_PREFIX = "effects.";
+export const EFFECT_PARAM_PATH_SUFFIX = ".params.";
 
-function buildEffectParamPath({
+export function buildEffectParamPath({
 	effectId,
 	paramKey,
 }: {
 	effectId: string;
 	paramKey: string;
-}): string {
+}): EffectParamPath {
 	return `${EFFECT_PARAM_PATH_PREFIX}${effectId}${EFFECT_PARAM_PATH_SUFFIX}${paramKey}`;
+}
+
+export function isEffectParamPath({
+	propertyPath,
+}: {
+	propertyPath: string;
+}): propertyPath is EffectParamPath {
+	return (
+		propertyPath.startsWith(EFFECT_PARAM_PATH_PREFIX) &&
+		propertyPath.includes(EFFECT_PARAM_PATH_SUFFIX)
+	);
+}
+
+export function parseEffectParamPath({
+	propertyPath,
+}: {
+	propertyPath: string;
+}): { effectId: string; paramKey: string } | null {
+	if (!isEffectParamPath({ propertyPath })) {
+		return null;
+	}
+
+	const withoutPrefix = propertyPath.slice(EFFECT_PARAM_PATH_PREFIX.length);
+	const separatorIndex = withoutPrefix.indexOf(EFFECT_PARAM_PATH_SUFFIX);
+	if (separatorIndex <= 0) {
+		return null;
+	}
+
+	const effectId = withoutPrefix.slice(0, separatorIndex);
+	const paramKey = withoutPrefix.slice(
+		separatorIndex + EFFECT_PARAM_PATH_SUFFIX.length,
+	);
+	if (!effectId || !paramKey) {
+		return null;
+	}
+
+	return { effectId, paramKey };
 }
 
 export function resolveEffectParamsAtTime({
@@ -32,8 +71,8 @@ export function resolveEffectParamsAtTime({
 	effect: Effect;
 	animations: ElementAnimations | undefined;
 	localTime: number;
-}): EffectParamValues {
-	const resolved: EffectParamValues = {};
+}): ParamValues {
+	const resolved: ParamValues = {};
 
 	for (const [paramKey, staticValue] of Object.entries(effect.params)) {
 		const path = buildEffectParamPath({ effectId: effect.id, paramKey });

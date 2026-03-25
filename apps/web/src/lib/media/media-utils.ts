@@ -1,4 +1,4 @@
-import type { MediaAsset, MediaType } from "@/types/assets";
+import type { MediaAsset, MediaType } from "@/lib/media/types";
 
 export const SUPPORTS_AUDIO: readonly MediaType[] = ["audio", "video"];
 

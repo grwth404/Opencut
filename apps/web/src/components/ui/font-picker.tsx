@@ -1,13 +1,6 @@
 "use client";
 
-import {
-	useState,
-	useMemo,
-	useRef,
-	useEffect,
-	useCallback,
-	type CSSProperties,
-} from "react";
+import { useState, useMemo, useRef, useEffect, useCallback, type CSSProperties } from "react";
 import { List, type RowComponentProps } from "react-window";
 import {
 	Popover,
@@ -16,28 +9,24 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-	getCachedFontAtlas,
-	loadFullFont,
-	prefetchFontAtlas,
-	clearFontAtlasCache,
-} from "@/lib/fonts/google-fonts";
-import type { FontAtlas, FontAtlasEntry } from "@/types/fonts";
+import { loadFullFont } from "@/lib/fonts/google-fonts";
+import { SYSTEM_FONTS } from "@/constants/font-constants";
+import type { FontAtlas, FontAtlasEntry } from "@/lib/fonts/types";
+import { useFontAtlas } from "@/hooks/use-font-atlas";
 import { cn } from "@/utils/ui";
-import { ChevronDown, Search, Upload } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { TextIcon } from "@hugeicons/core-free-icons";
 
 const FONT_TABS = [
 	{ key: "all", label: "All fonts" },
-	{ key: "favorites", label: "Favorites" },
 	{ key: "my-fonts", label: "My fonts" },
+	{ key: "favorites", label: "Favorites" },
 ] as const;
 
 type FontTab = (typeof FONT_TABS)[number]["key"];
 
 const ROW_HEIGHT = 40;
-const SPRITE_ROW_HEIGHT = 40;
 const PREVIEW_SCALE = 0.8;
 const LIST_WIDTH = 288;
 const MAX_LIST_HEIGHT = 288;
@@ -57,18 +46,8 @@ export function FontPicker({
 	const [open, setOpen] = useState(false);
 	const [search, setSearch] = useState("");
 	const [activeTab, setActiveTab] = useState<FontTab>("all");
-	const [atlas, setAtlas] = useState<FontAtlas | null>(() =>
-		getCachedFontAtlas(),
-	);
-	const [status, setStatus] = useState<"idle" | "loading" | "error">(() =>
-		getCachedFontAtlas() ? "idle" : "loading",
-	);
 	const searchInputRef = useRef<HTMLInputElement>(null);
-
-	const fontNames = useMemo(() => {
-		if (!atlas) return [];
-		return Object.keys(atlas.fonts).sort();
-	}, [atlas]);
+	const { atlas, status, fontNames, retry: handleRetry } = useFontAtlas({ open });
 
 	const filteredFonts = useMemo(() => {
 		if (!search) return fontNames;
@@ -83,31 +62,18 @@ export function FontPicker({
 
 	const handleSelect = useCallback(
 		async ({ family }: { family: string }) => {
-			try {
-				await loadFullFont({ family });
-				onValueChange?.(family);
-			} catch {
-				onValueChange?.(family);
+			if (!SYSTEM_FONTS.has(family)) {
+				try {
+					await loadFullFont({ family });
+				} catch {
+					// ignore load failure, font will fall back to system default
+				}
 			}
+			onValueChange?.(family);
 			setOpen(false);
 		},
 		[onValueChange],
 	);
-
-	// Load atlas on first open if cache is empty (fallback when prefetch hasn't completed)
-	useEffect(() => {
-		if (!open || atlas) return;
-
-		setStatus("loading");
-		prefetchFontAtlas().then((data) => {
-			if (data) {
-				setAtlas(data);
-				setStatus("idle");
-			} else {
-				setStatus("error");
-			}
-		});
-	}, [open, atlas]);
 
 	useEffect(() => {
 		if (!open) {
@@ -116,18 +82,8 @@ export function FontPicker({
 		}
 	}, [open]);
 
-	const handleRetry = useCallback(() => {
-		clearFontAtlasCache();
-		setStatus("loading");
-		prefetchFontAtlas().then((data) => {
-			if (data) {
-				setAtlas(data);
-				setStatus("idle");
-			} else {
-				setStatus("error");
-			}
-		});
-	}, []);
+	const activeTabLabel =
+		FONT_TABS.find((t) => t.key === activeTab)?.label.toLowerCase() ?? "";
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
@@ -164,11 +120,11 @@ export function FontPicker({
 					<Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 shrink-0 opacity-50" />
 					<Input
 						ref={searchInputRef}
-						placeholder="Search fonts..."
+						placeholder={`Search ${activeTabLabel}...`}
 						value={search}
 						onChange={(event) => setSearch(event.target.value)}
 						size="xs"
-						className="w-full pl-5 bg-transparent !border-none !shadow-none"
+						className="w-full pl-5 bg-transparent border-none! shadow-none!"
 					/>
 				</div>
 				<div className="flex border-b px-3">
@@ -225,20 +181,6 @@ export function FontPicker({
 						style={{ height: listHeight, width: LIST_WIDTH }}
 					/>
 				)}
-				<div className="border-t p-1">
-					<Button
-						variant="ghost"
-						size="sm"
-						className="w-full justify-start text-muted-foreground h-8 font-normal"
-						onClick={() => {
-							// TODO: Implement local font loading
-							console.log("Load local fonts clicked");
-						}}
-					>
-						<Upload className="!size-3.5" />
-						Load local fonts
-					</Button>
-				</div>
 			</PopoverContent>
 		</Popover>
 	);
@@ -250,7 +192,7 @@ function FontSpritePreview({ entry }: { entry: FontAtlasEntry }) {
 			className="shrink-0"
 			style={{
 				width: entry.w,
-				height: SPRITE_ROW_HEIGHT,
+				height: ROW_HEIGHT,
 				backgroundColor: "currentColor",
 				WebkitMaskImage: `url(/fonts/font-chunk-${entry.ch}.avif)`,
 				WebkitMaskPosition: `-${entry.x}px -${entry.y}px`,
@@ -283,6 +225,7 @@ function FontRow({
 	const fontName = filteredFonts[index];
 	const entry = atlas.fonts[fontName];
 	const isSelected = fontName === selectedFont;
+	const isSystemFont = SYSTEM_FONTS.has(fontName);
 
 	return (
 		<button
@@ -302,7 +245,13 @@ function FontRow({
 			aria-label={fontName}
 		>
 			<div className="min-w-0 overflow-hidden">
-				<FontSpritePreview entry={entry} />
+				{isSystemFont ? (
+					<span className="text-xl text-foreground/85" style={{ fontFamily: fontName }}>
+						{fontName}
+					</span>
+				) : (
+					<FontSpritePreview entry={entry} />
+				)}
 			</div>
 		</button>
 	);

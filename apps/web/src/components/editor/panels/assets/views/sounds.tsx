@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import { useSoundSearch } from "@/hooks/use-sound-search";
 import { useSoundsStore } from "@/stores/sounds-store";
-import type { SavedSound, SoundEffect } from "@/types/sounds";
+import type { SavedSound, SoundEffect } from "@/lib/sounds/types";
 import { cn } from "@/utils/ui";
 import {
 	FavouriteIcon,

@@ -37,7 +37,7 @@ export default function PrivacyPage() {
 					</AccordionTrigger>
 					<AccordionContent>
 						<h3 className="mb-3 text-lg font-medium">
-							Your content stays private and encrypted.
+							Your content never leaves your device.
 						</h3>
 						<ol className="list-decimal space-y-2 pl-6">
 							<li>
@@ -45,22 +45,19 @@ export default function PrivacyPage() {
 								your files
 							</li>
 							<li>
-								AI features require encrypted uploads - your content is
-								encrypted before leaving your device
+								AI features like auto captions run locally in your browser
+								too - nothing is uploaded
 							</li>
 							<li>
-								We only collect your email and basic profile info for your
-								account
+								OpenCut does not currently require an account or login
 							</li>
 							<li>Project data stays on your device, not our servers</li>
 							<li>
-								We use analytics to improve the app, but no personal video
+								We use anonymized analytics to improve the app, but no personal video
 								content is tracked
 							</li>
-							<li>
-								You can delete your account anytime and all data gets removed
-							</li>
-							<li>We don't sell your data or share it with advertisers</li>
+							<li>You can clear local data from your browser at any time</li>
+							<li>We don't sell or share your data with anyone (we don't even have it)</li>
 						</ol>
 						<p className="mt-4">
 							Questions? Email us at{" "}
@@ -78,84 +75,30 @@ export default function PrivacyPage() {
 			<section className="flex flex-col gap-3">
 				<h2 className="text-2xl font-semibold">How We Handle Your Content</h2>
 				<p>
-					<strong>Basic video editing happens locally on your device.</strong>{" "}
-					For standard editing features, we never upload, store, or have access
-					to your video files. Your content remains completely private and under
-					your control.
-				</p>
-				<p>
-					<strong>AI features require secure processing:</strong> When you
-					choose to use AI features like auto captions, your audio/video content
-					is encrypted on your device before being uploaded to our servers for
-					processing. We use zero-knowledge encryption, meaning we cannot
-					decrypt or view your content.
-				</p>
-				<p>
-					After AI processing is complete, the encrypted content is immediately
-					deleted from our servers. Only the results (like generated captions)
-					are returned to your device.
+					<strong>
+						All editing and processing happens locally on your device.
+					</strong>{" "}
+					We never upload, store, or have access to your video or audio files.
+					Your content remains completely private and under your control.
+					AI-powered features like auto captions also run in your browser using
+					on-device models - no content ever leaves your device.
 				</p>
 			</section>
 
 			<section className="flex flex-col gap-3">
-				<h2 className="text-2xl font-semibold">Account Information</h2>
-				<p>When you create an account, we only collect:</p>
-				<ul className="list-disc space-y-2 pl-6">
-					<li>Email address (for account access)</li>
-					<li>
-						Profile information from Google OAuth (if you choose to sign in with
-						Google)
-					</li>
-				</ul>
+				<h2 className="text-2xl font-semibold">Accounts & Authentication</h2>
 				<p>
-					<strong>We do NOT store your projects on our servers.</strong> All
-					project data, including names, thumbnails, and creation dates, is
-					stored locally in your browser using IndexedDB.
+					OpenCut does not currently offer user accounts, login, or Google
+					sign-in.
 				</p>
 				<p>
-					We use{" "}
-					<a
-						href="https://www.better-auth.com"
-						target="_blank"
-						rel="noopener"
-						className="text-primary hover:underline"
-					>
-						Better Auth
-					</a>{" "}
-					for secure authentication and follow industry-standard security
-					practices.
+					Because there is no account system today, we do not collect account
+					emails, profile information, or OAuth identity data.
 				</p>
-			</section>
-
-			<section className="flex flex-col gap-3">
-				<h2 className="text-2xl font-semibold">AI Features & Encryption</h2>
 				<p>
-					When you use AI-powered features (like auto captions, content
-					analysis, or enhancement tools), your content needs to be processed on
-					our servers. Here's how we protect your privacy:
-				</p>
-				<ul className="list-disc space-y-2 pl-6">
-					<li>
-						<strong>Client-side encryption:</strong> Your content is encrypted
-						on your device before upload
-					</li>
-					<li>
-						<strong>Zero-knowledge processing:</strong> We cannot decrypt or
-						view your original content
-					</li>
-					<li>
-						<strong>Temporary processing:</strong> Encrypted content is deleted
-						immediately after processing
-					</li>
-					<li>
-						<strong>Opt-in only:</strong> AI features are optional - basic
-						editing remains fully local
-					</li>
-				</ul>
-				<p>
-					Different AI features may process different types of content (audio
-					for captions, video for analysis, etc.), but all follow the same
-					zero-knowledge encryption approach.
+					Your projects are never stored on our servers. All project data,
+					including names, thumbnails, and creation dates, is stored locally
+					in your browser using IndexedDB.
 				</p>
 			</section>
 
@@ -171,13 +114,12 @@ export default function PrivacyPage() {
 					>
 						Databuddy
 					</a>{" "}
-					for completely anonymized and non-invasive analytics to understand how
-					people use OpenCut.
+					for basic, anonymized visitor counts. We do not track clicks,
+					interactions, or how you use the editor.
 				</p>
 				<p>
-					This helps us improve the editor, but we never collect personal
-					information, track individual users, or store any data that could
-					identify you.
+					No personal information is collected, no individual users are tracked,
+					and no data that could identify you is stored.
 				</p>
 			</section>
 
@@ -187,7 +129,7 @@ export default function PrivacyPage() {
 				<ul className="list-disc space-y-2 pl-6">
 					<li>Save your projects locally on your device</li>
 					<li>Remember your editor preferences and settings</li>
-					<li>Keep you logged in across browser sessions</li>
+					<li>Store app state needed for the editor to work between sessions</li>
 				</ul>
 				<p>
 					All data stays on your device and can be cleared at any time through
@@ -199,10 +141,6 @@ export default function PrivacyPage() {
 				<h2 className="text-2xl font-semibold">Third-Party Services</h2>
 				<p>OpenCut integrates with these services:</p>
 				<ul className="list-disc space-y-2 pl-6">
-					<li>
-						<strong>Google OAuth:</strong> For optional Google sign-in (governed
-						by Google's privacy policy)
-					</li>
 					<li>
 						<strong>Vercel:</strong> For hosting and content delivery
 					</li>
@@ -216,8 +154,7 @@ export default function PrivacyPage() {
 				<h2 className="text-2xl font-semibold">Your Rights</h2>
 				<p>You have complete control over your data:</p>
 				<ul className="list-disc space-y-2 pl-6">
-					<li>Delete your account and all associated data at any time</li>
-					<li>Export your project data</li>
+					<li>No account is required to use OpenCut today</li>
 					<li>Clear local storage to remove all saved projects</li>
 					<li>Contact us with any privacy concerns</li>
 				</ul>
@@ -280,7 +217,7 @@ export default function PrivacyPage() {
 			<Separator />
 
 			<p className="text-muted-foreground text-sm">
-				Last updated: July 14, 2025
+				Last updated: March 15, 2026
 			</p>
 		</BasePage>
 	);

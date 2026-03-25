@@ -2,15 +2,13 @@ import { EditorCore } from "@/core";
 import {
 	getChannel,
 	getChannelValueAtTime,
-	getElementBaseValueForProperty,
 	removeElementKeyframe,
-	supportsAnimationProperty,
-	withElementBaseValueForProperty,
+	resolveAnimationTarget,
 } from "@/lib/animation";
 import { Command } from "@/lib/commands/base-command";
 import { updateElementInTracks } from "@/lib/timeline";
-import type { AnimationPropertyPath } from "@/types/animation";
-import type { TimelineElement, TimelineTrack } from "@/types/timeline";
+import type { AnimationPath, AnimationValue } from "@/lib/animation/types";
+import type { TimelineElement, TimelineTrack } from "@/lib/timeline";
 
 function sampleValueBeforeRemoval({
 	element,
@@ -18,9 +16,9 @@ function sampleValueBeforeRemoval({
 	keyframeId,
 }: {
 	element: TimelineElement;
-	propertyPath: AnimationPropertyPath;
+	propertyPath: AnimationPath;
 	keyframeId: string;
-}): number | null {
+}): AnimationValue | null {
 	const channel = getChannel({
 		animations: element.animations,
 		propertyPath,
@@ -32,17 +30,20 @@ function sampleValueBeforeRemoval({
 		return null;
 	}
 
-	const baseValue = getElementBaseValueForProperty({ element, propertyPath });
-	if (baseValue === null || typeof baseValue !== "number") {
+	const target = resolveAnimationTarget({ element, path: propertyPath });
+	if (!target) {
+		return null;
+	}
+	const baseValue = target.getBaseValue();
+	if (baseValue === null) {
 		return null;
 	}
 
-	const sampled = getChannelValueAtTime({
+	return getChannelValueAtTime({
 		channel,
 		time: keyframe.time,
 		fallbackValue: baseValue,
 	});
-	return typeof sampled === "number" ? sampled : null;
 }
 
 function removeKeyframeAndPersist({
@@ -51,9 +52,14 @@ function removeKeyframeAndPersist({
 	keyframeId,
 }: {
 	element: TimelineElement;
-	propertyPath: AnimationPropertyPath;
+	propertyPath: AnimationPath;
 	keyframeId: string;
 }): TimelineElement {
+	const target = resolveAnimationTarget({ element, path: propertyPath });
+	if (!target) {
+		return element;
+	}
+
 	const valueBefore = sampleValueBeforeRemoval({
 		element,
 		propertyPath,
@@ -71,11 +77,7 @@ function removeKeyframeAndPersist({
 	const shouldPersistToBase = isChannelNowEmpty && valueBefore !== null;
 
 	const baseElement = shouldPersistToBase
-		? withElementBaseValueForProperty({
-				element,
-				propertyPath,
-				value: valueBefore,
-			})
+		? target.setBaseValue(valueBefore)
 		: element;
 
 	return { ...baseElement, animations: nextAnimations };
@@ -85,7 +87,7 @@ export class RemoveKeyframeCommand extends Command {
 	private savedState: TimelineTrack[] | null = null;
 	private readonly trackId: string;
 	private readonly elementId: string;
-	private readonly propertyPath: AnimationPropertyPath;
+	private readonly propertyPath: AnimationPath;
 	private readonly keyframeId: string;
 
 	constructor({
@@ -96,7 +98,7 @@ export class RemoveKeyframeCommand extends Command {
 	}: {
 		trackId: string;
 		elementId: string;
-		propertyPath: AnimationPropertyPath;
+		propertyPath: AnimationPath;
 		keyframeId: string;
 	}) {
 		super();
@@ -114,11 +116,6 @@ export class RemoveKeyframeCommand extends Command {
 			tracks: this.savedState,
 			trackId: this.trackId,
 			elementId: this.elementId,
-			elementPredicate: (element) =>
-				supportsAnimationProperty({
-					element,
-					propertyPath: this.propertyPath,
-				}),
 			update: (element) =>
 				removeKeyframeAndPersist({
 					element,

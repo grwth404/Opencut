@@ -1,0 +1,238 @@
+"use client";
+
+import { useRef } from "react";
+import { useElementPlayhead } from "../hooks/use-element-playhead";
+import {
+	useKeyframedParamProperty,
+	type KeyframedParamPropertyResult,
+} from "../hooks/use-keyframed-param-property";
+import { resolveGraphicParamsAtTime } from "@/lib/animation";
+import type { ParamDefinition, ParamValues } from "@/lib/params";
+import type { GraphicElement } from "@/lib/timeline";
+import { graphicsRegistry, registerDefaultGraphics } from "@/lib/graphics";
+import { useElementPreview } from "@/hooks/use-element-preview";
+import { useEditor } from "@/hooks/use-editor";
+import {
+	Section,
+	SectionContent,
+	SectionFields,
+	SectionHeader,
+	SectionTitle,
+} from "@/components/section";
+import { PropertyParamField } from "../components/property-param-field";
+import { Button } from "@/components/ui/button";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { MinusSignIcon, PlusSignIcon } from "@hugeicons/core-free-icons";
+import { cn } from "@/utils/ui";
+
+registerDefaultGraphics();
+
+const DEFAULT_STROKE_WIDTH = 2;
+
+export function GraphicTab({
+	element,
+	trackId,
+}: {
+	element: GraphicElement;
+	trackId: string;
+}) {
+	const definition = graphicsRegistry.get(element.definitionId);
+	const { localTime, isPlayheadWithinElementRange } = useElementPlayhead({
+		startTime: element.startTime,
+		duration: element.duration,
+	});
+	const { renderElement } = useElementPreview({
+		trackId,
+		elementId: element.id,
+		fallback: element,
+	});
+
+	const liveElement = renderElement as GraphicElement;
+	const resolvedParams = resolveGraphicParamsAtTime({
+		element: liveElement,
+		localTime,
+	});
+
+	const shapeParams = definition.params.filter((p) => p.group !== "stroke");
+	const hasStrokeParams = definition.params.some((p) => p.group === "stroke");
+
+	return (
+		<div className="flex flex-col">
+			<Section collapsible sectionKey={`${element.id}:graphic`}>
+				<SectionHeader>
+					<SectionTitle>{definition.name}</SectionTitle>
+				</SectionHeader>
+				<SectionContent>
+					<SectionFields>
+						{shapeParams.map((param) => (
+							<AnimatedGraphicParamField
+								key={param.key}
+								param={param}
+								trackId={trackId}
+								element={liveElement}
+								localTime={localTime}
+								isPlayheadWithinElementRange={isPlayheadWithinElementRange}
+								resolvedParams={resolvedParams}
+							/>
+						))}
+					</SectionFields>
+				</SectionContent>
+			</Section>
+			{hasStrokeParams && (
+				<StrokeSection element={element} trackId={trackId} />
+			)}
+		</div>
+	);
+}
+
+function StrokeSection({
+	element,
+	trackId,
+}: {
+	element: GraphicElement;
+	trackId: string;
+}) {
+	const editor = useEditor();
+	const definition = graphicsRegistry.get(element.definitionId);
+	const { localTime, isPlayheadWithinElementRange } = useElementPlayhead({
+		startTime: element.startTime,
+		duration: element.duration,
+	});
+	const { renderElement } = useElementPreview({
+		trackId,
+		elementId: element.id,
+		fallback: element,
+	});
+
+	const liveElement = renderElement as GraphicElement;
+	const resolvedParams = resolveGraphicParamsAtTime({
+		element: liveElement,
+		localTime,
+	});
+	const strokeParams = definition.params.filter((p) => p.group === "stroke");
+	const lastStrokeWidth = useRef(DEFAULT_STROKE_WIDTH);
+	const isStrokeEnabled = Number(element.params.strokeWidth ?? 0) > 0;
+
+	const toggleStroke = () => {
+		if (isStrokeEnabled) {
+			lastStrokeWidth.current = Number(
+				element.params.strokeWidth ?? DEFAULT_STROKE_WIDTH,
+			);
+			editor.timeline.updateElements({
+				updates: [
+					{
+						trackId,
+						elementId: element.id,
+						updates: { params: { ...element.params, strokeWidth: 0 } },
+					},
+				],
+			});
+		} else {
+			editor.timeline.updateElements({
+				updates: [
+					{
+						trackId,
+						elementId: element.id,
+						updates: {
+							params: {
+								...element.params,
+								strokeWidth: lastStrokeWidth.current,
+							},
+						},
+					},
+				],
+			});
+		}
+	};
+
+	return (
+		<Section
+			collapsible
+			defaultOpen={isStrokeEnabled}
+			sectionKey={`${element.id}:stroke`}
+		>
+			<SectionHeader
+				trailing={
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={(event) => {
+							event.stopPropagation();
+							toggleStroke();
+						}}
+					>
+						<HugeiconsIcon
+							icon={isStrokeEnabled ? MinusSignIcon : PlusSignIcon}
+							strokeWidth={1}
+						/>
+					</Button>
+				}
+			>
+				<SectionTitle>Stroke</SectionTitle>
+			</SectionHeader>
+			<SectionContent
+				className={cn(!isStrokeEnabled && "pointer-events-none opacity-50")}
+			>
+				<SectionFields>
+					{strokeParams.map((param) => (
+						<AnimatedGraphicParamField
+							key={param.key}
+							param={param}
+							trackId={trackId}
+							element={liveElement}
+							localTime={localTime}
+							isPlayheadWithinElementRange={isPlayheadWithinElementRange}
+							resolvedParams={resolvedParams}
+						/>
+					))}
+				</SectionFields>
+			</SectionContent>
+		</Section>
+	);
+}
+
+function AnimatedGraphicParamField({
+	param,
+	trackId,
+	element,
+	localTime,
+	isPlayheadWithinElementRange,
+	resolvedParams,
+}: {
+	param: ParamDefinition;
+	trackId: string;
+	element: GraphicElement;
+	localTime: number;
+	isPlayheadWithinElementRange: boolean;
+	resolvedParams: ParamValues;
+}) {
+	const animatedParam: KeyframedParamPropertyResult = useKeyframedParamProperty({
+		param,
+		trackId,
+		elementId: element.id,
+		animations: element.animations,
+		localTime,
+		isPlayheadWithinElementRange,
+		resolvedValue: resolvedParams[param.key] ?? param.default,
+		buildBaseUpdates: ({ value }) => ({
+			params: {
+				...element.params,
+				[param.key]: value,
+			},
+		}),
+	});
+
+	return (
+		<PropertyParamField
+			param={param}
+			value={resolvedParams[param.key] ?? param.default}
+			onPreview={animatedParam.onPreview}
+			onCommit={animatedParam.onCommit}
+			keyframe={{
+				isActive: animatedParam.isKeyframedAtTime,
+				isDisabled: !isPlayheadWithinElementRange,
+				onToggle: animatedParam.toggleKeyframe,
+			}}
+		/>
+	);
+}

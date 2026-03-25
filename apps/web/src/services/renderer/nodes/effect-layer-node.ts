@@ -1,14 +1,14 @@
 import type { CanvasRenderer } from "../canvas-renderer";
-import { getEffect } from "@/lib/effects";
-import type { EffectParamValues } from "@/types/effects";
+import { effectsRegistry, resolveEffectPasses } from "@/lib/effects";
+import type { ParamValues } from "@/lib/params";
 import { BaseNode } from "./base-node";
-import { webglEffectRenderer } from "../webgl-effect-renderer";
+import { webglEffectRenderer } from "../webgl/webgl-effect-renderer";
 
 const TIME_EPSILON = 1e-6;
 
 export type EffectLayerNodeParams = {
 	effectType: string;
-	effectParams: EffectParamValues;
+	effectParams: ParamValues;
 	timeOffset: number;
 	duration: number;
 };
@@ -49,18 +49,17 @@ export class EffectLayerNode extends BaseNode<EffectLayerNodeParams> {
 
 		const source = renderer.context.canvas as CanvasImageSource;
 
-		const effectDefinition = getEffect({
-			effectType: this.params.effectType,
-		});
+		const effectDefinition = effectsRegistry.get(this.params.effectType);
 
-		const passes = effectDefinition.renderer.passes.map((pass) => ({
-			fragmentShader: pass.fragmentShader,
-			uniforms: pass.uniforms({
-				effectParams: this.params.effectParams,
-				width: renderer.width,
-				height: renderer.height,
-			}),
-		}));
+		const passes = resolveEffectPasses({
+			definition: effectDefinition,
+			effectParams: this.params.effectParams,
+			width: renderer.width,
+			height: renderer.height,
+		});
+		if (passes.length === 0) {
+			return;
+		}
 		const effectResult = webglEffectRenderer.applyEffect({
 			source,
 			width: renderer.width,

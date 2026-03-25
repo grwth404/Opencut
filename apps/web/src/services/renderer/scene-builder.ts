@@ -1,26 +1,22 @@
-import type { TimelineTrack } from "@/types/timeline";
-import type { MediaAsset } from "@/types/assets";
+import type { TimelineTrack } from "@/lib/timeline";
+import type { MediaAsset } from "@/lib/media/types";
 import { RootNode } from "./nodes/root-node";
 import { VideoNode } from "./nodes/video-node";
 import { ImageNode } from "./nodes/image-node";
 import { TextNode } from "./nodes/text-node";
 import { StickerNode } from "./nodes/sticker-node";
+import { GraphicNode } from "./nodes/graphic-node";
 import { ColorNode } from "./nodes/color-node";
-import { CompositeEffectNode } from "./nodes/composite-effect-node";
+import { BlurBackgroundNode } from "./nodes/blur-background-node";
 import { EffectLayerNode } from "./nodes/effect-layer-node";
 import type { BaseNode } from "./nodes/base-node";
-import type { TBackground, TCanvasSize } from "@/types/project";
+import type { TBackground, TCanvasSize } from "@/lib/project/types";
 import { DEFAULT_BLUR_INTENSITY } from "@/constants/project-constants";
 import { isMainTrack } from "@/lib/timeline";
 
 const PREVIEW_MAX_IMAGE_SIZE = 2048;
-const BLUR_BACKGROUND_ZOOM_SCALE = 1.4;
 
-function getVisibleSortedElements({
-	track,
-}: {
-	track: TimelineTrack;
-}) {
+function getVisibleSortedElements({ track }: { track: TimelineTrack }) {
 	return track.elements
 		.filter((element) => !("hidden" in element && element.hidden))
 		.slice()
@@ -65,7 +61,7 @@ function buildTrackNodes({
 					continue;
 				}
 
-				if (mediaAsset.type === "video") {
+				if (element.type === "video" && mediaAsset.type === "video") {
 					nodes.push(
 						new VideoNode({
 							mediaId: mediaAsset.id,
@@ -75,15 +71,17 @@ function buildTrackNodes({
 							timeOffset: element.startTime,
 							trimStart: element.trimStart,
 							trimEnd: element.trimEnd,
+							retime: element.retime,
 							transform: element.transform,
 							animations: element.animations,
 							opacity: element.opacity,
 							blendMode: element.blendMode,
 							effects: element.effects,
+							masks: element.masks,
 						}),
 					);
 				}
-				if (mediaAsset.type === "image") {
+				if (element.type === "image" && mediaAsset.type === "image") {
 					nodes.push(
 						new ImageNode({
 							url: mediaAsset.url,
@@ -96,6 +94,7 @@ function buildTrackNodes({
 							opacity: element.opacity,
 							blendMode: element.blendMode,
 							effects: element.effects,
+							masks: element.masks,
 							...(isPreview && {
 								maxSourceSize: PREVIEW_MAX_IMAGE_SIZE,
 							}),
@@ -120,6 +119,8 @@ function buildTrackNodes({
 				nodes.push(
 					new StickerNode({
 						stickerId: element.stickerId,
+						intrinsicWidth: element.intrinsicWidth,
+						intrinsicHeight: element.intrinsicHeight,
 						duration: element.duration,
 						timeOffset: element.startTime,
 						trimStart: element.trimStart,
@@ -132,7 +133,75 @@ function buildTrackNodes({
 					}),
 				);
 			}
+
+			if (element.type === "graphic") {
+				nodes.push(
+					new GraphicNode({
+						definitionId: element.definitionId,
+						params: element.params,
+						duration: element.duration,
+						timeOffset: element.startTime,
+						trimStart: element.trimStart,
+						trimEnd: element.trimEnd,
+						transform: element.transform,
+						animations: element.animations,
+						opacity: element.opacity,
+						blendMode: element.blendMode,
+						effects: element.effects,
+						masks: element.masks,
+					}),
+				);
+			}
 		}
+	}
+
+	return nodes;
+}
+
+function buildBlurBackgroundNodes({
+	track,
+	mediaMap,
+	blurIntensity,
+}: {
+	track: TimelineTrack | undefined;
+	mediaMap: Map<string, MediaAsset>;
+	blurIntensity: number;
+}): BaseNode[] {
+	if (!track) {
+		return [];
+	}
+
+	const nodes: BaseNode[] = [];
+	const elements = getVisibleSortedElements({ track });
+
+	for (const element of elements) {
+		if (element.type !== "video" && element.type !== "image") {
+			continue;
+		}
+
+		const mediaAsset = mediaMap.get(element.mediaId);
+		if (
+			!mediaAsset?.file ||
+			!mediaAsset?.url ||
+			(mediaAsset.type !== "video" && mediaAsset.type !== "image")
+		) {
+			continue;
+		}
+
+		nodes.push(
+			new BlurBackgroundNode({
+				mediaId: mediaAsset.id,
+				url: mediaAsset.url,
+				file: mediaAsset.file,
+				mediaType: mediaAsset.type,
+				duration: element.duration,
+				timeOffset: element.startTime,
+				trimStart: element.trimStart,
+				trimEnd: element.trimEnd,
+				retime: element.type === "video" ? element.retime : undefined,
+				blurIntensity,
+			}),
+		);
 	}
 
 	return nodes;
@@ -168,6 +237,9 @@ export function buildScene({
 	];
 
 	const orderedTracksBottomToTop = orderedTracksTopToBottom.slice().reverse();
+	const mainTrack = orderedTracksBottomToTop.find((track) =>
+		isMainTrack(track),
+	);
 
 	const allNodes = buildTrackNodes({
 		tracks: orderedTracksBottomToTop,
@@ -177,20 +249,18 @@ export function buildScene({
 	});
 
 	if (background.type === "blur") {
-		rootNode.add(
-			new CompositeEffectNode({
-				contentNodes: allNodes.filter(
-					(node) => !(node instanceof EffectLayerNode),
-				),
-				effectType: "blur",
-				effectParams: {
-					intensity:
-						background.blurIntensity ?? DEFAULT_BLUR_INTENSITY,
-				},
-				scale: BLUR_BACKGROUND_ZOOM_SCALE,
-			}),
-		);
-	} else if (background.type === "color" && background.color !== "transparent") {
+		const blurNodes = buildBlurBackgroundNodes({
+			track: mainTrack,
+			mediaMap,
+			blurIntensity: background.blurIntensity ?? DEFAULT_BLUR_INTENSITY,
+		});
+		for (const node of blurNodes) {
+			rootNode.add(node);
+		}
+	} else if (
+		background.type === "color" &&
+		background.color !== "transparent"
+	) {
 		rootNode.add(new ColorNode({ color: background.color }));
 	}
 

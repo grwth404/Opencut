@@ -1,7 +1,7 @@
-import { getProvider } from "./registry";
+import { stickersRegistry } from "./registry";
 import { parseStickerId } from "./sticker-id";
 import { registerDefaultStickerProviders } from "./providers";
-import type { StickerResolveOptions } from "@/types/stickers";
+import type { StickerResolveOptions } from "@/lib/stickers/types";
 
 export function resolveStickerId({
 	stickerId,
@@ -13,9 +13,7 @@ export function resolveStickerId({
 	registerDefaultStickerProviders();
 
 	const parsedStickerId = parseStickerId({ stickerId });
-	return getProvider({
-		providerId: parsedStickerId.providerId,
-	}).resolveUrl({
+	return stickersRegistry.get(parsedStickerId.providerId).resolveUrl({
 		stickerId,
 		options,
 	});

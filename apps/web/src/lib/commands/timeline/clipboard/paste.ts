@@ -4,7 +4,7 @@ import type {
 	TimelineTrack,
 	TimelineElement,
 	ClipboardItem,
-} from "@/types/timeline";
+} from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { wouldElementOverlap } from "@/lib/timeline/element-utils";
 import {

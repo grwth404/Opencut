@@ -1,6 +1,6 @@
 import { Command } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
-import type { TScene } from "@/types/timeline";
+import type { TScene } from "@/lib/timeline";
 import { updateSceneInArray } from "@/lib/scenes";
 import { getFrameTime, moveBookmarkInArray } from "@/lib/timeline/bookmarks";
 

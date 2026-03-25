@@ -5,7 +5,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { ClipboardItem } from "@/types/timeline";
+import type { ClipboardItem } from "@/lib/timeline";
 
 interface TimelineStore {
 	snappingEnabled: boolean;

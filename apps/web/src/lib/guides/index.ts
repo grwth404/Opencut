@@ -1,0 +1,13 @@
+import { GUIDE_REGISTRY } from "./registry";
+import type { GuideDefinition } from "@/lib/guides/types";
+
+export { GUIDE_REGISTRY, isGuideId } from "./registry";
+export type { GuideDefinition, GuideId, GuideRenderProps } from "./registry";
+
+export function getGuideById(guideId: string | null): GuideDefinition | null {
+	if (!guideId) {
+		return null;
+	}
+
+	return GUIDE_REGISTRY.find((guide) => guide.id === guideId) ?? null;
+}

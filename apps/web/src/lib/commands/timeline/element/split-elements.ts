@@ -1,9 +1,10 @@
 import { Command } from "@/lib/commands/base-command";
-import type { TimelineTrack } from "@/types/timeline";
+import type { TimelineTrack } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { EditorCore } from "@/core";
-import { rippleShiftElements } from "@/lib/timeline";
+import { isRetimableElement, rippleShiftElements } from "@/lib/timeline";
 import { splitAnimationsAtTime } from "@/lib/animation";
+import { getSourceSpanAtClipTime } from "@/lib/retime";
 
 export class SplitElementsCommand extends Command {
 	private savedState: TimelineTrack[] | null = null;
@@ -75,6 +76,18 @@ export class SplitElementsCommand extends Command {
 				const relativeTime = this.splitTime - element.startTime;
 				const leftVisibleDuration = relativeTime;
 				const rightVisibleDuration = element.duration - relativeTime;
+				const retimeRef = isRetimableElement(element)
+					? element.retime
+					: undefined;
+				const leftSourceSpan = getSourceSpanAtClipTime({
+					clipTime: leftVisibleDuration,
+					retime: retimeRef,
+				});
+				const totalSourceSpan = getSourceSpanAtClipTime({
+					clipTime: element.duration,
+					retime: retimeRef,
+				});
+				const rightSourceSpan = totalSourceSpan - leftSourceSpan;
 				const { leftAnimations, rightAnimations } = splitAnimationsAtTime({
 					animations: element.animations,
 					splitTime: relativeTime,
@@ -83,63 +96,67 @@ export class SplitElementsCommand extends Command {
 
 				if (this.retainSide === "left") {
 					return [
-						{
-							...element,
-							duration: leftVisibleDuration,
-							trimEnd: element.trimEnd + rightVisibleDuration,
-							name: `${element.name} (left)`,
-							animations: leftAnimations,
-						},
-					];
-				}
-
-				if (this.retainSide === "right") {
-					if (this.rippleEnabled && elementsToSplit.length === 1) {
-						leftVisibleDurationForRipple = leftVisibleDuration;
-					}
-					const newId = generateUUID();
-					this.rightSideElements.push({
-						trackId: track.id,
-						elementId: newId,
-					});
-					return [
-						{
-							...element,
-							id: newId,
-							startTime: this.splitTime,
-							duration: rightVisibleDuration,
-							trimStart: element.trimStart + leftVisibleDuration,
-							name: `${element.name} (right)`,
-							animations: rightAnimations,
-						},
-					];
-				}
-
-				// "both" - split into two pieces
-				const secondElementId = generateUUID();
-				this.rightSideElements.push({
-					trackId: track.id,
-					elementId: secondElementId,
-				});
-
-				return [
 					{
 						...element,
 						duration: leftVisibleDuration,
-						trimEnd: element.trimEnd + rightVisibleDuration,
+						trimEnd: element.trimEnd + rightSourceSpan,
 						name: `${element.name} (left)`,
 						animations: leftAnimations,
-					},
-					{
-						...element,
-						id: secondElementId,
-						startTime: this.splitTime,
-						duration: rightVisibleDuration,
-						trimStart: element.trimStart + leftVisibleDuration,
-						name: `${element.name} (right)`,
-						animations: rightAnimations,
+						...(retimeRef !== undefined ? { retime: retimeRef } : {}),
 					},
 				];
+			}
+
+			if (this.retainSide === "right") {
+				if (this.rippleEnabled && elementsToSplit.length === 1) {
+					leftVisibleDurationForRipple = leftVisibleDuration;
+				}
+				const newId = generateUUID();
+				this.rightSideElements.push({
+					trackId: track.id,
+					elementId: newId,
+				});
+				return [
+					{
+						...element,
+						id: newId,
+						startTime: this.splitTime,
+						duration: rightVisibleDuration,
+						trimStart: element.trimStart + leftSourceSpan,
+						name: `${element.name} (right)`,
+						animations: rightAnimations,
+						...(retimeRef !== undefined ? { retime: retimeRef } : {}),
+					},
+				];
+			}
+
+			// "both" - split into two pieces
+			const secondElementId = generateUUID();
+			this.rightSideElements.push({
+				trackId: track.id,
+				elementId: secondElementId,
+			});
+
+			return [
+				{
+					...element,
+					duration: leftVisibleDuration,
+					trimEnd: element.trimEnd + rightSourceSpan,
+					name: `${element.name} (left)`,
+					animations: leftAnimations,
+					...(retimeRef !== undefined ? { retime: retimeRef } : {}),
+				},
+				{
+					...element,
+					id: secondElementId,
+					startTime: this.splitTime,
+					duration: rightVisibleDuration,
+					trimStart: element.trimStart + leftSourceSpan,
+					name: `${element.name} (right)`,
+					animations: rightAnimations,
+					...(retimeRef !== undefined ? { retime: retimeRef } : {}),
+				},
+			];
 			});
 
 			if (this.rippleEnabled && leftVisibleDurationForRipple !== null) {

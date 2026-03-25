@@ -1,4 +1,4 @@
-import type { TranscriptionSegment, CaptionChunk } from "@/types/transcription";
+import type { TranscriptionSegment, CaptionChunk } from "@/lib/transcription/types";
 import {
 	DEFAULT_WORDS_PER_CAPTION,
 	MIN_CAPTION_DURATION_SECONDS,

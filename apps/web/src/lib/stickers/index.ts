@@ -1,10 +1,20 @@
-import { STICKER_CATEGORIES } from "@/constants/sticker-constants";
-import type { StickerCategory } from "@/types/stickers";
-import { getAllProviders, getProvider } from "./registry";
+import {
+	STICKER_CATEGORIES,
+	STICKER_INTRINSIC_SIZE_FALLBACK,
+} from "@/constants/sticker-constants";
+import type { StickerCategory } from "@/lib/stickers/types";
+import { stickersRegistry } from "./registry";
 import { resolveStickerId } from "./resolver";
 import { registerDefaultStickerProviders } from "./providers";
-import type { StickerProvider, StickerSearchResult } from "./types";
+import { parseStickerId } from "./sticker-id";
+import type {
+	StickerBrowseResult,
+	StickerItem,
+	StickerProvider,
+	StickerSearchResult,
+} from "./types";
 
+const DEFAULT_BROWSE_LIMIT = 12;
 const DEFAULT_SEARCH_LIMIT = 100;
 
 function mergeSearchResults({
@@ -46,7 +56,46 @@ function getProviderByCategory({
 	}
 
 	try {
-		return getProvider({ providerId: category });
+		return stickersRegistry.get(category);
+	} catch {
+		return null;
+	}
+}
+
+function getEmptyBrowseResult(): StickerBrowseResult {
+	return {
+		sections: [],
+	};
+}
+
+function getStickerNameFromId({ stickerId }: { stickerId: string }): string {
+	const stickerIdParts = stickerId.split(":");
+	if (stickerIdParts.length <= 1) {
+		return stickerId;
+	}
+	return (
+		stickerIdParts.slice(1).join(":").split(":").pop()?.replaceAll("-", " ") ??
+		stickerId
+	);
+}
+
+function toRecentStickerItem({
+	stickerId,
+}: {
+	stickerId: string;
+}): StickerItem | null {
+	try {
+		const { providerId } = parseStickerId({ stickerId });
+		return {
+			id: stickerId,
+			provider: providerId,
+			name: getStickerNameFromId({ stickerId }),
+			previewUrl: resolveStickerId({
+				stickerId,
+				options: { width: 64, height: 64 },
+			}),
+			metadata: {},
+		};
 	} catch {
 		return null;
 	}
@@ -79,7 +128,7 @@ export async function searchStickers({
 		});
 	}
 
-	const providers = getAllProviders();
+	const providers = stickersRegistry.getAll();
 	if (providers.length === 0) {
 		return {
 			items: [],
@@ -110,64 +159,157 @@ export async function searchStickers({
 	});
 }
 
-export async function browseStickers({
-	category,
-	page = 1,
+export async function searchAll({
+	query,
 	limit = DEFAULT_SEARCH_LIMIT,
 }: {
-	category: StickerCategory;
-	page?: number;
+	query: string;
 	limit?: number;
-}): Promise<StickerSearchResult> {
+}): Promise<StickerBrowseResult> {
 	registerDefaultStickerProviders({});
 
-	const effectiveCategory = category in STICKER_CATEGORIES ? category : "all";
-	if (effectiveCategory !== "all") {
-		const provider = getProviderByCategory({ category: effectiveCategory });
-		if (!provider) {
-			return {
-				items: [],
-				total: 0,
-				hasMore: false,
-			};
-		}
-		return provider.browse({
-			options: { page, limit },
-		});
-	}
-
-	const providers = getAllProviders();
+	const providers = stickersRegistry.getAll();
 	if (providers.length === 0) {
-		return {
-			items: [],
-			total: 0,
-			hasMore: false,
-		};
+		return { sections: [] };
 	}
 
 	const perProviderLimit = Math.max(1, Math.ceil(limit / providers.length));
 	const settledResults = await Promise.allSettled(
-		providers.map((provider) =>
-			provider.browse({
-				options: { page, limit: perProviderLimit },
-			}),
-		),
+		providers.map(async (provider) => {
+			const result = await provider.search({
+				query,
+				options: { limit: perProviderLimit },
+			});
+			return { provider, result };
+		}),
 	);
 
-	const fulfilledResults = settledResults
-		.filter(
-			(result): result is PromiseFulfilledResult<StickerSearchResult> =>
-				result.status === "fulfilled",
-		)
-		.map((result) => result.value);
+	const sections: StickerBrowseResult["sections"] = [];
+	for (const settled of settledResults) {
+		if (settled.status !== "fulfilled") {
+			continue;
+		}
+		const { provider, result } = settled.value;
+		if (result.items.length === 0) {
+			continue;
+		}
+		const category = provider.id as StickerCategory;
+		sections.push({
+			id: category,
+			title: STICKER_CATEGORIES[category] ?? provider.id,
+			items: result.items,
+			hasMore: result.hasMore,
+			layout: "grid",
+		});
+	}
 
-	return mergeSearchResults({
-		results: fulfilledResults,
+	return { sections };
+}
+
+export async function browseCategory({
+	category,
+}: {
+	category: StickerCategory;
+}): Promise<StickerBrowseResult> {
+	registerDefaultStickerProviders({});
+
+	const effectiveCategory = category in STICKER_CATEGORIES ? category : "all";
+	if (effectiveCategory === "all") {
+		return getEmptyBrowseResult();
+	}
+
+	const provider = getProviderByCategory({ category: effectiveCategory });
+	if (!provider) {
+		return getEmptyBrowseResult();
+	}
+
+	return provider.browse({ options: {} });
+}
+
+export async function browseAll({
+	recentStickers,
+	limit = DEFAULT_BROWSE_LIMIT,
+}: {
+	recentStickers: string[];
+	limit?: number;
+}): Promise<StickerBrowseResult> {
+	registerDefaultStickerProviders({});
+
+	const sections: StickerBrowseResult["sections"] = [];
+	const recentItems = recentStickers
+		.map((stickerId) => toRecentStickerItem({ stickerId }))
+		.filter((item): item is StickerItem => item !== null);
+
+	if (recentItems.length > 0) {
+		sections.push({
+			id: "recent",
+			title: "Recently used",
+			items: recentItems.slice(0, limit),
+			hasMore: recentItems.length > limit,
+			layout: "row",
+		});
+	}
+
+	const settledResults = await Promise.allSettled(
+		stickersRegistry.getAll().map(async (provider) => {
+			const browseResult = await provider.browse({
+				options: { limit },
+			});
+			const firstSection = browseResult.sections[0];
+
+			if (!firstSection || firstSection.items.length === 0) {
+				return null;
+			}
+
+			const category = provider.id as StickerCategory;
+		return {
+			...firstSection,
+			id: category,
+			title: STICKER_CATEGORIES[category] ?? firstSection.title,
+			layout: "row" as const,
+			action: {
+				type: "see-all" as const,
+				category,
+				sectionId: firstSection.id,
+			},
+		};
+		}),
+	);
+
+	for (const result of settledResults) {
+		if (result.status === "fulfilled" && result.value) {
+			sections.push(result.value);
+		}
+	}
+
+	return { sections };
+}
+
+export async function resolveStickerIntrinsicSize({
+	stickerId,
+}: {
+	stickerId: string;
+}): Promise<{ width: number; height: number }> {
+	const url = resolveStickerId({ stickerId });
+	return new Promise((resolve) => {
+		const img = new Image();
+		img.onload = () =>
+			resolve({ width: img.naturalWidth, height: img.naturalHeight });
+		img.onerror = () =>
+			resolve({
+				width: STICKER_INTRINSIC_SIZE_FALLBACK,
+				height: STICKER_INTRINSIC_SIZE_FALLBACK,
+			});
+		img.src = url;
 	});
 }
 
 export { resolveStickerId };
+export { resolveQueryToRegions, getRegionLabel } from "./providers/flags";
 export type {
+	StickerBrowseResult,
+	StickerBrowseSection,
+	StickerCategory,
 	StickerItem,
 	StickerProvider,
 	StickerResolveOptions,

@@ -3,7 +3,7 @@ import { Command } from "@/lib/commands/base-command";
 import { upsertEffectParamKeyframe } from "@/lib/animation/effect-param-channel";
 import { updateElementInTracks } from "@/lib/timeline";
 import { isVisualElement } from "@/lib/timeline/element-utils";
-import type { TimelineTrack } from "@/types/timeline";
+import type { TimelineTrack } from "@/lib/timeline";
 
 export class UpsertEffectParamKeyframeCommand extends Command {
 	private savedState: TimelineTrack[] | null = null;

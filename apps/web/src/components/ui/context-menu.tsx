@@ -10,8 +10,20 @@ import {
 	ArrowRightIcon,
 	CircleIcon,
 } from "@hugeicons/core-free-icons";
+import { useOverlayOpenChange } from "./use-overlay-open-change";
 
-const ContextMenu = ContextMenuPrimitive.Root;
+function ContextMenu({
+	onOpenChange,
+	...props
+}: React.ComponentProps<typeof ContextMenuPrimitive.Root>) {
+	const handleOpenChange = useOverlayOpenChange({
+		source: "context-menu",
+		onOpenChange,
+	});
+	return (
+		<ContextMenuPrimitive.Root onOpenChange={handleOpenChange} {...props} />
+	);
+}
 
 const ContextMenuTrigger = ContextMenuPrimitive.Trigger;
 

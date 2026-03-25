@@ -1,20 +1,28 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { TPlatformLayout } from "@/types/editor";
-
-interface LayoutGuideSettings {
-	platform: TPlatformLayout | null;
-}
+import { isGuideId, type GuideId } from "@/lib/guides";
+import { DEFAULT_GRID_CONFIG } from "@/constants/guide-constants";
+import type { GridConfig } from "@/lib/guides/types";
 
 interface PreviewOverlaysState {
 	bookmarks: boolean;
 }
 
+interface PersistedPreviewState {
+	activeGuide?: string | null;
+	layoutGuide?: {
+		platform?: string | null;
+	};
+	overlays?: PreviewOverlaysState;
+	gridConfig?: GridConfig;
+}
+
 interface PreviewState {
-	layoutGuide: LayoutGuideSettings;
+	activeGuide: GuideId | null;
 	overlays: PreviewOverlaysState;
-	setLayoutGuide: (settings: Partial<LayoutGuideSettings>) => void;
-	toggleLayoutGuide: (platform: TPlatformLayout) => void;
+	gridConfig: GridConfig;
+	toggleGuide: (guideId: GuideId) => void;
+	setGridConfig: (config: Partial<GridConfig>) => void;
 	setOverlayVisibility: ({
 		overlay,
 		isVisible,
@@ -33,24 +41,33 @@ const DEFAULT_PREVIEW_OVERLAYS: PreviewOverlaysState = {
 	bookmarks: true,
 };
 
+function getPersistedActiveGuide(
+	state: PersistedPreviewState | undefined,
+): GuideId | null {
+	const persistedGuide =
+		state?.activeGuide ?? state?.layoutGuide?.platform ?? null;
+
+	if (typeof persistedGuide !== "string") {
+		return null;
+	}
+
+	return isGuideId(persistedGuide) ? persistedGuide : null;
+}
+
 export const usePreviewStore = create<PreviewState>()(
 	persist(
 		(set) => ({
-			layoutGuide: { platform: null },
+			activeGuide: null,
 			overlays: DEFAULT_PREVIEW_OVERLAYS,
-			setLayoutGuide: (settings) => {
+			gridConfig: DEFAULT_GRID_CONFIG,
+			toggleGuide: (guideId) => {
 				set((state) => ({
-					layoutGuide: {
-						...state.layoutGuide,
-						...settings,
-					},
+					activeGuide: state.activeGuide === guideId ? null : guideId,
 				}));
 			},
-			toggleLayoutGuide: (platform) => {
+			setGridConfig: (config) => {
 				set((state) => ({
-					layoutGuide: {
-						platform: state.layoutGuide.platform === platform ? null : platform,
-					},
+					gridConfig: { ...state.gridConfig, ...config },
 				}));
 			},
 			setOverlayVisibility: ({ overlay, isVisible }) => {
@@ -72,22 +89,23 @@ export const usePreviewStore = create<PreviewState>()(
 		}),
 		{
 			name: "preview-settings",
-			version: 2,
+			version: 4,
 			migrate: (persistedState) => {
-				const state = persistedState as
-					| {
-							layoutGuide?: LayoutGuideSettings;
-							overlays?: PreviewOverlaysState;
-					  }
-					| undefined;
+				const state = persistedState as PersistedPreviewState | undefined;
+
 				return {
-					layoutGuide: state?.layoutGuide ?? { platform: null },
+					activeGuide: getPersistedActiveGuide(state),
 					overlays: state?.overlays ?? DEFAULT_PREVIEW_OVERLAYS,
+					gridConfig: {
+						rows: state?.gridConfig?.rows ?? DEFAULT_GRID_CONFIG.rows,
+						cols: state?.gridConfig?.cols ?? DEFAULT_GRID_CONFIG.cols,
+					},
 				};
 			},
 			partialize: (state) => ({
-				layoutGuide: state.layoutGuide,
+				activeGuide: state.activeGuide,
 				overlays: state.overlays,
+				gridConfig: state.gridConfig,
 			}),
 		},
 	),

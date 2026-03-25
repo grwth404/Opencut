@@ -1,7 +1,7 @@
 import { DraggableItem } from "@/components/editor/panels/assets/draggable-item";
-import { PanelView } from "@/components/editor/panels/assets/views/base-view";
+import { PanelView } from "@/components/editor/panels/assets/views/base-panel";
 import { useEditor } from "@/hooks/use-editor";
-import { DEFAULT_TEXT_ELEMENT } from "@/constants/text-constants";
+import { DEFAULTS } from "@/lib/timeline/defaults";
 import { buildTextElement } from "@/lib/timeline/element-utils";
 
 export function TextView() {
@@ -12,7 +12,7 @@ export function TextView() {
 		if (!activeScene) return;
 
 		const element = buildTextElement({
-			raw: DEFAULT_TEXT_ELEMENT,
+			raw: DEFAULTS.text.element,
 			startTime: currentTime,
 		});
 
@@ -33,9 +33,9 @@ export function TextView() {
 				}
 				dragData={{
 					id: "temp-text-id",
-					type: DEFAULT_TEXT_ELEMENT.type,
-					name: DEFAULT_TEXT_ELEMENT.name,
-					content: DEFAULT_TEXT_ELEMENT.content,
+					type: DEFAULTS.text.element.type,
+					name: DEFAULTS.text.element.name,
+					content: DEFAULTS.text.element.content,
 				}}
 				aspectRatio={1}
 				onAddToTimeline={handleAddToTimeline}

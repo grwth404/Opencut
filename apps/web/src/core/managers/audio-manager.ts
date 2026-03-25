@@ -1,6 +1,20 @@
 import type { EditorCore } from "@/core";
+import {
+	clampRetimeRate,
+	shouldMaintainPitch,
+} from "@/constants/retime-constants";
 import type { AudioClipSource } from "@/lib/media/audio";
 import { createAudioContext, collectAudioClips } from "@/lib/media/audio";
+import {
+	buildAudioGainAutomation,
+	hasAnimatedVolume,
+} from "@/lib/timeline/audio-state";
+import { createAudioMasteringChain } from "@/lib/media/audio-mastering";
+import {
+	getClipTimeAtSourceTime,
+	getSourceTimeAtClipTime,
+	renderRetimedBuffer,
+} from "@/lib/retime";
 import {
 	ALL_FORMATS,
 	AudioBufferSink,
@@ -26,6 +40,8 @@ export class AudioManager {
 		AsyncGenerator<WrappedAudioBuffer, void, unknown>
 	>();
 	private queuedSources = new Set<AudioBufferSourceNode>();
+	private preparedClipBuffers = new Map<string, Promise<AudioBuffer | null>>();
+	private decodedBuffers = new Map<string, Promise<AudioBuffer | null>>();
 	private playbackSessionId = 0;
 	private lastIsPlaying = false;
 	private lastVolume = 1;
@@ -55,6 +71,8 @@ export class AudioManager {
 			window.removeEventListener("playback-seek", this.handleSeek);
 		}
 		this.disposeSinks();
+		this.preparedClipBuffers.clear();
+		this.decodedBuffers.clear();
 		if (this.audioContext) {
 			void this.audioContext.close();
 			this.audioContext = null;
@@ -102,6 +120,8 @@ export class AudioManager {
 
 	private handleTimelineChange = (): void => {
 		this.disposeSinks();
+		this.preparedClipBuffers.clear();
+		this.decodedBuffers.clear();
 
 		if (!this.editor.playback.getIsPlaying()) return;
 
@@ -113,9 +133,12 @@ export class AudioManager {
 		if (typeof window === "undefined") return null;
 
 		this.audioContext = createAudioContext();
-		this.masterGain = this.audioContext.createGain();
+		const { input } = createAudioMasteringChain({
+			audioContext: this.audioContext,
+			destination: this.audioContext.destination,
+		});
+		this.masterGain = input;
 		this.masterGain.gain.value = this.lastVolume;
-		this.masterGain.connect(this.audioContext.destination);
 		return this.audioContext;
 	}
 
@@ -179,11 +202,19 @@ export class AudioManager {
 			if (clip.startTime > windowEnd) continue;
 
 			this.activeClipIds.add(clip.id);
-			void this.runClipIterator({
-				clip,
-				startTime: currentTime,
-				sessionId: this.playbackSessionId,
-			});
+			if (this.shouldUsePreparedClipBuffer({ clip })) {
+				void this.schedulePreparedClip({
+					clip,
+					startTime: currentTime,
+					sessionId: this.playbackSessionId,
+				});
+			} else {
+				void this.runClipIterator({
+					clip,
+					startTime: currentTime,
+					sessionId: this.playbackSessionId,
+				});
+			}
 		}
 	}
 
@@ -236,7 +267,11 @@ export class AudioManager {
 			return;
 		}
 		const sourceStartTime =
-			clip.trimStart + (iteratorStartTime - clip.startTime);
+			clip.trimStart +
+			getSourceTimeAtClipTime({
+				clipTime: iteratorStartTime - clip.startTime,
+				retime: clip.retime,
+			});
 
 		const iterator = sink.buffers(sourceStartTime);
 		this.clipIterators.set(clip.id, iterator);
@@ -246,12 +281,23 @@ export class AudioManager {
 			if (!this.editor.playback.getIsPlaying()) return;
 			if (sessionId !== this.playbackSessionId) return;
 
-			const timelineTime = clip.startTime + (timestamp - clip.trimStart);
+			const timelineTime =
+				clip.startTime +
+				getClipTimeAtSourceTime({
+					sourceTime: timestamp - clip.trimStart,
+					retime: clip.retime,
+				});
 			if (timelineTime >= clipEnd) break;
 
 			const node = audioContext.createBufferSource();
 			node.buffer = buffer;
-			node.connect(this.masterGain ?? audioContext.destination);
+			if (clip.retime) {
+				node.playbackRate.value = clampRetimeRate({ rate: clip.retime.rate });
+			}
+			const clipGain = audioContext.createGain();
+			clipGain.gain.value = clip.volume;
+			node.connect(clipGain);
+			clipGain.connect(this.masterGain ?? audioContext.destination);
 
 			const startTimestamp =
 				this.playbackStartContextTime +
@@ -277,8 +323,7 @@ export class AudioManager {
 							nextCompensationSeconds >
 							this.playbackLatencyCompensationSeconds + 0.001
 						) {
-							this.playbackLatencyCompensationSeconds =
-								nextCompensationSeconds;
+							this.playbackLatencyCompensationSeconds = nextCompensationSeconds;
 						}
 						const resyncStartTime = this.getPlaybackTime();
 						this.clipIterators.delete(clip.id);
@@ -296,6 +341,7 @@ export class AudioManager {
 			this.queuedSources.add(node);
 			node.addEventListener("ended", () => {
 				node.disconnect();
+				clipGain.disconnect();
 				this.queuedSources.delete(node);
 			});
 
@@ -309,6 +355,73 @@ export class AudioManager {
 		this.clipIterators.delete(clip.id);
 		// don't remove from activeClipIds - prevents scheduler from restarting this clip
 		// the set is cleared on stopPlayback anyway
+	}
+
+	private async schedulePreparedClip({
+		clip,
+		startTime,
+		sessionId,
+	}: {
+		clip: AudioClipSource;
+		startTime: number;
+		sessionId: number;
+	}): Promise<void> {
+		const audioContext = this.ensureAudioContext();
+		if (!audioContext) return;
+
+		const buffer = await this.getPreparedClipBuffer({ clip });
+		if (!buffer || !this.editor.playback.getIsPlaying()) return;
+		if (sessionId !== this.playbackSessionId) return;
+
+		const clipStart = clip.startTime;
+		const clipEnd = clip.startTime + clip.duration;
+		const playbackTimeAfterReady = this.getPlaybackTime();
+		const effectiveStartTime = Math.max(
+			startTime,
+			clipStart,
+			playbackTimeAfterReady,
+		);
+		if (effectiveStartTime >= clipEnd) {
+			return;
+		}
+
+		const node = audioContext.createBufferSource();
+		node.buffer = buffer;
+		const clipGain = audioContext.createGain();
+		node.connect(clipGain);
+		clipGain.connect(this.masterGain ?? audioContext.destination);
+
+		const startTimestamp =
+			this.playbackStartContextTime +
+			this.playbackLatencyCompensationSeconds +
+			(effectiveStartTime - this.playbackStartTime);
+		const clipOffset = effectiveStartTime - clipStart;
+		let actualStartTimestamp = startTimestamp;
+		let actualClipOffset = clipOffset;
+
+		if (startTimestamp >= audioContext.currentTime) {
+			node.start(startTimestamp, clipOffset);
+		} else {
+			const lateOffset = audioContext.currentTime - startTimestamp;
+			actualStartTimestamp = audioContext.currentTime;
+			actualClipOffset = clipOffset + lateOffset;
+			node.start(actualStartTimestamp, actualClipOffset);
+		}
+
+		this.scheduleClipGainAutomation({
+			audioContext,
+			clip,
+			clipGain,
+			startTimestamp: actualStartTimestamp,
+			startLocalTime: actualClipOffset,
+		});
+
+		this.queuedSources.add(node);
+		node.addEventListener("ended", () => {
+			node.disconnect();
+			clipGain.disconnect();
+			this.queuedSources.delete(node);
+		});
 	}
 
 	private waitUntilCaughtUp({
@@ -347,6 +460,221 @@ export class AudioManager {
 		}
 		this.inputs.clear();
 		this.sinks.clear();
+	}
+
+	private shouldUsePreparedClipBuffer({
+		clip,
+	}: {
+		clip: AudioClipSource;
+	}): boolean {
+		return (
+			this.hasCurveRetime({ clip }) ||
+			hasAnimatedVolume({ element: clip.timelineElement }) ||
+			shouldMaintainPitch({
+				rate: clip.retime?.rate ?? 1,
+				maintainPitch: clip.retime?.maintainPitch,
+			})
+		);
+	}
+
+	private hasCurveRetime({ clip }: { clip: AudioClipSource }): boolean {
+		const mode = (clip.retime as { mode?: unknown } | undefined)?.mode;
+		return mode === "curve";
+	}
+
+	private scheduleClipGainAutomation({
+		audioContext,
+		clip,
+		clipGain,
+		startTimestamp,
+		startLocalTime,
+	}: {
+		audioContext: AudioContext;
+		clip: AudioClipSource;
+		clipGain: GainNode;
+		startTimestamp: number;
+		startLocalTime: number;
+	}): void {
+		clipGain.gain.cancelScheduledValues(startTimestamp);
+		clipGain.gain.setValueAtTime(clip.volume, startTimestamp);
+
+		if (!hasAnimatedVolume({ element: clip.timelineElement })) {
+			return;
+		}
+
+		const points = buildAudioGainAutomation({
+			element: clip.timelineElement,
+			fromLocalTime: startLocalTime,
+			toLocalTime: clip.duration,
+		});
+
+		if (points.length === 0) {
+			return;
+		}
+
+		clipGain.gain.setValueAtTime(points[0].gain, startTimestamp);
+		for (let index = 1; index < points.length; index++) {
+			const point = points[index];
+			const pointTimestamp =
+				startTimestamp + (point.localTime - startLocalTime);
+			if (pointTimestamp < audioContext.currentTime) {
+				continue;
+			}
+
+			clipGain.gain.linearRampToValueAtTime(point.gain, pointTimestamp);
+		}
+	}
+
+	private buildPreparedClipCacheKey({
+		clip,
+	}: {
+		clip: AudioClipSource;
+	}): string {
+		return JSON.stringify({
+			id: clip.id,
+			sourceKey: clip.sourceKey,
+			startTime: clip.startTime,
+			duration: clip.duration,
+			trimStart: clip.trimStart,
+			trimEnd: clip.trimEnd,
+			retime: clip.retime ?? null,
+		});
+	}
+
+	private async getPreparedClipBuffer({
+		clip,
+	}: {
+		clip: AudioClipSource;
+	}): Promise<AudioBuffer | null> {
+		const cacheKey = this.buildPreparedClipCacheKey({ clip });
+		const existing = this.preparedClipBuffers.get(cacheKey);
+		if (existing) {
+			return existing;
+		}
+
+		const promise = (async () => {
+			const audioContext = this.ensureAudioContext();
+			if (!audioContext) {
+				return null;
+			}
+
+			const decodedBuffer = await this.getDecodedBuffer({ clip });
+			if (!decodedBuffer) {
+				return null;
+			}
+
+			return await renderRetimedBuffer({
+				audioContext,
+				sourceBuffer: decodedBuffer,
+				trimStart: clip.trimStart,
+				clipDuration: clip.duration,
+				retime: clip.retime,
+				maintainPitch: clip.retime?.maintainPitch === true,
+			});
+		})();
+
+		this.preparedClipBuffers.set(cacheKey, promise);
+		return promise;
+	}
+
+	private async getDecodedBuffer({
+		clip,
+	}: {
+		clip: AudioClipSource;
+	}): Promise<AudioBuffer | null> {
+		const existing = this.decodedBuffers.get(clip.sourceKey);
+		if (existing) {
+			return existing;
+		}
+
+		const promise = this.decodeClipBuffer({ clip });
+		this.decodedBuffers.set(clip.sourceKey, promise);
+		return promise;
+	}
+
+	private async decodeClipBuffer({
+		clip,
+	}: {
+		clip: AudioClipSource;
+	}): Promise<AudioBuffer | null> {
+		const audioContext = this.ensureAudioContext();
+		if (!audioContext) {
+			return null;
+		}
+
+		const input = new Input({
+			source: new BlobSource(clip.file),
+			formats: ALL_FORMATS,
+		});
+
+		try {
+			const audioTrack = await input.getPrimaryAudioTrack();
+			if (!audioTrack) {
+				return null;
+			}
+
+			const sink = new AudioBufferSink(audioTrack);
+			const chunks: AudioBuffer[] = [];
+			let totalSamples = 0;
+
+			for await (const { buffer } of sink.buffers(0)) {
+				chunks.push(buffer);
+				totalSamples += buffer.length;
+			}
+
+			if (chunks.length === 0) {
+				return null;
+			}
+
+			const targetSampleRate = audioContext.sampleRate;
+			const nativeSampleRate = chunks[0].sampleRate;
+			const numChannels = Math.min(2, chunks[0].numberOfChannels);
+			const nativeChannels = Array.from(
+				{ length: numChannels },
+				() => new Float32Array(totalSamples),
+			);
+
+			let offset = 0;
+			for (const chunk of chunks) {
+				for (let channel = 0; channel < numChannels; channel++) {
+					nativeChannels[channel].set(
+						chunk.getChannelData(Math.min(channel, chunk.numberOfChannels - 1)),
+						offset,
+					);
+				}
+				offset += chunk.length;
+			}
+
+			const outputSamples = Math.ceil(
+				totalSamples * (targetSampleRate / nativeSampleRate),
+			);
+			const offlineContext = new OfflineAudioContext(
+				numChannels,
+				outputSamples,
+				targetSampleRate,
+			);
+			const nativeBuffer = audioContext.createBuffer(
+				numChannels,
+				totalSamples,
+				nativeSampleRate,
+			);
+
+			for (let channel = 0; channel < numChannels; channel++) {
+				nativeBuffer.copyToChannel(nativeChannels[channel], channel);
+			}
+
+			const sourceNode = offlineContext.createBufferSource();
+			sourceNode.buffer = nativeBuffer;
+			sourceNode.connect(offlineContext.destination);
+			sourceNode.start(0);
+
+			return await offlineContext.startRendering();
+		} catch (error) {
+			console.warn("Failed to decode clip audio:", error);
+			return null;
+		} finally {
+			input.dispose();
+		}
 	}
 
 	private async getAudioSink({
