@@ -35,7 +35,7 @@ export default function RootLayout({
 							crossOrigin="anonymous"
 							strategy="beforeInteractive"
 						/>
-						
+
 						{/* code to figma */}
 						{/* <script
 							dangerouslySetInnerHTML={{

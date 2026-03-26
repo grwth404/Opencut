@@ -18,7 +18,7 @@ export function clampDb(value: number): number {
 }
 
 export function dBToLinear(db: number): number {
-	return Math.pow(10, clampDb(db) / 20);
+	return 10 ** (clampDb(db) / 20);
 }
 
 export function hasAnimatedVolume({

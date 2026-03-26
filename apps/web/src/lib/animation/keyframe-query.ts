@@ -20,7 +20,7 @@ export function getElementKeyframes({
 			if (
 				!channel ||
 				channel.keyframes.length === 0 ||
-				!isAnimationPath({ propertyPath })
+				!isAnimationPath(propertyPath)
 			) {
 				return [];
 			}

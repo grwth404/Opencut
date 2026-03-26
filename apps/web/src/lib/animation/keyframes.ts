@@ -616,8 +616,8 @@ export function splitAnimationsAtTime({
 				time: splitTime,
 				fallbackValue: normalizedChannel.keyframes[0].value,
 			});
-			const knownPropertyPath = isAnimationPropertyPath({ propertyPath })
-				? (propertyPath as AnimationPropertyPath)
+			const knownPropertyPath = isAnimationPropertyPath(propertyPath)
+				? propertyPath
 				: null;
 			const boundaryInterpolation = knownPropertyPath
 				? getDefaultInterpolationForProperty({

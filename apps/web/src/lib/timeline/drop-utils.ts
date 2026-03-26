@@ -6,7 +6,11 @@ import type {
 import { TRACK_CONFIG, TRACK_GAP } from "@/constants/timeline-constants";
 import { wouldElementOverlap } from "./element-utils";
 import type { ComputeDropTargetParams, DropTarget } from "@/lib/timeline";
-import { isMainTrack, enforceMainTrackStart } from "./track-utils";
+import {
+	canElementGoOnTrack,
+	isMainTrack,
+	enforceMainTrackStart,
+} from "./track-utils";
 
 function findElementAtPosition({
 	mouseX,
@@ -85,14 +89,7 @@ function isCompatible({
 	elementType: ElementType;
 	trackType: TimelineTrack["type"];
 }): boolean {
-	if (elementType === "text") return trackType === "text";
-	if (elementType === "audio") return trackType === "audio";
-	if (elementType === "sticker") return trackType === "sticker";
-	if (elementType === "effect") return trackType === "effect";
-	if (elementType === "video" || elementType === "image") {
-		return trackType === "video";
-	}
-	return false;
+	return canElementGoOnTrack({ elementType, trackType });
 }
 
 function getMainTrackIndex({ tracks }: { tracks: TimelineTrack[] }): number {

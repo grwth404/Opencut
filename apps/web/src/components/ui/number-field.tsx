@@ -134,20 +134,28 @@ function NumberField({
 	ref,
 	...props
 }: NumberFieldProps & { ref?: React.Ref<HTMLInputElement> }) {
-	const iconRef = useRef<HTMLSpanElement>(null);
+	const iconRef = useRef<HTMLButtonElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const ghostRef = useRef<HTMLSpanElement>(null);
 	const startValueRef = useRef(0);
 	const cumulativeDeltaRef = useRef(0);
 	const [isInputFocused, setIsInputFocused] = useState(false);
 	const [suffixLeft, setSuffixLeft] = useState(0);
+	const ghostValue = Array.isArray(value) ? value.join(", ") : String(value ?? "");
 
 	useLayoutEffect(() => {
-		if (!suffix || !ghostRef.current || !inputRef.current) return;
+		if (!suffix) {
+			setSuffixLeft(0);
+			return;
+		}
+		if (!ghostRef.current || !inputRef.current) return;
+		if (ghostRef.current.textContent !== ghostValue) {
+			ghostRef.current.textContent = ghostValue;
+		}
 		const paddingLeft =
 			parseFloat(getComputedStyle(inputRef.current).paddingLeft) || 0;
 		setSuffixLeft(paddingLeft + ghostRef.current.offsetWidth);
-	}, [value, suffix]);
+	}, [ghostValue, suffix]);
 
 	const { containerRef: wrapperRef } = useFocusLock<HTMLDivElement>({
 		isActive: isInputFocused,
@@ -243,19 +251,24 @@ function NumberField({
 				className,
 			)}
 		>
-			{icon && (
-				<span
-					ref={iconRef}
-					className={cn(
-						"text-muted-foreground [&_svg]:size-3.5! shrink-0 select-none pl-2.5 text-sm leading-none",
-						canScrub && "cursor-ew-resize",
-					)}
-					onMouseDown={canScrub ? (event) => event.preventDefault() : undefined}
-					onPointerDown={canScrub ? handleIconPointerDown : undefined}
-				>
-					{icon}
-				</span>
-			)}
+			{icon &&
+				(canScrub ? (
+					<button
+						ref={iconRef}
+						type="button"
+						aria-label="Drag to adjust value"
+						disabled={disabled}
+						className="text-muted-foreground [&_svg]:size-3.5! shrink-0 select-none pl-2.5 text-sm leading-none cursor-ew-resize"
+						onMouseDown={(event) => event.preventDefault()}
+						onPointerDown={handleIconPointerDown}
+					>
+						{icon}
+					</button>
+				) : (
+					<span className="text-muted-foreground [&_svg]:size-3.5! shrink-0 select-none pl-2.5 text-sm leading-none">
+						{icon}
+					</span>
+				))}
 			<span
 				className={cn(
 					"relative flex flex-1 min-w-0 items-center",
@@ -272,7 +285,7 @@ function NumberField({
 							className="invisible absolute text-sm leading-none whitespace-pre pointer-events-none"
 							aria-hidden="true"
 						>
-							{value}
+							{ghostValue}
 						</span>
 						<span
 							className={cn(

@@ -551,7 +551,6 @@ export function Timeline() {
 					timelineRef={timelineRef}
 					tracksScrollRef={tracksScrollRef}
 					isVisible={showSnapIndicator}
-					tracks={tracks}
 				/>
 			</div>
 		</section>

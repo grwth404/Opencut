@@ -204,15 +204,13 @@ function buildEffectParamDescriptor({
 	};
 }
 
-export function isAnimationPath({
-	propertyPath,
-}: {
-	propertyPath: string;
-}): propertyPath is AnimationPath {
+export function isAnimationPath(
+	propertyPath: string,
+): propertyPath is AnimationPath {
 	return (
-		isAnimationPropertyPath({ propertyPath }) ||
-		isGraphicParamPath({ propertyPath }) ||
-		isEffectParamPath({ propertyPath })
+		isAnimationPropertyPath(propertyPath) ||
+		isGraphicParamPath(propertyPath) ||
+		isEffectParamPath(propertyPath)
 	);
 }
 
@@ -223,7 +221,7 @@ export function resolveAnimationTarget({
 	element: TimelineElement;
 	path: AnimationPath;
 }): AnimationPathDescriptor | null {
-	if (isAnimationPropertyPath({ propertyPath: path })) {
+	if (isAnimationPropertyPath(path)) {
 		const propertyDefinition = getAnimationPropertyDefinition({
 			propertyPath: path,
 		});

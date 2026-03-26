@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import type { EditorCore } from "@/core";
 import { MigrationDialog } from "@/components/editor/dialogs/migration-dialog";
 import { StoragePersistenceDialog } from "@/components/editor/dialogs/storage-persistence-dialog";
 import { Button } from "@/components/ui/button";
@@ -359,7 +360,7 @@ async function deleteProjects({
 	editor,
 	ids,
 }: {
-	editor: ReturnType<typeof useEditor>;
+	editor: EditorCore;
 	ids: string[];
 }) {
 	await editor.project.deleteProjects({ ids });
@@ -369,7 +370,7 @@ async function duplicateProjects({
 	editor,
 	ids,
 }: {
-	editor: ReturnType<typeof useEditor>;
+	editor: EditorCore;
 	ids: string[];
 }) {
 	await editor.project.duplicateProjects({ ids });
@@ -380,7 +381,7 @@ async function renameProject({
 	id,
 	name,
 }: {
-	editor: ReturnType<typeof useEditor>;
+	editor: EditorCore;
 	id: string;
 	name: string;
 }) {

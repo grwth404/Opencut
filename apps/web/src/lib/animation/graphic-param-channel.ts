@@ -20,11 +20,9 @@ export function buildGraphicParamPath({
 	return `${GRAPHIC_PARAM_PATH_PREFIX}${paramKey}`;
 }
 
-export function isGraphicParamPath({
-	propertyPath,
-}: {
-	propertyPath: string;
-}): propertyPath is GraphicParamPath {
+export function isGraphicParamPath(
+	propertyPath: string,
+): propertyPath is GraphicParamPath {
 	return propertyPath.startsWith(GRAPHIC_PARAM_PATH_PREFIX);
 }
 
@@ -33,7 +31,7 @@ export function parseGraphicParamPath({
 }: {
 	propertyPath: string;
 }): { paramKey: string } | null {
-	if (!isGraphicParamPath({ propertyPath })) {
+	if (!isGraphicParamPath(propertyPath)) {
 		return null;
 	}
 

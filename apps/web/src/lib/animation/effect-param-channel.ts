@@ -26,11 +26,9 @@ export function buildEffectParamPath({
 	return `${EFFECT_PARAM_PATH_PREFIX}${effectId}${EFFECT_PARAM_PATH_SUFFIX}${paramKey}`;
 }
 
-export function isEffectParamPath({
-	propertyPath,
-}: {
-	propertyPath: string;
-}): propertyPath is EffectParamPath {
+export function isEffectParamPath(
+	propertyPath: string,
+): propertyPath is EffectParamPath {
 	return (
 		propertyPath.startsWith(EFFECT_PARAM_PATH_PREFIX) &&
 		propertyPath.includes(EFFECT_PARAM_PATH_SUFFIX)
@@ -42,7 +40,7 @@ export function parseEffectParamPath({
 }: {
 	propertyPath: string;
 }): { effectId: string; paramKey: string } | null {
-	if (!isEffectParamPath({ propertyPath })) {
+	if (!isEffectParamPath(propertyPath)) {
 		return null;
 	}
 

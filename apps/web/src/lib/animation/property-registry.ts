@@ -245,12 +245,10 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 	},
 };
 
-export function isAnimationPropertyPath({
-	propertyPath,
-}: {
-	propertyPath: string;
-}): boolean {
-	return propertyPath in ANIMATION_PROPERTY_REGISTRY;
+export function isAnimationPropertyPath(
+	propertyPath: string,
+): propertyPath is AnimationPropertyPath {
+	return Object.hasOwn(ANIMATION_PROPERTY_REGISTRY, propertyPath);
 }
 
 export function getAnimationPropertyDefinition({
