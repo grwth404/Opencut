@@ -13,19 +13,19 @@ export class PlaybackManager {
 
 	constructor(private editor: EditorCore) {
 		this.editor.timeline.subscribe(() => {
-			const duration = this.editor.timeline.getTotalDuration();
-			if (this.currentTime > duration && duration > 0) {
-				this.currentTime = duration;
+			const maxTime = this.editor.timeline.getLastSeekableTime();
+			if (this.currentTime > maxTime && maxTime > 0) {
+				this.currentTime = maxTime;
 				this.notify();
 			}
 		});
 	}
 
 	play(): void {
-		const duration = this.editor.timeline.getTotalDuration();
+		const maxTime = this.editor.timeline.getLastSeekableTime();
 
-		if (duration > 0) {
-			if (this.currentTime >= duration) {
+		if (maxTime > 0) {
+			if (this.currentTime >= maxTime) {
 				this.seek({ time: 0 });
 			}
 		}
@@ -50,8 +50,8 @@ export class PlaybackManager {
 	}
 
 	seek({ time }: { time: number }): void {
-		const duration = this.editor.timeline.getTotalDuration();
-		this.currentTime = Math.max(0, Math.min(duration, time));
+		const maxTime = this.editor.timeline.getLastSeekableTime();
+		this.currentTime = Math.max(0, Math.min(maxTime, time));
 		this.notify();
 
 		window.dispatchEvent(
@@ -154,16 +154,16 @@ export class PlaybackManager {
 		this.lastUpdate = now;
 
 		const newTime = this.currentTime + delta;
-		const duration = this.editor.timeline.getTotalDuration();
+		const maxTime = this.editor.timeline.getLastSeekableTime();
 
-		if (duration > 0 && newTime >= duration) {
+		if (maxTime > 0 && newTime >= maxTime) {
 			this.pause();
-			this.currentTime = duration;
+			this.currentTime = maxTime;
 			this.notify();
 
 			window.dispatchEvent(
 				new CustomEvent("playback-seek", {
-					detail: { time: duration },
+					detail: { time: maxTime },
 				}),
 			);
 		} else {

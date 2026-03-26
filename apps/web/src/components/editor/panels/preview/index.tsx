@@ -9,7 +9,6 @@ import { useFullscreen } from "@/hooks/use-fullscreen";
 import { CanvasRenderer } from "@/services/renderer/canvas-renderer";
 import type { RootNode } from "@/services/renderer/nodes/root-node";
 import { buildScene } from "@/services/renderer/scene-builder";
-import { getLastFrameTime } from "@/lib/time";
 import { PreviewInteractionOverlay } from "./preview-interaction-overlay";
 import { BookmarkNoteOverlay } from "./bookmark-note-overlay";
 import { GuideOverlay } from "./guide-overlay";
@@ -134,12 +133,7 @@ function PreviewCanvas({
 
 	const render = useCallback(() => {
 		if (canvasRef.current && renderTree && !renderingRef.current) {
-			const time = editor.playback.getCurrentTime();
-			const lastFrameTime = getLastFrameTime({
-				duration: renderTree.duration,
-				fps: renderer.fps,
-			});
-			const renderTime = Math.min(time, lastFrameTime);
+			const renderTime = editor.playback.getCurrentTime();
 			const frame = Math.floor(renderTime * renderer.fps);
 
 			if (

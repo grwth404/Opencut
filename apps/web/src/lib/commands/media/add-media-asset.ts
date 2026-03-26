@@ -5,11 +5,15 @@ import type { MediaAsset } from "@/lib/media/types";
 import { generateUUID } from "@/utils/id";
 import { storageService } from "@/services/storage/service";
 import { hasMediaId } from "@/lib/timeline/element-utils";
+import { getHighestImportedVideoFps } from "@/lib/project/fps";
+import { UpdateProjectSettingsCommand } from "@/lib/commands/project";
 
 export class AddMediaAssetCommand extends Command {
 	private assetId: string;
 	private savedAssets: MediaAsset[] | null = null;
 	private createdAsset: MediaAsset | null = null;
+	private previousProjectFps: number | null = null;
+	private appliedProjectFps: number | null = null;
 
 	constructor(
 		private projectId: string,
@@ -30,6 +34,10 @@ export class AddMediaAssetCommand extends Command {
 
 		editor.media.setAssets({
 			assets: [...this.savedAssets, this.createdAsset],
+		});
+		this.previousProjectFps = editor.project.getActiveOrNull()?.settings.fps ?? null;
+		this.appliedProjectFps = editor.project.ratchetFpsForImportedMedia({
+			importedAssets: [this.createdAsset],
 		});
 
 		storageService
@@ -64,6 +72,8 @@ export class AddMediaAssetCommand extends Command {
 					editor.timeline.deleteElements({ elements: orphanedElements });
 				}
 
+				this.restoreProjectFpsAfterFailedSave({ editor });
+
 				if (storageService.isQuotaExceededError({ error })) {
 					toast.error("Not enough browser storage", {
 						description: error instanceof Error ? error.message : undefined,
@@ -89,5 +99,29 @@ export class AddMediaAssetCommand extends Command {
 
 	getAssetId(): string {
 		return this.assetId;
+	}
+
+	private restoreProjectFpsAfterFailedSave({
+		editor,
+	}: {
+		editor: EditorCore;
+	}): void {
+		if (this.previousProjectFps === null || this.appliedProjectFps === null) return;
+
+		const activeProject = editor.project.getActiveOrNull();
+		if (!activeProject) return;
+		if (activeProject.settings.fps !== this.appliedProjectFps) return;
+
+		const highestRemainingVideoFps = getHighestImportedVideoFps({
+			mediaAssets: editor.media.getAssets(),
+		});
+		if (
+			highestRemainingVideoFps !== null &&
+			highestRemainingVideoFps >= this.appliedProjectFps
+		) {
+			return;
+		}
+
+		new UpdateProjectSettingsCommand({ fps: this.previousProjectFps }).execute();
 	}
 }

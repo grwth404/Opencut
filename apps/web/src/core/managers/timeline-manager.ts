@@ -13,6 +13,7 @@ import type {
 	AnimationValue,
 } from "@/lib/animation/types";
 import { calculateTotalDuration } from "@/lib/timeline";
+import { getLastFrameTime } from "@/lib/time";
 import {
 	AddTrackCommand,
 	RemoveTrackCommand,
@@ -222,6 +223,13 @@ export class TimelineManager {
 
 	getTotalDuration(): number {
 		return calculateTotalDuration({ tracks: this.getTracks() });
+	}
+
+	getLastSeekableTime(): number {
+		const duration = this.getTotalDuration();
+		const fps = this.editor.project.getActive()?.settings.fps;
+		if (!fps || duration <= 0) return duration;
+		return getLastFrameTime({ duration, fps });
 	}
 
 	getTrackById({ trackId }: { trackId: string }): TimelineTrack | null {

@@ -5,7 +5,7 @@ import { CanvasRenderer } from "@/services/renderer/canvas-renderer";
 import { SceneExporter } from "@/services/renderer/scene-exporter";
 import { buildScene } from "@/services/renderer/scene-builder";
 import { createTimelineAudioBuffer } from "@/lib/media/audio";
-import { formatTimeCode, getLastFrameTime } from "@/lib/time";
+import { formatTimeCode } from "@/lib/time";
 import { downloadBlob } from "@/utils/browser";
 
 type SnapshotResult =
@@ -81,9 +81,7 @@ export class RendererManager {
 			}
 
 			const { canvasSize, fps } = activeProject.settings;
-			const currentTime = this.editor.playback.getCurrentTime();
-			const lastFrameTime = getLastFrameTime({ duration, fps });
-			const renderTime = Math.min(currentTime, lastFrameTime);
+			const renderTime = this.editor.playback.getCurrentTime();
 
 			const renderer = new CanvasRenderer({
 				width: canvasSize.width,

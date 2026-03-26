@@ -30,6 +30,9 @@ export class MediaManager {
 
 		try {
 			await storageService.saveMediaAsset({ projectId, mediaAsset: newAsset });
+			this.editor.project.ratchetFpsForImportedMedia({
+				importedAssets: [newAsset],
+			});
 			return newAsset;
 		} catch (error) {
 			console.error("Failed to save media asset:", error);

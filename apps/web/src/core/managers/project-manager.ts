@@ -29,6 +29,8 @@ import {
 import { loadFonts } from "@/lib/fonts/google-fonts";
 import { DEFAULTS } from "@/lib/timeline/defaults";
 import { getElementFontFamilies } from "@/lib/timeline/element-utils";
+import { getRaisedProjectFpsForImportedMedia } from "@/lib/project/fps";
+import type { MediaAsset } from "@/lib/media/types";
 
 export interface MigrationState {
 	isMigrating: boolean;
@@ -490,6 +492,23 @@ export class ProjectManager {
 		}
 
 		command.execute();
+	}
+
+	ratchetFpsForImportedMedia({
+		importedAssets,
+	}: {
+		importedAssets: Array<Pick<MediaAsset, "type" | "fps">>;
+	}): number | null {
+		if (!this.active) return null;
+
+		const nextFps = getRaisedProjectFpsForImportedMedia({
+			currentFps: this.active.settings.fps,
+			importedAssets,
+		});
+		if (nextFps === null) return null;
+
+		new UpdateProjectSettingsCommand({ fps: nextFps }).execute();
+		return nextFps;
 	}
 
 	async updateThumbnail({ thumbnail }: { thumbnail: string }): Promise<void> {

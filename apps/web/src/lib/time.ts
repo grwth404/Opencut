@@ -207,7 +207,8 @@ export function getSnappedSeekTime({
 	fps: number;
 }): number {
 	const snappedTime = snapTimeToFrame({ time: rawTime, fps });
-	return Math.max(0, Math.min(duration, snappedTime));
+	const lastFrame = getLastFrameTime({ duration, fps });
+	return Math.max(0, Math.min(lastFrame, snappedTime));
 }
 
 export function getLastFrameTime({
