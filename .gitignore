@@ -18,3 +18,5 @@ bun.lockb
 
 # Twiggy
 .cursor/
+
+.open-next

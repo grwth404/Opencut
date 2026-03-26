@@ -9,6 +9,8 @@
     "dev:web": "turbo run dev --filter=@opencut/web",
     "build:web": "turbo run build --filter=@opencut/web",
     "dev:tools": "turbo run dev --filter=@opencut/tools",
+    "preview:web": "turbo run preview --filter=@opencut/web",
+    "deploy:web": "turbo run deploy --filter=@opencut/web",
     "build:tools": "turbo run build --filter=@opencut/tools",
     "start:tools": "turbo run start --filter=@opencut/tools",
     "lint:web": "biome lint apps/web/src --max-diagnostics=1000",
