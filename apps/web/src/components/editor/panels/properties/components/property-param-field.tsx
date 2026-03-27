@@ -1,7 +1,11 @@
 "use client";
 
 import type { ParamDefinition, NumberParamDefinition } from "@/lib/params";
-import { formatNumberForDisplay, snapToStep } from "@/utils/math";
+import {
+	formatNumberForDisplay,
+	getFractionDigitsForStep,
+	snapToStep,
+} from "@/utils/math";
 import { SectionField } from "@/components/section";
 import { NumberField } from "@/components/ui/number-field";
 import { Switch } from "@/components/ui/switch";
@@ -156,7 +160,7 @@ function NumberParamField({
 		onPreview(clamped / displayMultiplier);
 	};
 
-	const maxFractionDigits = step >= 1 ? 0 : Math.round(-Math.log10(step));
+	const maxFractionDigits = getFractionDigitsForStep({ step });
 
 	const draft = usePropertyDraft({
 		displayValue: formatNumberForDisplay({

@@ -16,7 +16,7 @@ import {
 import { ColorPicker } from "@/components/ui/color-picker";
 import { Button } from "@/components/ui/button";
 import { uppercase } from "@/utils/string";
-import { clamp } from "@/utils/math";
+import { clamp, formatNumberForDisplay } from "@/utils/math";
 import { useEditor } from "@/hooks/use-editor";
 import { DEFAULT_COLOR } from "@/constants/project-constants";
 import {
@@ -251,7 +251,10 @@ function SpacingSection({
 	});
 
 	const lineHeight = usePropertyDraft({
-		displayValue: (element.lineHeight ?? DEFAULTS.text.lineHeight).toFixed(1),
+		displayValue: formatNumberForDisplay({
+			value: element.lineHeight ?? DEFAULTS.text.lineHeight,
+			fractionDigits: 1,
+		}),
 		parse: (input) => {
 			const parsed = parseFloat(input);
 			return Number.isNaN(parsed)

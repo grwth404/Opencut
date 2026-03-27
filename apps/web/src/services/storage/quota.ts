@@ -1,3 +1,5 @@
+import { formatNumberForDisplay } from "@/utils/math";
+
 const BYTE_UNITS = ["B", "KB", "MB", "GB", "TB"] as const;
 
 export const STORAGE_HEADROOM_RESERVE_BYTES = 50 * 1024 * 1024;
@@ -37,7 +39,7 @@ export function formatStorageBytes({ bytes }: { bytes: number }): string {
 	}
 
 	const precision = value >= 10 || unitIndex === 0 ? 0 : 1;
-	return `${value.toFixed(precision)} ${BYTE_UNITS[unitIndex]}`;
+	return `${formatNumberForDisplay({ value, fractionDigits: precision })} ${BYTE_UNITS[unitIndex]}`;
 }
 
 export async function readStorageQuotaStatus(): Promise<StorageQuotaStatus> {

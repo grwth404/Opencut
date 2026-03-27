@@ -27,7 +27,7 @@ import { ColorPicker } from "@/components/ui/color-picker";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { uppercase } from "@/utils/string";
-import { clamp } from "@/utils/math";
+import { clamp, formatNumberForDisplay } from "@/utils/math";
 import {
 	timelineTimeToPixels,
 	timelineTimeToSnappedPixels,
@@ -188,7 +188,7 @@ function TimelineBookmark({
 						left: `${bookmarkLeft}px`,
 						width: `${bookmarkWidth}px`,
 					}}
-					aria-label={`Bookmark at ${time.toFixed(1)}s`}
+					aria-label={`Bookmark at ${formatNumberForDisplay({ value: time, fractionDigits: 1 })}s`}
 					type="button"
 					onMouseDown={handleMouseDown}
 					onClick={handleClick}

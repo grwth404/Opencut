@@ -22,16 +22,28 @@ import {
 	SectionTitle,
 } from "@/components/section";
 import { usePropertyDraft } from "../hooks/use-property-draft";
+import {
+	formatNumberForDisplay,
+	getFractionDigitsForStep,
+	snapToStep,
+} from "@/utils/math";
+
+const SPEED_STEP = 0.01;
+const SPEED_FRACTION_DIGITS = getFractionDigitsForStep({ step: SPEED_STEP });
 
 function rateToDisplay({ rate }: { rate: number }): string {
-	return rate.toFixed(2);
+	return formatNumberForDisplay({
+		value: rate,
+		fractionDigits: SPEED_FRACTION_DIGITS,
+	});
 }
 
 function parseSpeedInput({ input }: { input: string }): number | null {
 	const parsed = parseFloat(input);
 	if (Number.isNaN(parsed)) return null;
-	const rounded = Math.round(parsed * 100) / 100;
-	return clampRetimeRate({ rate: rounded });
+	return clampRetimeRate({
+		rate: snapToStep({ value: parsed, step: SPEED_STEP }),
+	});
 }
 
 function buildRetime({
@@ -56,24 +68,21 @@ export function SpeedTab({
 	const rate = clampRetimeRate({
 		rate: element.retime?.rate ?? DEFAULT_RETIME_RATE,
 	});
-	const maintainPitchAvailable = canMaintainPitch({ rate });
+	const isPitchPreserveAvailable = canMaintainPitch({ rate });
 	const maintainPitch = element.retime?.maintainPitch ?? false;
 	const pendingRateRef = useRef(rate);
 
-	const applyRetime = ({
+	const commitRetime = ({
 		rate: nextRate,
 		maintainPitch: nextMaintainPitch,
-		pushHistory = true,
 	}: {
 		rate: number;
 		maintainPitch: boolean;
-		pushHistory?: boolean;
 	}) => {
 		editor.timeline.updateElementRetime({
 			trackId,
 			elementId: element.id,
 			retime: buildRetime({ rate: nextRate, maintainPitch: nextMaintainPitch }),
-			pushHistory,
 		});
 	};
 
@@ -82,10 +91,20 @@ export function SpeedTab({
 		parse: (input) => parseSpeedInput({ input }),
 		onPreview: (nextRate) => {
 			pendingRateRef.current = nextRate;
-			applyRetime({ rate: nextRate, maintainPitch, pushHistory: false });
+			editor.timeline.previewElements({
+				updates: [
+					{
+						trackId,
+						elementId: element.id,
+						updates: {
+							retime: buildRetime({ rate: nextRate, maintainPitch }),
+						},
+					},
+				],
+			});
 		},
 		onCommit: () => {
-			applyRetime({ rate: pendingRateRef.current, maintainPitch });
+			commitRetime({ rate: pendingRateRef.current, maintainPitch });
 		},
 	});
 
@@ -115,20 +134,20 @@ export function SpeedTab({
 							onScrub={speedDraft.scrubTo}
 							onScrubEnd={speedDraft.commitScrub}
 							onReset={() =>
-								applyRetime({ rate: DEFAULT_RETIME_RATE, maintainPitch })
+								commitRetime({ rate: DEFAULT_RETIME_RATE, maintainPitch })
 							}
 							isDefault={rate === DEFAULT_RETIME_RATE}
 						/>
 					</SectionField>
 					<div className="flex items-center justify-between">
-					<span className="text-sm">Change pitch</span>
-					<Switch
-						checked={!maintainPitch}
-						disabled={!maintainPitchAvailable}
-						onCheckedChange={(checked) =>
-							applyRetime({ rate, maintainPitch: !checked })
-						}
-					/>
+						<span className="text-sm">Change pitch</span>
+						<Switch
+							checked={!maintainPitch}
+							disabled={!isPitchPreserveAvailable}
+							onCheckedChange={(checked) =>
+								commitRetime({ rate, maintainPitch: !checked })
+							}
+						/>
 					</div>
 				</SectionFields>
 			</SectionContent>

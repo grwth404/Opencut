@@ -1,7 +1,13 @@
 import { NumberField } from "@/components/ui/number-field";
 import { VOLUME_DB_MAX, VOLUME_DB_MIN } from "@/lib/timeline/audio-constants";
 import { DEFAULTS } from "@/lib/timeline/defaults";
-import { clamp, isNearlyEqual } from "@/utils/math";
+import {
+	clamp,
+	formatNumberForDisplay,
+	getFractionDigitsForStep,
+	isNearlyEqual,
+	snapToStep,
+} from "@/utils/math";
 import type { AudioElement, VideoElement } from "@/lib/timeline";
 import { resolveNumberAtTime } from "@/lib/animation";
 import { useElementPlayhead } from "../hooks/use-element-playhead";
@@ -17,6 +23,9 @@ import {
 	SectionHeader,
 	SectionTitle,
 } from "@/components/section";
+
+const VOLUME_STEP = 0.1;
+const VOLUME_FRACTION_DIGITS = getFractionDigitsForStep({ step: VOLUME_STEP });
 
 export function AudioTab({
 	element,
@@ -42,17 +51,24 @@ export function AudioTab({
 		propertyPath: "volume",
 		localTime,
 		isPlayheadWithinElementRange,
-		displayValue: resolvedVolume.toFixed(1),
+		displayValue: formatNumberForDisplay({
+			value: resolvedVolume,
+			fractionDigits: VOLUME_FRACTION_DIGITS,
+		}),
 		parse: (input) => {
 			const parsed = parseFloat(input);
 			if (Number.isNaN(parsed)) {
 				return null;
 			}
 
-			return clamp({ value: parsed, min: VOLUME_DB_MIN, max: VOLUME_DB_MAX });
+			return clamp({
+				value: snapToStep({ value: parsed, step: VOLUME_STEP }),
+				min: VOLUME_DB_MIN,
+				max: VOLUME_DB_MAX,
+			});
 		},
 		valueAtPlayhead: resolvedVolume,
-		step: 0.1,
+		step: VOLUME_STEP,
 		buildBaseUpdates: ({ value }) => ({
 			volume: value,
 		}),

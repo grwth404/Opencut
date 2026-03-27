@@ -22,7 +22,7 @@ export function clampRound({
 	return Math.round(clamp({ value, min, max }));
 }
 
-function getFractionDigitsForStep({ step }: { step: number }): number {
+export function getFractionDigitsForStep({ step }: { step: number }): number {
 	const normalizedStep = step.toString().toLowerCase();
 	if (normalizedStep.includes("e-")) {
 		return Number(normalizedStep.split("e-")[1] ?? 0);
@@ -59,12 +59,43 @@ export function isNearlyEqual({
 
 export function formatNumberForDisplay({
 	value,
+	fractionDigits,
+	minFractionDigits = 0,
 	maxFractionDigits = 6,
 }: {
 	value: number;
+	fractionDigits?: number;
+	minFractionDigits?: number;
 	maxFractionDigits?: number;
 }): string {
-	return Number(value.toFixed(maxFractionDigits)).toString();
+	const resolvedMaxFractionDigits = Math.max(
+		0,
+		fractionDigits ?? maxFractionDigits,
+	);
+	const resolvedMinFractionDigits = Math.min(
+		Math.max(0, fractionDigits ?? minFractionDigits),
+		resolvedMaxFractionDigits,
+	);
+	const fixedValue = value.toFixed(resolvedMaxFractionDigits);
+
+	if (resolvedMaxFractionDigits === 0) {
+		return Number(fixedValue) === 0 ? "0" : fixedValue;
+	}
+
+	const [integerPart, fractionPart = ""] = fixedValue.split(".");
+	const normalizedIntegerPart = Number(fixedValue) === 0 ? "0" : integerPart;
+	let trimmedFractionPart = fractionPart;
+
+	while (
+		trimmedFractionPart.length > resolvedMinFractionDigits &&
+		trimmedFractionPart.endsWith("0")
+	) {
+		trimmedFractionPart = trimmedFractionPart.slice(0, -1);
+	}
+
+	return trimmedFractionPart
+		? `${normalizedIntegerPart}.${trimmedFractionPart}`
+		: normalizedIntegerPart;
 }
 
 export function evaluateMathExpression({

@@ -38,7 +38,12 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { clamp, formatNumberForDisplay, snapToStep } from "@/utils/math";
+import {
+	clamp,
+	formatNumberForDisplay,
+	getFractionDigitsForStep,
+	snapToStep,
+} from "@/utils/math";
 import {
 	Section,
 	SectionContent,
@@ -599,7 +604,7 @@ function MaskNumberField({
 	const max = isPercent ? 100 : param.max;
 	const step = isPercent ? 1 : param.step;
 	const displayValue = value * displayMultiplier;
-	const maxFractionDigits = step >= 1 ? 0 : Math.round(-Math.log10(step));
+	const maxFractionDigits = getFractionDigitsForStep({ step });
 
 	const clampDisplay = (nextDisplayValue: number) =>
 		max !== undefined
