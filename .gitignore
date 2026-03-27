@@ -20,3 +20,5 @@ bun.lockb
 .cursor/
 
 .open-next
+
+target/
