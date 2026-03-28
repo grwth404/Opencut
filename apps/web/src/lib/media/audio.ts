@@ -34,10 +34,12 @@ export interface DecodedAudio {
 
 export async function decodeAudioToFloat32({
 	audioBlob,
+	sampleRate,
 }: {
 	audioBlob: Blob;
+	sampleRate?: number;
 }): Promise<DecodedAudio> {
-	const audioContext = createAudioContext();
+	const audioContext = createAudioContext({ sampleRate });
 	const arrayBuffer = await audioBlob.arrayBuffer();
 	const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 

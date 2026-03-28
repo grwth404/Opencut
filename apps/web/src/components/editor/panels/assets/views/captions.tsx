@@ -11,7 +11,10 @@ import { useState, useRef } from "react";
 import { extractTimelineAudio } from "@/lib/media/mediabunny";
 import { useEditor } from "@/hooks/use-editor";
 import { DEFAULT_TEXT_ELEMENT } from "@/constants/text-constants";
-import { TRANSCRIPTION_LANGUAGES } from "@/constants/transcription-constants";
+import {
+	DEFAULT_TRANSCRIPTION_SAMPLE_RATE,
+	TRANSCRIPTION_LANGUAGES,
+} from "@/constants/transcription-constants";
 import type {
 	TranscriptionLanguage,
 	TranscriptionProgress,
@@ -52,7 +55,10 @@ export function Captions() {
 			});
 
 			setProcessingStep("Preparing audio...");
-			const { samples } = await decodeAudioToFloat32({ audioBlob });
+			const { samples } = await decodeAudioToFloat32({
+				audioBlob,
+				sampleRate: DEFAULT_TRANSCRIPTION_SAMPLE_RATE,
+			});
 
 			const result = await transcriptionService.transcribe({
 				audioData: samples,
