@@ -30,7 +30,7 @@ import { ClipEffectsTab, StandaloneEffectTab } from "./tabs/effects-tab";
 import { MasksTab } from "./tabs/masks-tab";
 import { SpeedTab } from "./tabs/speed-tab";
 import { GraphicTab } from "./tabs/graphic-tab";
-import { OcShapesIcon } from "@opencut/ui/icons";
+import { OcShapesIcon } from "@/components/icons";
 
 export type TabContentProps = {
 	trackId: string;

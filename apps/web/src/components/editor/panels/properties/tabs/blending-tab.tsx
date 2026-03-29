@@ -1,7 +1,7 @@
 import { useEditor } from "@/hooks/use-editor";
 import { clamp } from "@/utils/math";
 import { NumberField } from "@/components/ui/number-field";
-import { OcCheckerboardIcon } from "@opencut/ui/icons";
+import { OcCheckerboardIcon } from "@/components/icons";
 import { Fragment, useRef } from "react";
 import { useMenuPreview } from "@/hooks/use-menu-preview";
 import {

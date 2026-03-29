@@ -28,7 +28,7 @@ import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/utils/ui";
 import { dimensionToAspectRatio } from "@/utils/geometry";
 import { formatNumberForDisplay } from "@/utils/math";
-import { OcSquarePlusIcon } from "@opencut/ui/icons";
+import { OcSquarePlusIcon } from "@/components/icons";
 import type { TCanvasSize } from "@/lib/project/types";
 
 type SettingsView = "project-info" | "background";

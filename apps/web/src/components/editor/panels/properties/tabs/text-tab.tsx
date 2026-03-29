@@ -38,7 +38,7 @@ import {
 	PlusSignIcon,
 	TextFontIcon,
 } from "@hugeicons/core-free-icons";
-import { OcTextHeightIcon, OcTextWidthIcon } from "@opencut/ui/icons";
+import { OcTextHeightIcon, OcTextWidthIcon } from "@/components/icons";
 import { DEFAULTS } from "@/lib/timeline/defaults";
 import { cn } from "@/utils/ui";
 

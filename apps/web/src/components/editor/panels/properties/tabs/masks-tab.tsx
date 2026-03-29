@@ -53,7 +53,7 @@ import {
 	SectionTitle,
 } from "@/components/section";
 import { usePropertyDraft } from "../hooks/use-property-draft";
-import { OcMirrorIcon, OcShapesIcon } from "@opencut/ui/icons";
+import { OcMirrorIcon, OcShapesIcon } from "@/components/icons";
 import { cn } from "@/utils/ui";
 
 type MasksTabProps = {

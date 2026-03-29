@@ -13,7 +13,7 @@ import {
 	VolumeOffIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { OcShapesIcon, OcVideoIcon } from "@opencut/ui/icons";
+import { OcShapesIcon, OcVideoIcon } from "@/components/icons";
 import {
 	ContextMenu,
 	ContextMenuContent,

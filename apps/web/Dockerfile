@@ -14,14 +14,9 @@ COPY bun.lock bun.lock
 COPY turbo.json turbo.json
 
 COPY apps/web/package.json apps/web/package.json
-COPY packages/env/package.json packages/env/package.json
-COPY packages/ui/package.json packages/ui/package.json
-
 RUN bun install
 
 COPY apps/web/ apps/web/
-COPY packages/env/ packages/env/
-COPY packages/ui/ packages/ui/
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
