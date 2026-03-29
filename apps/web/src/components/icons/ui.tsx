@@ -1,10 +1,9 @@
+import type { IconProps } from "./types";
+
 export function OcVideoIcon({
 	className = "",
 	size = 32,
-}: {
-	className?: string;
-	size?: number;
-}) {
+}: IconProps) {
 	return (
 		<svg
 			width={size}
@@ -34,10 +33,7 @@ export function OcVideoIcon({
 export function OcCheckerboardIcon({
 	className = "",
 	size = 32,
-}: {
-	className?: string;
-	size?: number;
-}) {
+}: IconProps) {
 	return (
 		<svg
 			width={size}
@@ -68,10 +64,7 @@ export function OcCheckerboardIcon({
 export function OcSlidersVerticalIcon({
 	className = "",
 	size = 32,
-}: {
-	className?: string;
-	size?: number;
-}) {
+}: IconProps) {
 	return (
 		<svg
 			width={size}
@@ -113,10 +106,7 @@ export function OcSlidersVerticalIcon({
 export function OcSocialIcon({
 	className = "",
 	size = 32,
-}: {
-	className?: string;
-	size?: number;
-}) {
+}: IconProps) {
 	return (
 		<svg
 			width={Math.round(size * (38 / 24))}
@@ -162,10 +152,7 @@ export function OcSocialIcon({
 export function OcTextWidthIcon({
 	className = "",
 	size = 32,
-}: {
-	className?: string;
-	size?: number;
-}) {
+}: IconProps) {
 	return (
 		<svg
 			width={Math.round((size * 17) / 24)}
@@ -190,10 +177,7 @@ export function OcTextWidthIcon({
 export function OcTextHeightIcon({
 	className = "",
 	size = 32,
-}: {
-	className?: string;
-	size?: number;
-}) {
+}: IconProps) {
 	return (
 		<svg
 			width={Math.round((size * 20) / 23)}
@@ -218,10 +202,7 @@ export function OcTextHeightIcon({
 export function OcFontIcon({
 	className = "",
 	size = 32,
-}: {
-	className?: string;
-	size?: number;
-}) {
+	}: IconProps) {
 	return (
 		<svg
 			width={size}
@@ -244,11 +225,7 @@ export function OcShapesIcon({
 	className = "",
 	size = 32,
 	strokeWidth = 1.5,
-}: {
-	className?: string;
-	size?: number;
-	strokeWidth?: number;
-}) {
+}: IconProps) {
 	return (
 		<svg
 			width={size}
@@ -288,10 +265,7 @@ export function OcShapesIcon({
 export function OcMirrorIcon({
 	className = "",
 	size = 32,
-}: {
-	className?: string;
-	size?: number;
-}) {
+}: IconProps) {
 	return (
 		<svg
 			width={size}
@@ -329,11 +303,7 @@ export function OcSquarePlusIcon({
 	className = "",
 	size = 32,
 	strokeWidth = 1.5,
-}: {
-	className?: string;
-	size?: number;
-	strokeWidth?: number;
-}) {
+}: IconProps) {
 	return (
 		<svg
 			width={size}
@@ -383,3 +353,4 @@ export function OcSquarePlusIcon({
 		</svg>
 	);
 }
+

@@ -1,4 +1,6 @@
-export function OcVercelIcon({ className }: { className?: string }) {
+import type { IconProps } from "./types";
+
+export function OcVercelIcon({ className }: IconProps) {
 	return (
 		<svg
 			className={className}
@@ -17,10 +19,7 @@ export function OcVercelIcon({ className }: { className?: string }) {
 export function OcMarbleIcon({
 	className = "",
 	size = 32,
-}: {
-	className?: string;
-	size?: number;
-}) {
+}: IconProps) {
 	return (
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
@@ -43,10 +42,7 @@ export function OcMarbleIcon({
 export function OcDataBuddyIcon({
 	className = "",
 	size = 32,
-}: {
-	className?: string;
-	size?: number;
-}) {
+}: IconProps) {
 	return (
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
