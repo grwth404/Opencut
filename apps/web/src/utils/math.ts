@@ -98,6 +98,10 @@ export function formatNumberForDisplay({
 		: normalizedIntegerPart;
 }
 
+/**
+ * Safely evaluates a mathematical expression without using eval() or new Function().
+ * Supports +, -, *, /, parentheses, and decimal numbers.
+ */
 export function evaluateMathExpression({
 	input,
 }: {
@@ -106,10 +110,167 @@ export function evaluateMathExpression({
 	const sanitized = input.trim();
 	if (!/^[\d.\s+\-*/()]+$/.test(sanitized)) return null;
 	try {
-		const result = new Function(`return (${sanitized})`)();
-		if (typeof result !== "number" || !Number.isFinite(result)) return null;
-		return result;
+		return parseExpression(sanitized);
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * Recursive descent parser for basic arithmetic expressions.
+ * Grammar:
+ *   expression = term { ('+' | '-') term }
+ *   term = factor { ('*' | '/') factor }
+ *   factor = number | '(' expression ')'
+ */
+function parseExpression(input: string): number | null {
+	const tokens = tokenize(input);
+	if (tokens.length === 0) return null;
+
+	let index = 0;
+
+	function peek(): Token | null {
+		return tokens[index] ?? null;
+	}
+
+	function consume(): Token | null {
+		return tokens[index++] ?? null;
+	}
+
+	function parseExpressionLevel(): number {
+		let left = parseTerm();
+		while (true) {
+			const token = peek();
+			if (token?.type === "PLUS") {
+				consume();
+				left = left + parseTerm();
+			} else if (token?.type === "MINUS") {
+				consume();
+				left = left - parseTerm();
+			} else {
+				break;
+			}
+		}
+		return left;
+	}
+
+	function parseTerm(): number {
+		let left = parseFactor();
+		while (true) {
+			const token = peek();
+			if (token?.type === "MULTIPLY") {
+				consume();
+				left = left * parseFactor();
+			} else if (token?.type === "DIVIDE") {
+				consume();
+				const right = parseFactor();
+				if (right === 0) throw new Error("Division by zero");
+				left = left / right;
+			} else {
+				break;
+			}
+		}
+		return left;
+	}
+
+	function parseFactor(): number {
+		const token = peek();
+		if (!token) throw new Error("Unexpected end of expression");
+
+		if (token.type === "NUMBER") {
+			consume();
+			return token.value;
+		}
+
+		if (token.type === "MINUS") {
+			consume();
+			return -parseFactor();
+		}
+
+		if (token.type === "LPAREN") {
+			consume();
+			const value = parseExpressionLevel();
+			const next = peek();
+			if (next?.type !== "RPAREN") {
+				throw new Error("Missing closing parenthesis");
+			}
+			consume();
+			return value;
+		}
+
+		throw new Error(`Unexpected token: ${token.type}`);
+	}
+
+	const result = parseExpressionLevel();
+
+	if (index !== tokens.length) {
+		return null;
+	}
+
+	if (!Number.isFinite(result)) return null;
+	return result;
+}
+
+type Token =
+	| { type: "NUMBER"; value: number }
+	| { type: "PLUS" }
+	| { type: "MINUS" }
+	| { type: "MULTIPLY" }
+	| { type: "DIVIDE" }
+	| { type: "LPAREN" }
+	| { type: "RPAREN" };
+
+function tokenize(input: string): Token[] {
+	const tokens: Token[] = [];
+	let i = 0;
+	const str = input.trim();
+
+	while (i < str.length) {
+		const char = str[i];
+
+		if (/\s/.test(char)) {
+			i++;
+			continue;
+		}
+
+		if (/\d/.test(char)) {
+			let numStr = "";
+			while (i < str.length && (/\d/.test(str[i]) || str[i] === ".")) {
+				numStr += str[i];
+				i++;
+			}
+			const value = Number(numStr);
+			if (!Number.isFinite(value)) {
+				throw new Error(`Invalid number: ${numStr}`);
+			}
+			tokens.push({ type: "NUMBER", value });
+			continue;
+		}
+
+		switch (char) {
+			case "+":
+				tokens.push({ type: "PLUS" });
+				break;
+			case "-":
+				tokens.push({ type: "MINUS" });
+				break;
+			case "*":
+				tokens.push({ type: "MULTIPLY" });
+				break;
+			case "/":
+				tokens.push({ type: "DIVIDE" });
+				break;
+			case "(":
+				tokens.push({ type: "LPAREN" });
+				break;
+			case ")":
+				tokens.push({ type: "RPAREN" });
+				break;
+			default:
+				throw new Error(`Invalid character: ${char}`);
+		}
+		i++;
+	}
+
+	return tokens;
 }
