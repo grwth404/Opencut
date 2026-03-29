@@ -1,6 +1,12 @@
 "use client";
 
-import { type PropsWithChildren, useEffect, useRef, useState } from "react";
+import {
+	type PropsWithChildren,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
+} from "react";
 
 type HandlebarsProps = PropsWithChildren;
 
@@ -31,7 +37,7 @@ export function Handlebars({ children }: HandlebarsProps) {
 		initialPosition: 0,
 	});
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		const el = containerRef.current;
 		if (!el) return;
 
@@ -106,9 +112,22 @@ export function Handlebars({ children }: HandlebarsProps) {
 		};
 	}, []);
 
-	const leftGradientPercent = width > 0 ? (leftHandle / (width - 10)) * 100 : 0;
-	const rightGradientPercent =
-		width > 0 ? (rightHandle / (width + 10)) * 100 : 0;
+	const hasMeasuredWidth = width > 0;
+	const leftGradientPercent = hasMeasuredWidth
+		? (leftHandle / (width - 10)) * 100
+		: 0;
+	const rightGradientPercent = hasMeasuredWidth
+		? (rightHandle / (width + 10)) * 100
+		: 100;
+	const textMask = hasMeasuredWidth
+		? `linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0%, 
+            rgba(255, 255, 255, 0) ${leftGradientPercent}%, 
+            rgba(0, 0, 0) ${leftGradientPercent}%, 
+            rgba(0, 0, 0) ${rightGradientPercent}%, 
+            rgba(255, 255, 255, 0) ${rightGradientPercent}%, 
+            rgba(255, 255, 255, 0) 100%)`
+		: undefined;
 
 	return (
 		<div className="flex justify-center gap-4 leading-16">
@@ -135,9 +154,11 @@ export function Handlebars({ children }: HandlebarsProps) {
 
 					<div
 						ref={rightHandleRef}
-						className="bg-background absolute -left-[30px] z-20 flex h-full w-7 cursor-ew-resize touch-none items-center justify-center rounded-full border border-yellow-500 select-none"
+						className="bg-background absolute z-20 flex h-full w-7 cursor-ew-resize touch-none items-center justify-center rounded-full border border-yellow-500 select-none"
 						style={{
-							translate: `${rightHandle}px 0`,
+							left: hasMeasuredWidth ? "-30px" : undefined,
+							right: hasMeasuredWidth ? undefined : "0px",
+							translate: hasMeasuredWidth ? `${rightHandle}px 0` : undefined,
 						}}
 						onPointerDown={(event) => {
 							event.preventDefault();
@@ -156,13 +177,8 @@ export function Handlebars({ children }: HandlebarsProps) {
 				<span
 					className="relative z-0 inline-flex size-full items-center justify-center rounded-2xl px-9 will-change-auto"
 					style={{
-						mask: `linear-gradient(90deg,
-            rgba(255, 255, 255, 0) 0%, 
-            rgba(255, 255, 255, 0) ${leftGradientPercent}%, 
-            rgba(0, 0, 0) ${leftGradientPercent}%, 
-            rgba(0, 0, 0) ${rightGradientPercent}%, 
-            rgba(255, 255, 255, 0) ${rightGradientPercent}%, 
-            rgba(255, 255, 255, 0) 100%)`,
+						mask: textMask,
+						WebkitMask: textMask,
 					}}
 				>
 					{children}
