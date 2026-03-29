@@ -34,6 +34,7 @@ import {
 	AlignLeftIcon,
 	AlignRightIcon,
 	Layers01Icon,
+	Chart03Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -154,6 +155,14 @@ function ToolbarLeftSection() {
 						onClick={({ event }) =>
 							handleAction({ action: "toggle-bookmark", event })
 						}
+					/>
+				</Tooltip>
+
+				<Tooltip>
+					<ToolbarButton
+						icon={<HugeiconsIcon icon={Chart03Icon} />}
+						tooltip="Graph"
+						onClick={() => {}}
 					/>
 				</Tooltip>
 			</TooltipProvider>
