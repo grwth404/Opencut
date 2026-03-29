@@ -10,6 +10,11 @@ import {
 
 type HandlebarsProps = PropsWithChildren;
 
+const MIN_HANDLE_SEPARATION_PX = 60;
+const MASK_GRADIENT_EDGE_PADDING_PX = 10;
+const HANDLEBARS_ROTATE_DEG = 2.76;
+const RIGHT_HANDLE_LEFT_OFFSET_PX = -30;
+
 export function Handlebars({ children }: HandlebarsProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const leftHandleRef = useRef<HTMLDivElement>(null);
@@ -38,17 +43,17 @@ export function Handlebars({ children }: HandlebarsProps) {
 	});
 
 	useLayoutEffect(() => {
-		const el = containerRef.current;
-		if (!el) return;
+		const container = containerRef.current;
+		if (!container) return;
 
 		const updateWidth = () => {
-			const newWidth = el.offsetWidth;
+			const newWidth = container.offsetWidth;
 			setWidth(newWidth);
 			setRightHandle(newWidth);
 		};
 
 		const observer = new ResizeObserver(updateWidth);
-		observer.observe(el);
+		observer.observe(container);
 		updateWidth();
 
 		return () => observer.disconnect();
@@ -72,7 +77,10 @@ export function Handlebars({ children }: HandlebarsProps) {
 			const deltaX = event.clientX - startX;
 
 			if (side === "left") {
-				const maxLeft = Math.max(0, rightHandlePositionRef.current - 60);
+				const maxLeft = Math.max(
+					0,
+					rightHandlePositionRef.current - MIN_HANDLE_SEPARATION_PX,
+				);
 				const nextLeftHandle = Math.max(
 					0,
 					Math.min(maxLeft, initialPosition + deltaX),
@@ -83,7 +91,7 @@ export function Handlebars({ children }: HandlebarsProps) {
 
 			const minRight = Math.min(
 				widthRef.current,
-				leftHandlePositionRef.current + 60,
+				leftHandlePositionRef.current + MIN_HANDLE_SEPARATION_PX,
 			);
 			const nextRightHandle = Math.max(
 				minRight,
@@ -114,10 +122,10 @@ export function Handlebars({ children }: HandlebarsProps) {
 
 	const hasMeasuredWidth = width > 0;
 	const leftGradientPercent = hasMeasuredWidth
-		? (leftHandle / (width - 10)) * 100
+		? (leftHandle / (width - MASK_GRADIENT_EDGE_PADDING_PX)) * 100
 		: 0;
 	const rightGradientPercent = hasMeasuredWidth
-		? (rightHandle / (width + 10)) * 100
+		? (rightHandle / (width + MASK_GRADIENT_EDGE_PADDING_PX)) * 100
 		: 100;
 	const textMask = hasMeasuredWidth
 		? `linear-gradient(90deg,
@@ -131,7 +139,11 @@ export function Handlebars({ children }: HandlebarsProps) {
 
 	return (
 		<div className="flex justify-center gap-4 leading-16">
-			<div ref={containerRef} className="relative mt-0.5 -rotate-[2.76deg]">
+			<div
+				ref={containerRef}
+				className="relative mt-0.5"
+				style={{ transform: `rotate(-${HANDLEBARS_ROTATE_DEG}deg)` }}
+			>
 				<div className="absolute inset-0 z-10 flex size-full justify-between rounded-2xl border border-yellow-500">
 					<div
 						ref={leftHandleRef}
@@ -156,7 +168,9 @@ export function Handlebars({ children }: HandlebarsProps) {
 						ref={rightHandleRef}
 						className="bg-background absolute z-20 flex h-full w-7 cursor-ew-resize touch-none items-center justify-center rounded-full border border-yellow-500 select-none"
 						style={{
-							left: hasMeasuredWidth ? "-30px" : undefined,
+							left: hasMeasuredWidth
+								? `${RIGHT_HANDLE_LEFT_OFFSET_PX}px`
+								: undefined,
 							right: hasMeasuredWidth ? undefined : "0px",
 							translate: hasMeasuredWidth ? `${rightHandle}px 0` : undefined,
 						}}
