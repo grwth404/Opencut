@@ -1,0 +1,15 @@
+[package]
+name = "time"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "src/time.rs"
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+bridge = { version = "0.1.0", path = "../bridge" }
+wasm-bindgen = { version = "0.2.115", optional = true }
+
+[features]
+wasm = ["dep:wasm-bindgen"]

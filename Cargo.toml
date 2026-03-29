@@ -2,4 +2,6 @@
 resolver = "2"
 members = [
     "apps/desktop",
+    "rust/crates/time"
+    "rust/crates/bridge"
 ]
