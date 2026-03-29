@@ -37,6 +37,7 @@ import {
 	Chart03Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { OcRippleIcon } from "@/components/icons";
 
 export function TimelineToolbar({
 	zoomLevel,
@@ -216,7 +217,7 @@ function ToolbarRightSection({
 				/>
 
 				<ToolbarButton
-					icon={<HugeiconsIcon icon={Link04Icon} className="scale-110" />}
+					icon={<OcRippleIcon size={24} className="scale-110" />}
 					isActive={rippleEditingEnabled}
 					tooltip="Ripple editing"
 					onClick={() => toggleRippleEditing()}
