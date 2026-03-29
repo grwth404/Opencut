@@ -87,7 +87,7 @@ export function ReleaseChanges({ release }: { release: Release }) {
 			{orderedTypes.map((type) => (
 				<div key={type} className="flex flex-col gap-1.5">
 					<h3 className="text-base font-semibold text-foreground">
-						{getSectionTitle(type)}:
+						{getSectionTitle({ type })}:
 					</h3>
 					<ul className="list-disc pl-5 space-y-1.5">
 						{grouped[type].map((change) => (

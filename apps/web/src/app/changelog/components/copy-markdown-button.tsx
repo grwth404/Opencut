@@ -23,7 +23,7 @@ function buildMarkdown({
 	const { grouped, orderedTypes } = groupAndOrderChanges({ changes });
 
 	for (const type of orderedTypes) {
-		lines.push(`## ${getSectionTitle(type)}`);
+		lines.push(`## ${getSectionTitle({ type })}`);
 		for (const change of grouped[type]) {
 			lines.push(`- ${change.text}`);
 		}

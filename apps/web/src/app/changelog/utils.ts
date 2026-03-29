@@ -12,7 +12,7 @@ const knownSectionTitles: Record<string, string> = {
 	breaking: "Breaking Changes",
 };
 
-export function getSectionTitle(type: string): string {
+export function getSectionTitle({ type }: { type: string }): string {
 	return (
 		knownSectionTitles[type] ?? type.charAt(0).toUpperCase() + type.slice(1)
 	);
@@ -36,8 +36,18 @@ export function groupAndOrderChanges({ changes }: { changes: Change[] }) {
 	return { grouped, orderedTypes };
 }
 
+function isPublishedRelease({ published }: Release) {
+	return published !== false;
+}
+
 export function getSortedReleases() {
-	return [...allChangelogs].sort((a, b) =>
-		b.version.localeCompare(a.version, undefined, { numeric: true }),
-	);
+	return allChangelogs
+		.filter(isPublishedRelease)
+		.sort((a, b) =>
+			b.version.localeCompare(a.version, undefined, { numeric: true }),
+		);
+}
+
+export function getReleaseByVersion({ version }: { version: string }) {
+	return getSortedReleases().find((release) => release.version === version);
 }
