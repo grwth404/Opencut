@@ -265,7 +265,7 @@ export class TimelineManager {
 		time: number;
 		clipboardItems: ClipboardItem[];
 	}): { trackId: string; elementId: string }[] {
-		const command = new PasteCommand(time, clipboardItems);
+		const command = new PasteCommand({ time, clipboardItems });
 		this.editor.command.execute({ command });
 		return command.getPastedElements();
 	}

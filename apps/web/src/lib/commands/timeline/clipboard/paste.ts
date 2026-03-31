@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import type {
 	TimelineTrack,
@@ -17,21 +17,26 @@ import { cloneAnimations } from "@/lib/animation";
 export class PasteCommand extends Command {
 	private savedState: TimelineTrack[] | null = null;
 	private pastedElements: { trackId: string; elementId: string }[] = [];
-	private previousSelection: { trackId: string; elementId: string }[] = [];
+	private readonly time: number;
+	private readonly clipboardItems: ClipboardItem[];
 
-	constructor(
-		private time: number,
-		private clipboardItems: ClipboardItem[],
-	) {
+	constructor({
+		time,
+		clipboardItems,
+	}: {
+		time: number;
+		clipboardItems: ClipboardItem[];
+	}) {
 		super();
+		this.time = time;
+		this.clipboardItems = clipboardItems;
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		if (this.clipboardItems.length === 0) return;
 
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
-		this.previousSelection = editor.selection.getSelectedElements();
 		this.pastedElements = [];
 
 		const minStart = Math.min(
@@ -116,7 +121,7 @@ export class PasteCommand extends Command {
 		editor.timeline.updateTracks(updatedTracks);
 
 		if (this.pastedElements.length > 0) {
-			editor.selection.setSelectedElements({ elements: this.pastedElements });
+			return { select: this.pastedElements };
 		}
 	}
 
@@ -124,9 +129,6 @@ export class PasteCommand extends Command {
 		if (this.savedState) {
 			const editor = EditorCore.getInstance();
 			editor.timeline.updateTracks(this.savedState);
-			editor.selection.setSelectedElements({
-				elements: this.previousSelection,
-			});
 		}
 	}
 

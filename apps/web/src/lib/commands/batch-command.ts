@@ -1,14 +1,21 @@
-import { Command } from "./base-command";
+import { Command, type CommandResult } from "./base-command";
 
 export class BatchCommand extends Command {
 	constructor(private commands: Command[]) {
 		super();
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
+		let latestSelectionResult: CommandResult | undefined;
+
 		for (const command of this.commands) {
-			command.execute();
+			const result = command.execute();
+			if (result?.select !== undefined) {
+				latestSelectionResult = result;
+			}
 		}
+
+		return latestSelectionResult;
 	}
 
 	undo(): void {
@@ -17,9 +24,16 @@ export class BatchCommand extends Command {
 		}
 	}
 
-	redo(): void {
+	redo(): CommandResult | undefined {
+		let latestSelectionResult: CommandResult | undefined;
+
 		for (const command of this.commands) {
-			command.execute();
+			const result = command.redo();
+			if (result?.select !== undefined) {
+				latestSelectionResult = result;
+			}
 		}
+
+		return latestSelectionResult;
 	}
 }

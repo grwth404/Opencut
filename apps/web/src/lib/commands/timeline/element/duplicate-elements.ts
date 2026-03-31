@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import type { TimelineElement, TimelineTrack } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { EditorCore } from "@/core";
@@ -12,7 +12,6 @@ interface DuplicateElementsParams {
 export class DuplicateElementsCommand extends Command {
 	private duplicatedElements: { trackId: string; elementId: string }[] = [];
 	private savedState: TimelineTrack[] | null = null;
-	private previousSelection: { trackId: string; elementId: string }[] = [];
 	private elements: DuplicateElementsParams["elements"];
 
 	constructor({ elements }: DuplicateElementsParams) {
@@ -20,10 +19,9 @@ export class DuplicateElementsCommand extends Command {
 		this.elements = elements;
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
-		this.previousSelection = editor.selection.getSelectedElements();
 		this.duplicatedElements = [];
 
 		let updatedTracks = [...this.savedState];
@@ -89,9 +87,9 @@ export class DuplicateElementsCommand extends Command {
 		editor.timeline.updateTracks(updatedTracks);
 
 		if (this.duplicatedElements.length > 0) {
-			editor.selection.setSelectedElements({
-				elements: this.duplicatedElements,
-			});
+			return {
+				select: this.duplicatedElements,
+			};
 		}
 	}
 
@@ -99,9 +97,6 @@ export class DuplicateElementsCommand extends Command {
 		if (this.savedState) {
 			const editor = EditorCore.getInstance();
 			editor.timeline.updateTracks(this.savedState);
-			editor.selection.setSelectedElements({
-				elements: this.previousSelection,
-			});
 		}
 	}
 

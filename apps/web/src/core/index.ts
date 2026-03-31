@@ -27,7 +27,7 @@ export class EditorCore {
 	private constructor() {
 		registerDefaultEffects();
 		registerDefaultMasks();
-		this.command = new CommandManager();
+		this.command = new CommandManager(this);
 		this.timeline = new TimelineManager(this);
 		this.playback = new PlaybackManager(this);
 		this.scenes = new ScenesManager(this);
