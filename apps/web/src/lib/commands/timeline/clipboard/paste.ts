@@ -38,7 +38,7 @@ export class PasteCommand extends Command {
 			...this.clipboardItems.map((item) => item.element.startTime),
 		);
 
-		const updatedTracks = [...this.savedState];
+		let updatedTracks = [...this.savedState];
 		const itemsByTrackId = groupClipboardItemsByTrackId({
 			clipboardItems: this.clipboardItems,
 		});

@@ -26,7 +26,7 @@ export class DuplicateElementsCommand extends Command {
 		this.previousSelection = editor.selection.getSelectedElements();
 		this.duplicatedElements = [];
 
-		const updatedTracks = [...this.savedState];
+		let updatedTracks = [...this.savedState];
 
 		for (const track of this.savedState) {
 			const elementsToDuplicate = this.elements.filter(
