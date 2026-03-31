@@ -12,7 +12,7 @@ import {
 	getFrameTime,
 	isBookmarkAtTime,
 } from "@/lib/timeline/bookmarks";
-import { ensureMainTrack } from "@/lib/timeline/track-utils";
+import { ensureMainTrack } from "@/lib/timeline/placement";
 import {
 	CreateSceneCommand,
 	DeleteSceneCommand,

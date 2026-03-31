@@ -49,10 +49,10 @@ import {
 	getTotalTracksHeight,
 	canTracktHaveAudio,
 	canTrackBeHidden,
-	isMainTrack,
 	getTimelineZoomMin,
 	getTimelinePaddingPx,
 } from "@/lib/timeline";
+import { isMainTrack } from "@/lib/timeline/placement";
 import { TimelineToolbar } from "./timeline-toolbar";
 import { useElementSelection } from "@/hooks/timeline/element/use-element-selection";
 import { useTimelineSeek } from "@/hooks/timeline/use-timeline-seek";

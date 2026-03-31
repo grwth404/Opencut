@@ -12,7 +12,7 @@ import { EffectLayerNode } from "./nodes/effect-layer-node";
 import type { BaseNode } from "./nodes/base-node";
 import type { TBackground, TCanvasSize } from "@/lib/project/types";
 import { DEFAULT_BLUR_INTENSITY } from "@/constants/project-constants";
-import { isMainTrack } from "@/lib/timeline";
+import { isMainTrack } from "@/lib/timeline/placement";
 
 const PREVIEW_MAX_IMAGE_SIZE = 2048;
 

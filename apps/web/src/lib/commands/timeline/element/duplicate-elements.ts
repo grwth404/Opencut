@@ -2,10 +2,7 @@ import { Command } from "@/lib/commands/base-command";
 import type { TimelineElement, TimelineTrack } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { EditorCore } from "@/core";
-import {
-	buildEmptyTrack,
-	getHighestInsertIndexForTrack,
-} from "@/lib/timeline/track-utils";
+import { applyPlacement, resolveTrackPlacement } from "@/lib/timeline/placement";
 import { cloneAnimations } from "@/lib/animation";
 
 interface DuplicateElementsParams {
@@ -45,22 +42,12 @@ export class DuplicateElementsCommand extends Command {
 			);
 			const newTrackElements: TimelineElement[] = [];
 
-			const newTrackId = generateUUID();
-			const newTrackBase = buildEmptyTrack({
-				id: newTrackId,
-				type: track.type,
-			});
-
 			for (const element of track.elements) {
 				if (!elementIdsToDuplicate.has(element.id)) {
 					continue;
 				}
 
 				const newId = generateUUID();
-				this.duplicatedElements.push({
-					trackId: newTrackId,
-					elementId: newId,
-				});
 				newTrackElements.push(
 					buildDuplicateElement({
 						element,
@@ -70,16 +57,33 @@ export class DuplicateElementsCommand extends Command {
 				);
 			}
 
-			const newTrack = {
-				...newTrackBase,
-				elements: newTrackElements,
-			} as TimelineTrack;
-
-			const insertIndex = getHighestInsertIndexForTrack({
+			const placementResult = resolveTrackPlacement({
 				tracks: updatedTracks,
 				trackType: track.type,
+				timeSpans: [],
+				strategy: { type: "alwaysNew", position: "highest" },
 			});
-			updatedTracks.splice(insertIndex, 0, newTrack);
+			if (!placementResult || placementResult.kind !== "newTrack") {
+				continue;
+			}
+
+			const applied = applyPlacement({
+				tracks: updatedTracks,
+				placementResult,
+				elements: newTrackElements,
+			});
+			if (!applied) {
+				continue;
+			}
+
+			updatedTracks = applied.updatedTracks;
+
+			for (const element of newTrackElements) {
+				this.duplicatedElements.push({
+					trackId: applied.targetTrackId,
+					elementId: element.id,
+				});
+			}
 		}
 
 		editor.timeline.updateTracks(updatedTracks);

@@ -16,7 +16,7 @@ import { AddTrackCommand, InsertElementCommand } from "@/lib/commands/timeline";
 import { BatchCommand } from "@/lib/commands";
 import { computeDropTarget } from "@/lib/timeline/drop-utils";
 import { getDragData, hasDragData } from "@/lib/drag-data";
-import { isMainTrack } from "@/lib/timeline/track-utils";
+import { isMainTrack } from "@/lib/timeline/placement";
 import type { TrackType, DropTarget, ElementType } from "@/lib/timeline";
 import type {
 	MediaDragData,
@@ -444,7 +444,8 @@ export function useTimelineDragDrop({
 						if (!createdAsset) continue;
 
 						const duration =
-							createdAsset.duration ?? TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION;
+							createdAsset.duration ??
+							TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION;
 						const currentTracks = editor.timeline.getTracks();
 						const currentTime = editor.playback.getCurrentTime();
 						const onlyTrack = currentTracks[0];

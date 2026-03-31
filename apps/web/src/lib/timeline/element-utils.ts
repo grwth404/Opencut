@@ -86,24 +86,6 @@ export function requiresMediaId({
 	);
 }
 
-export function wouldElementOverlap({
-	elements,
-	startTime,
-	endTime,
-	excludeElementId,
-}: {
-	elements: TimelineElement[];
-	startTime: number;
-	endTime: number;
-	excludeElementId?: string;
-}): boolean {
-	return elements.some((element) => {
-		if (excludeElementId && element.id === excludeElementId) return false;
-		const elementEnd = element.startTime + element.duration;
-		return startTime < elementEnd && endTime > element.startTime;
-	});
-}
-
 function buildTextBackground(
 	raw: Partial<TextBackground> | undefined,
 ): TextBackground {

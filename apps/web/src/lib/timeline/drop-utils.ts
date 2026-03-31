@@ -1,16 +1,10 @@
 import type {
 	TimelineTrack,
-	ElementType,
 	TimelineElement,
 } from "@/lib/timeline";
 import { TRACK_CONFIG, TRACK_GAP } from "@/constants/timeline-constants";
-import { wouldElementOverlap } from "./element-utils";
 import type { ComputeDropTargetParams, DropTarget } from "@/lib/timeline";
-import {
-	canElementGoOnTrack,
-	isMainTrack,
-	enforceMainTrackStart,
-} from "./track-utils";
+import { resolveTrackPlacement } from "@/lib/timeline/placement";
 
 function findElementAtPosition({
 	mouseX,
@@ -82,56 +76,21 @@ function getTrackAtY({
 	return null;
 }
 
-function isCompatible({
-	elementType,
-	trackType,
+const EMPTY_TARGET_ELEMENT = null;
+
+function fallbackNewTrackDropTarget({
+	xPosition,
 }: {
-	elementType: ElementType;
-	trackType: TimelineTrack["type"];
-}): boolean {
-	return canElementGoOnTrack({ elementType, trackType });
-}
-
-function getMainTrackIndex({ tracks }: { tracks: TimelineTrack[] }): number {
-	return tracks.findIndex((track) => isMainTrack(track));
-}
-
-function findInsertIndex({
-	elementType,
-	tracks,
-	preferredIndex,
-	insertAbove,
-}: {
-	elementType: ElementType;
-	tracks: TimelineTrack[];
-	preferredIndex: number;
-	insertAbove: boolean;
-}): { index: number; position: "above" | "below" } {
-	const mainTrackIndex = getMainTrackIndex({ tracks });
-
-	if (elementType === "audio") {
-		if (preferredIndex <= mainTrackIndex) {
-			return { index: mainTrackIndex + 1, position: "below" };
-		}
-		return {
-			index: insertAbove ? preferredIndex : preferredIndex + 1,
-			position: insertAbove ? "above" : "below",
-		};
-	}
-
-	const overlayInsertIndex = insertAbove ? preferredIndex : preferredIndex + 1;
-
-	if (mainTrackIndex >= 0 && overlayInsertIndex > mainTrackIndex) {
-		return { index: mainTrackIndex, position: "above" };
-	}
-
+	xPosition: number;
+}): DropTarget {
 	return {
-		index: overlayInsertIndex,
-		position: insertAbove ? "above" : "below",
+		trackIndex: 0,
+		isNewTrack: true,
+		insertPosition: null,
+		xPosition,
+		targetElement: EMPTY_TARGET_ELEMENT,
 	};
 }
-
-const EMPTY_TARGET_ELEMENT = null;
 
 export function computeDropTarget({
 	elementType,
@@ -155,22 +114,28 @@ export function computeDropTarget({
 				? playheadTime
 				: Math.max(0, mouseX / (pixelsPerSecond * zoomLevel));
 
-	const mainTrackIndex = getMainTrackIndex({ tracks });
-
 	if (tracks.length === 0) {
-		if (elementType === "audio") {
-			return {
+		const placementResult = resolveTrackPlacement({
+			tracks,
+			elementType,
+			timeSpans: [{ startTime: xPosition, duration: elementDuration, excludeElementId }],
+			strategy: {
+				type: "preferIndex",
 				trackIndex: 0,
-				isNewTrack: true,
-				insertPosition: "below",
-				xPosition,
-				targetElement: EMPTY_TARGET_ELEMENT,
-			};
+				hoverDirection: "below",
+				createNewTrackOnly: true,
+			},
+		});
+		const emptyTimelineResult =
+			placementResult?.kind === "newTrack" ? placementResult : null;
+		if (!emptyTimelineResult) {
+			return fallbackNewTrackDropTarget({ xPosition });
 		}
+
 		return {
-			trackIndex: 0,
+			trackIndex: emptyTimelineResult.insertIndex,
 			isNewTrack: true,
-			insertPosition: null,
+			insertPosition: emptyTimelineResult.insertPosition,
 			xPosition,
 			targetElement: EMPTY_TARGET_ELEMENT,
 		};
@@ -181,30 +146,27 @@ export function computeDropTarget({
 	if (!trackAtMouse) {
 		const isAboveAllTracks = mouseY < 0;
 
-		if (elementType === "audio") {
-			return {
-				trackIndex: tracks.length,
-				isNewTrack: true,
-				insertPosition: "below",
-				xPosition,
-				targetElement: EMPTY_TARGET_ELEMENT,
-			};
-		}
-
-		if (isAboveAllTracks) {
-			return {
-				trackIndex: 0,
-				isNewTrack: true,
-				insertPosition: "above",
-				xPosition,
-				targetElement: EMPTY_TARGET_ELEMENT,
-			};
+		const placementResult = resolveTrackPlacement({
+			tracks,
+			elementType,
+			timeSpans: [{ startTime: xPosition, duration: elementDuration, excludeElementId }],
+			strategy: {
+				type: "preferIndex",
+				trackIndex: isAboveAllTracks ? 0 : tracks.length - 1,
+				hoverDirection: isAboveAllTracks ? "above" : "below",
+				createNewTrackOnly: true,
+			},
+		});
+		const outOfBoundsResult =
+			placementResult?.kind === "newTrack" ? placementResult : null;
+		if (!outOfBoundsResult) {
+			return fallbackNewTrackDropTarget({ xPosition });
 		}
 
 		return {
-			trackIndex: Math.max(0, mainTrackIndex),
+			trackIndex: outOfBoundsResult.insertIndex,
 			isNewTrack: true,
-			insertPosition: "above",
+			insertPosition: outOfBoundsResult.insertPosition,
 			xPosition,
 			targetElement: EMPTY_TARGET_ELEMENT,
 		};
@@ -237,34 +199,27 @@ export function computeDropTarget({
 	}
 
 	const trackHeight = TRACK_CONFIG[track.type].height;
-	const isInUpperHalf = relativeY < trackHeight / 2;
-
-	const isTrackCompatible = isCompatible({
+	const placementResult = resolveTrackPlacement({
+		tracks,
 		elementType,
-		trackType: track.type,
+		timeSpans: [{ startTime: xPosition, duration: elementDuration, excludeElementId }],
+		strategy: {
+			type: "preferIndex",
+			trackIndex,
+			hoverDirection: relativeY < trackHeight / 2 ? "above" : "below",
+			verticalDragDirection,
+		},
 	});
+	if (!placementResult) {
+		return fallbackNewTrackDropTarget({ xPosition });
+	}
 
-	const endTime = xPosition + elementDuration;
-	const hasOverlap = wouldElementOverlap({
-		elements: track.elements,
-		startTime: xPosition,
-		endTime,
-		excludeElementId,
-	});
-
-	if (isTrackCompatible && !hasOverlap) {
-		const targetTrack = tracks[trackIndex];
-		// safe: snap to 0 only happens when element becomes the new earliest,
-		// meaning the space before the current earliest is empty
-		const adjustedXPosition = enforceMainTrackStart({
-			tracks,
-			targetTrackId: targetTrack.id,
-			requestedStartTime: xPosition,
-			excludeElementId,
-		});
+	if (placementResult.kind === "existingTrack") {
+		const adjustedXPosition =
+			placementResult.adjustedStartTime ?? xPosition;
 
 		return {
-			trackIndex,
+			trackIndex: placementResult.trackIndex,
 			isNewTrack: false,
 			insertPosition: null,
 			xPosition: adjustedXPosition,
@@ -272,22 +227,10 @@ export function computeDropTarget({
 		};
 	}
 
-	let insertAbove = isInUpperHalf;
-	if (!isTrackCompatible && verticalDragDirection) {
-		insertAbove = verticalDragDirection === "up";
-	}
-
-	const { index, position } = findInsertIndex({
-		elementType,
-		tracks,
-		preferredIndex: trackIndex,
-		insertAbove,
-	});
-
 	return {
-		trackIndex: index,
+		trackIndex: placementResult.insertIndex,
 		isNewTrack: true,
-		insertPosition: position,
+		insertPosition: placementResult.insertPosition,
 		xPosition,
 		targetElement: EMPTY_TARGET_ELEMENT,
 	};

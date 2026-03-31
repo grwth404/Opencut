@@ -1,4 +1,4 @@
-import type { ElementType, TrackType } from "@/lib/timeline";
+import type { TrackType } from "@/lib/timeline";
 
 export const TRACK_CONFIG: Record<
 	TrackType,
@@ -45,16 +45,6 @@ export const ELEMENT_TYPE_CONFIG: Record<
 	graphic: { background: "bg-[#BA5D7A]" },
 	effect: { background: "bg-[#5d93ba]" },
 } as const;
-
-export const ELEMENT_TRACK_MAP: Record<ElementType, TrackType> = {
-	audio: "audio",
-	text: "text",
-	sticker: "graphic",
-	graphic: "graphic",
-	effect: "effect",
-	video: "video",
-	image: "video",
-};
 
 export const TRACK_GAP = 6;
 export const TRACK_LABELS_WIDTH_PX = 112;

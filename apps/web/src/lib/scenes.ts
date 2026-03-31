@@ -1,7 +1,7 @@
 import type { TScene } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { calculateTotalDuration } from "@/lib/timeline";
-import { ensureMainTrack } from "@/lib/timeline/track-utils";
+import { ensureMainTrack } from "@/lib/timeline/placement";
 
 export function getMainScene({ scenes }: { scenes: TScene[] }): TScene | null {
 	return scenes.find((scene) => scene.isMain) || null;

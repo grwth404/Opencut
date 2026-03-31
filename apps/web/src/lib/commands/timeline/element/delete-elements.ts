@@ -1,7 +1,8 @@
 import { Command } from "@/lib/commands/base-command";
 import type { TimelineTrack } from "@/lib/timeline";
 import { EditorCore } from "@/core";
-import { isMainTrack, rippleShiftElements } from "@/lib/timeline";
+import { rippleShiftElements } from "@/lib/timeline";
+import { isMainTrack } from "@/lib/timeline/placement";
 
 export class DeleteElementsCommand extends Command {
 	private savedState: TimelineTrack[] | null = null;

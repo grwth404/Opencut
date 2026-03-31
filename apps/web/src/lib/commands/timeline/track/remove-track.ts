@@ -1,7 +1,7 @@
 import { Command } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import type { TimelineTrack } from "@/lib/timeline";
-import { getMainTrack } from "@/lib/timeline";
+import { getMainTrack } from "@/lib/timeline/placement";
 
 export class RemoveTrackCommand extends Command {
 	private savedState: TimelineTrack[] | null = null;

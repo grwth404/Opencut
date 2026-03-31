@@ -3,7 +3,7 @@ import type { TimelineTrack } from "@/lib/timeline";
 import { EditorCore } from "@/core";
 import { clampAnimationsToDuration } from "@/lib/animation";
 import { isRetimableElement, rippleShiftElements } from "@/lib/timeline";
-import { enforceMainTrackStart } from "@/lib/timeline/track-utils";
+import { enforceMainTrackStart } from "@/lib/timeline/placement";
 
 export class UpdateElementTrimCommand extends Command {
 	private savedState: TimelineTrack[] | null = null;
