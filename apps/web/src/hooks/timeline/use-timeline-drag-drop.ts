@@ -16,7 +16,7 @@ import { AddTrackCommand, InsertElementCommand } from "@/lib/commands/timeline";
 import { BatchCommand } from "@/lib/commands";
 import { computeDropTarget } from "@/lib/timeline/drop-utils";
 import { getDragData, hasDragData } from "@/lib/drag-data";
-import { isMainTrack } from "@/lib/timeline/track-utils";
+import { isMainTrack } from "@/lib/track-placement";
 import type { TrackType, DropTarget, ElementType } from "@/lib/timeline";
 import type {
 	MediaDragData,

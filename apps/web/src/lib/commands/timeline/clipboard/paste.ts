@@ -6,13 +6,12 @@ import type {
 	ClipboardItem,
 } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
-import { wouldElementOverlap } from "@/lib/timeline/element-utils";
 import {
-	buildEmptyTrack,
-	getHighestInsertIndexForTrack,
+	applyPlacement,
+	resolveTrackPlacement,
 	isMainTrack,
 	enforceMainTrackStart,
-} from "@/lib/timeline/track-utils";
+} from "@/lib/track-placement";
 import { cloneAnimations } from "@/lib/animation";
 
 export class PasteCommand extends Command {
@@ -59,17 +58,22 @@ export class PasteCommand extends Command {
 			const sourceTrackIndex = updatedTracks.findIndex(
 				(track) => track.id === trackId,
 			);
-			const resolvedTargetIndex = resolveTargetTrackIndex({
+			const placementResult = resolveTrackPlacement({
 				tracks: updatedTracks,
-				sourceTrackIndex,
 				trackType,
-				elements: elementsToAdd,
+				timeSpans: elementsToAdd.map((element) => ({
+					startTime: element.startTime,
+					duration: element.duration,
+				})),
+				strategy: { type: "aboveSource", sourceTrackIndex },
 			});
+			if (!placementResult) {
+				continue;
+			}
 
-			if (resolvedTargetIndex >= 0) {
-				const targetTrack = updatedTracks[resolvedTargetIndex];
-				let adjustedElements = elementsToAdd;
-
+			let elementsForPlacement = elementsToAdd;
+			if (placementResult.kind === "existingTrack") {
+				const targetTrack = updatedTracks[placementResult.trackIndex];
 				if (isMainTrack(targetTrack)) {
 					const earliestElement = elementsToAdd.reduce((earliest, element) =>
 						element.startTime < earliest.startTime ? element : earliest,
@@ -82,39 +86,28 @@ export class PasteCommand extends Command {
 					const delta = adjustedEarliestStartTime - earliestElement.startTime;
 
 					if (delta !== 0) {
-						adjustedElements = elementsToAdd.map((element) => ({
+						elementsForPlacement = elementsToAdd.map((element) => ({
 							...element,
 							startTime: Math.max(0, element.startTime + delta),
 						}));
 					}
 				}
+			}
 
-				updatedTracks[resolvedTargetIndex] = {
-					...targetTrack,
-					elements: [...targetTrack.elements, ...adjustedElements],
-				} as TimelineTrack;
-				for (const element of adjustedElements) {
-					this.pastedElements.push({
-						trackId: targetTrack.id,
-						elementId: element.id,
-					});
-				}
+			const applied = applyPlacement({
+				tracks: updatedTracks,
+				placementResult,
+				elements: elementsForPlacement,
+			});
+			if (!applied) {
 				continue;
 			}
 
-			const insertIndex = resolveInsertIndexForNewTrack({
-				tracks: updatedTracks,
-				sourceTrackIndex,
-				trackType,
-			});
-			const newTrack = buildTrackWithElements({
-				trackType,
-				elements: elementsToAdd,
-			});
-			updatedTracks.splice(insertIndex, 0, newTrack);
-			for (const element of elementsToAdd) {
+			updatedTracks = applied.updatedTracks;
+
+			for (const element of elementsForPlacement) {
 				this.pastedElements.push({
-					trackId: newTrack.id,
+					trackId: applied.targetTrackId,
 					elementId: element.id,
 				});
 			}
@@ -187,107 +180,3 @@ function buildPastedElements({
 	return elementsToAdd;
 }
 
-function resolveTargetTrackIndex({
-	tracks,
-	sourceTrackIndex,
-	trackType,
-	elements,
-}: {
-	tracks: TimelineTrack[];
-	sourceTrackIndex: number;
-	trackType: ClipboardItem["trackType"];
-	elements: TimelineElement[];
-}): number {
-	if (sourceTrackIndex >= 0) {
-		const aboveIndex = sourceTrackIndex - 1;
-		if (aboveIndex < 0) {
-			return -1;
-		}
-
-		const aboveTrack = tracks[aboveIndex];
-		if (aboveTrack.type !== trackType) {
-			return -1;
-		}
-
-		const canPlaceOnAbove = canPlaceElementsOnTrack({
-			track: aboveTrack,
-			elements,
-		});
-		return canPlaceOnAbove ? aboveIndex : -1;
-	}
-
-	const highestCompatibleIndex = tracks.findIndex(
-		(track) => track.type === trackType,
-	);
-	if (highestCompatibleIndex < 0) {
-		return -1;
-	}
-
-	const highestCompatibleTrack = tracks[highestCompatibleIndex];
-	const canPlaceOnHighest = canPlaceElementsOnTrack({
-		track: highestCompatibleTrack,
-		elements,
-	});
-
-	return canPlaceOnHighest ? highestCompatibleIndex : -1;
-}
-
-function resolveInsertIndexForNewTrack({
-	tracks,
-	sourceTrackIndex,
-	trackType,
-}: {
-	tracks: TimelineTrack[];
-	sourceTrackIndex: number;
-	trackType: ClipboardItem["trackType"];
-}): number {
-	if (sourceTrackIndex >= 0) {
-		return sourceTrackIndex;
-	}
-
-	const highestCompatibleIndex = tracks.findIndex(
-		(track) => track.type === trackType,
-	);
-	if (highestCompatibleIndex >= 0) {
-		return highestCompatibleIndex;
-	}
-
-	return getHighestInsertIndexForTrack({ tracks, trackType });
-}
-
-function canPlaceElementsOnTrack({
-	track,
-	elements,
-}: {
-	track: TimelineTrack;
-	elements: TimelineElement[];
-}): boolean {
-	for (const element of elements) {
-		const endTime = element.startTime + element.duration;
-		const hasOverlap = wouldElementOverlap({
-			elements: track.elements,
-			startTime: element.startTime,
-			endTime,
-		});
-		if (hasOverlap) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
-function buildTrackWithElements({
-	trackType,
-	elements,
-}: {
-	trackType: ClipboardItem["trackType"];
-	elements: TimelineElement[];
-}): TimelineTrack {
-	const newTrackId = generateUUID();
-	const newTrackBase = buildEmptyTrack({ id: newTrackId, type: trackType });
-	return {
-		...newTrackBase,
-		elements,
-	} as TimelineTrack;
-}

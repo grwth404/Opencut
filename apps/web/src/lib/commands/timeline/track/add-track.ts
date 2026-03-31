@@ -5,7 +5,7 @@ import { EditorCore } from "@/core";
 import {
 	buildEmptyTrack,
 	getDefaultInsertIndexForTrack,
-} from "@/lib/timeline/track-utils";
+} from "@/lib/track-placement";
 
 export class AddTrackCommand extends Command {
 	private trackId: string;

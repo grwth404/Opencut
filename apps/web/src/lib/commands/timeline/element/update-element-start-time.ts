@@ -1,7 +1,7 @@
 import { Command } from "@/lib/commands/base-command";
 import type { TimelineTrack } from "@/lib/timeline";
 import { EditorCore } from "@/core";
-import { enforceMainTrackStart } from "@/lib/timeline/track-utils";
+import { enforceMainTrackStart } from "@/lib/track-placement";
 
 export class UpdateElementStartTimeCommand extends Command {
 	private savedState: TimelineTrack[] | null = null;

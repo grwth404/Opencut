@@ -1,6 +1,6 @@
 import type { TimelineTrack, TimelineElement } from "@/lib/timeline";
 import type { MediaAsset } from "@/lib/media/types";
-import { isMainTrack } from "@/lib/timeline";
+import { isMainTrack } from "@/lib/track-placement";
 import { STICKER_INTRINSIC_SIZE_FALLBACK } from "@/constants/sticker-constants";
 import { DEFAULT_GRAPHIC_SOURCE_SIZE } from "@/lib/graphics";
 import { measureTextElement } from "@/lib/text/measure-element";

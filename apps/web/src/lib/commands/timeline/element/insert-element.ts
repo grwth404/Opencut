@@ -5,23 +5,18 @@ import type {
 	TimelineTrack,
 	TimelineElement,
 	TrackType,
-	ElementType,
 } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
-import {
-	requiresMediaId,
-	wouldElementOverlap,
-} from "@/lib/timeline/element-utils";
-import {
-	buildEmptyTrack,
-	canElementGoOnTrack,
-	getDefaultInsertIndexForTrack,
-	validateElementTrackCompatibility,
-	enforceMainTrackStart,
-} from "@/lib/timeline/track-utils";
+import { requiresMediaId } from "@/lib/timeline/element-utils";
 import type { MediaAsset } from "@/lib/media/types";
-import { ELEMENT_TRACK_MAP, TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 import { graphicsRegistry, registerDefaultGraphics } from "@/lib/graphics";
+import {
+	applyPlacement,
+	canElementGoOnTrack,
+	resolveTrackPlacement,
+	validateElementTrackCompatibility,
+} from "@/lib/track-placement";
 
 type InsertElementPlacement =
 	| { mode: "explicit"; trackId: string }
@@ -67,7 +62,7 @@ export class InsertElementCommand extends Command {
 		const isFirstElement = totalElementsInTimeline === 0;
 
 		const newElement = this.buildElement({ element: this.element });
-		const updateResult = this.resolveTracksWithElement({
+		const updateResult = this.applyPlacementResult({
 			tracks: this.savedState,
 			element: newElement,
 		});
@@ -190,7 +185,7 @@ export class InsertElementCommand extends Command {
 		return true;
 	}
 
-	private resolveTracksWithElement({
+	private applyPlacementResult({
 		tracks,
 		element,
 	}: {
@@ -199,160 +194,71 @@ export class InsertElementCommand extends Command {
 	}): { updatedTracks: TimelineTrack[]; targetTrackId: string } | null {
 		const placement = this.placement;
 
-		if (placement.mode === "explicit") {
-			const targetTrack = tracks.find(
-				(track) => track.id === placement.trackId,
-			);
-
-			if (!targetTrack) {
-				console.error("Track not found:", placement.trackId);
-				return null;
-			}
-
-			const validation = validateElementTrackCompatibility({
-				element,
-				track: targetTrack,
-			});
-
-			if (!validation.isValid) {
-				console.error(validation.errorMessage);
-				return null;
-			}
-
-			const adjustedElement = this.adjustElementForMainTrack({
-				tracks,
-				targetTrackId: targetTrack.id,
-				element,
-			});
-
-			const updatedTracks = tracks.map((track) =>
-				track.id === targetTrack.id
-					? {
-							...track,
-							elements: [...track.elements, adjustedElement],
-						}
-					: track,
-			) as TimelineTrack[];
-
-			return { updatedTracks, targetTrackId: targetTrack.id };
-		}
-
-		const trackType =
-			placement.trackType ?? this.getTrackTypeForElement({ element });
-
 		if (
+			placement.mode === "auto" &&
 			placement.trackType &&
 			!canElementGoOnTrack({
 				elementType: element.type,
-				trackType,
+				trackType: placement.trackType,
 			})
 		) {
 			console.error(
-				`${element.type} elements cannot be placed on ${trackType} tracks`,
+				`${element.type} elements cannot be placed on ${placement.trackType} tracks`,
 			);
 			return null;
 		}
 
-		const elementEndTime = element.startTime + element.duration;
-		const existingTrack = tracks.find((track) => {
-			if (
-				!canElementGoOnTrack({
-					elementType: element.type,
-					trackType: track.type,
-				})
-			) {
-				return false;
+		const placementResult = resolveTrackPlacement({
+			tracks,
+			...(placement.mode === "auto" && placement.trackType
+				? { trackType: placement.trackType }
+				: { elementType: element.type }),
+			timeSpans: [
+				{
+					startTime: element.startTime,
+					duration: element.duration,
+				},
+			],
+			strategy:
+				placement.mode === "explicit"
+					? { type: "explicit", trackId: placement.trackId }
+					: { type: "firstAvailable" },
+		});
+		if (!placementResult) {
+			if (placement.mode === "explicit") {
+				const targetTrack = tracks.find((track) => track.id === placement.trackId);
+				if (!targetTrack) {
+					console.error("Track not found:", placement.trackId);
+					return null;
+				}
+
+				const validation = validateElementTrackCompatibility({
+					element,
+					track: targetTrack,
+				});
+				console.error(validation.errorMessage);
 			}
 
-			return !wouldElementOverlap({
-				elements: track.elements,
-				startTime: element.startTime,
-				endTime: elementEndTime,
-			});
-		});
-
-		if (existingTrack) {
-			const adjustedElement = this.adjustElementForMainTrack({
-				tracks,
-				targetTrackId: existingTrack.id,
-				element,
-			});
-
-			const updatedTracks = tracks.map((track) =>
-				track.id === existingTrack.id
-					? {
-							...track,
-							elements: [...track.elements, adjustedElement],
-						}
-					: track,
-			) as TimelineTrack[];
-
-			return { updatedTracks, targetTrackId: existingTrack.id };
+			return null;
 		}
 
-		const newTrackId = generateUUID();
-		const newTrack = buildEmptyTrack({
-			id: newTrackId,
-			type: trackType,
-		});
-		const newTrackWithElement = {
-			...newTrack,
-			elements: [...newTrack.elements, element],
-		} as TimelineTrack;
+		const elementToPlace =
+			placementResult.kind === "existingTrack"
+				? {
+						...element,
+						startTime:
+							placementResult.adjustedStartTime ?? element.startTime,
+					}
+				: element;
 
-		const updatedTracks = [...tracks];
-		const insertIndex =
-			placement.insertIndex ??
-			this.getAutoInsertIndex({ tracks: updatedTracks, trackType });
-		updatedTracks.splice(insertIndex, 0, newTrackWithElement);
-
-		return { updatedTracks, targetTrackId: newTrackId };
-	}
-
-	private getAutoInsertIndex({
-		tracks,
-		trackType,
-	}: {
-		tracks: TimelineTrack[];
-		trackType: TrackType;
-	}): number {
-		if (trackType === "text") {
-			const firstVideoTrackIndex = tracks.findIndex(
-				(track) => track.type === "video",
-			);
-			if (firstVideoTrackIndex >= 0) {
-				return firstVideoTrackIndex;
-			}
-		}
-
-		return getDefaultInsertIndexForTrack({
+		return applyPlacement({
 			tracks,
-			trackType,
+			placementResult,
+			elements: [elementToPlace],
+			newTrackInsertIndexOverride:
+				placement.mode === "auto" && typeof placement.insertIndex === "number"
+					? placement.insertIndex
+					: undefined,
 		});
-	}
-
-	private adjustElementForMainTrack({
-		tracks,
-		targetTrackId,
-		element,
-	}: {
-		tracks: TimelineTrack[];
-		targetTrackId: string;
-		element: TimelineElement;
-	}): TimelineElement {
-		const adjustedStartTime = enforceMainTrackStart({
-			tracks,
-			targetTrackId,
-			requestedStartTime: element.startTime,
-		});
-		return { ...element, startTime: adjustedStartTime };
-	}
-
-	private getTrackTypeForElement({
-		element,
-	}: {
-		element: { type: ElementType };
-	}): TrackType {
-		return ELEMENT_TRACK_MAP[element.type];
 	}
 }

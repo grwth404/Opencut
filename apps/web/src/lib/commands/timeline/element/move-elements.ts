@@ -10,7 +10,7 @@ import {
 	isMainTrack,
 	validateElementTrackCompatibility,
 	enforceMainTrackStart,
-} from "@/lib/timeline/track-utils";
+} from "@/lib/track-placement";
 import { rippleShiftElements } from "@/lib/timeline/ripple-utils";
 
 export class MoveElementCommand extends Command {
