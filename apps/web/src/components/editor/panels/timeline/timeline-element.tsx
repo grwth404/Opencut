@@ -40,6 +40,11 @@ import type {
 import type { MediaAsset } from "@/lib/media/types";
 import { mediaSupportsAudio } from "@/lib/media/media-utils";
 import {
+	canToggleSourceAudio,
+	getSourceAudioActionLabel,
+	isSourceAudioSeparated,
+} from "@/lib/timeline/audio-separation";
+import {
 	getActionDefinition,
 	type TAction,
 	type TActionWithOptionalArgs,
@@ -61,7 +66,9 @@ import {
 	Search01Icon,
 	Exchange01Icon,
 	KeyframeIcon,
+	Link02Icon,
 	MagicWand05Icon,
+	Unlink02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { uppercase } from "@/utils/string";
@@ -280,6 +287,19 @@ export function TimelineElement({
 	};
 
 	const isMuted = canElementHaveAudio(element) && element.muted === true;
+	const canToggleCurrentSourceAudio =
+		selectedElements.length === 1 &&
+		isCurrentElementSelected &&
+		canToggleSourceAudio({
+			element,
+			mediaAsset,
+		});
+	const sourceAudioLabel =
+		element.type === "video"
+			? getSourceAudioActionLabel({ element })
+			: "Extract audio";
+	const isElementSourceAudioSeparated =
+		element.type === "video" && isSourceAudioSeparated({ element });
 
 	return (
 		<ContextMenu>
@@ -333,6 +353,21 @@ export function TimelineElement({
 						isCurrentElementSelected={isCurrentElementSelected}
 						isMuted={isMuted}
 					/>
+				)}
+				{canToggleCurrentSourceAudio && (
+					<ContextMenuItem
+					icon={
+						<HugeiconsIcon
+							icon={isElementSourceAudioSeparated ? Unlink02Icon : Link02Icon}
+						/>
+					}
+						onClick={(event: React.MouseEvent) => {
+							event.stopPropagation();
+							invokeAction("toggle-source-audio");
+						}}
+					>
+						{sourceAudioLabel}
+					</ContextMenuItem>
 				)}
 				{canElementBeHidden(element) && (
 					<VisibilityMenuItem

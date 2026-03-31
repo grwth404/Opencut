@@ -12,7 +12,10 @@ import {
 	hasAnimatedVolume,
 	resolveEffectiveAudioGain,
 } from "@/lib/timeline/audio-state";
-import { canElementHaveAudio } from "@/lib/timeline/element-utils";
+import {
+	doesElementHaveEnabledAudio,
+} from "@/lib/timeline/audio-separation";
+import { canElementHaveAudio, hasMediaId } from "@/lib/timeline/element-utils";
 import { canTracktHaveAudio } from "@/lib/timeline";
 import { mediaSupportsAudio } from "@/lib/media/media-utils";
 import { getSourceTimeAtClipTime, renderRetimedBuffer } from "@/lib/retime";
@@ -100,6 +103,11 @@ export async function collectAudioElements({
 			if (!canElementHaveAudio(element)) continue;
 			if (element.duration <= 0) continue;
 
+			const mediaAsset = hasMediaId(element)
+				? (mediaMap.get(element.mediaId) ?? null)
+				: null;
+			if (!doesElementHaveEnabledAudio({ element, mediaAsset })) continue;
+
 			const isTrackMuted = canTracktHaveAudio(track) && track.muted;
 
 			if (element.type === "audio") {
@@ -132,7 +140,6 @@ export async function collectAudioElements({
 			}
 
 			if (element.type === "video") {
-				const mediaAsset = mediaMap.get(element.mediaId);
 				if (!mediaAsset || !mediaSupportsAudio({ media: mediaAsset })) continue;
 
 				pendingElements.push(
@@ -451,6 +458,10 @@ export async function collectAudioMixSources({
 		for (const element of track.elements) {
 			if (!canElementHaveAudio(element)) continue;
 			if (element.muted === true) continue;
+			const mediaAsset = hasMediaId(element)
+				? (mediaMap.get(element.mediaId) ?? null)
+				: null;
+			if (!doesElementHaveEnabledAudio({ element, mediaAsset })) continue;
 			const volume = resolveEffectiveAudioGain({
 				element,
 				localTime: 0,
@@ -473,10 +484,7 @@ export async function collectAudioMixSources({
 			}
 
 			if (element.type === "video") {
-				const mediaAsset = mediaMap.get(element.mediaId);
-				if (!mediaAsset) continue;
-
-				if (mediaSupportsAudio({ media: mediaAsset })) {
+				if (mediaAsset && mediaSupportsAudio({ media: mediaAsset })) {
 					audioMixSources.push(
 						collectMediaAudioSource({ element, mediaAsset, volume }),
 					);
@@ -512,6 +520,11 @@ export async function collectAudioClips({
 		for (const element of track.elements) {
 			if (!canElementHaveAudio(element)) continue;
 
+			const mediaAsset = hasMediaId(element)
+				? (mediaMap.get(element.mediaId) ?? null)
+				: null;
+			if (!doesElementHaveEnabledAudio({ element, mediaAsset })) continue;
+
 			const isElementMuted =
 				"muted" in element ? (element.muted ?? false) : false;
 			const muted = isTrackMuted || isElementMuted;
@@ -543,10 +556,7 @@ export async function collectAudioClips({
 			}
 
 			if (element.type === "video") {
-				const mediaAsset = mediaMap.get(element.mediaId);
-				if (!mediaAsset) continue;
-
-				if (mediaSupportsAudio({ media: mediaAsset })) {
+				if (mediaAsset && mediaSupportsAudio({ media: mediaAsset })) {
 					clips.push(
 						collectMediaAudioClip({
 							element,

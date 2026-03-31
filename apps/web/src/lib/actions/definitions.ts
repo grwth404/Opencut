@@ -101,6 +101,10 @@ export const ACTIONS = {
 		description: "Toggle ripple editing",
 		category: "editing",
 	},
+	"toggle-source-audio": {
+		description: "Extract or recover source audio",
+		category: "editing",
+	},
 	"select-all": {
 		description: "Select all elements",
 		category: "selection",

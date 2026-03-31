@@ -113,6 +113,7 @@ export interface VideoElement extends BaseTimelineElement {
 	mediaId: string;
 	volume?: number;
 	muted?: boolean;
+	isSourceAudioEnabled?: boolean;
 	hidden?: boolean;
 	retime?: RetimeConfig;
 	transform: Transform;

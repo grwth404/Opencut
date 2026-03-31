@@ -18,10 +18,11 @@ import { V15toV16Migration } from "./v15-to-v16";
 import { V16toV17Migration } from "./v16-to-v17";
 import { V17toV18Migration } from "./v17-to-v18";
 import { V18toV19Migration } from "./v18-to-v19";
+import { V19toV20Migration } from "./v19-to-v20";
 export { runStorageMigrations } from "./runner";
 export type { MigrationProgress } from "./runner";
 
-export const CURRENT_PROJECT_VERSION = 19;
+export const CURRENT_PROJECT_VERSION = 20;
 
 export const migrations = [
 	new V0toV1Migration(),
@@ -43,4 +44,5 @@ export const migrations = [
 	new V16toV17Migration(),
 	new V17toV18Migration(),
 	new V18toV19Migration(),
+	new V19toV20Migration(),
 ];

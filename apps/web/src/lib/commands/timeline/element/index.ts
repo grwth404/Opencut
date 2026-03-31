@@ -8,6 +8,7 @@ export { SplitElementsCommand } from "./split-elements";
 export { UpdateElementCommand } from "./update-element";
 export { ToggleElementsVisibilityCommand } from "./toggle-elements-visibility";
 export { ToggleElementsMutedCommand } from "./toggle-elements-muted";
+export { ToggleSourceAudioSeparationCommand } from "./toggle-source-audio-separation";
 export { MoveElementCommand } from "./move-elements";
 export * from "./keyframes";
 export * from "./effects";
