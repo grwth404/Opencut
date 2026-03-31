@@ -242,6 +242,7 @@ function buildVideoElement({
 		trimEnd: 0,
 		sourceDuration: duration,
 		muted: false,
+		isSourceAudioEnabled: true,
 		hidden: false,
 		transform: {
 			...DEFAULTS.element.transform,

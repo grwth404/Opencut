@@ -45,6 +45,7 @@ import {
 	ToggleMaskInvertedCommand,
 	UpsertEffectParamKeyframeCommand,
 	RemoveEffectParamKeyframeCommand,
+	ToggleSourceAudioSeparationCommand,
 } from "@/lib/commands/timeline";
 import { BatchCommand } from "@/lib/commands";
 import type { InsertElementParams } from "@/lib/commands/timeline/element/insert-element";
@@ -278,6 +279,20 @@ export class TimelineManager {
 		rippleEnabled?: boolean;
 	}): void {
 		const command = new DeleteElementsCommand({ elements, rippleEnabled });
+		this.editor.command.execute({ command });
+	}
+
+	toggleSourceAudioSeparation({
+		trackId,
+		elementId,
+	}: {
+		trackId: string;
+		elementId: string;
+	}): void {
+		const command = new ToggleSourceAudioSeparationCommand({
+			trackId,
+			elementId,
+		});
 		this.editor.command.execute({ command });
 	}
 

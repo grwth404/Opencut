@@ -6,9 +6,13 @@ import { useActionHandler } from "@/hooks/actions/use-action-handler";
 import { useEditor } from "../use-editor";
 import { useElementSelection } from "../timeline/element/use-element-selection";
 import { useKeyframeSelection } from "../timeline/element/use-keyframe-selection";
-import { getElementsAtTime } from "@/lib/timeline";
+import {
+	getElementsAtTime,
+	hasMediaId,
+} from "@/lib/timeline";
 import { cancelInteraction } from "@/lib/cancel-interaction";
 import { invokeAction } from "@/lib/actions";
+import { canToggleSourceAudio } from "@/lib/timeline/audio-separation";
 import {
 	activateScope,
 	clearActiveScope,
@@ -260,6 +264,48 @@ export function useEditorActions() {
 			editor.timeline.deleteElements({
 				elements: selectedElements,
 				rippleEnabled: rippleEditingEnabled,
+			});
+		},
+		undefined,
+	);
+
+	useActionHandler(
+		"toggle-source-audio",
+		() => {
+			if (selectedElements.length !== 1) {
+				return;
+			}
+
+			const selectedElement = editor.timeline.getElementsWithTracks({
+				elements: selectedElements,
+			})[0];
+			if (!selectedElement) {
+				return;
+			}
+
+			const mediaAsset = (() => {
+				const { element } = selectedElement;
+				if (!hasMediaId(element)) {
+					return null;
+				}
+
+				return (
+					editor.media.getAssets().find((asset) => asset.id === element.mediaId) ??
+					null
+				);
+			})();
+			if (
+				!canToggleSourceAudio({
+					element: selectedElement.element,
+					mediaAsset,
+				})
+			) {
+				return;
+			}
+
+			editor.timeline.toggleSourceAudioSeparation({
+				trackId: selectedElement.track.id,
+				elementId: selectedElement.element.id,
 			});
 		},
 		undefined,

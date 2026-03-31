@@ -5,6 +5,7 @@ export * from "./drag";
 export * from "./track-utils";
 export * from "./track-element-update";
 export * from "./element-utils";
+export * from "./audio-separation";
 export * from "./zoom-utils";
 export * from "./ruler-utils";
 export * from "./ripple-utils";
