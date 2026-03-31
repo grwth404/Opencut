@@ -10,7 +10,7 @@ import {
 	TIMELINE_BOOKMARK_ROW_HEIGHT,
 } from "@/constants/timeline-constants";
 import { DEFAULT_FPS } from "@/constants/project-constants";
-import { getSnappedSeekTime } from "@/lib/time";
+import { getSnappedSeekTime } from "opencut-wasm";
 import {
 	ArrowTurnBackwardIcon,
 	Delete02Icon,

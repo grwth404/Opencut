@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatTimeCode, parseTimeCode } from "@/lib/time";
-import type { TTimeCode } from "@/lib/time";
+import { formatTimeCode, parseTimeCode, type TimeCodeFormat } from "opencut-wasm";
 import { cn } from "@/utils/ui";
 
 interface EditableTimecodeProps {
 	time: number;
 	duration: number;
-	format?: TTimeCode;
+	format?: TimeCodeFormat;
 	fps: number;
 	onTimeChange?: ({ time }: { time: number }) => void;
 	className?: string;
@@ -29,7 +28,7 @@ export function EditableTimecode({
 	const [hasError, setHasError] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const enterPressedRef = useRef(false);
-	const formattedTime = formatTimeCode({ timeInSeconds: time, format, fps });
+	const formattedTime = formatTimeCode({ timeInSeconds: time, format, fps }) ?? "";
 
 	const startEditing = () => {
 		if (disabled) return;
@@ -49,7 +48,7 @@ export function EditableTimecode({
 	const applyEdit = () => {
 		const parsedTime = parseTimeCode({ timeCode: inputValue, format, fps });
 
-		if (parsedTime === null) {
+		if (parsedTime == null) {
 			setHasError(true);
 			return;
 		}

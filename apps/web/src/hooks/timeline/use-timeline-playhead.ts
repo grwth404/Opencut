@@ -1,4 +1,4 @@
-import { getSnappedSeekTime } from "@/lib/time";
+import { getSnappedSeekTime } from "opencut-wasm";
 import { useEffect, useCallback, useRef } from "react";
 import { useEdgeAutoScroll } from "@/hooks/timeline/use-edge-auto-scroll";
 import { useEditor } from "../use-editor";
@@ -83,11 +83,7 @@ export function useTimelinePlayhead({
 			);
 
 			const framesPerSecond = activeProject.settings.fps;
-			const frameTime = getSnappedSeekTime({
-				rawTime,
-				duration,
-				fps: framesPerSecond,
-			});
+			const frameTime = getSnappedSeekTime({ rawTime, duration, fps: framesPerSecond });
 
 			const shouldSnap = snappingEnabled && !isShiftHeldRef.current;
 			const time = (() => {

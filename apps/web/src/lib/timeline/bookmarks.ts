@@ -1,5 +1,5 @@
 import type { Bookmark } from "@/lib/timeline";
-import { roundToFrame } from "@/lib/time";
+import { roundToFrame } from "opencut-wasm";
 
 export const BOOKMARK_TIME_EPSILON = 0.001;
 

@@ -5,7 +5,7 @@ import { CanvasRenderer } from "@/services/renderer/canvas-renderer";
 import { SceneExporter } from "@/services/renderer/scene-exporter";
 import { buildScene } from "@/services/renderer/scene-builder";
 import { createTimelineAudioBuffer } from "@/lib/media/audio";
-import { formatTimeCode } from "@/lib/time";
+import { formatTimeCode } from "opencut-wasm";
 import { downloadBlob } from "@/utils/browser";
 
 type SnapshotResult =
@@ -107,10 +107,7 @@ export class RendererManager {
 				return { success: false, error: "Failed to create image" };
 			}
 
-			const timecode = formatTimeCode({
-				timeInSeconds: renderTime,
-				fps,
-			}).replace(/:/g, "-");
+			const timecode = formatTimeCode({ timeInSeconds: renderTime, fps })!.replace(/:/g, "-");
 			const safeName =
 				activeProject.metadata.name.replace(/[<>:"/\\|?*]/g, "-").trim() ||
 				"snapshot";

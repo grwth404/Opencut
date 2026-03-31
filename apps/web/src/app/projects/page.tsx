@@ -21,7 +21,7 @@ import type {
 	TProjectSortKey,
 	TProjectSortOption,
 } from "@/lib/project/types";
-import { formatTimeCode } from "@/lib/time";
+import { formatTimeCode } from "opencut-wasm";
 import { formatDate } from "@/utils/date";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -77,7 +77,7 @@ const formatProjectDuration = ({
 	}
 
 	const format = duration >= 3600 ? "HH:MM:SS" : "MM:SS";
-	return formatTimeCode({ timeInSeconds: duration, format });
+	return formatTimeCode({ timeInSeconds: duration, format }) ?? "";
 };
 
 const VIEW_MODE_OPTIONS = [

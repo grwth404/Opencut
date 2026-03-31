@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
-import { snapTimeToFrame } from "@/lib/time";
+import { snapTimeToFrame } from "opencut-wasm";
 import type { TimelineElement, TimelineTrack } from "@/lib/timeline";
 import { useEditor } from "@/hooks/use-editor";
 import { useShiftKey } from "@/hooks/use-shift-key";
@@ -285,26 +285,14 @@ export function useTimelineElementResize({
 					resizing.initialTrimStart + getSourceDeltaForClipDelta(deltaTime);
 
 				if (calculated >= 0 && calculated <= maxAllowed) {
-					const newTrimStart = snapTimeToFrame({
-						time: Math.min(
-							maxAllowed,
-							Math.max(minTrimStartForNeighbor, calculated),
-						),
-						fps: projectFps,
-					});
+				const newTrimStart = snapTimeToFrame({ time: Math.min(maxAllowed, Math.max(minTrimStartForNeighbor, calculated)), fps: projectFps });
 					const visibleSourceSpan = Math.max(
 						0,
 						sourceDuration - newTrimStart - resizing.initialTrimEnd,
 					);
-					const newDuration = snapTimeToFrame({
-						time: getDurationForVisibleSourceSpan(visibleSourceSpan),
-						fps: projectFps,
-					});
-					const trimDelta = resizing.initialDuration - newDuration;
-					const newStartTime = snapTimeToFrame({
-						time: resizing.initialStartTime + trimDelta,
-						fps: projectFps,
-					});
+				const newDuration = snapTimeToFrame({ time: getDurationForVisibleSourceSpan(visibleSourceSpan), fps: projectFps });
+				const trimDelta = resizing.initialDuration - newDuration;
+				const newStartTime = snapTimeToFrame({ time: resizing.initialStartTime + trimDelta, fps: projectFps });
 
 					setCurrentTrimStart(newTrimStart);
 					setCurrentStartTime(newStartTime);
@@ -326,14 +314,8 @@ export function useTimelineElementResize({
 									)
 								: Math.min(extensionAmount, maxExtension),
 						);
-						const newStartTime = snapTimeToFrame({
-							time: resizing.initialStartTime - actualExtension,
-							fps: projectFps,
-						});
-						const newDuration = snapTimeToFrame({
-							time: resizing.initialDuration + actualExtension,
-							fps: projectFps,
-						});
+					const newStartTime = snapTimeToFrame({ time: resizing.initialStartTime - actualExtension, fps: projectFps });
+					const newDuration = snapTimeToFrame({ time: resizing.initialDuration + actualExtension, fps: projectFps });
 
 						setCurrentTrimStart(0);
 						setCurrentStartTime(newStartTime);
@@ -359,16 +341,8 @@ export function useTimelineElementResize({
 							0,
 							sourceDuration - newTrimStart - resizing.initialTrimEnd,
 						);
-						const newDuration = snapTimeToFrame({
-							time: getDurationForVisibleSourceSpan(visibleSourceSpan),
-							fps: projectFps,
-						});
-						const newStartTime = snapTimeToFrame({
-							time:
-								resizing.initialStartTime +
-								(resizing.initialDuration - newDuration),
-							fps: projectFps,
-						});
+					const newDuration = snapTimeToFrame({ time: getDurationForVisibleSourceSpan(visibleSourceSpan), fps: projectFps });
+					const newStartTime = snapTimeToFrame({ time: resizing.initialStartTime + (resizing.initialDuration - newDuration), fps: projectFps });
 
 						setCurrentTrimStart(newTrimStart);
 						setCurrentStartTime(newStartTime);
@@ -395,13 +369,7 @@ export function useTimelineElementResize({
 						const extensionNeeded = Math.abs(newTrimEnd);
 						const baseDuration =
 							resizing.initialDuration + resizing.initialTrimEnd;
-						const newDuration = snapTimeToFrame({
-							time: Math.min(
-								baseDuration + extensionNeeded,
-								maxAllowedDuration,
-							),
-							fps: projectFps,
-						});
+					const newDuration = snapTimeToFrame({ time: Math.min(baseDuration + extensionNeeded, maxAllowedDuration), fps: projectFps });
 
 						setCurrentDuration(newDuration);
 						setCurrentTrimEnd(0);
@@ -411,10 +379,7 @@ export function useTimelineElementResize({
 						const unclampedDuration = getDurationForVisibleSourceSpan(
 							Math.max(0, sourceDuration - resizing.initialTrimStart),
 						);
-						const newDuration = snapTimeToFrame({
-							time: Math.min(unclampedDuration, maxAllowedDuration),
-							fps: projectFps,
-						});
+					const newDuration = snapTimeToFrame({ time: Math.min(unclampedDuration, maxAllowedDuration), fps: projectFps });
 
 						setCurrentDuration(newDuration);
 						setCurrentTrimEnd(0);
@@ -438,18 +403,12 @@ export function useTimelineElementResize({
 						maxTrimEnd,
 						Math.max(minTrimEndForNeighbor, newTrimEnd),
 					);
-					const finalTrimEnd = snapTimeToFrame({
-						time: clampedTrimEnd,
-						fps: projectFps,
-					});
+				const finalTrimEnd = snapTimeToFrame({ time: clampedTrimEnd, fps: projectFps });
 					const visibleSourceSpan = Math.max(
 						0,
 						sourceDuration - resizing.initialTrimStart - finalTrimEnd,
 					);
-					const newDuration = snapTimeToFrame({
-						time: getDurationForVisibleSourceSpan(visibleSourceSpan),
-						fps: projectFps,
-					});
+				const newDuration = snapTimeToFrame({ time: getDurationForVisibleSourceSpan(visibleSourceSpan), fps: projectFps });
 
 					setCurrentTrimEnd(finalTrimEnd);
 					setCurrentDuration(newDuration);

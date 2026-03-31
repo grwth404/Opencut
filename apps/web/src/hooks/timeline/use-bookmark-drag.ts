@@ -8,7 +8,7 @@ import {
 import { useEditor } from "@/hooks/use-editor";
 import { useShiftKey } from "@/hooks/use-shift-key";
 import { DRAG_THRESHOLD_PX } from "@/constants/timeline-constants";
-import { snapTimeToFrame } from "@/lib/time";
+import { snapTimeToFrame } from "opencut-wasm";
 import { getMouseTimeFromClientX } from "@/lib/timeline/drag-utils";
 import {
 	findSnapPoints,
@@ -145,10 +145,7 @@ export function useBookmarkDrag({
 					zoomLevel,
 					scrollLeft,
 				});
-				const frameSnappedTime = snapTimeToFrame({
-					time: Math.max(0, Math.min(mouseTime, duration)),
-					fps: activeProject.settings.fps,
-				});
+			const frameSnappedTime = snapTimeToFrame({ time: Math.max(0, Math.min(mouseTime, duration)), fps: activeProject.settings.fps });
 				const { snappedTime: initialTime } = getSnapResult({
 					rawTime: frameSnappedTime,
 					excludeBookmarkTime: bookmarkTime,
@@ -176,10 +173,7 @@ export function useBookmarkDrag({
 				scrollLeft,
 			});
 			const clampedTime = Math.max(0, Math.min(mouseTime, duration));
-			const frameSnappedTime = snapTimeToFrame({
-				time: clampedTime,
-				fps: activeProject.settings.fps,
-			});
+			const frameSnappedTime = snapTimeToFrame({ time: clampedTime, fps: activeProject.settings.fps });
 			const snapResult = getSnapResult({
 				rawTime: frameSnappedTime,
 				excludeBookmarkTime: dragState.bookmarkTime,

@@ -14,7 +14,7 @@ import {
 	DRAG_THRESHOLD_PX,
 	TIMELINE_CONSTANTS,
 } from "@/constants/timeline-constants";
-import { snapTimeToFrame } from "@/lib/time";
+import { snapTimeToFrame } from "opencut-wasm";
 import { computeDropTarget } from "@/lib/timeline/drop-utils";
 import { getMouseTimeFromClientX } from "@/lib/timeline/drag-utils";
 import { generateUUID } from "@/utils/id";
@@ -302,10 +302,7 @@ export function useElementInteraction({
 						0,
 						mouseTime - pendingDragRef.current.clickOffsetTime,
 					);
-					const snappedTime = snapTimeToFrame({
-						time: adjustedTime,
-						fps: activeProject.settings.fps,
-					});
+				const snappedTime = snapTimeToFrame({ time: adjustedTime, fps: activeProject.settings.fps });
 					startDrag({
 						...pendingDragRef.current,
 						initialCurrentTime: snappedTime,

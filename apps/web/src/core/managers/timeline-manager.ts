@@ -13,7 +13,7 @@ import type {
 	AnimationValue,
 } from "@/lib/animation/types";
 import { calculateTotalDuration } from "@/lib/timeline";
-import { getLastFrameTime } from "@/lib/time";
+import { getLastFrameTime } from "opencut-wasm";
 import {
 	AddTrackCommand,
 	RemoveTrackCommand,

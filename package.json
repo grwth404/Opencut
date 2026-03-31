@@ -3,9 +3,13 @@
   "packageManager": "bun@1.2.18",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "rust/wasm/pkg"
   ],
   "scripts": {
+    "build:wasm": "wasm-pack build rust/wasm --target bundler --out-dir pkg",
+    "publish:wasm": "bun run build:wasm && npm publish rust/wasm/pkg --access public",
+    "dev:wasm": "cargo watch -w rust/crates -w rust/wasm/src -s 'wasm-pack build rust/wasm --target bundler --out-dir pkg'",
     "dev:web": "turbo run dev --filter=@opencut/web",
     "build:web": "turbo run build --filter=@opencut/web",
     "dev:tools": "turbo run dev --filter=@opencut/tools",

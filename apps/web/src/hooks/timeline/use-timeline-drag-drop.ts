@@ -4,7 +4,7 @@ import { processMediaAssets } from "@/lib/media/processing";
 import { toast } from "sonner";
 import { showMediaUploadToast } from "@/lib/media/upload-toast";
 import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
-import { snapTimeToFrame } from "@/lib/time";
+import { snapTimeToFrame } from "opencut-wasm";
 import {
 	buildTextElement,
 	buildGraphicElement,

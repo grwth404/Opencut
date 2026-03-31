@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useEditor } from "@/hooks/use-editor";
 import { useKeyframeSelection } from "./use-keyframe-selection";
-import { snapTimeToFrame, getSnappedSeekTime } from "@/lib/time";
+import { snapTimeToFrame, getSnappedSeekTime } from "opencut-wasm";
 import { timelineTimeToSnappedPixels } from "@/lib/timeline";
 import {
 	DRAG_THRESHOLD_PX,
@@ -254,11 +254,7 @@ export function useKeyframeDrag({
 			if (wasDrag) return;
 
 			const duration = editor.timeline.getTotalDuration();
-			const seekTime = getSnappedSeekTime({
-				rawTime: displayedStartTime + indicatorTime,
-				duration,
-				fps,
-			});
+			const seekTime = getSnappedSeekTime({ rawTime: displayedStartTime + indicatorTime, duration, fps });
 			editor.playback.seek({ time: seekTime });
 
 			if (event.shiftKey) {
