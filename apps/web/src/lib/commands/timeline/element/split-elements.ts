@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import type { TimelineTrack } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { EditorCore } from "@/core";
@@ -9,7 +9,6 @@ import { getSourceSpanAtClipTime } from "@/lib/retime";
 export class SplitElementsCommand extends Command {
 	private savedState: TimelineTrack[] | null = null;
 	private rightSideElements: { trackId: string; elementId: string }[] = [];
-	private previousSelection: { trackId: string; elementId: string }[] = [];
 	private readonly elements: { trackId: string; elementId: string }[];
 	private readonly splitTime: number;
 	private readonly retainSide: "both" | "left" | "right";
@@ -37,10 +36,9 @@ export class SplitElementsCommand extends Command {
 		return this.rightSideElements;
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
-		this.previousSelection = editor.selection.getSelectedElements();
 		this.rightSideElements = [];
 
 		const updatedTracks = this.savedState.map((track) => {
@@ -173,9 +171,9 @@ export class SplitElementsCommand extends Command {
 		editor.timeline.updateTracks(updatedTracks);
 
 		if (this.rightSideElements.length > 0) {
-			editor.selection.setSelectedElements({
-				elements: this.rightSideElements,
-			});
+			return {
+				select: this.rightSideElements,
+			};
 		}
 	}
 
@@ -183,9 +181,6 @@ export class SplitElementsCommand extends Command {
 		if (this.savedState) {
 			const editor = EditorCore.getInstance();
 			editor.timeline.updateTracks(this.savedState);
-			editor.selection.setSelectedElements({
-				elements: this.previousSelection,
-			});
 		}
 	}
 }

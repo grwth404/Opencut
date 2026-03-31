@@ -261,7 +261,6 @@ export function useEditorActions() {
 				elements: selectedElements,
 				rippleEnabled: rippleEditingEnabled,
 			});
-			editor.selection.clearSelection();
 		},
 		undefined,
 	);

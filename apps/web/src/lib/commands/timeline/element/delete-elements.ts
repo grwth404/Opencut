@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import type { TimelineTrack } from "@/lib/timeline";
 import { EditorCore } from "@/core";
 import { rippleShiftElements } from "@/lib/timeline";
@@ -21,7 +21,7 @@ export class DeleteElementsCommand extends Command {
 		this.rippleEnabled = rippleEnabled;
 	}
 
-	execute(): void {
+	execute(): CommandResult {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 
@@ -69,6 +69,10 @@ export class DeleteElementsCommand extends Command {
 			.filter((track) => track.elements.length > 0 || isMainTrack(track));
 
 		editor.timeline.updateTracks(updatedTracks);
+
+		return {
+			select: [],
+		};
 	}
 
 	undo(): void {
