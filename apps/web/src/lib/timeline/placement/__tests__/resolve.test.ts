@@ -1,7 +1,53 @@
 import { describe, expect, test } from "bun:test";
-import type { ElementType, TimelineElement, TimelineTrack, TrackType } from "@/lib/timeline";
+import type {
+	AudioElement,
+	AudioTrack,
+	GraphicElement,
+	GraphicTrack,
+	TextElement,
+	TextTrack,
+	TimelineTrack,
+	VideoElement,
+	VideoTrack,
+} from "@/lib/timeline";
+import type { Transform } from "@/lib/rendering";
 import { resolveTrackPlacement } from "@/lib/timeline/placement";
 
+function buildTransform(): Transform {
+	return {
+		scaleX: 1,
+		scaleY: 1,
+		position: { x: 0, y: 0 },
+		rotate: 0,
+	};
+}
+
+type TestElement = AudioElement | GraphicElement | TextElement | VideoElement;
+
+function buildElement(params: {
+	id: string;
+	type: "audio";
+	startTime: number;
+	duration: number;
+}): AudioElement;
+function buildElement(params: {
+	id: string;
+	type: "graphic";
+	startTime: number;
+	duration: number;
+}): GraphicElement;
+function buildElement(params: {
+	id: string;
+	type: "text";
+	startTime: number;
+	duration: number;
+}): TextElement;
+function buildElement(params: {
+	id: string;
+	type: "video";
+	startTime: number;
+	duration: number;
+}): VideoElement;
 function buildElement({
 	id,
 	type,
@@ -9,61 +55,171 @@ function buildElement({
 	duration,
 }: {
 	id: string;
-	type: ElementType;
+	type: TestElement["type"];
 	startTime: number;
 	duration: number;
-}): TimelineElement {
-	return {
-		id,
-		type,
-		name: id,
-		startTime,
-		duration,
-		trimStart: 0,
-		trimEnd: 0,
-	} as TimelineElement;
+}): TestElement {
+	switch (type) {
+		case "audio":
+			return {
+				id,
+				type: "audio",
+				name: id,
+				startTime,
+				duration,
+				trimStart: 0,
+				trimEnd: 0,
+				volume: 1,
+				sourceType: "upload",
+				mediaId: `media-${id}`,
+			} satisfies AudioElement;
+		case "graphic":
+			return {
+				id,
+				type: "graphic",
+				name: id,
+				startTime,
+				duration,
+				trimStart: 0,
+				trimEnd: 0,
+				definitionId: `graphic-${id}`,
+				params: {},
+				transform: buildTransform(),
+				opacity: 1,
+			} satisfies GraphicElement;
+		case "text":
+			return {
+				id,
+				type: "text",
+				name: id,
+				startTime,
+				duration,
+				trimStart: 0,
+				trimEnd: 0,
+				content: id,
+				fontSize: 32,
+				fontFamily: "sans-serif",
+				color: "#ffffff",
+				background: {
+					enabled: false,
+					color: "#000000",
+				},
+				textAlign: "left",
+				fontWeight: "normal",
+				fontStyle: "normal",
+				textDecoration: "none",
+				transform: buildTransform(),
+				opacity: 1,
+			} satisfies TextElement;
+		case "video":
+			return {
+				id,
+				type: "video",
+				name: id,
+				startTime,
+				duration,
+				trimStart: 0,
+				trimEnd: 0,
+				mediaId: `media-${id}`,
+				transform: buildTransform(),
+				opacity: 1,
+			} satisfies VideoElement;
+	}
+
+	throw new Error(`Unsupported test element type: ${type}`);
 }
 
-function buildTrack({
-	id,
-	type,
-	elements = [],
-	isMain = false,
-}: {
+type BuildTrackParams =
+	| {
+			id: string;
+			type: "audio";
+			elements?: AudioTrack["elements"];
+			isMain?: boolean;
+	  }
+	| {
+			id: string;
+			type: "graphic";
+			elements?: GraphicTrack["elements"];
+			isMain?: boolean;
+	  }
+	| {
+			id: string;
+			type: "text";
+			elements?: TextTrack["elements"];
+			isMain?: boolean;
+	  }
+	| {
+			id: string;
+			type: "video";
+			elements?: VideoTrack["elements"];
+			isMain?: boolean;
+	  };
+
+function buildTrack(params: {
 	id: string;
-	type: TrackType;
-	elements?: TimelineElement[];
+	type: "audio";
+	elements?: AudioTrack["elements"];
 	isMain?: boolean;
-}): TimelineTrack {
-	if (type === "video") {
-		return {
-			id,
-			type,
-			name: id,
-			elements: elements as TimelineTrack["elements"],
-			isMain,
-			muted: false,
-			hidden: false,
-		};
+}): AudioTrack;
+function buildTrack(params: {
+	id: string;
+	type: "graphic";
+	elements?: GraphicTrack["elements"];
+	isMain?: boolean;
+}): GraphicTrack;
+function buildTrack(params: {
+	id: string;
+	type: "text";
+	elements?: TextTrack["elements"];
+	isMain?: boolean;
+}): TextTrack;
+function buildTrack(params: {
+	id: string;
+	type: "video";
+	elements?: VideoTrack["elements"];
+	isMain?: boolean;
+}): VideoTrack;
+function buildTrack(params: BuildTrackParams): TimelineTrack {
+	const { id, type, isMain = false } = params;
+
+	switch (type) {
+		case "audio":
+			return {
+				id,
+				type: "audio",
+				name: id,
+				elements: params.elements ?? [],
+				muted: false,
+			};
+		case "graphic":
+			return {
+				id,
+				type: "graphic",
+				name: id,
+				elements: params.elements ?? [],
+				hidden: false,
+			};
+		case "text":
+			return {
+				id,
+				type: "text",
+				name: id,
+				elements: params.elements ?? [],
+				hidden: false,
+			};
+		case "video":
+			return {
+				id,
+				type: "video",
+				name: id,
+				elements: params.elements ?? [],
+				isMain,
+				muted: false,
+				hidden: false,
+			};
 	}
 
-	if (type === "audio") {
-		return {
-			id,
-			type,
-			name: id,
-			elements: elements as TimelineTrack["elements"],
-			muted: false,
-		};
-	}
-
-	return {
-		id,
-		type,
-		name: id,
-		elements: elements as TimelineTrack["elements"],
-		hidden: false,
-	};
+	throw new Error(`Unsupported test track type: ${type}`);
 }
 
 function buildTimeSpan({
@@ -124,7 +280,9 @@ describe("resolveTrackPlacement", () => {
 			buildTrack({
 				id: "text-1",
 				type: "text",
-				elements: [buildElement({ id: "a", type: "text", startTime: 0, duration: 5 })],
+				elements: [
+					buildElement({ id: "a", type: "text", startTime: 0, duration: 5 }),
+				],
 			}),
 			buildTrack({ id: "text-2", type: "text" }),
 		];
@@ -256,7 +414,9 @@ describe("resolveTrackPlacement", () => {
 			buildTrack({
 				id: "text-middle",
 				type: "text",
-				elements: [buildElement({ id: "a", type: "text", startTime: 0, duration: 5 })],
+				elements: [
+					buildElement({ id: "a", type: "text", startTime: 0, duration: 5 }),
+				],
 			}),
 			buildTrack({ id: "text-source", type: "text" }),
 		];
@@ -281,12 +441,16 @@ describe("resolveTrackPlacement", () => {
 			buildTrack({
 				id: "text-top",
 				type: "text",
-				elements: [buildElement({ id: "a", type: "text", startTime: 0, duration: 5 })],
+				elements: [
+					buildElement({ id: "a", type: "text", startTime: 0, duration: 5 }),
+				],
 			}),
 			buildTrack({
 				id: "text-source",
 				type: "text",
-				elements: [buildElement({ id: "b", type: "text", startTime: 0, duration: 5 })],
+				elements: [
+					buildElement({ id: "b", type: "text", startTime: 0, duration: 5 }),
+				],
 			}),
 		];
 

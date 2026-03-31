@@ -44,9 +44,7 @@ function buildExistingTrackResult({
 		trackId: track.id,
 		trackIndex,
 		trackType: track.type,
-		...(adjustedStartTime !== requestedStartTime
-			? { adjustedStartTime }
-			: {}),
+		...(adjustedStartTime !== requestedStartTime ? { adjustedStartTime } : {}),
 	};
 }
 
@@ -114,6 +112,24 @@ function resolveAlwaysNewTrack({
 	});
 }
 
+function getInsertDirection({
+	hoverDirection,
+	verticalDragDirection,
+}: {
+	hoverDirection: "above" | "below";
+	verticalDragDirection?: "up" | "down" | null;
+}): "above" | "below" {
+	if (verticalDragDirection === "up") {
+		return "above";
+	}
+
+	if (verticalDragDirection === "down") {
+		return "below";
+	}
+
+	return hoverDirection;
+}
+
 export function resolveTrackPlacement({
 	tracks,
 	...placement
@@ -127,7 +143,9 @@ export function resolveTrackPlacement({
 	const { timeSpans, strategy } = placement;
 
 	if (strategy.type === "explicit") {
-		const trackIndex = tracks.findIndex((track) => track.id === strategy.trackId);
+		const trackIndex = tracks.findIndex(
+			(track) => track.id === strategy.trackId,
+		);
 		if (trackIndex < 0) {
 			return null;
 		}
@@ -182,15 +200,16 @@ export function resolveTrackPlacement({
 			});
 		}
 
-		const insertDirection =
-			!isPreferredTrackCompatible && strategy.verticalDragDirection
-				? strategy.verticalDragDirection
-				: strategy.hoverDirection;
 		const { insertIndex, insertPosition } = resolvePreferredNewTrackPlacement({
 			tracks,
 			trackType,
 			preferredIndex: strategy.trackIndex,
-			direction: insertDirection,
+			direction: getInsertDirection({
+				hoverDirection: strategy.hoverDirection,
+				verticalDragDirection: !isPreferredTrackCompatible
+					? strategy.verticalDragDirection
+					: null,
+			}),
 		});
 		return buildNewTrackResult({
 			trackType,
