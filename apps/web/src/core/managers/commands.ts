@@ -11,6 +11,7 @@ interface CommandHistoryEntry {
 export class CommandManager {
 	private history: CommandHistoryEntry[] = [];
 	private redoStack: CommandHistoryEntry[] = [];
+	private reactors: Array<() => void> = [];
 
 	constructor(private editor: EditorCore) {}
 
@@ -18,6 +19,7 @@ export class CommandManager {
 		const previousSelection = this.getSelectionSnapshot();
 		const result = command.execute();
 		const selectionOverride = this.applySelectionOverride(result);
+		this.runReactors();
 		this.history.push({
 			command,
 			previousSelection,
@@ -33,6 +35,10 @@ export class CommandManager {
 			previousSelection: this.getSelectionSnapshot(),
 		});
 		this.redoStack = [];
+	}
+
+	registerReactor(reactor: () => void): void {
+		this.reactors.push(reactor);
 	}
 
 	undo(): void {
@@ -64,6 +70,7 @@ export class CommandManager {
 		const previousSelection = this.getSelectionSnapshot();
 		const result = entry.command.redo();
 		const selectionOverride = this.applySelectionOverride(result);
+		this.runReactors();
 
 		this.history.push({
 			command: entry.command,
@@ -99,5 +106,11 @@ export class CommandManager {
 		const selectionOverride = [...result.select];
 		this.editor.selection.setSelectedElements({ elements: selectionOverride });
 		return selectionOverride;
+	}
+
+	private runReactors(): void {
+		for (const reactor of this.reactors) {
+			reactor();
+		}
 	}
 }
