@@ -1,4 +1,4 @@
-import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
 
 /**
  * frame intervals for labels - starts at 2 so there's always at least
@@ -56,7 +56,7 @@ export function getRulerConfig({
 	zoomLevel: number;
 	fps: number;
 }): RulerConfig {
-	const pixelsPerSecond = TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
+	const pixelsPerSecond = BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel;
 	const pixelsPerFrame = pixelsPerSecond / fps;
 
 	const labelIntervalSeconds = findOptimalInterval({

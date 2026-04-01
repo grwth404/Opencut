@@ -1,5 +1,5 @@
 import type { Bookmark, TimelineTrack } from "@/lib/timeline";
-import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
 import { BOOKMARK_TIME_EPSILON } from "@/lib/timeline/bookmarks";
 import { getElementKeyframes } from "@/lib/animation";
 
@@ -107,7 +107,7 @@ export function snapToNearestPoint({
 	zoomLevel: number;
 	snapThreshold?: number;
 }): SnapResult {
-	const pixelsPerSecond = TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
+	const pixelsPerSecond = BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel;
 	const thresholdInSeconds = snapThreshold / pixelsPerSecond;
 
 	let closestSnapPoint: SnapPoint | null = null;

@@ -6,10 +6,10 @@ import { useEditor } from "@/hooks/use-editor";
 import type { BookmarkDragState } from "@/hooks/timeline/use-bookmark-drag";
 import { BOOKMARK_TIME_EPSILON } from "@/lib/timeline/bookmarks";
 import {
-	DEFAULT_BOOKMARK_COLOR,
-	TIMELINE_BOOKMARK_ROW_HEIGHT,
-} from "@/constants/timeline-constants";
-import { DEFAULT_FPS } from "@/constants/project-constants";
+	DEFAULT_TIMELINE_BOOKMARK_COLOR,
+} from "./theme";
+import { TIMELINE_BOOKMARK_ROW_HEIGHT_PX } from "./layout";
+import { DEFAULT_FPS } from "@/lib/fps/constants";
 import { getSnappedSeekTime } from "opencut-wasm";
 import {
 	ArrowTurnBackwardIcon,
@@ -83,12 +83,12 @@ export function TimelineBookmarksRow({
 	return (
 		<div
 			className="relative flex-1 overflow-hidden"
-			style={{ height: TIMELINE_BOOKMARK_ROW_HEIGHT }}
+			style={{ height: TIMELINE_BOOKMARK_ROW_HEIGHT_PX }}
 		>
 			<button
 				className="relative w-full cursor-default select-none border-0 bg-transparent p-0"
 				style={{
-					height: TIMELINE_BOOKMARK_ROW_HEIGHT,
+					height: TIMELINE_BOOKMARK_ROW_HEIGHT_PX,
 					width: `${dynamicTimelineWidth}px`,
 				}}
 				aria-label="Timeline ruler"
@@ -153,7 +153,7 @@ function TimelineBookmark({
 	const left = timelineTimeToSnappedPixels({ time: displayTime, zoomLevel });
 	const bookmarkLeft = left - BOOKMARK_HALF_WIDTH_PX;
 	const rightHalfLeft = BOOKMARK_HALF_WIDTH_PX + Math.max(durationWidth, 0);
-	const iconColor = bookmark.color ?? DEFAULT_BOOKMARK_COLOR;
+	const iconColor = bookmark.color ?? DEFAULT_TIMELINE_BOOKMARK_COLOR;
 
 	const handleSeek = () => seekToBookmarkTime({ editor, time });
 
@@ -298,12 +298,16 @@ function BookmarkPopoverContent({
 }) {
 	const editor = useEditor();
 	const [draftColorHex, setDraftColorHex] = useState(
-		(bookmark.color ?? DEFAULT_BOOKMARK_COLOR).replace("#", "").toUpperCase(),
+		(bookmark.color ?? DEFAULT_TIMELINE_BOOKMARK_COLOR)
+			.replace("#", "")
+			.toUpperCase(),
 	);
 
 	useEffect(() => {
 		setDraftColorHex(
-			(bookmark.color ?? DEFAULT_BOOKMARK_COLOR).replace("#", "").toUpperCase(),
+			(bookmark.color ?? DEFAULT_TIMELINE_BOOKMARK_COLOR)
+				.replace("#", "")
+				.toUpperCase(),
 		);
 	}, [bookmark.color]);
 
@@ -357,7 +361,7 @@ function BookmarkPopoverContent({
 					/>
 					{bookmark.color &&
 						bookmark.color.replace(/^#/, "").toUpperCase() !==
-							DEFAULT_BOOKMARK_COLOR.replace(/^#/, "").toUpperCase() && (
+							DEFAULT_TIMELINE_BOOKMARK_COLOR.replace(/^#/, "").toUpperCase() && (
 							<Button
 								type="button"
 								variant="text"

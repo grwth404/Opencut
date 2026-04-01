@@ -1,4 +1,7 @@
-import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import {
+	BASE_TIMELINE_PIXELS_PER_SECOND,
+	TIMELINE_ZOOM_MAX,
+} from "@/lib/timeline/scale";
 
 const PADDING_MAX_RATIO = 0.75;
 const PADDING_MIN_RATIO = 0.15;
@@ -16,9 +19,9 @@ export function getTimelineZoomMin({
 	const contentRatioAtMinZoom = 1 - PADDING_MAX_RATIO;
 	const availableWidth = safeContainerWidth * contentRatioAtMinZoom;
 	const zoomToFit =
-		availableWidth / (safeDuration * TIMELINE_CONSTANTS.PIXELS_PER_SECOND);
+		availableWidth / (safeDuration * BASE_TIMELINE_PIXELS_PER_SECOND);
 
-	return Math.min(TIMELINE_CONSTANTS.ZOOM_MAX, zoomToFit);
+	return Math.min(TIMELINE_ZOOM_MAX, zoomToFit);
 }
 
 export function getTimelinePaddingPx({
@@ -49,7 +52,7 @@ export function getZoomPercent({
 	zoomLevel: number;
 	minZoom: number;
 }): number {
-	return (zoomLevel - minZoom) / (TIMELINE_CONSTANTS.ZOOM_MAX - minZoom);
+	return (zoomLevel - minZoom) / (TIMELINE_ZOOM_MAX - minZoom);
 }
 
 /**
@@ -59,7 +62,7 @@ export function getZoomPercent({
 export function sliderToZoom({
 	sliderPosition,
 	minZoom,
-	maxZoom = TIMELINE_CONSTANTS.ZOOM_MAX,
+	maxZoom = TIMELINE_ZOOM_MAX,
 }: {
 	sliderPosition: number;
 	minZoom: number;
@@ -75,7 +78,7 @@ export function sliderToZoom({
 export function zoomToSlider({
 	zoomLevel,
 	minZoom,
-	maxZoom = TIMELINE_CONSTANTS.ZOOM_MAX,
+	maxZoom = TIMELINE_ZOOM_MAX,
 }: {
 	zoomLevel: number;
 	minZoom: number;

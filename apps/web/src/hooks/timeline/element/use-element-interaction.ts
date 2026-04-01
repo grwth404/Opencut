@@ -10,12 +10,10 @@ import { useEditor } from "@/hooks/use-editor";
 import { useShiftKey } from "@/hooks/use-shift-key";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useElementSelection } from "@/hooks/timeline/element/use-element-selection";
-import {
-	DRAG_THRESHOLD_PX,
-	TIMELINE_CONSTANTS,
-} from "@/constants/timeline-constants";
+import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
+import { TIMELINE_DRAG_THRESHOLD_PX } from "@/components/editor/panels/timeline/interaction";
 import { snapTimeToFrame } from "opencut-wasm";
-import { computeDropTarget } from "@/lib/timeline/drop-utils";
+import { computeDropTarget } from "@/components/editor/panels/timeline/drop-target";
 import { getMouseTimeFromClientX } from "@/lib/timeline/drag-utils";
 import { generateUUID } from "@/utils/id";
 import { snapElementEdge, type SnapPoint } from "@/lib/timeline/snap-utils";
@@ -70,7 +68,7 @@ function getClickOffsetTime({
 	zoomLevel: number;
 }): number {
 	const clickOffsetX = clientX - elementRect.left;
-	return clickOffsetX / (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel);
+	return clickOffsetX / (BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel);
 }
 
 function getVerticalDragDirection({
@@ -136,7 +134,7 @@ function getDragDropTarget({
 		playheadTime: snappedTime,
 		isExternalDrop: false,
 		elementDuration,
-		pixelsPerSecond: TIMELINE_CONSTANTS.PIXELS_PER_SECOND,
+		pixelsPerSecond: BASE_TIMELINE_PIXELS_PER_SECOND,
 		zoomLevel,
 		startTimeOverride: snappedTime,
 		excludeElementId: movingElement.id,
@@ -288,7 +286,10 @@ export function useElementInteraction({
 			if (isPendingDrag && pendingDragRef.current) {
 				const deltaX = Math.abs(clientX - pendingDragRef.current.startMouseX);
 				const deltaY = Math.abs(clientY - pendingDragRef.current.startMouseY);
-				if (deltaX > DRAG_THRESHOLD_PX || deltaY > DRAG_THRESHOLD_PX) {
+				if (
+					deltaX > TIMELINE_DRAG_THRESHOLD_PX ||
+					deltaY > TIMELINE_DRAG_THRESHOLD_PX
+				) {
 					const activeProject = editor.project.getActive();
 					if (!activeProject) return;
 					const scrollLeft = scrollContainer.scrollLeft;
@@ -416,7 +417,10 @@ export function useElementInteraction({
 			if (mouseDownLocationRef.current) {
 				const deltaX = Math.abs(clientX - mouseDownLocationRef.current.x);
 				const deltaY = Math.abs(clientY - mouseDownLocationRef.current.y);
-				if (deltaX <= DRAG_THRESHOLD_PX && deltaY <= DRAG_THRESHOLD_PX) {
+				if (
+					deltaX <= TIMELINE_DRAG_THRESHOLD_PX &&
+					deltaY <= TIMELINE_DRAG_THRESHOLD_PX
+				) {
 					mouseDownLocationRef.current = null;
 					endDrag();
 					onSnapPointChange?.(null);
@@ -596,7 +600,10 @@ export function useElementInteraction({
 			if (mouseDownLocationRef.current) {
 				const deltaX = Math.abs(event.clientX - mouseDownLocationRef.current.x);
 				const deltaY = Math.abs(event.clientY - mouseDownLocationRef.current.y);
-				if (deltaX > DRAG_THRESHOLD_PX || deltaY > DRAG_THRESHOLD_PX) {
+				if (
+					deltaX > TIMELINE_DRAG_THRESHOLD_PX ||
+					deltaY > TIMELINE_DRAG_THRESHOLD_PX
+				) {
 					mouseDownLocationRef.current = null;
 					return;
 				}

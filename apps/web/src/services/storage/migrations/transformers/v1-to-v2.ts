@@ -1,9 +1,9 @@
 import {
-	DEFAULT_BLUR_INTENSITY,
-	DEFAULT_CANVAS_SIZE,
-	DEFAULT_COLOR,
-	DEFAULT_FPS,
-} from "@/constants/project-constants";
+	DEFAULT_BACKGROUND_BLUR_INTENSITY,
+	DEFAULT_BACKGROUND_COLOR,
+} from "@/lib/background/constants";
+import { DEFAULT_CANVAS_SIZE } from "@/lib/canvas/constants";
+import { DEFAULT_FPS } from "@/lib/fps/constants";
 import { IndexedDBAdapter } from "@/services/storage/indexeddb-adapter";
 import type { MediaAssetData } from "@/services/storage/types";
 import type { MigrationResult, ProjectRecord } from "./types";
@@ -739,14 +739,17 @@ function getBackgroundValue({
 				type: "blur",
 				blurIntensity: getNumberValue({
 					value: value.blurIntensity,
-					fallback: DEFAULT_BLUR_INTENSITY,
+					fallback: DEFAULT_BACKGROUND_BLUR_INTENSITY,
 				}),
 			};
 		}
 
 		return {
 			type: "color",
-			color: getStringValue({ value: value.color, fallback: DEFAULT_COLOR }),
+			color: getStringValue({
+				value: value.color,
+				fallback: DEFAULT_BACKGROUND_COLOR,
+			}),
 		};
 	}
 
@@ -755,14 +758,17 @@ function getBackgroundValue({
 			type: "blur",
 			blurIntensity: getNumberValue({
 				value: blurIntensity,
-				fallback: DEFAULT_BLUR_INTENSITY,
+				fallback: DEFAULT_BACKGROUND_BLUR_INTENSITY,
 			}),
 		};
 	}
 
 	return {
 		type: "color",
-		color: getStringValue({ value: backgroundColor, fallback: DEFAULT_COLOR }),
+		color: getStringValue({
+			value: backgroundColor,
+			fallback: DEFAULT_BACKGROUND_COLOR,
+		}),
 	};
 }
 

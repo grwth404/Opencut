@@ -14,7 +14,10 @@ import {
 	SplitButtonSeparator,
 } from "@/components/ui/split-button";
 import { Slider } from "@/components/ui/slider";
-import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import {
+	TIMELINE_ZOOM_BUTTON_FACTOR,
+} from "./interaction";
+import { TIMELINE_ZOOM_MAX } from "@/lib/timeline/scale";
 import { sliderToZoom, zoomToSlider } from "@/lib/timeline/zoom-utils";
 import { ScenesView } from "@/components/editor/scenes-view";
 import { type TActionWithOptionalArgs, invokeAction } from "@/lib/actions";
@@ -60,10 +63,10 @@ export function TimelineToolbar({
 		const newZoomLevel =
 			direction === "in"
 				? Math.min(
-						TIMELINE_CONSTANTS.ZOOM_MAX,
-						zoomLevel * TIMELINE_CONSTANTS.ZOOM_BUTTON_FACTOR,
+						TIMELINE_ZOOM_MAX,
+						zoomLevel * TIMELINE_ZOOM_BUTTON_FACTOR,
 					)
-				: Math.max(minZoom, zoomLevel / TIMELINE_CONSTANTS.ZOOM_BUTTON_FACTOR);
+				: Math.max(minZoom, zoomLevel / TIMELINE_ZOOM_BUTTON_FACTOR);
 		setZoomLevel({ zoom: newZoomLevel });
 	};
 

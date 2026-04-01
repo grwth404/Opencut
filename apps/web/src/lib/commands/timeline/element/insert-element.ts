@@ -9,7 +9,7 @@ import type {
 import { generateUUID } from "@/utils/id";
 import { requiresMediaId } from "@/lib/timeline/element-utils";
 import type { MediaAsset } from "@/lib/media/types";
-import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import { DEFAULT_NEW_ELEMENT_DURATION_SECONDS } from "@/lib/timeline/creation";
 import { graphicsRegistry, registerDefaultGraphics } from "@/lib/graphics";
 import {
 	applyPlacement,
@@ -136,7 +136,7 @@ export class InsertElementCommand extends Command {
 			startTime: element.startTime,
 			trimStart: element.trimStart ?? 0,
 			trimEnd: element.trimEnd ?? 0,
-			duration: element.duration ?? TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION,
+			duration: element.duration ?? DEFAULT_NEW_ELEMENT_DURATION_SECONDS,
 		} as TimelineElement;
 	}
 

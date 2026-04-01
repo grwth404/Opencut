@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
 import { snapTimeToFrame } from "opencut-wasm";
 import type { TimelineElement, TimelineTrack } from "@/lib/timeline";
 import { useEditor } from "@/hooks/use-editor";
@@ -190,7 +190,7 @@ export function useTimelineElementResize({
 
 			const deltaX = clientX - resizing.startX;
 			let deltaTime =
-				deltaX / (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel);
+				deltaX / (BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel);
 			let resizeSnapPoint: SnapPoint | null = null;
 
 			const projectFps = editor.project.getActive().settings.fps;

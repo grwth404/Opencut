@@ -5,7 +5,7 @@ import type { MediaAsset } from "@/lib/media/types";
 import { generateUUID } from "@/utils/id";
 import { storageService } from "@/services/storage/service";
 import { hasMediaId } from "@/lib/timeline/element-utils";
-import { getHighestImportedVideoFps } from "@/lib/project/fps";
+import { getHighestImportedVideoFps } from "@/lib/fps/utils";
 import { UpdateProjectSettingsCommand } from "@/lib/commands/project";
 
 export class AddMediaAssetCommand extends Command {

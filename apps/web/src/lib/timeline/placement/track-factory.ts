@@ -1,4 +1,4 @@
-import { TRACK_CONFIG } from "@/constants/timeline-constants";
+import { DEFAULT_TRACK_NAMES } from "@/lib/timeline/tracks";
 import type { TrackType, TimelineTrack } from "@/lib/timeline";
 
 export function buildEmptyTrack({
@@ -10,7 +10,7 @@ export function buildEmptyTrack({
 	type: TrackType;
 	name?: string;
 }): TimelineTrack {
-	const trackName = name ?? TRACK_CONFIG[type].defaultName;
+	const trackName = name ?? DEFAULT_TRACK_NAMES[type];
 
 	switch (type) {
 		case "video":

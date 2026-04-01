@@ -11,7 +11,7 @@ import { BlurBackgroundNode } from "./nodes/blur-background-node";
 import { EffectLayerNode } from "./nodes/effect-layer-node";
 import type { BaseNode } from "./nodes/base-node";
 import type { TBackground, TCanvasSize } from "@/lib/project/types";
-import { DEFAULT_BLUR_INTENSITY } from "@/constants/project-constants";
+import { DEFAULT_BACKGROUND_BLUR_INTENSITY } from "@/lib/background/constants";
 import { isMainTrack } from "@/lib/timeline/placement";
 
 const PREVIEW_MAX_IMAGE_SIZE = 2048;
@@ -252,7 +252,8 @@ export function buildScene({
 		const blurNodes = buildBlurBackgroundNodes({
 			track: mainTrack,
 			mediaMap,
-			blurIntensity: background.blurIntensity ?? DEFAULT_BLUR_INTENSITY,
+			blurIntensity:
+				background.blurIntensity ?? DEFAULT_BACKGROUND_BLUR_INTENSITY,
 		});
 		for (const node of blurNodes) {
 			rootNode.add(node);

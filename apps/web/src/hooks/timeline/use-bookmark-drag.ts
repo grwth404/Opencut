@@ -7,7 +7,7 @@ import {
 } from "react";
 import { useEditor } from "@/hooks/use-editor";
 import { useShiftKey } from "@/hooks/use-shift-key";
-import { DRAG_THRESHOLD_PX } from "@/constants/timeline-constants";
+import { TIMELINE_DRAG_THRESHOLD_PX } from "@/components/editor/panels/timeline/interaction";
 import { snapTimeToFrame } from "opencut-wasm";
 import { getMouseTimeFromClientX } from "@/lib/timeline/drag-utils";
 import {
@@ -131,7 +131,10 @@ export function useBookmarkDrag({
 				const deltaX = Math.abs(event.clientX - startMouseX);
 				const deltaY = Math.abs(event.clientY - startMouseY);
 
-				if (deltaX <= DRAG_THRESHOLD_PX && deltaY <= DRAG_THRESHOLD_PX) {
+				if (
+					deltaX <= TIMELINE_DRAG_THRESHOLD_PX &&
+					deltaY <= TIMELINE_DRAG_THRESHOLD_PX
+				) {
 					return;
 				}
 

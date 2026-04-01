@@ -8,7 +8,7 @@ import {
 	getCenteredLineLeft,
 	timelineTimeToSnappedPixels,
 } from "@/lib/timeline";
-import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
 
 interface UseTimelinePlayheadProps {
 	zoomLevel: number;
@@ -67,7 +67,7 @@ export function useTimelinePlayhead({
 			const relativeMouseX = event.clientX - rulerRect.left;
 
 			const timelineContentWidth =
-				duration * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
+				duration * BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel;
 
 			const clampedMouseX = Math.max(
 				0,
@@ -78,7 +78,7 @@ export function useTimelinePlayhead({
 				0,
 				Math.min(
 					duration,
-					clampedMouseX / (TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel),
+					clampedMouseX / (BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel),
 				),
 			);
 
@@ -161,7 +161,7 @@ export function useTimelinePlayhead({
 		getMouseClientX: () => lastMouseXRef.current,
 		rulerScrollRef,
 		tracksScrollRef,
-		contentWidth: duration * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel,
+		contentWidth: duration * BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel,
 	});
 
 	useEffect(() => {
@@ -248,7 +248,7 @@ export function useTimelinePlayhead({
 			if (!rulerViewport || !tracksViewport) return;
 
 			const playheadPixels =
-				time * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevelRef.current;
+				time * BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevelRef.current;
 			const viewportWidth = rulerViewport.clientWidth;
 			const scrollMinimum = 0;
 			const scrollMaximum = rulerViewport.scrollWidth - viewportWidth;

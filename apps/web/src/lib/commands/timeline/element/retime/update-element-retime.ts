@@ -1,5 +1,5 @@
 import { EditorCore } from "@/core";
-import { clampRetimeRate } from "@/constants/retime-constants";
+import { clampRetimeRate } from "@/lib/retime/rate";
 import { clampAnimationsToDuration } from "@/lib/animation";
 import { Command } from "@/lib/commands/base-command";
 import { getTimelineDurationForSourceSpan, getSourceSpanAtClipTime } from "@/lib/retime";

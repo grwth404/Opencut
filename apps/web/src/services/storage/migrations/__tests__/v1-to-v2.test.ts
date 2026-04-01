@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
-	DEFAULT_BLUR_INTENSITY,
-	DEFAULT_CANVAS_SIZE,
-	DEFAULT_COLOR,
-	DEFAULT_FPS,
-} from "@/constants/project-constants";
+	DEFAULT_BACKGROUND_BLUR_INTENSITY,
+	DEFAULT_BACKGROUND_COLOR,
+} from "@/lib/background/constants";
+import { DEFAULT_CANVAS_SIZE } from "@/lib/canvas/constants";
+import { DEFAULT_FPS } from "@/lib/fps/constants";
 import type { MediaAssetData } from "@/services/storage/types";
 import { getProjectId, transformProjectV1ToV2 } from "../transformers/v1-to-v2";
 import {
@@ -119,7 +119,7 @@ describe("V1 to V2 Migration", () => {
 
 			const background = settings.background as Record<string, unknown>;
 			expect(background.type).toBe("color");
-			expect(background.color).toBe(DEFAULT_COLOR);
+			expect(background.color).toBe(DEFAULT_BACKGROUND_COLOR);
 		});
 
 		test("uses default blur intensity when missing", async () => {
@@ -135,7 +135,9 @@ describe("V1 to V2 Migration", () => {
 
 			const settings = result.project.settings as Record<string, unknown>;
 			const background = settings.background as Record<string, unknown>;
-			expect(background.blurIntensity).toBe(DEFAULT_BLUR_INTENSITY);
+			expect(background.blurIntensity).toBe(
+				DEFAULT_BACKGROUND_BLUR_INTENSITY,
+			);
 		});
 
 		test("preserves currentSceneId", async () => {

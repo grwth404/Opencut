@@ -38,20 +38,26 @@ import { SnapIndicator } from "./snap-indicator";
 import type { SnapPoint } from "@/lib/timeline/snap-utils";
 import type { TimelineTrack } from "@/lib/timeline";
 import {
-	TIMELINE_CONSTANTS,
-	TRACK_GAP,
 	TIMELINE_SCROLLBAR_SIZE_PX,
-} from "@/constants/timeline-constants";
+	TIMELINE_CONTENT_TOP_PADDING_PX,
+	TIMELINE_TRACK_GAP_PX,
+	TIMELINE_TRACK_LABELS_COLUMN_WIDTH_PX,
+} from "./layout";
 import { useElementInteraction } from "@/hooks/timeline/element/use-element-interaction";
 import {
-	getTrackHeight,
-	getCumulativeHeightBefore,
-	getTotalTracksHeight,
-	canTracktHaveAudio,
+	canTrackHaveAudio,
 	canTrackBeHidden,
 	getTimelineZoomMin,
 	getTimelinePaddingPx,
 } from "@/lib/timeline";
+import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
+import {
+	getTrackHeight,
+	getCumulativeHeightBefore,
+	getTotalTracksHeight,
+} from "./track-layout";
+import { SELECTED_TRACK_ROW_CLASS } from "./theme";
+import { TIMELINE_HORIZONTAL_WHEEL_STEP_PX } from "./interaction";
 import { isMainTrack } from "@/lib/timeline/placement";
 import { TimelineToolbar } from "./timeline-toolbar";
 import { useElementSelection } from "@/hooks/timeline/element/use-element-selection";
@@ -67,7 +73,7 @@ import { useEditor } from "@/hooks/use-editor";
 import { useTimelinePlayhead } from "@/hooks/timeline/use-timeline-playhead";
 import { DragLine } from "./drag-line";
 import { invokeAction } from "@/lib/actions";
-import { resolveTimelineElementIntersections } from "@/lib/timeline/selection-hit-testing";
+import { resolveTimelineElementIntersections } from "./selection-hit-testing";
 import { cn } from "@/utils/ui";
 
 const TRACKS_CONTAINER_MAX_HEIGHT = 800;
@@ -230,7 +236,7 @@ export function Timeline() {
 					Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
 				const clamped =
 					Math.sign(raw) *
-					Math.min(Math.abs(raw), TIMELINE_CONSTANTS.HORIZONTAL_WHEEL_STEP_PX);
+					Math.min(Math.abs(raw), TIMELINE_HORIZONTAL_WHEEL_STEP_PX);
 				tracks.scrollLeft = Math.max(0, tracks.scrollLeft + clamped);
 			} else {
 				tracks.scrollTop = Math.max(0, tracks.scrollTop + e.deltaY);
@@ -335,7 +341,7 @@ export function Timeline() {
 	const containerWidth =
 		tracksContainerRef.current?.clientWidth || FALLBACK_CONTAINER_WIDTH;
 	const contentWidth =
-		timelineDuration * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
+		timelineDuration * BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel;
 	const paddingPx = getTimelinePaddingPx({
 		containerWidth,
 		zoomLevel,
@@ -383,7 +389,7 @@ export function Timeline() {
 
 	const timelineHeaderHeight =
 		(timelineHeaderRef.current?.getBoundingClientRect().height ?? 0) +
-			TIMELINE_CONSTANTS.PADDING_TOP_PX || 0;
+			TIMELINE_CONTENT_TOP_PADDING_PX || 0;
 
 	return (
 		<section
@@ -483,7 +489,7 @@ export function Timeline() {
 												TRACKS_CONTAINER_HEIGHT.max,
 												getTotalTracksHeight({ tracks }),
 											),
-										) + TIMELINE_CONSTANTS.PADDING_TOP_PX
+										) + TIMELINE_CONTENT_TOP_PADDING_PX
 									}px`,
 								}}
 								onMouseDown={(event) => {
@@ -577,7 +583,10 @@ function TrackLabelsPanel({
 	);
 
 	return (
-		<div className="flex w-28 shrink-0 flex-col border-r">
+		<div
+			className="flex shrink-0 flex-col border-r"
+			style={{ width: `${TIMELINE_TRACK_LABELS_COLUMN_WIDTH_PX}px` }}
+		>
 			<div
 				className="shrink-0"
 				style={{ height: timelineHeaderHeight || 48 }}
@@ -585,21 +594,24 @@ function TrackLabelsPanel({
 			<div ref={trackLabelsRef} className="flex-1 overflow-hidden">
 				<div ref={trackLabelsScrollRef} className="size-full overflow-hidden">
 					{tracks.length > 0 && (
-						<div className="flex flex-col" style={{ gap: `${TRACK_GAP}px` }}>
+						<div
+							className="flex flex-col"
+							style={{ gap: `${TIMELINE_TRACK_GAP_PX}px` }}
+						>
 							{tracks.map((track) => (
 								<div
 									key={track.id}
 									className={cn(
 										"group flex items-center px-3",
 										tracksWithSelection.has(track.id) &&
-											TIMELINE_CONSTANTS.TRACK_SELECTED_BG,
+											SELECTED_TRACK_ROW_CLASS,
 									)}
 									style={{
 										height: `${getTrackHeight({ type: track.type })}px`,
 									}}
 								>
 									<div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-										{canTracktHaveAudio(track) && (
+										{canTrackHaveAudio(track) && (
 											<TrackToggleIcon
 												isOff={track.muted}
 												icons={{ on: VolumeHighIcon, off: VolumeOffIcon }}
@@ -707,10 +719,10 @@ function TimelineTrackRows({
 							className={cn(
 								"absolute right-0 left-0 transition-colors",
 								tracksWithSelection.has(track.id) &&
-									TIMELINE_CONSTANTS.TRACK_SELECTED_BG,
+									SELECTED_TRACK_ROW_CLASS,
 							)}
 							style={{
-								top: `${TIMELINE_CONSTANTS.PADDING_TOP_PX + getCumulativeHeightBefore({ tracks, trackIndex: index })}px`,
+								top: `${TIMELINE_CONTENT_TOP_PADDING_PX + getCumulativeHeightBefore({ tracks, trackIndex: index })}px`,
 								height: `${getTrackHeight({ type: track.type })}px`,
 							}}
 						>
@@ -753,7 +765,7 @@ function TimelineTrackRows({
 								timeline.toggleTrackMute({ trackId: track.id });
 							}}
 						>
-							{canTracktHaveAudio(track) && track.muted
+							{canTrackHaveAudio(track) && track.muted
 								? "Unmute track"
 								: "Mute track"}
 						</ContextMenuItem>

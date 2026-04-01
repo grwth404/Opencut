@@ -12,8 +12,6 @@ import { useKeyframeSelection } from "@/hooks/timeline/element/use-keyframe-sele
 import type { SnapPoint } from "@/lib/timeline/snap-utils";
 import { getElementKeyframes } from "@/lib/animation";
 import {
-	getElementClasses,
-	getTrackHeight,
 	canElementHaveAudio,
 	canElementBeHidden,
 	hasElementEffects,
@@ -21,7 +19,11 @@ import {
 	timelineTimeToPixels,
 	timelineTimeToSnappedPixels,
 } from "@/lib/timeline";
-import { ELEMENT_TYPE_CONFIG } from "@/constants/timeline-constants";
+import { getTrackHeight } from "./track-layout";
+import {
+	getTimelineElementClassName,
+	TIMELINE_TRACK_THEME,
+} from "./theme";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -464,7 +466,7 @@ function ElementInner({
 				<div
 					className={cn(
 						"absolute inset-0 overflow-hidden rounded-sm",
-						getElementClasses({ type: track.type }),
+						getTimelineElementClassName({ type: track.type }),
 						isReducedOpacity && "opacity-50",
 					)}
 				>
@@ -710,7 +712,7 @@ function AudioElementContent({ element }: { element: AudioElement }) {
 				<AudioWaveform
 					audioBuffer={audioBuffer}
 					audioUrl={audioUrl}
-					color={ELEMENT_TYPE_CONFIG.audio.waveformColor}
+					color={TIMELINE_TRACK_THEME.audio.waveformColor}
 				/>
 				<MediaElementHeader name={mediaLabel} hasFade={false} />
 			</div>

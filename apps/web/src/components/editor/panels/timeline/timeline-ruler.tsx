@@ -1,9 +1,9 @@
 import { type JSX, useLayoutEffect, useRef } from "react";
 import {
-	TIMELINE_CONSTANTS,
-	TIMELINE_RULER_HEIGHT,
-} from "@/constants/timeline-constants";
-import { DEFAULT_FPS } from "@/constants/project-constants";
+	BASE_TIMELINE_PIXELS_PER_SECOND,
+} from "@/lib/timeline/scale";
+import { TIMELINE_RULER_HEIGHT_PX } from "./layout";
+import { DEFAULT_FPS } from "@/lib/fps/constants";
 import { useEditor } from "@/hooks/use-editor";
 import { getRulerConfig, shouldShowLabel } from "@/lib/timeline/ruler-utils";
 import { useScrollPosition } from "@/hooks/timeline/use-scroll-position";
@@ -31,7 +31,7 @@ export function TimelineRuler({
 	handleRulerMouseDown,
 }: TimelineRulerProps) {
 	const duration = useEditor((e) => e.timeline.getTotalDuration());
-	const pixelsPerSecond = TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
+	const pixelsPerSecond = BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel;
 	const visibleDuration = dynamicTimelineWidth / pixelsPerSecond;
 	const effectiveDuration = Math.max(duration, visibleDuration);
 	const fps =
@@ -107,7 +107,7 @@ export function TimelineRuler({
 			aria-valuemax={effectiveDuration}
 			aria-valuenow={0}
 			className="relative flex-1 overflow-x-visible"
-			style={{ height: TIMELINE_RULER_HEIGHT }}
+			style={{ height: TIMELINE_RULER_HEIGHT_PX }}
 			onWheel={handleWheel}
 			onClick={(event) => {
 				// Ruler seek already happens on mousedown via playhead scrubbing.
@@ -124,7 +124,7 @@ export function TimelineRuler({
 				ref={rulerRef}
 				className="relative cursor-default select-none"
 				style={{
-					height: TIMELINE_RULER_HEIGHT,
+					height: TIMELINE_RULER_HEIGHT_PX,
 					width: `${dynamicTimelineWidth}px`,
 				}}
 				onMouseDown={handleRulerMouseDown}

@@ -22,7 +22,7 @@ import {
 	SelectItem,
 	SelectSeparator,
 } from "@/components/ui/select";
-import { PREVIEW_ZOOM_PRESETS } from "@/constants/editor-constants";
+import { PREVIEW_ZOOM_PRESETS } from "@/lib/preview/constants";
 import { usePreviewViewport } from "./preview-viewport";
 import { GridPopover } from "./guide-popover";
 import { usePreviewStore } from "@/stores/preview-store";

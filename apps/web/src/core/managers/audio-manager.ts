@@ -2,7 +2,7 @@ import type { EditorCore } from "@/core";
 import {
 	clampRetimeRate,
 	shouldMaintainPitch,
-} from "@/constants/retime-constants";
+} from "@/lib/retime/rate";
 import type { AudioClipSource } from "@/lib/media/audio";
 import { createAudioContext, collectAudioClips } from "@/lib/media/audio";
 import {

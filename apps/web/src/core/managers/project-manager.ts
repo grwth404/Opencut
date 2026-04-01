@@ -12,11 +12,9 @@ import { storageService } from "@/services/storage/service";
 import { toast } from "sonner";
 import { generateUUID } from "@/utils/id";
 import { UpdateProjectSettingsCommand } from "@/lib/commands/project";
-import {
-	DEFAULT_FPS,
-	DEFAULT_CANVAS_SIZE,
-	DEFAULT_COLOR,
-} from "@/constants/project-constants";
+import { DEFAULT_BACKGROUND_COLOR } from "@/lib/background/constants";
+import { DEFAULT_CANVAS_SIZE } from "@/lib/canvas/constants";
+import { DEFAULT_FPS } from "@/lib/fps/constants";
 import { buildDefaultScene, getProjectDurationFromScenes } from "@/lib/scenes";
 import { buildScene } from "@/services/renderer/scene-builder";
 import { CanvasRenderer } from "@/services/renderer/canvas-renderer";
@@ -29,7 +27,7 @@ import {
 import { loadFonts } from "@/lib/fonts/google-fonts";
 import { DEFAULTS } from "@/lib/timeline/defaults";
 import { getElementFontFamilies } from "@/lib/timeline/element-utils";
-import { getRaisedProjectFpsForImportedMedia } from "@/lib/project/fps";
+import { getRaisedProjectFpsForImportedMedia } from "@/lib/fps/utils";
 import type { MediaAsset } from "@/lib/media/types";
 
 export interface MigrationState {
@@ -101,7 +99,7 @@ export class ProjectManager {
 				originalCanvasSize: null,
 				background: {
 					type: "color",
-					color: DEFAULT_COLOR,
+					color: DEFAULT_BACKGROUND_COLOR,
 				},
 			},
 			version: CURRENT_PROJECT_VERSION,

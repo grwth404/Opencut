@@ -18,13 +18,13 @@ import { Button } from "@/components/ui/button";
 import { uppercase } from "@/utils/string";
 import { clamp, formatNumberForDisplay } from "@/utils/math";
 import { useEditor } from "@/hooks/use-editor";
-import { DEFAULT_COLOR } from "@/constants/project-constants";
 import {
 	CORNER_RADIUS_MAX,
+	DEFAULT_TEXT_COLOR,
 	CORNER_RADIUS_MIN,
 	MAX_FONT_SIZE,
 	MIN_FONT_SIZE,
-} from "@/constants/text-constants";
+} from "@/lib/text/constants";
 import { usePropertyDraft } from "../hooks/use-property-draft";
 import { useKeyframedColorProperty } from "../hooks/use-keyframed-color-property";
 import { useKeyframedNumberProperty } from "../hooks/use-keyframed-number-property";
@@ -343,7 +343,7 @@ function BackgroundSection({
 	trackId: string;
 }) {
 	const editor = useEditor();
-	const lastSelectedColor = useRef(DEFAULT_COLOR);
+	const lastSelectedColor = useRef(DEFAULT_TEXT_COLOR);
 	const { localTime, isPlayheadWithinElementRange } = useElementPlayhead({
 		startTime: element.startTime,
 		duration: element.duration,

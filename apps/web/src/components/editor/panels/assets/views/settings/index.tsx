@@ -9,7 +9,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { FPS_PRESETS } from "@/constants/project-constants";
+import { FPS_PRESETS } from "@/lib/fps/constants";
 import { useEditor } from "@/hooks/use-editor";
 import {
 	Section,

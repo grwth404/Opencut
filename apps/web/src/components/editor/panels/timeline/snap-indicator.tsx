@@ -6,7 +6,7 @@ import {
 	getCenteredLineLeft,
 	TIMELINE_INDICATOR_LINE_WIDTH_PX,
 } from "@/lib/timeline";
-import { TIMELINE_LAYERS } from "@/constants/timeline-constants";
+import { TIMELINE_LAYERS } from "./layers";
 interface SnapIndicatorProps {
 	snapPoint: SnapPoint | null;
 	zoomLevel: number;

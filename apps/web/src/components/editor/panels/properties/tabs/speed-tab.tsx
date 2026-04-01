@@ -11,7 +11,7 @@ import {
 	MAX_RETIME_RATE,
 	clampRetimeRate,
 	canMaintainPitch,
-} from "@/constants/retime-constants";
+} from "@/lib/retime/rate";
 import type { AudioElement, VideoElement } from "@/lib/timeline";
 import {
 	Section,

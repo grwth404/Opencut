@@ -5,7 +5,8 @@ import { TimelineElement } from "./timeline-element";
 import type { TimelineTrack } from "@/lib/timeline";
 import type { TimelineElement as TimelineElementType } from "@/lib/timeline";
 import type { SnapPoint } from "@/lib/timeline/snap-utils";
-import { TIMELINE_CONSTANTS, TIMELINE_LAYERS } from "@/constants/timeline-constants";
+import { TIMELINE_LAYERS } from "./layers";
+import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
 import { useEdgeAutoScroll } from "@/hooks/timeline/use-edge-auto-scroll";
 import type { ElementDragState } from "@/lib/timeline";
 import { useEditor } from "@/hooks/use-editor";
@@ -59,7 +60,7 @@ export function TimelineTrackContent({
 		getMouseClientX: () => lastMouseXRef.current ?? 0,
 		rulerScrollRef,
 		tracksScrollRef,
-		contentWidth: duration * TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel,
+		contentWidth: duration * BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel,
 	});
 
 	return (

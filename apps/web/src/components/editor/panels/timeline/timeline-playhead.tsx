@@ -9,9 +9,9 @@ import {
 import { useTimelinePlayhead } from "@/hooks/timeline/use-timeline-playhead";
 import { useEditor } from "@/hooks/use-editor";
 import {
-	TIMELINE_LAYERS,
 	TIMELINE_SCROLLBAR_SIZE_PX,
-} from "@/constants/timeline-constants";
+} from "./layout";
+import { TIMELINE_LAYERS } from "./layers";
 
 interface TimelinePlayheadProps {
 	zoomLevel: number;

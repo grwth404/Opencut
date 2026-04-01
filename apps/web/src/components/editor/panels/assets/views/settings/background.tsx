@@ -8,10 +8,10 @@ import {
 	SectionTitle,
 } from "@/components/section";
 import {
-	BLUR_INTENSITY_PRESETS,
-	DEFAULT_BLUR_INTENSITY,
-	DEFAULT_COLOR,
-} from "@/constants/project-constants";
+	BACKGROUND_BLUR_INTENSITY_PRESETS,
+	DEFAULT_BACKGROUND_BLUR_INTENSITY,
+	DEFAULT_BACKGROUND_COLOR,
+} from "@/lib/background/constants";
 import { patternCraftGradients } from "@/data/colors/pattern-craft";
 import { colors } from "@/data/colors/solid";
 import { syntaxUIGradients } from "@/data/colors/syntax-ui";
@@ -164,16 +164,16 @@ export function BackgroundContent() {
 	const currentBlurIntensity = isBlurBackground
 		? (activeProject.settings.background as { blurIntensity: number })
 				.blurIntensity
-		: DEFAULT_BLUR_INTENSITY;
+		: DEFAULT_BACKGROUND_BLUR_INTENSITY;
 
 	const currentBackgroundColor = isColorBackground
 		? (activeProject.settings.background as { color: string }).color
-		: DEFAULT_COLOR;
+		: DEFAULT_BACKGROUND_COLOR;
 	const canvasSize = activeProject.settings.canvasSize;
 
 	const blurPreviews = useMemo(
 		() =>
-			BLUR_INTENSITY_PRESETS.map((blur) => (
+			BACKGROUND_BLUR_INTENSITY_PRESETS.map((blur) => (
 				<BlurPreview
 					key={blur.value}
 					blur={blur}

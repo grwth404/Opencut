@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { timelineTimeToSnappedPixels } from "@/lib/timeline";
-import { TRACK_LABELS_WIDTH_PX } from "@/constants/timeline-constants";
+import { TIMELINE_TRACK_LABELS_COLUMN_WIDTH_PX } from "@/components/editor/panels/timeline/layout";
 interface UseSnapIndicatorPositionParams {
 	snapPoint: { time: number } | null;
 	zoomLevel: number;
@@ -44,7 +44,8 @@ export function useSnapIndicatorPosition({
 		time: snapPoint?.time ?? 0,
 		zoomLevel,
 	});
-	const leftPosition = TRACK_LABELS_WIDTH_PX + timelinePosition - scrollLeft;
+	const leftPosition =
+		TIMELINE_TRACK_LABELS_COLUMN_WIDTH_PX + timelinePosition - scrollLeft;
 
 	return {
 		leftPosition,

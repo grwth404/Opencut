@@ -4,7 +4,7 @@ import type {
 	RetimeConfig,
 	TimelineTrack,
 } from "@/lib/timeline";
-import { shouldMaintainPitch } from "@/constants/retime-constants";
+import { shouldMaintainPitch } from "@/lib/retime/rate";
 import type { MediaAsset } from "@/lib/media/types";
 import { applyAudioMasteringToBuffer } from "@/lib/media/audio-mastering";
 import type { AudioCapableElement } from "@/lib/timeline/audio-state";
@@ -16,7 +16,7 @@ import {
 	doesElementHaveEnabledAudio,
 } from "@/lib/timeline/audio-separation";
 import { canElementHaveAudio, hasMediaId } from "@/lib/timeline/element-utils";
-import { canTracktHaveAudio } from "@/lib/timeline";
+import { canTrackHaveAudio } from "@/lib/timeline";
 import { mediaSupportsAudio } from "@/lib/media/media-utils";
 import { getSourceTimeAtClipTime, renderRetimedBuffer } from "@/lib/retime";
 import { Input, ALL_FORMATS, BlobSource, AudioBufferSink } from "mediabunny";
@@ -97,7 +97,7 @@ export async function collectAudioElements({
 	const pendingElements: Array<Promise<CollectedAudioElement | null>> = [];
 
 	for (const track of tracks) {
-		if (canTracktHaveAudio(track) && track.muted) continue;
+		if (canTrackHaveAudio(track) && track.muted) continue;
 
 		for (const element of track.elements) {
 			if (!canElementHaveAudio(element)) continue;
@@ -108,7 +108,7 @@ export async function collectAudioElements({
 				: null;
 			if (!doesElementHaveEnabledAudio({ element, mediaAsset })) continue;
 
-			const isTrackMuted = canTracktHaveAudio(track) && track.muted;
+			const isTrackMuted = canTrackHaveAudio(track) && track.muted;
 
 			if (element.type === "audio") {
 				pendingElements.push(
@@ -453,7 +453,7 @@ export async function collectAudioMixSources({
 	const pendingLibrarySources: Array<Promise<AudioMixSource | null>> = [];
 
 	for (const track of tracks) {
-		if (canTracktHaveAudio(track) && track.muted) continue;
+		if (canTrackHaveAudio(track) && track.muted) continue;
 
 		for (const element of track.elements) {
 			if (!canElementHaveAudio(element)) continue;
@@ -515,7 +515,7 @@ export async function collectAudioClips({
 	const pendingLibraryClips: Array<Promise<AudioClipSource | null>> = [];
 
 	for (const track of tracks) {
-		const isTrackMuted = canTracktHaveAudio(track) && track.muted;
+		const isTrackMuted = canTrackHaveAudio(track) && track.muted;
 
 		for (const element of track.elements) {
 			if (!canElementHaveAudio(element)) continue;

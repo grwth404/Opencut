@@ -3,7 +3,8 @@ import { useEditor } from "@/hooks/use-editor";
 import { processMediaAssets } from "@/lib/media/processing";
 import { toast } from "sonner";
 import { showMediaUploadToast } from "@/lib/media/upload-toast";
-import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
+import { DEFAULT_NEW_ELEMENT_DURATION_SECONDS } from "@/lib/timeline/creation";
+import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
 import { snapTimeToFrame } from "opencut-wasm";
 import {
 	buildTextElement,
@@ -14,7 +15,7 @@ import {
 } from "@/lib/timeline/element-utils";
 import { AddTrackCommand, InsertElementCommand } from "@/lib/commands/timeline";
 import { BatchCommand } from "@/lib/commands";
-import { computeDropTarget } from "@/lib/timeline/drop-utils";
+import { computeDropTarget } from "@/components/editor/panels/timeline/drop-target";
 import { getDragData, hasDragData } from "@/lib/drag-data";
 import { isMainTrack } from "@/lib/timeline/placement";
 import type { TrackType, DropTarget, ElementType } from "@/lib/timeline";
@@ -82,14 +83,14 @@ export function useTimelineDragDrop({
 				elementType === "sticker" ||
 				elementType === "effect"
 			) {
-				return TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION;
+				return DEFAULT_NEW_ELEMENT_DURATION_SECONDS;
 			}
 			if (mediaId) {
 				const mediaAssets = editor.media.getAssets();
 				const media = mediaAssets.find((m) => m.id === mediaId);
-				return media?.duration ?? TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION;
+				return media?.duration ?? DEFAULT_NEW_ELEMENT_DURATION_SECONDS;
 			}
-			return TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION;
+			return DEFAULT_NEW_ELEMENT_DURATION_SECONDS;
 		},
 		[editor],
 	);
@@ -158,7 +159,7 @@ export function useTimelineDragDrop({
 				playheadTime: currentTime,
 				isExternalDrop: isExternal,
 				elementDuration: duration,
-				pixelsPerSecond: TIMELINE_CONSTANTS.PIXELS_PER_SECOND,
+				pixelsPerSecond: BASE_TIMELINE_PIXELS_PER_SECOND,
 				zoomLevel,
 				targetElementTypes,
 			});
@@ -330,7 +331,7 @@ export function useTimelineDragDrop({
 				dragData.mediaType === "audio" ? "audio" : "video";
 
 			const duration =
-				mediaAsset.duration ?? TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION;
+				mediaAsset.duration ?? DEFAULT_NEW_ELEMENT_DURATION_SECONDS;
 			const element = buildElementFromMedia({
 				mediaId: mediaAsset.id,
 				mediaType: mediaAsset.type,
@@ -445,7 +446,7 @@ export function useTimelineDragDrop({
 
 						const duration =
 							createdAsset.duration ??
-							TIMELINE_CONSTANTS.DEFAULT_ELEMENT_DURATION;
+							DEFAULT_NEW_ELEMENT_DURATION_SECONDS;
 						const currentTracks = editor.timeline.getTracks();
 						const currentTime = editor.playback.getCurrentTime();
 						const onlyTrack = currentTracks[0];
@@ -467,7 +468,7 @@ export function useTimelineDragDrop({
 									playheadTime: currentTime,
 									isExternalDrop: true,
 									elementDuration: duration,
-									pixelsPerSecond: TIMELINE_CONSTANTS.PIXELS_PER_SECOND,
+									pixelsPerSecond: BASE_TIMELINE_PIXELS_PER_SECOND,
 									zoomLevel,
 								});
 

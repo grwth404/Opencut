@@ -9,10 +9,8 @@ import { useEditor } from "@/hooks/use-editor";
 import { useKeyframeSelection } from "./use-keyframe-selection";
 import { snapTimeToFrame, getSnappedSeekTime } from "opencut-wasm";
 import { timelineTimeToSnappedPixels } from "@/lib/timeline";
-import {
-	DRAG_THRESHOLD_PX,
-	TIMELINE_CONSTANTS,
-} from "@/constants/timeline-constants";
+import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
+import { TIMELINE_DRAG_THRESHOLD_PX } from "@/components/editor/panels/timeline/interaction";
 import { RetimeKeyframeCommand } from "@/lib/commands/timeline/element/keyframes/retime-keyframe";
 import { BatchCommand } from "@/lib/commands";
 import type { SelectedKeyframeRef } from "@/lib/animation/types";
@@ -64,7 +62,7 @@ export function useKeyframeDrag({
 	const activeProject = editor.project.getActive();
 	const fps = activeProject.settings.fps;
 
-	const pixelsPerSecond = TIMELINE_CONSTANTS.PIXELS_PER_SECOND * zoomLevel;
+	const pixelsPerSecond = BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel;
 
 	const endDrag = useCallback(() => {
 		setDragState(initialDragState);
@@ -127,7 +125,7 @@ export function useKeyframeDrag({
 		const handleMouseMove = ({ clientX }: MouseEvent) => {
 			if (isPendingDrag && pendingDragRef.current) {
 				const deltaX = Math.abs(clientX - pendingDragRef.current.startMouseX);
-				if (deltaX <= DRAG_THRESHOLD_PX) return;
+				if (deltaX <= TIMELINE_DRAG_THRESHOLD_PX) return;
 
 				const pending = pendingDragRef.current;
 				pendingDragRef.current = null;
@@ -248,7 +246,8 @@ export function useKeyframeDrag({
 
 			const wasDrag =
 				mouseDownXRef.current !== null &&
-				Math.abs(event.clientX - mouseDownXRef.current) > DRAG_THRESHOLD_PX;
+				Math.abs(event.clientX - mouseDownXRef.current) >
+				TIMELINE_DRAG_THRESHOLD_PX;
 			mouseDownXRef.current = null;
 
 			if (wasDrag) return;
