@@ -214,7 +214,7 @@ function ToolbarLeftSection() {
 				<Tooltip>
 					<ToolbarButton
 						icon={<HugeiconsIcon icon={Chart03Icon} />}
-						tooltip="Graph"
+						tooltip="Open graph editor"
 						onClick={() => {}}
 					/>
 				</Tooltip>
