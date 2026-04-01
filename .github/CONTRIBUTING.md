@@ -45,10 +45,9 @@ Thank you for your interest in contributing to OpenCut! This document provides g
 5. Install dependencies: `bun install`
 6. Start the development server: `bun run dev`
 
-> **Note:** If you see an error like `Unsupported URL Type "workspace:*"` when running `npm install`, you have two options:
+> **Note:** Web development uses the published `opencut-wasm` package by default, so a fresh clone does not need a local WASM build.
 >
-> 1. Upgrade to a recent npm version (v9 or later), which has full workspace protocol support.
-> 2. Use an alternative package manager such as **bun** or **pnpm**.
+> If you are editing `rust/wasm`, run `bun run build:wasm`, then `cd rust/wasm/pkg && bun link`, then `cd ../../../apps/web && bun link opencut-wasm`.
 
 ### Desktop setup
 

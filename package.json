@@ -3,8 +3,7 @@
   "packageManager": "bun@1.2.18",
   "workspaces": [
     "apps/*",
-    "packages/*",
-    "rust/wasm/pkg"
+    "packages/*"
   ],
   "scripts": {
     "build:tools": "turbo run build --filter=@opencut/tools",

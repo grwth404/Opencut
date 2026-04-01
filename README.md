@@ -93,6 +93,43 @@ Desktop is opt-in. If you're only working on the web app, skip this entirely.
 
 If you want to get ready for `apps/desktop`, see [`apps/desktop/README.md`](apps/desktop/README.md). It's a two-step setup: Rust toolchain first, then desktop native dependencies.
 
+### Local WASM development
+
+Only needed if you're editing `rust/wasm` and want the web app to use your local build instead of the published package.
+
+1. Build the package once from the repo root:
+
+   ```bash
+   bun run build:wasm
+   ```
+
+2. Register the generated package for linking:
+
+   ```bash
+   cd rust/wasm/pkg
+   bun link
+   ```
+
+3. Link `apps/web` to the local package:
+
+   ```bash
+   cd apps/web
+   bun link opencut-wasm
+   ```
+
+4. Rebuild on changes while you work:
+
+   ```bash
+   bun dev:wasm
+   ```
+
+To switch `apps/web` back to the published package, run:
+
+```bash
+cd apps/web
+bun add opencut-wasm
+```
+
 ### Self-Hosting with Docker
 
 To run everything (including a production build of the app) in Docker:
