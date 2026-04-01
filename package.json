@@ -7,21 +7,21 @@
     "rust/wasm/pkg"
   ],
   "scripts": {
+    "build:tools": "turbo run build --filter=@opencut/tools",
     "build:wasm": "wasm-pack build rust/wasm --target bundler --out-dir pkg",
-    "publish:wasm": "bun run build:wasm && npm publish rust/wasm/pkg --access public",
+    "build:web": "turbo run build --filter=@opencut/web",
+    "deploy:web": "turbo run deploy --filter=@opencut/web",
+    "dev:tools": "turbo run dev --filter=@opencut/tools",
     "dev:wasm": "cargo watch -w rust/crates -w rust/wasm/src -s 'wasm-pack build rust/wasm --target bundler --out-dir pkg'",
     "dev:web": "turbo run dev --filter=@opencut/web",
-    "build:web": "turbo run build --filter=@opencut/web",
-    "dev:tools": "turbo run dev --filter=@opencut/tools",
-    "preview:web": "turbo run preview --filter=@opencut/web",
-    "deploy:web": "turbo run deploy --filter=@opencut/web",
-    "build:tools": "turbo run build --filter=@opencut/tools",
-    "start:tools": "turbo run start --filter=@opencut/tools",
+    "format:web": "biome format apps/web/src/services/renderer --write --max-diagnostics=1000",
+    "generate:fonts": "npx tsx apps/web/scripts/generate-font-sprites.ts",
     "lint:web": "biome lint apps/web/src --max-diagnostics=1000",
     "lint:web:fix": "biome lint apps/web/src --write --unsafe --max-diagnostics=1000",
-    "format:web": "biome format apps/web/src/services/renderer --write --max-diagnostics=1000",
-    "test": "bun test",
-    "generate:fonts": "npx tsx apps/web/scripts/generate-font-sprites.ts"
+    "preview:web": "turbo run preview --filter=@opencut/web",
+    "publish:wasm": "bun run build:wasm && npm publish rust/wasm/pkg --access public",
+    "start:tools": "turbo run start --filter=@opencut/tools",
+    "test": "bun test"
   },
   "dependencies": {
     "@biomejs/biome": "^2.4.8",
