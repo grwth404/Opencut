@@ -1,0 +1,66 @@
+import { DEFAULT_BLUR_INTENSITY } from "@/constants/project-constants";
+import { INTENSITY_TO_SIGMA_DIVISOR } from "@/lib/effects/definitions/blur";
+import type { MigrationResult, ProjectRecord } from "./types";
+import { getProjectId, isRecord } from "./utils";
+
+export function transformProjectV20ToV21({
+	project,
+}: {
+	project: ProjectRecord;
+}): MigrationResult<ProjectRecord> {
+	if (!getProjectId({ project })) {
+		return { project, skipped: true, reason: "no project id" };
+	}
+
+	const version = project.version;
+	if (typeof version !== "number") {
+		return { project, skipped: true, reason: "invalid version" };
+	}
+	if (version >= 21) {
+		return { project, skipped: true, reason: "already v21" };
+	}
+	if (version !== 20) {
+		return { project, skipped: true, reason: "not v20" };
+	}
+
+	return {
+		project: {
+			...migrateBackgroundBlurScale({ project }),
+			version: 21,
+		},
+		skipped: false,
+	};
+}
+
+function migrateBackgroundBlurScale({
+	project,
+}: {
+	project: ProjectRecord;
+}): ProjectRecord {
+	if (!isRecord(project.settings)) {
+		return project;
+	}
+
+	const settings = { ...project.settings };
+	const background = settings.background;
+	if (!isRecord(background) || background.type !== "blur") {
+		return { ...project, settings };
+	}
+
+	const raw = background.blurIntensity;
+	const blurIntensity =
+		typeof raw === "number" && Number.isFinite(raw)
+			? raw * INTENSITY_TO_SIGMA_DIVISOR
+			: DEFAULT_BLUR_INTENSITY;
+
+	return {
+		...project,
+		settings: {
+			...settings,
+			background: {
+				...background,
+				blurIntensity,
+			},
+		},
+	};
+}

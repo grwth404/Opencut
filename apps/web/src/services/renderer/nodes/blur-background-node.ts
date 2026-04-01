@@ -1,5 +1,5 @@
 import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
-import { buildGaussianBlurPasses } from "@/lib/effects/definitions/blur";
+import { buildGaussianBlurPasses, intensityToSigma } from "@/lib/effects/definitions/blur";
 import { getSourceTimeAtClipTime } from "@/lib/retime";
 import { videoCache } from "@/services/video-cache/service";
 import type { RetimeConfig } from "@/lib/timeline";
@@ -128,8 +128,8 @@ export class BlurBackgroundNode extends BaseNode<BlurBackgroundNodeParams> {
 		);
 
 		const passes = buildGaussianBlurPasses({
-			sigmaX: this.params.blurIntensity * (renderer.width / 1920),
-			sigmaY: this.params.blurIntensity * (renderer.height / 1080),
+			sigmaX: intensityToSigma({ intensity: this.params.blurIntensity, resolution: renderer.width, reference: 1920 }),
+			sigmaY: intensityToSigma({ intensity: this.params.blurIntensity, resolution: renderer.height, reference: 1080 }),
 		});
 		const effectResult = gpuRenderer.applyEffect({
 			source: offscreen as CanvasImageSource,
