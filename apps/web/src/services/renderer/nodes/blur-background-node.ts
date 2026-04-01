@@ -5,7 +5,7 @@ import { videoCache } from "@/services/video-cache/service";
 import type { RetimeConfig } from "@/lib/timeline";
 import type { CanvasRenderer } from "../canvas-renderer";
 import { createOffscreenCanvas } from "../canvas-utils";
-import { webglEffectRenderer } from "../webgl/webgl-effect-renderer";
+import { gpuRenderer } from "../gpu-renderer";
 import { BaseNode } from "./base-node";
 import { loadImageSource, type CachedImageSource } from "./image-node";
 
@@ -131,7 +131,7 @@ export class BlurBackgroundNode extends BaseNode<BlurBackgroundNodeParams> {
 			sigmaX: this.params.blurIntensity * (renderer.width / 1920),
 			sigmaY: this.params.blurIntensity * (renderer.height / 1080),
 		});
-		const effectResult = webglEffectRenderer.applyEffect({
+		const effectResult = gpuRenderer.applyEffect({
 			source: offscreen as CanvasImageSource,
 			width: renderer.width,
 			height: renderer.height,

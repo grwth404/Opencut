@@ -1,5 +1,6 @@
-import type { EffectDefinition, ResolvedEffectPass } from "@/lib/effects/types";
-import blurFragmentShader from "./blur.frag.glsl";
+import type { EffectDefinition, EffectPass } from "@/lib/effects/types";
+
+export const GAUSSIAN_BLUR_SHADER = "gaussian-blur";
 
 const MAX_SINGLE_PASS_SIGMA = 10;
 const MAX_STEP = 4;
@@ -17,7 +18,7 @@ export function buildGaussianBlurPasses({
 }: {
 	sigmaX: number;
 	sigmaY: number;
-}): ResolvedEffectPass[] {
+}): EffectPass[] {
 	const maxSigma = Math.max(sigmaX, sigmaY);
 	if (maxSigma < 0.001) return [];
 
@@ -36,10 +37,10 @@ export function buildGaussianBlurPasses({
 	const stepX = Math.max(1, perPassSigmaX / MAX_SINGLE_PASS_SIGMA);
 	const stepY = Math.max(1, perPassSigmaY / MAX_SINGLE_PASS_SIGMA);
 
-	const passes: ResolvedEffectPass[] = [];
+	const passes: EffectPass[] = [];
 	for (let i = 0; i < iterations; i++) {
 		passes.push({
-			fragmentShader: blurFragmentShader,
+			shader: GAUSSIAN_BLUR_SHADER,
 			uniforms: {
 				u_sigma: perPassSigmaX,
 				u_step: stepX,
@@ -47,7 +48,7 @@ export function buildGaussianBlurPasses({
 			},
 		});
 		passes.push({
-			fragmentShader: blurFragmentShader,
+			shader: GAUSSIAN_BLUR_SHADER,
 			uniforms: {
 				u_sigma: perPassSigmaY,
 				u_step: stepY,
@@ -83,10 +84,9 @@ export const blurEffectDefinition: EffectDefinition = {
 		},
 	],
 	renderer: {
-		type: "webgl",
 		passes: [
 			{
-				fragmentShader: blurFragmentShader,
+				shader: GAUSSIAN_BLUR_SHADER,
 				uniforms: ({ effectParams, width }) => ({
 					u_sigma: Math.max(intensityToSigma(parseIntensity(effectParams), width, 1920), 0.001),
 					u_step: 1,
@@ -94,7 +94,7 @@ export const blurEffectDefinition: EffectDefinition = {
 				}),
 			},
 			{
-				fragmentShader: blurFragmentShader,
+				shader: GAUSSIAN_BLUR_SHADER,
 				uniforms: ({ effectParams, height }) => ({
 					u_sigma: Math.max(intensityToSigma(parseIntensity(effectParams), height, 1080), 0.001),
 					u_step: 1,

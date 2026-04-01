@@ -2,7 +2,7 @@ import type { CanvasRenderer } from "../canvas-renderer";
 import { effectsRegistry, resolveEffectPasses } from "@/lib/effects";
 import type { ParamValues } from "@/lib/params";
 import { BaseNode } from "./base-node";
-import { webglEffectRenderer } from "../webgl/webgl-effect-renderer";
+import { gpuRenderer } from "../gpu-renderer";
 
 const TIME_EPSILON = 1e-6;
 
@@ -60,7 +60,7 @@ export class EffectLayerNode extends BaseNode<EffectLayerNodeParams> {
 		if (passes.length === 0) {
 			return;
 		}
-		const effectResult = webglEffectRenderer.applyEffect({
+		const effectResult = gpuRenderer.applyEffect({
 			source,
 			width: renderer.width,
 			height: renderer.height,

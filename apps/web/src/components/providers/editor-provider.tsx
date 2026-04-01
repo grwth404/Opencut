@@ -9,6 +9,7 @@ import { useKeybindingsListener } from "@/hooks/use-keybindings";
 import { useKeybindingsStore } from "@/stores/keybindings-store";
 import { useEditorActions } from "@/hooks/actions/use-editor-actions";
 import { loadFontAtlas } from "@/lib/fonts/google-fonts";
+import { initializeGpuRenderer } from "@/services/renderer/gpu-renderer";
 
 interface EditorProviderProps {
 	projectId: string;
@@ -33,6 +34,7 @@ export function EditorProvider({ projectId, children }: EditorProviderProps) {
 		const loadProject = async () => {
 			try {
 				setIsLoading(true);
+				await initializeGpuRenderer();
 				await editor.project.loadProject({ id: projectId });
 
 				if (cancelled) return;

@@ -94,7 +94,6 @@
     "dotenv": "^16.5.0",
     "drizzle-kit": "^0.31.4",
     "postcss": "^8",
-    "raw-loader": "^4.0.2",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.8.3",

@@ -16,7 +16,7 @@ import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
 import { effectsRegistry, resolveEffectPasses } from "@/lib/effects";
 import { masksRegistry } from "@/lib/masks";
 import { getSourceTimeAtClipTime } from "@/lib/retime";
-import { webglEffectRenderer } from "../webgl/webgl-effect-renderer";
+import { gpuRenderer } from "../gpu-renderer";
 import { applyMaskFeather } from "../mask-feather";
 
 export interface VisualNodeParams {
@@ -205,7 +205,7 @@ export abstract class VisualNode<
 				width,
 				height,
 			});
-			current = webglEffectRenderer.applyEffect({
+			current = gpuRenderer.applyEffect({
 				source: current,
 				width: Math.round(width),
 				height: Math.round(height),

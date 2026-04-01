@@ -2,7 +2,7 @@ import { generateUUID } from "@/utils/id";
 import { buildDefaultParamValues } from "@/lib/registry";
 import { effectsRegistry } from "./registry";
 import type { ParamValues } from "@/lib/params";
-import type { Effect, EffectDefinition, ResolvedEffectPass } from "@/lib/effects/types";
+import type { Effect, EffectDefinition, EffectPass } from "@/lib/effects/types";
 import { VISUAL_ELEMENT_TYPES } from "@/lib/timeline";
 
 export { effectsRegistry } from "./registry";
@@ -18,12 +18,12 @@ export function resolveEffectPasses({
 	effectParams: ParamValues;
 	width: number;
 	height: number;
-}): ResolvedEffectPass[] {
+}): EffectPass[] {
 	if (definition.renderer.buildPasses) {
 		return definition.renderer.buildPasses({ effectParams, width, height });
 	}
 	return definition.renderer.passes.map((pass) => ({
-		fragmentShader: pass.fragmentShader,
+		shader: pass.shader,
 		uniforms: pass.uniforms({ effectParams, width, height }),
 	}));
 }

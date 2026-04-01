@@ -7,36 +7,35 @@ export interface Effect {
 	enabled: boolean;
 }
 
-export interface ResolvedEffectPass {
-	fragmentShader: string;
-	uniforms: Record<string, number | number[]>;
+export type EffectUniformValue = number | number[];
+
+export interface EffectPass {
+	shader: string;
+	uniforms: Record<string, EffectUniformValue>;
 }
 
-export interface WebGLEffectPass {
-	fragmentShader: string;
+export interface EffectPassTemplate {
+	shader: string;
 	uniforms(params: {
 		effectParams: ParamValues;
 		width: number;
 		height: number;
-	}): Record<string, number | number[]>;
+	}): Record<string, EffectUniformValue>;
 }
 
-export interface WebGLEffectRenderer {
-	type: "webgl";
-	passes: WebGLEffectPass[];
+export interface EffectRendererConfig {
+	passes: EffectPassTemplate[];
 	buildPasses?: (params: {
 		effectParams: ParamValues;
 		width: number;
 		height: number;
-	}) => ResolvedEffectPass[];
+	}) => EffectPass[];
 }
-
-export type EffectRenderer = WebGLEffectRenderer;
 
 export interface EffectDefinition {
 	type: string;
 	name: string;
 	keywords: string[];
 	params: ParamDefinition[];
-	renderer: EffectRenderer;
+	renderer: EffectRendererConfig;
 }

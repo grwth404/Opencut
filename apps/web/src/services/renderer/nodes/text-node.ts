@@ -21,7 +21,7 @@ import {
 } from "@/lib/animation";
 import { resolveEffectParamsAtTime } from "@/lib/animation/effect-param-channel";
 import { effectsRegistry, resolveEffectPasses } from "@/lib/effects";
-import { webglEffectRenderer } from "../webgl/webgl-effect-renderer";
+import { gpuRenderer } from "../gpu-renderer";
 import { clamp } from "@/utils/math";
 
 const TEXT_DECORATION_THICKNESS_RATIO = 0.07;
@@ -272,7 +272,7 @@ export class TextNode extends BaseNode<TextNodeParams> {
 				width: renderer.width,
 				height: renderer.height,
 			});
-			currentSource = webglEffectRenderer.applyEffect({
+			currentSource = gpuRenderer.applyEffect({
 				source: currentSource,
 				width: renderer.width,
 				height: renderer.height,

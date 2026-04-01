@@ -1,4 +1,4 @@
-# Effects & WebGL Renderer
+# Effects & GPU Renderer
 
 ## How to add a new effect
 
@@ -11,19 +11,18 @@ An effect definition has:
 - `name` — display name
 - `keywords` — for search
 - `params` — user-facing controls (sliders, toggles, etc.)
-- `renderer` — always `webgl`
+- `renderer` — GPU pass templates resolved into shader identifiers + uniforms
 
-All effects use WebGL. Even simple single-value effects like brightness or contrast are trivial shaders — there's no reason to leave the GPU pipeline for them.
+All effects use the shared GPU renderer. TypeScript decides which shader identifiers to run and which uniforms to pass. Rust/wgpu owns device creation, textures, and pass execution.
 
 ## Single-pass vs multi-pass
 
-The `webgl` renderer supports a `passes` array. Single-pass effects (e.g. color grading) just have one entry. Multi-pass is needed when an effect has to process its own output — blur (H then V), bloom (extract → blur → composite), glow, etc.
+The renderer supports a `passes` array. Single-pass effects (e.g. color grading) just have one entry. Multi-pass is needed when an effect has to process its own output — blur (H then V), bloom (extract → blur → composite), glow, etc.
 
 ```typescript
 renderer: {
-  type: "webgl",
   passes: [
-    { fragmentShader: myShader, uniforms: ({ effectParams }) => ({ ... }) },
+    { shader: "my-effect-shader", uniforms: ({ effectParams }) => ({ ... }) },
   ],
 }
 ```
@@ -34,10 +33,9 @@ Some effects need a variable number of passes depending on their parameters (e.g
 
 ```typescript
 renderer: {
-  type: "webgl",
   passes: [ /* static fallback — used if buildPasses is absent */ ],
   buildPasses: ({ effectParams, width, height }) => {
-    // return ResolvedEffectPass[] with pre-computed uniforms
+    // return EffectPass[] with pre-computed uniforms
   },
 }
 ```
@@ -58,11 +56,17 @@ This handles the `buildPasses` vs static `passes` dispatch automatically.
 
 ### Pipeline
 
-Linear effect chains (blur, color grading, bloom) go through `applyMultiPassEffect` in `apps/web/src/services/renderer/webgl-utils.ts`. Non-linear GPU pipelines that need branching or multi-texture passes (like JFA for signed distance fields) get their own orchestrator in `services/renderer/` and share the WebGL context via `webgl-context.ts`.
+Linear effect chains go through `gpuRenderer.applyEffect()` in `apps/web/src/services/renderer/gpu-renderer.ts`.
 
-## Writing fragment shaders
+TypeScript resolves `EffectPass[]` from effect definitions. Each pass contains:
+- `shader` — a stable identifier such as `"gaussian-blur"`
+- `uniforms` — resolved numeric values for that pass
 
-Effect-specific shaders live in `apps/web/src/lib/effects/definitions/`. General-purpose GPU algorithm shaders (like JFA) live in `apps/web/src/lib/shaders/`. Domain-specific shaders that consume a general algorithm (like the mask feather smoothstep) live with their domain (e.g. `lib/masks/shaders/`). The shared vertex shader (`effect.vert.glsl`) maps clip space to UV coordinates — don't replace it unless you have a specific reason.
+Rust maps the shader identifier to a precompiled WGSL pipeline in `rust/crates/gpu/src/shader_registry.rs`. Non-linear GPU work such as signed-distance-field generation and mask feathering lives in dedicated Rust pipeline modules, not in TypeScript orchestration.
+
+## Writing shaders
+
+Effect-specific WGSL shaders live in `rust/crates/gpu/src/shaders/`. Add the shader file there, then register its identifier in `rust/crates/gpu/src/shader_registry.rs`.
 
 Available uniforms (automatically injected, no need to pass them manually):
 - `u_texture` — the input texture (sampler2D)
@@ -78,17 +82,15 @@ The fix is a `u_step` uniform that spaces samples further apart. With step=4 the
 
 Keep the step size moderate (≤4) to avoid visible banding. If you need more blur than step=4 allows in a single iteration, add iterations instead of increasing the step further.
 
-```glsl
+```wgsl
 // u_step scales the distance between samples
-float pos = float(i) * u_step;
-float weight = exp(-(pos * pos) / (2.0 * u_sigma * u_sigma));
-color += texture2D(u_texture, v_texCoord + texelSize * u_direction * pos) * weight;
+let position = f32(sample_index) * uniforms.step;
+let weight = exp(-(position * position) / (2.0 * uniforms.sigma * uniforms.sigma));
+color += textureSample(input_texture, input_sampler, uv + texel_size * uniforms.direction * position) * weight;
 ```
 
 Do **not** use large step sizes (>6) in a single pass — it creates visible banding regardless of bilinear interpolation. Use multiple iterations instead.
 
-## Y-flip and coordinate systems
+## Coordinate systems
 
-Source textures (uploaded from canvas) are Y-flipped via `UNPACK_FLIP_Y_WEBGL`. Intermediate FBO textures (rendered by WebGL between passes) are not. In practice this cancels out correctly as long as you use the shared vertex shader — it maps clip space Y consistently so both texture types sample correctly.
-
-If you write a custom vertex shader or do manual coordinate math, be aware that canvas and WebGL have opposite Y origins (canvas: top-left, WebGL: bottom-left). Getting this wrong produces an upside-down result with no obvious error.
+Source canvases are imported through `copy_external_image_to_texture()`, which is the boundary where browser canvas data enters the GPU pipeline. If a shader or import path changes, validate orientation explicitly — the renderer assumes a consistent top-left canvas origin by the time results come back to TypeScript.
