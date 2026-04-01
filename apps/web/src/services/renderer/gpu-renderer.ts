@@ -5,17 +5,27 @@ import {
 } from "opencut-wasm";
 import type { EffectPass, EffectUniformValue } from "@/lib/effects/types";
 
-let initializeGpuRendererPromise: Promise<void> | null = null;
+let gpuAvailable = false;
+let initPromise: Promise<void> | null = null;
 
 export function initializeGpuRenderer(): Promise<void> {
-	if (!initializeGpuRendererPromise) {
-		initializeGpuRendererPromise = initializeGpu();
+	if (!initPromise) {
+		initPromise = initializeGpu()
+			.then(() => {
+				gpuAvailable = true;
+			})
+			.catch((error: unknown) => {
+				gpuAvailable = false;
+				const message =
+					error instanceof Error ? error.message : String(error);
+				console.warn(`GPU renderer unavailable: ${message}`);
+			});
 	}
-	const promise = initializeGpuRendererPromise;
-	if (!promise) {
-		throw new Error("GPU renderer initialization promise was not created");
-	}
-	return promise;
+	return initPromise;
+}
+
+export function isGpuAvailable(): boolean {
+	return gpuAvailable;
 }
 
 export const gpuRenderer = {
@@ -30,7 +40,7 @@ export const gpuRenderer = {
 		height: number;
 		passes: EffectPass[];
 	}): CanvasImageSource {
-		if (passes.length === 0) {
+		if (passes.length === 0 || !gpuAvailable) {
 			return source;
 		}
 
@@ -59,6 +69,10 @@ export const gpuRenderer = {
 		height: number;
 		feather: number;
 	}): CanvasImageSource {
+		if (!gpuAvailable) {
+			return maskCanvas;
+		}
+
 		const sourceCanvas = ensureOffscreenCanvas({
 			source: maskCanvas,
 			width,
