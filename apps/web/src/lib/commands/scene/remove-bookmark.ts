@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import type { TScene } from "@/lib/timeline";
 import { updateSceneInArray } from "@/lib/scenes";
@@ -15,7 +15,7 @@ export class RemoveBookmarkCommand extends Command {
 		super();
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		const activeScene = editor.scenes.getActiveScene();
 		const activeProject = editor.project.getActive();

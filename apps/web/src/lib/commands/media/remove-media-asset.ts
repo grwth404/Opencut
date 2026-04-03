@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import type { MediaAsset } from "@/lib/media/types";
 import { storageService } from "@/services/storage/service";
@@ -18,7 +18,7 @@ export class RemoveMediaAssetCommand extends Command {
 		super();
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		const assets = editor.media.getAssets();
 

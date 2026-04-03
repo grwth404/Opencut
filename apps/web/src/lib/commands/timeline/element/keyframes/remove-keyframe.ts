@@ -5,7 +5,7 @@ import {
 	removeElementKeyframe,
 	resolveAnimationTarget,
 } from "@/lib/animation";
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { updateElementInTracks } from "@/lib/timeline";
 import type { AnimationPath, AnimationValue } from "@/lib/animation/types";
 import type { TimelineElement, TimelineTrack } from "@/lib/timeline";
@@ -108,7 +108,7 @@ export class RemoveKeyframeCommand extends Command {
 		this.keyframeId = keyframeId;
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 
@@ -125,6 +125,7 @@ export class RemoveKeyframeCommand extends Command {
 		});
 
 		editor.timeline.updateTracks(updatedTracks);
+		return undefined;
 	}
 
 	undo(): void {

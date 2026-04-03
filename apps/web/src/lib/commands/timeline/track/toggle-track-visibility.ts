@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import type { TimelineTrack } from "@/lib/timeline";
 import { EditorCore } from "@/core";
 import { canTrackBeHidden } from "@/lib/timeline";
@@ -10,7 +10,7 @@ export class ToggleTrackVisibilityCommand extends Command {
 		super();
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 

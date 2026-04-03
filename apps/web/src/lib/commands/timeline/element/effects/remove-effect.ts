@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import { isVisualElement, updateElementInTracks } from "@/lib/timeline";
 import type { TimelineTrack, VisualElement } from "@/lib/timeline";
@@ -36,7 +36,7 @@ export class RemoveClipEffectCommand extends Command {
 		this.effectId = effectId;
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 
@@ -54,6 +54,7 @@ export class RemoveClipEffectCommand extends Command {
 		});
 
 		editor.timeline.updateTracks(updatedTracks);
+		return undefined;
 	}
 
 	undo(): void {

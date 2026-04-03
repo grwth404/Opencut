@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import { toast } from "sonner";
 import type { MediaAsset } from "@/lib/media/types";
@@ -23,7 +23,7 @@ export class AddMediaAssetCommand extends Command {
 		this.assetId = generateUUID();
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedAssets = [...editor.media.getAssets()];
 
@@ -80,6 +80,8 @@ export class AddMediaAssetCommand extends Command {
 					});
 				}
 			});
+
+		return undefined;
 	}
 
 	undo(): void {

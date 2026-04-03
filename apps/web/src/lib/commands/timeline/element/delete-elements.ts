@@ -20,7 +20,7 @@ export class DeleteElementsCommand extends Command {
 		this.rippleEnabled = rippleEnabled;
 	}
 
-	execute(): CommandResult {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 

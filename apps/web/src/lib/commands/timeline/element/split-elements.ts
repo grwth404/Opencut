@@ -175,6 +175,7 @@ export class SplitElementsCommand extends Command {
 				select: this.rightSideElements,
 			};
 		}
+		return undefined;
 	}
 
 	undo(): void {

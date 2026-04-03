@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import type { TimelineTrack } from "@/lib/timeline";
 import { EditorCore } from "@/core";
 
@@ -10,8 +10,9 @@ export class TracksSnapshotCommand extends Command {
 		super();
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		EditorCore.getInstance().timeline.updateTracks(this.after);
+		return undefined;
 	}
 
 	undo(): void {

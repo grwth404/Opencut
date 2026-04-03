@@ -1,5 +1,5 @@
 import { EditorCore } from "@/core";
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import {
 	buildSeparatedAudioElement,
 	canExtractSourceAudio,
@@ -25,7 +25,7 @@ export class ToggleSourceAudioSeparationCommand extends Command {
 		super();
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 
@@ -41,6 +41,9 @@ export class ToggleSourceAudioSeparationCommand extends Command {
 			(element) => element.id === this.params.elementId,
 		);
 		if (!sourceElement) {
+			return;
+		}
+		if (sourceElement.type !== "video") {
 			return;
 		}
 
@@ -59,9 +62,7 @@ export class ToggleSourceAudioSeparationCommand extends Command {
 		const mediaAsset = editor
 			.media
 			.getAssets()
-			.find((asset) =>
-				sourceElement.type === "video" ? asset.id === sourceElement.mediaId : false,
-			);
+			.find((asset) => asset.id === sourceElement.mediaId);
 		if (!canExtractSourceAudio({ element: sourceElement, mediaAsset })) {
 			return;
 		}

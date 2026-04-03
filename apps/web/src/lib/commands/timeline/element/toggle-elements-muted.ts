@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import type { TimelineTrack } from "@/lib/timeline";
 import { canElementHaveAudio } from "@/lib/timeline/element-utils";
 import { EditorCore } from "@/core";
@@ -10,7 +10,7 @@ export class ToggleElementsMutedCommand extends Command {
 		super();
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 

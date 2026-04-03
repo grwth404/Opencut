@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import type { TScene } from "@/lib/timeline";
 import { buildDefaultScene } from "@/lib/scenes";
@@ -14,7 +14,7 @@ export class CreateSceneCommand extends Command {
 		super();
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedScenes = [...editor.scenes.getScenes()];
 
@@ -25,6 +25,7 @@ export class CreateSceneCommand extends Command {
 
 		const updatedScenes = [...this.savedScenes, this.createdScene];
 		editor.scenes.setScenes({ scenes: updatedScenes });
+		return undefined;
 	}
 
 	undo(): void {

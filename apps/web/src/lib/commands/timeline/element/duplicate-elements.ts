@@ -91,6 +91,7 @@ export class DuplicateElementsCommand extends Command {
 				select: this.duplicatedElements,
 			};
 		}
+		return undefined;
 	}
 
 	undo(): void {

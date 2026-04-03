@@ -33,7 +33,7 @@ export class PasteCommand extends Command {
 	}
 
 	execute(): CommandResult | undefined {
-		if (this.clipboardItems.length === 0) return;
+		if (this.clipboardItems.length === 0) return undefined;
 
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
@@ -123,6 +123,7 @@ export class PasteCommand extends Command {
 		if (this.pastedElements.length > 0) {
 			return { select: this.pastedElements };
 		}
+		return undefined;
 	}
 
 	undo(): void {

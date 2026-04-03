@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import type { TimelineTrack } from "@/lib/timeline";
 import { EditorCore } from "@/core";
 import { enforceMainTrackStart } from "@/lib/timeline/placement";
@@ -20,7 +20,7 @@ export class UpdateElementStartTimeCommand extends Command {
 		this.startTime = startTime;
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 
@@ -58,6 +58,7 @@ export class UpdateElementStartTimeCommand extends Command {
 		});
 
 		editor.timeline.updateTracks(updatedTracks);
+		return undefined;
 	}
 
 	undo(): void {

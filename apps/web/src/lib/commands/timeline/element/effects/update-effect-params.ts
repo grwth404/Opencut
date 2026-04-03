@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import { isVisualElement, updateElementInTracks } from "@/lib/timeline";
 import type { ParamValues } from "@/lib/params";
@@ -56,7 +56,7 @@ export class UpdateClipEffectParamsCommand extends Command {
 		this.params = params;
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 
@@ -75,6 +75,7 @@ export class UpdateClipEffectParamsCommand extends Command {
 		});
 
 		editor.timeline.updateTracks(updatedTracks);
+		return undefined;
 	}
 
 	undo(): void {

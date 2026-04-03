@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import type { TProject, TProjectSettings } from "@/lib/project/types";
 
@@ -10,7 +10,7 @@ export class UpdateProjectSettingsCommand extends Command {
 		super();
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		const activeProject = editor.project.getActive();
 		if (!activeProject) return;

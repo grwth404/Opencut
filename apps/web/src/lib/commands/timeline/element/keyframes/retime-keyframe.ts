@@ -1,6 +1,6 @@
 import { EditorCore } from "@/core";
 import { resolveAnimationTarget, retimeElementKeyframe } from "@/lib/animation";
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { updateElementInTracks } from "@/lib/timeline";
 import type { AnimationPath } from "@/lib/animation/types";
 import type { TimelineTrack } from "@/lib/timeline";
@@ -34,7 +34,7 @@ export class RetimeKeyframeCommand extends Command {
 		this.nextTime = nextTime;
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 
@@ -61,6 +61,7 @@ export class RetimeKeyframeCommand extends Command {
 		});
 
 		editor.timeline.updateTracks(updatedTracks);
+		return undefined;
 	}
 
 	undo(): void {

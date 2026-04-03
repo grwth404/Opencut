@@ -1,5 +1,5 @@
 import { EditorCore } from "@/core";
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { resolveAnimationTarget, upsertPathKeyframe } from "@/lib/animation";
 import { updateElementInTracks } from "@/lib/timeline";
 import type { TimelineTrack } from "@/lib/timeline";
@@ -46,7 +46,7 @@ export class UpsertKeyframeCommand extends Command {
 		this.keyframeId = keyframeId;
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 
@@ -82,6 +82,7 @@ export class UpsertKeyframeCommand extends Command {
 		});
 
 		editor.timeline.updateTracks(updatedTracks);
+		return undefined;
 	}
 
 	undo(): void {

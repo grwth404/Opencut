@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import type { TimelineTrack } from "@/lib/timeline";
 import { EditorCore } from "@/core";
 import { clampAnimationsToDuration } from "@/lib/animation";
@@ -24,7 +24,7 @@ export class UpdateElementDurationCommand extends Command {
 		this.duration = duration;
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 
@@ -46,6 +46,7 @@ export class UpdateElementDurationCommand extends Command {
 		});
 
 		editor.timeline.updateTracks(updatedTracks);
+		return undefined;
 	}
 
 	undo(): void {

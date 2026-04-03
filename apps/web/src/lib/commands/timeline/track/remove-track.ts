@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import type { TimelineTrack } from "@/lib/timeline";
 import { getMainTrack } from "@/lib/timeline/placement";
@@ -10,7 +10,7 @@ export class RemoveTrackCommand extends Command {
 		super();
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 		const targetTrack = this.savedState.find(

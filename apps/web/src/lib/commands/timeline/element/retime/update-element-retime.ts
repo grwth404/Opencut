@@ -1,7 +1,7 @@
 import { EditorCore } from "@/core";
 import { clampRetimeRate } from "@/lib/retime/rate";
 import { clampAnimationsToDuration } from "@/lib/animation";
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { getTimelineDurationForSourceSpan, getSourceSpanAtClipTime } from "@/lib/retime";
 import { isRetimableElement, updateElementInTracks } from "@/lib/timeline";
 import type { RetimeConfig, TimelineTrack } from "@/lib/timeline";
@@ -54,7 +54,7 @@ export class UpdateElementRetimeCommand extends Command {
 		this.retime = retime;
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 
@@ -103,6 +103,7 @@ export class UpdateElementRetimeCommand extends Command {
 		});
 
 		editor.timeline.updateTracks(updatedTracks);
+		return undefined;
 	}
 
 	undo(): void {

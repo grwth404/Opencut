@@ -1,4 +1,4 @@
-import { Command } from "@/lib/commands/base-command";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
 import type { TrackType, TimelineTrack } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { EditorCore } from "@/core";
@@ -19,7 +19,7 @@ export class AddTrackCommand extends Command {
 		this.trackId = generateUUID();
 	}
 
-	execute(): void {
+	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.timeline.getTracks();
 
@@ -38,6 +38,7 @@ export class AddTrackCommand extends Command {
 		updatedTracks.splice(insertIndex, 0, newTrack);
 
 		editor.timeline.updateTracks(updatedTracks);
+		return undefined;
 	}
 
 	undo(): void {
