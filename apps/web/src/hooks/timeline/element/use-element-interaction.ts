@@ -297,11 +297,12 @@ export function useElementInteraction({
 						zoomLevel,
 						scrollLeft,
 					});
-					const adjustedTime = Math.max(
-						0,
-						mouseTime - pendingDragRef.current.clickOffsetTime,
-					);
-				const snappedTime = snapTimeToFrame({ time: adjustedTime, fps: activeProject.settings.fps });
+					const adjustedTime =
+						mouseTime - pendingDragRef.current.clickOffsetTime;
+					const snappedTime = snapTimeToFrame({
+						time: adjustedTime,
+						fps: activeProject.settings.fps,
+					});
 					startDrag({
 						...pendingDragRef.current,
 						initialCurrentTime: snappedTime,
@@ -342,7 +343,7 @@ export function useElementInteraction({
 				zoomLevel,
 				scrollLeft,
 			});
-			const adjustedTime = Math.max(0, mouseTime - dragState.clickOffsetTime);
+			const adjustedTime = mouseTime - dragState.clickOffsetTime;
 			const fps = activeProject.settings.fps;
 			const frameSnappedTime = snapTimeToFrame({ time: adjustedTime, fps });
 
@@ -451,6 +452,18 @@ export function useElementInteraction({
 
 			const sourceTrack = tracks.find(({ id }) => id === dragState.trackId);
 			if (!sourceTrack) {
+				endDrag();
+				onSnapPointChange?.(null);
+				return;
+			}
+			const movingElement =
+				sourceTrack.elements.find(({ id }) => id === dragState.elementId) ?? null;
+			if (
+				movingElement &&
+				!dropTarget.isNewTrack &&
+				tracks[dropTarget.trackIndex]?.id === dragState.trackId &&
+				snappedTime === movingElement.startTime
+			) {
 				endDrag();
 				onSnapPointChange?.(null);
 				return;
