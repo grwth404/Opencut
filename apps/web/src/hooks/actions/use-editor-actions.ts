@@ -294,12 +294,7 @@ export function useEditorActions() {
 					null
 				);
 			})();
-			if (
-				!canToggleSourceAudio({
-					element: selectedElement.element,
-					mediaAsset,
-				})
-			) {
+			if (!canToggleSourceAudio(selectedElement.element, mediaAsset)) {
 				return;
 			}
 

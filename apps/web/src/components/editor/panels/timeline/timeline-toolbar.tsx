@@ -50,6 +50,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { OcRippleIcon } from "@/components/icons";
 
+
 export function TimelineToolbar({
 	zoomLevel,
 	minZoom,
@@ -115,10 +116,7 @@ function ToolbarLeftSection() {
 	})();
 	const canToggleSelectedSourceAudio =
 		!!selectedElement &&
-		canToggleSourceAudio({
-			element: selectedElement.element,
-			mediaAsset: selectedMediaAsset,
-		});
+		canToggleSourceAudio(selectedElement.element, selectedMediaAsset);
 	const sourceAudioLabel =
 		selectedElement?.element.type === "video"
 			? getSourceAudioActionLabel({
@@ -317,28 +315,34 @@ function ToolbarButton({
 	onClick,
 	disabled,
 	isActive,
+	buttonWrapper,
 }: {
 	icon: React.ReactNode;
 	tooltip: string;
-	onClick: ({ event }: { event: React.MouseEvent }) => void;
+	onClick?: ({ event }: { event: React.MouseEvent }) => void;
 	disabled?: boolean;
 	isActive?: boolean;
+	buttonWrapper?: (button: React.ReactElement) => React.ReactElement;
 }) {
+	const button = (
+		<Button
+			variant={isActive ? "secondary" : "text"}
+			size="icon"
+			disabled={disabled}
+			onClick={onClick ? (event) => onClick({ event }) : undefined}
+			className={cn(
+				"rounded-sm",
+				disabled ? "cursor-not-allowed opacity-50" : "",
+			)}
+		>
+			{icon}
+		</Button>
+	);
+
 	return (
 		<Tooltip delayDuration={200}>
 			<TooltipTrigger asChild>
-				<Button
-					variant={isActive ? "secondary" : "text"}
-					size="icon"
-					disabled={disabled}
-					onClick={(event) => onClick({ event })}
-					className={cn(
-						"rounded-sm",
-						disabled ? "cursor-not-allowed opacity-50" : "",
-					)}
-				>
-					{icon}
-				</Button>
+				{buttonWrapper ? buttonWrapper(button) : button}
 			</TooltipTrigger>
 			<TooltipContent>{tooltip}</TooltipContent>
 		</Tooltip>

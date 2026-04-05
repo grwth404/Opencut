@@ -1,8 +1,9 @@
 import { EditorCore } from "@/core";
 import {
-	getChannel,
-	getChannelValueAtTime,
+	hasKeyframesForPath,
+	getKeyframeById,
 	removeElementKeyframe,
+	resolveAnimationPathValueAtTime,
 	resolveAnimationTarget,
 } from "@/lib/animation";
 import { Command, type CommandResult } from "@/lib/commands/base-command";
@@ -19,17 +20,6 @@ function sampleValueBeforeRemoval({
 	propertyPath: AnimationPath;
 	keyframeId: string;
 }): AnimationValue | null {
-	const channel = getChannel({
-		animations: element.animations,
-		propertyPath,
-	});
-	const keyframe = channel?.keyframes.find(
-		(candidate) => candidate.id === keyframeId,
-	);
-	if (!channel || !keyframe) {
-		return null;
-	}
-
 	const target = resolveAnimationTarget({ element, path: propertyPath });
 	if (!target) {
 		return null;
@@ -39,9 +29,19 @@ function sampleValueBeforeRemoval({
 		return null;
 	}
 
-	return getChannelValueAtTime({
-		channel,
-		time: keyframe.time,
+	const keyframe = getKeyframeById({
+		animations: element.animations,
+		propertyPath,
+		keyframeId,
+	});
+	if (!keyframe) {
+		return null;
+	}
+
+	return resolveAnimationPathValueAtTime({
+		animations: element.animations,
+		propertyPath,
+		localTime: keyframe.time,
 		fallbackValue: baseValue,
 	});
 }
@@ -72,8 +72,10 @@ function removeKeyframeAndPersist({
 		keyframeId,
 	});
 
-	const isChannelNowEmpty =
-		getChannel({ animations: nextAnimations, propertyPath }) === undefined;
+	const isChannelNowEmpty = !hasKeyframesForPath({
+		animations: nextAnimations,
+		propertyPath,
+	});
 	const shouldPersistToBase = isChannelNowEmpty && valueBefore !== null;
 
 	const baseElement = shouldPersistToBase

@@ -7,8 +7,7 @@ import {
 	getGraphicDefinition,
 	resolveGraphicParams,
 } from "@/lib/graphics";
-import { getChannel } from "./keyframes";
-import { getChannelValueAtTime } from "./interpolation";
+import { resolveAnimationPathValueAtTime } from "./resolve";
 
 export const GRAPHIC_PARAM_PATH_PREFIX = "params.";
 
@@ -58,19 +57,16 @@ export function resolveGraphicParamsAtTime({
 
 	for (const param of definition.params) {
 		const path = buildGraphicParamPath({ paramKey: param.key });
-		const channel = getChannel({
-			animations: element.animations,
-			propertyPath: path,
-		});
-		if (!channel || channel.keyframes.length === 0) {
+		if (!element.animations?.bindings[path]) {
 			continue;
 		}
 
-		resolved[param.key] = getChannelValueAtTime({
-			channel,
-			time: Math.max(0, localTime),
+		resolved[param.key] = resolveAnimationPathValueAtTime({
+			animations: element.animations,
+			propertyPath: path,
+			localTime: Math.max(0, localTime),
 			fallbackValue: baseParams[param.key] ?? param.default,
-		}) as number | string | boolean;
+		});
 	}
 
 	return resolved;

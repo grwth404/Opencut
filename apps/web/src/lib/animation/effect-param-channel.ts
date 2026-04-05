@@ -3,15 +3,9 @@ import type { Effect } from "@/lib/effects/types";
 import type {
 	ElementAnimations,
 	EffectParamPath,
-	NumberAnimationChannel,
 } from "@/lib/animation/types";
-import {
-	getChannel,
-	removeKeyframe,
-	setChannel,
-	upsertKeyframe,
-} from "./keyframes";
-import { getChannelValueAtTime } from "./interpolation";
+import { removeElementKeyframe } from "./keyframes";
+import { resolveAnimationPathValueAtTime } from "./resolve";
 
 export const EFFECT_PARAM_PATH_PREFIX = "effects.";
 export const EFFECT_PARAM_PATH_SUFFIX = ".params.";
@@ -74,62 +68,17 @@ export function resolveEffectParamsAtTime({
 
 	for (const [paramKey, staticValue] of Object.entries(effect.params)) {
 		const path = buildEffectParamPath({ effectId: effect.id, paramKey });
-		const channel = getChannel({ animations, propertyPath: path });
-		if (channel && channel.keyframes.length > 0) {
-			resolved[paramKey] = getChannelValueAtTime({
-				channel,
-				time: localTime,
-				fallbackValue: staticValue,
-			}) as number | string | boolean;
-		} else {
-			resolved[paramKey] = staticValue;
-		}
+		resolved[paramKey] = animations?.bindings[path]
+			? resolveAnimationPathValueAtTime({
+					animations,
+					propertyPath: path,
+					localTime,
+					fallbackValue: staticValue,
+				})
+			: staticValue;
 	}
 
 	return resolved;
-}
-
-const EMPTY_NUMBER_CHANNEL: NumberAnimationChannel = {
-	valueKind: "number",
-	keyframes: [],
-};
-
-export function upsertEffectParamKeyframe({
-	animations,
-	effectId,
-	paramKey,
-	time,
-	value,
-	interpolation,
-	keyframeId,
-}: {
-	animations: ElementAnimations | undefined;
-	effectId: string;
-	paramKey: string;
-	time: number;
-	value: number;
-	interpolation?: "linear" | "hold";
-	keyframeId?: string;
-}): ElementAnimations | undefined {
-	const path = buildEffectParamPath({ effectId, paramKey });
-	const channel = getChannel({ animations, propertyPath: path });
-	const targetChannel =
-		channel && channel.valueKind === "number" ? channel : EMPTY_NUMBER_CHANNEL;
-	const updatedChannel = upsertKeyframe({
-		channel: targetChannel,
-		time,
-		value,
-		interpolation: interpolation ?? "linear",
-		keyframeId,
-	});
-
-	return (
-		setChannel({
-			animations,
-			propertyPath: path,
-			channel: updatedChannel,
-		}) ?? { channels: {} }
-	);
 }
 
 export function removeEffectParamKeyframe({
@@ -143,12 +92,9 @@ export function removeEffectParamKeyframe({
 	paramKey: string;
 	keyframeId: string;
 }): ElementAnimations | undefined {
-	const path = buildEffectParamPath({ effectId, paramKey });
-	const channel = getChannel({ animations, propertyPath: path });
-	const updatedChannel = removeKeyframe({ channel, keyframeId });
-	return setChannel({
+	return removeElementKeyframe({
 		animations,
-		propertyPath: path,
-		channel: updatedChannel,
+		propertyPath: buildEffectParamPath({ effectId, paramKey }),
+		keyframeId,
 	});
 }

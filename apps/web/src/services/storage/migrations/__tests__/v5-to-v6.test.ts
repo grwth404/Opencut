@@ -29,13 +29,15 @@ describe("V5 to V6 Migration", () => {
 	});
 
 	test("skips projects that are already v6", () => {
+		const firstScene = (v5Project as { scenes: Array<Record<string, unknown>> })
+			.scenes[0];
 		const result = transformProjectV5ToV6({
 			project: {
 				...v5Project,
 				version: 6,
 				scenes: [
 					{
-						...(v5Project as { scenes: unknown[] }).scenes[0],
+						...firstScene,
 						bookmarks: [{ time: 2 }, { time: 5 }],
 					},
 				],

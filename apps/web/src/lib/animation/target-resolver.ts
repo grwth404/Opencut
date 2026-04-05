@@ -1,8 +1,8 @@
 import type {
+	AnimationBindingKind,
 	AnimationInterpolation,
 	AnimationPath,
 	AnimationValue,
-	AnimationValueKind,
 } from "@/lib/animation/types";
 import {
 	parseEffectParamPath,
@@ -26,11 +26,13 @@ import {
 	type NumericSpec,
 	withElementBaseValueForProperty,
 } from "./property-registry";
+import { parseColorToLinearRgba } from "./binding-values";
 
 export interface AnimationPathDescriptor {
-	valueKind: AnimationValueKind;
+	kind: AnimationBindingKind;
 	defaultInterpolation: AnimationInterpolation;
-	numericRange?: NumericSpec;
+	numericRanges?: Partial<Record<string, NumericSpec>>;
+	coerceValue(value: AnimationValue): AnimationValue | null;
 	getBaseValue(): AnimationValue | null;
 	setBaseValue(value: AnimationValue): TimelineElement;
 }
@@ -39,7 +41,7 @@ export function getParamValueKind({
 	param,
 }: {
 	param: ParamDefinition;
-}): AnimationValueKind {
+}): AnimationBindingKind {
 	if (param.type === "number") {
 		return "number";
 	}
@@ -63,19 +65,21 @@ function getParamNumericRange({
 	param,
 }: {
 	param: ParamDefinition;
-}): NumericSpec | undefined {
+}): Partial<Record<string, NumericSpec>> | undefined {
 	if (param.type !== "number") {
 		return undefined;
 	}
 
 	return {
-		min: param.min,
-		max: param.max,
-		step: param.step,
+		value: {
+			min: param.min,
+			max: param.max,
+			step: param.step,
+		},
 	};
 }
 
-function coerceParamValue({
+export function coerceAnimationValueForParam({
 	param,
 	value,
 }: {
@@ -128,12 +132,13 @@ function buildGraphicParamDescriptor({
 	}
 
 	return {
-		valueKind: getParamValueKind({ param }),
+		kind: getParamValueKind({ param }),
 		defaultInterpolation: getParamDefaultInterpolation({ param }),
-		numericRange: getParamNumericRange({ param }),
+		numericRanges: getParamNumericRange({ param }),
+		coerceValue: (value) => coerceAnimationValueForParam({ param, value }),
 		getBaseValue: () => element.params[param.key] ?? param.default,
 		setBaseValue: (value) => {
-			const coercedValue = coerceParamValue({ param, value });
+			const coercedValue = coerceAnimationValueForParam({ param, value });
 			if (coercedValue === null) {
 				return element;
 			}
@@ -175,12 +180,13 @@ function buildEffectParamDescriptor({
 	}
 
 	return {
-		valueKind: getParamValueKind({ param }),
+		kind: getParamValueKind({ param }),
 		defaultInterpolation: getParamDefaultInterpolation({ param }),
-		numericRange: getParamNumericRange({ param }),
+		numericRanges: getParamNumericRange({ param }),
+		coerceValue: (value) => coerceAnimationValueForParam({ param, value }),
 		getBaseValue: () => effect.params[param.key] ?? param.default,
 		setBaseValue: (value) => {
-			const coercedValue = coerceParamValue({ param, value });
+			const coercedValue = coerceAnimationValueForParam({ param, value });
 			if (coercedValue === null) {
 				return element;
 			}
@@ -230,19 +236,21 @@ export function resolveAnimationTarget({
 		}
 
 		return {
-			valueKind: propertyDefinition.valueKind,
+			kind: propertyDefinition.kind,
 			defaultInterpolation: propertyDefinition.defaultInterpolation,
-			numericRange: propertyDefinition.numericRange,
+			numericRanges: propertyDefinition.numericRanges,
+			coerceValue: (value) =>
+				coerceAnimationValueForProperty({
+					propertyPath: path,
+					value,
+				}),
 			getBaseValue: () =>
 				getElementBaseValueForProperty({
 					element,
 					propertyPath: path,
 				}),
 			setBaseValue: (value) => {
-				const coercedValue = coerceAnimationValueForProperty({
-					propertyPath: path,
-					value,
-				});
+				const coercedValue = propertyDefinition.coerceValue({ value });
 				if (coercedValue === null) {
 					return element;
 				}

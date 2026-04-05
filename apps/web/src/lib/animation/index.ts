@@ -1,7 +1,8 @@
 export {
 	getChannelValueAtTime,
-	getNumberChannelValueAtTime,
-	getVectorChannelValueAtTime,
+	getDiscreteChannelValueAtTime,
+	getScalarChannelValueAtTime,
+	getScalarSegmentInterpolation,
 	normalizeChannel,
 } from "./interpolation";
 
@@ -19,6 +20,7 @@ export {
 
 export {
 	getElementLocalTime,
+	resolveAnimationPathValueAtTime,
 	resolveColorAtTime,
 	resolveNumberAtTime,
 	resolveOpacityAtTime,
@@ -34,12 +36,12 @@ export {
 	supportsAnimationProperty,
 	type AnimationPropertyDefinition,
 	type NumericSpec,
-	type NumericRange,
 	withElementBaseValueForProperty,
 } from "./property-registry";
 
 export {
 	getElementKeyframes,
+	getKeyframeById,
 	getKeyframeAtTime,
 	hasKeyframesForPath,
 } from "./keyframe-query";
@@ -52,7 +54,16 @@ export {
 } from "./graphic-param-channel";
 
 export {
+	buildEffectParamPath,
+	isEffectParamPath,
+	parseEffectParamPath,
+	removeEffectParamKeyframe,
+	resolveEffectParamsAtTime,
+} from "./effect-param-channel";
+
+export {
 	isAnimationPath,
+	coerceAnimationValueForParam,
 	resolveAnimationTarget,
 	getParamValueKind,
 	getParamDefaultInterpolation,
@@ -66,6 +77,5 @@ export {
 } from "./property-groups";
 
 export {
-	getVectorChannelForPath,
 	isVectorValue,
-} from "./vector-channel";
+} from "./binding-values";

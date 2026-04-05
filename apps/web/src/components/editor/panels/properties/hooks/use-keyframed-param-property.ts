@@ -3,6 +3,7 @@
 import { useEditor } from "@/hooks/use-editor";
 import {
 	buildGraphicParamPath,
+	coerceAnimationValueForParam,
 	getKeyframeAtTime,
 	getParamDefaultInterpolation,
 	getParamValueKind,
@@ -78,14 +79,15 @@ export function useKeyframedParamProperty({
 								propertyPath,
 								time: localTime,
 								value,
-								valueKind: getParamValueKind({ param }),
+								kind: getParamValueKind({ param }),
 								defaultInterpolation: getParamDefaultInterpolation({
 									param,
 								}),
-								numericRange:
-									param.type === "number"
-										? { min: param.min, max: param.max, step: param.step }
-										: undefined,
+								coerceValue: (nextValue) =>
+									coerceAnimationValueForParam({
+										param,
+										value: nextValue,
+									}),
 							}),
 						},
 					},
