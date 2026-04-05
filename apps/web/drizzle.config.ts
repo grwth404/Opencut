@@ -2,7 +2,6 @@ import type { Config } from "drizzle-kit";
 import * as dotenv from "dotenv";
 import { webEnv } from "@/lib/env/web";
 
-// Load the right env file based on environment
 if (webEnv.NODE_ENV === "production") {
 	dotenv.config({ path: ".env.production" });
 } else {
