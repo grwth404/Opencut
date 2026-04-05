@@ -11,6 +11,7 @@ import type {
 	ElementAnimations,
 	ScalarAnimationChannel,
 	ScalarAnimationKey,
+	ScalarCurveKeyframePatch,
 	ScalarSegmentType,
 } from "@/lib/animation/types";
 import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
@@ -209,7 +210,7 @@ function getBinding({
 	propertyPath,
 }: {
 	animations: ElementAnimations | undefined;
-	propertyPath: string;
+	propertyPath: AnimationPath;
 }): AnimationBindingInstance | undefined {
 	return animations?.bindings[propertyPath];
 }
@@ -222,6 +223,16 @@ function getChannelById({
 	channelId: string;
 }): AnimationChannel | undefined {
 	return animations?.channels[channelId];
+}
+
+function getBindingComponent({
+	binding,
+	componentKey,
+}: {
+	binding: AnimationBindingInstance;
+	componentKey: string;
+}) {
+	return binding.components.find((component) => component.key === componentKey) ?? null;
 }
 
 function getTargetKeyMetadata({
@@ -402,7 +413,7 @@ export function getChannel({
 	propertyPath,
 }: {
 	animations: ElementAnimations | undefined;
-	propertyPath: string;
+	propertyPath: AnimationPath;
 }): AnimationChannel | undefined {
 	const binding = getBinding({ animations, propertyPath });
 	const primaryChannelId =
@@ -651,28 +662,12 @@ export function setChannel({
 	channel,
 }: {
 	animations: ElementAnimations | undefined;
-	propertyPath: string;
+	propertyPath: AnimationPath;
 	channel: AnimationChannel | undefined;
 }): ElementAnimations | undefined {
 	const binding = getBinding({ animations, propertyPath });
 	if (!binding) {
 		return animations;
-	}
-
-	const primaryComponent = getPrimaryComponent({ binding });
-	if (!primaryComponent) {
-		return animations;
-	}
-
-	const nextAnimations = cloneAnimationsState({ animations });
-	if (!channel || !hasChannelKeys({ channel })) {
-		for (const component of binding.components) {
-			delete nextAnimations.channels[component.channelId];
-		}
-		delete nextAnimations.bindings[propertyPath];
-		return toAnimation({
-			animations: nextAnimations,
-		});
 	}
 
 	if (binding.components.length !== 1) {
@@ -681,11 +676,131 @@ export function setChannel({
 		);
 	}
 
-	nextAnimations.channels[primaryComponent.channelId] = normalizeChannel({
+	const primaryComponent = getPrimaryComponent({ binding });
+	if (!primaryComponent) {
+		return animations;
+	}
+
+	return setBindingComponentChannel({
+		animations,
+		propertyPath,
+		componentKey: primaryComponent.key,
+		channel,
+	});
+}
+
+export function setBindingComponentChannel({
+	animations,
+	propertyPath,
+	componentKey,
+	channel,
+}: {
+	animations: ElementAnimations | undefined;
+	propertyPath: AnimationPath;
+	componentKey: string;
+	channel: AnimationChannel | undefined;
+}): ElementAnimations | undefined {
+	const binding = getBinding({ animations, propertyPath });
+	if (!binding) {
+		return animations;
+	}
+
+	const component = getBindingComponent({
+		binding,
+		componentKey,
+	});
+	if (!component) {
+		return animations;
+	}
+
+	const nextAnimations = cloneAnimationsState({ animations });
+	if (!channel || !hasChannelKeys({ channel })) {
+		delete nextAnimations.channels[component.channelId];
+		const hasRemainingKeys = binding.components.some((candidate) =>
+			hasChannelKeys({
+				channel: nextAnimations.channels[candidate.channelId],
+			}),
+		);
+		if (!hasRemainingKeys) {
+			delete nextAnimations.bindings[propertyPath];
+		}
+		return toAnimation({
+			animations: nextAnimations,
+		});
+	}
+
+	nextAnimations.channels[component.channelId] = normalizeChannel({
 		channel,
 	});
 	return toAnimation({
 		animations: nextAnimations,
+	});
+}
+
+export function updateScalarKeyframeCurve({
+	animations,
+	propertyPath,
+	componentKey,
+	keyframeId,
+	patch,
+}: {
+	animations: ElementAnimations | undefined;
+	propertyPath: AnimationPath;
+	componentKey: string;
+	keyframeId: string;
+	patch: ScalarCurveKeyframePatch;
+}): ElementAnimations | undefined {
+	const binding = getBinding({ animations, propertyPath });
+	if (!binding) {
+		return animations;
+	}
+
+	const component = getBindingComponent({
+		binding,
+		componentKey,
+	});
+	if (!component) {
+		return animations;
+	}
+
+	const channel = getChannelById({
+		animations,
+		channelId: component.channelId,
+	});
+	if (channel?.kind !== "scalar") {
+		return animations;
+	}
+
+	const keyframeIndex = channel.keys.findIndex((keyframe) => keyframe.id === keyframeId);
+	if (keyframeIndex < 0) {
+		return animations;
+	}
+
+	const nextKeys = [...channel.keys];
+	const currentKey = nextKeys[keyframeIndex];
+	nextKeys[keyframeIndex] = {
+		...currentKey,
+		leftHandle:
+			patch.leftHandle === undefined
+				? currentKey.leftHandle
+				: patch.leftHandle ?? undefined,
+		rightHandle:
+			patch.rightHandle === undefined
+				? currentKey.rightHandle
+				: patch.rightHandle ?? undefined,
+		segmentToNext: patch.segmentToNext ?? currentKey.segmentToNext,
+		tangentMode: patch.tangentMode ?? currentKey.tangentMode,
+	};
+
+	return setBindingComponentChannel({
+		animations,
+		propertyPath,
+		componentKey,
+		channel: {
+			kind: "scalar",
+			keys: nextKeys,
+			extrapolation: channel.extrapolation,
+		},
 	});
 }
 

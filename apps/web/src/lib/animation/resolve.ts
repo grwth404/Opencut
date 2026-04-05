@@ -1,5 +1,9 @@
 import type {
+	AnimationColorPropertyPath,
+	AnimationNumericPropertyPath,
+	AnimationPath,
 	AnimationPropertyPath,
+	AnimationValueForPath,
 	ElementAnimations,
 } from "@/lib/animation/types";
 import type { Transform } from "@/lib/rendering";
@@ -96,7 +100,7 @@ export function resolveNumberAtTime({
 }: {
 	baseValue: number;
 	animations: ElementAnimations | undefined;
-	propertyPath: AnimationPropertyPath;
+	propertyPath: AnimationNumericPropertyPath;
 	localTime: number;
 }): number {
 	return resolveAnimationPathValueAtTime({
@@ -115,7 +119,7 @@ export function resolveColorAtTime({
 }: {
 	baseColor: string;
 	animations: ElementAnimations | undefined;
-	propertyPath: AnimationPropertyPath;
+	propertyPath: AnimationColorPropertyPath;
 	localTime: number;
 }): string {
 	return resolveAnimationPathValueAtTime({
@@ -126,19 +130,17 @@ export function resolveColorAtTime({
 	});
 }
 
-export function resolveAnimationPathValueAtTime<
-	T extends number | string | boolean | Transform["position"],
->({
+export function resolveAnimationPathValueAtTime<TPath extends AnimationPath>({
 	animations,
 	propertyPath,
 	localTime,
 	fallbackValue,
 }: {
 	animations: ElementAnimations | undefined;
-	propertyPath: string;
+	propertyPath: TPath;
 	localTime: number;
-	fallbackValue: T;
-}): T {
+	fallbackValue: AnimationValueForPath<TPath>;
+}): AnimationValueForPath<TPath> {
 	const binding = animations?.bindings[propertyPath];
 	if (!binding) {
 		return fallbackValue;
@@ -170,5 +172,5 @@ export function resolveAnimationPathValueAtTime<
 	return (composeAnimationValue({
 		binding,
 		componentValues,
-	}) ?? fallbackValue) as T;
+	}) ?? fallbackValue) as AnimationValueForPath<TPath>;
 }

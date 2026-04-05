@@ -1,3 +1,5 @@
+import type { ParamValues } from "@/lib/params";
+
 export const ANIMATION_PROPERTY_PATHS = [
 	"transform.position",
 	"transform.scaleX",
@@ -31,6 +33,34 @@ export type AnimationPropertyGroup = keyof typeof ANIMATION_PROPERTY_GROUPS;
 export type VectorValue = { x: number; y: number };
 export type DiscreteValue = boolean | string;
 export type AnimationValue = number | string | boolean | VectorValue;
+export interface AnimationPropertyValueMap {
+	"transform.position": VectorValue;
+	"transform.scaleX": number;
+	"transform.scaleY": number;
+	"transform.rotate": number;
+	opacity: number;
+	volume: number;
+	color: string;
+	"background.color": string;
+	"background.paddingX": number;
+	"background.paddingY": number;
+	"background.offsetX": number;
+	"background.offsetY": number;
+	"background.cornerRadius": number;
+}
+export type DynamicAnimationPathValue = ParamValues[string];
+export type AnimationValueForPath<TPath extends AnimationPath> =
+	TPath extends AnimationPropertyPath
+		? AnimationPropertyValueMap[TPath]
+		: TPath extends GraphicParamPath | EffectParamPath
+			? DynamicAnimationPathValue
+			: never;
+export type AnimationNumericPropertyPath = {
+	[K in AnimationPropertyPath]: AnimationValueForPath<K> extends number ? K : never;
+}[AnimationPropertyPath];
+export type AnimationColorPropertyPath = {
+	[K in AnimationPropertyPath]: AnimationValueForPath<K> extends string ? K : never;
+}[AnimationPropertyPath];
 
 export type ContinuousKeyframeInterpolation = "linear" | "hold" | "bezier";
 export type DiscreteKeyframeInterpolation = "hold";
@@ -142,6 +172,36 @@ export type ElementAnimationBindingMap = Record<
 export interface ElementAnimations {
 	bindings: ElementAnimationBindingMap;
 	channels: ElementAnimationChannelMap;
+}
+
+export type NormalizedCubicBezier = [number, number, number, number];
+
+export interface ScalarGraphChannelTarget {
+	propertyPath: AnimationPath;
+	componentKey: string;
+	channelId: string;
+}
+
+export interface ScalarGraphChannel extends ScalarGraphChannelTarget {
+	channel: ScalarAnimationChannel;
+}
+
+export interface ScalarGraphKeyframeRef extends ScalarGraphChannelTarget {
+	keyframeId: string;
+}
+
+export interface ScalarGraphKeyframeContext extends ScalarGraphChannel {
+	keyframe: ScalarAnimationKey;
+	keyframeIndex: number;
+	previousKey: ScalarAnimationKey | null;
+	nextKey: ScalarAnimationKey | null;
+}
+
+export interface ScalarCurveKeyframePatch {
+	leftHandle?: CurveHandle | null;
+	rightHandle?: CurveHandle | null;
+	segmentToNext?: ScalarSegmentType;
+	tangentMode?: TangentMode;
 }
 
 export interface ElementKeyframe {

@@ -12,8 +12,10 @@ export {
 	getChannel,
 	removeElementKeyframe,
 	retimeElementKeyframe,
+	setBindingComponentChannel,
 	setChannel,
 	splitAnimationsAtTime,
+	updateScalarKeyframeCurve,
 	upsertElementKeyframe,
 	upsertPathKeyframe,
 } from "./keyframes";
@@ -45,6 +47,17 @@ export {
 	getKeyframeAtTime,
 	hasKeyframesForPath,
 } from "./keyframe-query";
+
+export {
+	getEditableScalarChannel,
+	getEditableScalarChannels,
+	getScalarKeyframeContext,
+} from "./graph-channels";
+
+export {
+	getCurveHandlesForNormalizedCubicBezier,
+	getNormalizedCubicBezierForScalarSegment,
+} from "./curve-bridge";
 
 export {
 	buildGraphicParamPath,
