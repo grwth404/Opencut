@@ -27,13 +27,10 @@ export function isSourceAudioSeparated({
 	return !isSourceAudioEnabled({ element });
 }
 
-export function canExtractSourceAudio({
-	element,
-	mediaAsset,
-}: {
-	element: TimelineElement;
-	mediaAsset: MediaAudioState | null | undefined;
-}): element is VideoElement {
+export function canExtractSourceAudio(
+	element: TimelineElement,
+	mediaAsset: MediaAudioState | null | undefined,
+): element is VideoElement {
 	return (
 		element.type === "video" &&
 		isSourceAudioEnabled({ element }) &&
@@ -48,17 +45,11 @@ export function canRecoverSourceAudio(
 	return element.type === "video" && isSourceAudioSeparated({ element });
 }
 
-export function canToggleSourceAudio({
-	element,
-	mediaAsset,
-}: {
-	element: TimelineElement;
-	mediaAsset: MediaAudioState | null | undefined;
-}): element is VideoElement {
-	return (
-		canRecoverSourceAudio({ element }) ||
-		canExtractSourceAudio({ element, mediaAsset })
-	);
+export function canToggleSourceAudio(
+	element: TimelineElement,
+	mediaAsset: MediaAudioState | null | undefined,
+): element is VideoElement {
+	return canRecoverSourceAudio(element) || canExtractSourceAudio(element, mediaAsset);
 }
 
 export function doesElementHaveEnabledAudio({
