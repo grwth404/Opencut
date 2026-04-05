@@ -1,28 +1,40 @@
 import type {
+	AnimationBindingInstance,
+	AnimationBindingKind,
 	AnimationChannel,
 	AnimationInterpolation,
-	AnimationKeyframe,
 	AnimationPath,
 	AnimationPropertyPath,
 	AnimationValue,
-	AnimationValueKind,
-	ColorAnimationChannel,
 	DiscreteAnimationChannel,
+	DiscreteAnimationKey,
 	ElementAnimations,
-	NumberAnimationChannel,
-	VectorAnimationChannel,
+	ScalarAnimationChannel,
+	ScalarAnimationKey,
+	ScalarCurveKeyframePatch,
+	ScalarSegmentType,
 } from "@/lib/animation/types";
-import { isVectorValue } from "./vector-channel";
 import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
 import { generateUUID } from "@/utils/id";
-import { snapToStep } from "@/utils/math";
-import { getChannelValueAtTime, normalizeChannel } from "./interpolation";
+import {
+	cloneAnimationBinding,
+	createAnimationBinding,
+	decomposeAnimationValue,
+} from "./binding-values";
+import {
+	getBezierPoint,
+	getDefaultLeftHandle,
+	getDefaultRightHandle,
+	solveBezierProgressForTime,
+} from "./bezier";
+import {
+	getChannelValueAtTime,
+	getScalarSegmentInterpolation,
+	normalizeChannel,
+} from "./interpolation";
 import {
 	coerceAnimationValueForProperty,
-	getDefaultInterpolationForProperty,
 	getAnimationPropertyDefinition,
-	isAnimationPropertyPath,
-	type NumericRange,
 } from "./property-registry";
 
 function isNearlySameTime({
@@ -35,32 +47,364 @@ function isNearlySameTime({
 	return Math.abs(leftTime - rightTime) <= TIME_EPSILON_SECONDS;
 }
 
-function toAnimation({
-	channelEntries,
+function hasChannelKeys({
+	channel,
 }: {
-	channelEntries: Array<[string, AnimationChannel]>;
+	channel: AnimationChannel | undefined;
+}): boolean {
+	return Boolean(channel && channel.keys.length > 0);
+}
+
+function toAnimation({
+	animations,
+}: {
+	animations: ElementAnimations;
 }): ElementAnimations | undefined {
-	if (channelEntries.length === 0) {
+	const nextBindings = Object.fromEntries(
+		Object.entries(animations.bindings).filter(([, binding]) => binding),
+	);
+	const nextChannels = Object.fromEntries(
+		Object.entries(animations.channels).filter(([, channel]) =>
+			hasChannelKeys({ channel }),
+		),
+	);
+	if (Object.keys(nextBindings).length === 0 || Object.keys(nextChannels).length === 0) {
 		return undefined;
 	}
 
 	return {
-		channels: Object.fromEntries(channelEntries),
+		bindings: nextBindings,
+		channels: nextChannels,
 	};
 }
 
-function toChannel({
-	keyframes,
-	valueKind,
+function cloneAnimationsState({
+	animations,
 }: {
-	keyframes: AnimationKeyframe[];
-	valueKind: AnimationValueKind;
+	animations: ElementAnimations | undefined;
+}): ElementAnimations {
+	return {
+		bindings: { ...(animations?.bindings ?? {}) },
+		channels: { ...(animations?.channels ?? {}) },
+	};
+}
+
+function getBindingChannelKind({
+	kind,
+}: {
+	kind: AnimationBindingKind;
+}): AnimationChannel["kind"] {
+	return kind === "discrete" ? "discrete" : "scalar";
+}
+
+function getPrimaryComponent({
+	binding,
+}: {
+	binding: AnimationBindingInstance;
+}) {
+	return binding.components[0] ?? null;
+}
+
+function getPrimaryChannelId({
+	binding,
+}: {
+	binding: AnimationBindingInstance;
+}) {
+	return getPrimaryComponent({ binding })?.channelId ?? null;
+}
+
+function getScalarSegmentType({
+	interpolation,
+}: {
+	interpolation: AnimationInterpolation;
+}): ScalarSegmentType {
+	if (interpolation === "hold") {
+		return "step";
+	}
+	return interpolation === "bezier" ? "bezier" : "linear";
+}
+
+function getInterpolationForBinding({
+	kind,
+	interpolation,
+}: {
+	kind: AnimationBindingKind;
+	interpolation: AnimationInterpolation | undefined;
+}): AnimationInterpolation {
+	if (kind === "discrete") {
+		return "hold";
+	}
+
+	if (
+		interpolation === "linear" ||
+		interpolation === "hold" ||
+		interpolation === "bezier"
+	) {
+		return interpolation;
+	}
+
+	return "linear";
+}
+
+function createEmptyChannelForBindingKind({
+	kind,
+}: {
+	kind: AnimationBindingKind;
 }): AnimationChannel {
+	if (kind === "discrete") {
+		return {
+			kind: "discrete",
+			keys: [],
+		} satisfies DiscreteAnimationChannel;
+	}
+
+	return {
+		kind: "scalar",
+		keys: [],
+	} satisfies ScalarAnimationChannel;
+}
+
+function createScalarKey({
+	id,
+	time,
+	value,
+	interpolation,
+	previousKey,
+}: {
+	id: string;
+	time: number;
+	value: number;
+	interpolation: AnimationInterpolation;
+	previousKey?: ScalarAnimationKey;
+}): ScalarAnimationKey {
+	return {
+		id,
+		time,
+		value,
+		leftHandle: previousKey?.leftHandle,
+		rightHandle: previousKey?.rightHandle,
+		segmentToNext:
+			previousKey?.segmentToNext ?? getScalarSegmentType({ interpolation }),
+		tangentMode: previousKey?.tangentMode ?? "flat",
+	};
+}
+
+function createDiscreteKey({
+	id,
+	time,
+	value,
+}: {
+	id: string;
+	time: number;
+	value: string | boolean;
+}): DiscreteAnimationKey {
+	return {
+		id,
+		time,
+		value,
+	};
+}
+
+function getBinding({
+	animations,
+	propertyPath,
+}: {
+	animations: ElementAnimations | undefined;
+	propertyPath: AnimationPath;
+}): AnimationBindingInstance | undefined {
+	return animations?.bindings[propertyPath];
+}
+
+function getChannelById({
+	animations,
+	channelId,
+}: {
+	animations: ElementAnimations | undefined;
+	channelId: string;
+}): AnimationChannel | undefined {
+	return animations?.channels[channelId];
+}
+
+function getBindingComponent({
+	binding,
+	componentKey,
+}: {
+	binding: AnimationBindingInstance;
+	componentKey: string;
+}) {
+	return binding.components.find((component) => component.key === componentKey) ?? null;
+}
+
+function getTargetKeyMetadata({
+	channel,
+	time,
+	keyframeId,
+}: {
+	channel: AnimationChannel | undefined;
+	time: number;
+	keyframeId?: string;
+}) {
+	const normalizedChannel =
+		channel != null ? normalizeChannel({ channel }) : undefined;
+	const keys = normalizedChannel?.keys ?? [];
+	if (keyframeId) {
+		const keyById = keys.find((key) => key.id === keyframeId);
+		if (keyById) {
+			return {
+				id: keyById.id,
+				time,
+			};
+		}
+	}
+
+	const keyAtTime = keys.find((key) =>
+		isNearlySameTime({ leftTime: key.time, rightTime: time }),
+	);
+	if (keyAtTime) {
+		return {
+			id: keyAtTime.id,
+			time: keyAtTime.time,
+		};
+	}
+
+	return {
+		id: keyframeId ?? generateUUID(),
+		time,
+	};
+}
+
+function upsertDiscreteChannelKey({
+	channel,
+	time,
+	value,
+	keyframeId,
+}: {
+	channel: DiscreteAnimationChannel | undefined;
+	time: number;
+	value: string | boolean;
+	keyframeId?: string;
+}): DiscreteAnimationChannel {
+	const normalizedChannel = normalizeChannel({
+		channel: channel ?? { kind: "discrete", keys: [] },
+	});
+	const keys = [...normalizedChannel.keys];
+	if (keyframeId) {
+		const existingIndex = keys.findIndex((key) => key.id === keyframeId);
+		if (existingIndex >= 0) {
+			keys[existingIndex] = createDiscreteKey({
+				id: keys[existingIndex].id,
+				time,
+				value,
+			});
+			return normalizeChannel({
+				channel: { kind: "discrete", keys },
+			});
+		}
+	}
+
+	const existingAtTimeIndex = keys.findIndex((key) =>
+		isNearlySameTime({ leftTime: key.time, rightTime: time }),
+	);
+	if (existingAtTimeIndex >= 0) {
+		keys[existingAtTimeIndex] = createDiscreteKey({
+			id: keys[existingAtTimeIndex].id,
+			time: keys[existingAtTimeIndex].time,
+			value,
+		});
+		return normalizeChannel({
+			channel: { kind: "discrete", keys },
+		});
+	}
+
+	keys.push(
+		createDiscreteKey({
+			id: keyframeId ?? generateUUID(),
+			time,
+			value,
+		}),
+	);
+	return normalizeChannel({
+		channel: { kind: "discrete", keys },
+	});
+}
+
+function upsertScalarChannelKey({
+	channel,
+	time,
+	value,
+	interpolation,
+	keyframeId,
+}: {
+	channel: ScalarAnimationChannel | undefined;
+	time: number;
+	value: number;
+	interpolation: AnimationInterpolation;
+	keyframeId?: string;
+}): ScalarAnimationChannel {
+	const normalizedChannel = normalizeChannel({
+		channel: channel ?? { kind: "scalar", keys: [] },
+	});
+	const keys = [...normalizedChannel.keys];
+	if (keyframeId) {
+		const existingIndex = keys.findIndex((key) => key.id === keyframeId);
+		if (existingIndex >= 0) {
+			keys[existingIndex] = createScalarKey({
+				id: keys[existingIndex].id,
+				time,
+				value,
+				interpolation,
+				previousKey: {
+					...keys[existingIndex],
+					segmentToNext: getScalarSegmentType({ interpolation }),
+				},
+			});
+			return normalizeChannel({
+				channel: {
+					kind: "scalar",
+					keys,
+					extrapolation: normalizedChannel.extrapolation,
+				},
+			});
+		}
+	}
+
+	const existingAtTimeIndex = keys.findIndex((key) =>
+		isNearlySameTime({ leftTime: key.time, rightTime: time }),
+	);
+	if (existingAtTimeIndex >= 0) {
+		keys[existingAtTimeIndex] = createScalarKey({
+			id: keys[existingAtTimeIndex].id,
+			time: keys[existingAtTimeIndex].time,
+			value,
+			interpolation,
+			previousKey: {
+				...keys[existingAtTimeIndex],
+				segmentToNext: getScalarSegmentType({ interpolation }),
+			},
+		});
+		return normalizeChannel({
+			channel: {
+				kind: "scalar",
+				keys,
+				extrapolation: normalizedChannel.extrapolation,
+			},
+		});
+	}
+
+	keys.push(
+		createScalarKey({
+			id: keyframeId ?? generateUUID(),
+			time,
+			value,
+			interpolation,
+		}),
+	);
 	return normalizeChannel({
 		channel: {
-			valueKind,
-			keyframes,
-		} as AnimationChannel,
+			kind: "scalar",
+			keys,
+			extrapolation: normalizedChannel.extrapolation,
+		},
 	});
 }
 
@@ -69,173 +413,12 @@ export function getChannel({
 	propertyPath,
 }: {
 	animations: ElementAnimations | undefined;
-	propertyPath: string;
+	propertyPath: AnimationPath;
 }): AnimationChannel | undefined {
-	return animations?.channels[propertyPath];
-}
-
-function getInterpolationForChannel({
-	channel,
-	interpolation,
-}: {
-	channel: AnimationChannel;
-	interpolation: AnimationInterpolation | undefined;
-}): AnimationInterpolation {
-	if (channel.valueKind === "discrete") {
-		return "hold";
-	}
-
-	if (interpolation === "linear" || interpolation === "hold") {
-		return interpolation;
-	}
-
-	return "linear";
-}
-
-function buildKeyframe({
-	channel,
-	id,
-	time,
-	value,
-	interpolation,
-}: {
-	channel: AnimationChannel;
-	id: string;
-	time: number;
-	value: AnimationValue;
-	interpolation: AnimationInterpolation;
-}): AnimationKeyframe {
-	if (channel.valueKind === "number") {
-		if (typeof value !== "number") {
-			throw new Error("Number channel keyframes require numeric values");
-		}
-
-		return {
-			id,
-			time,
-			value,
-			interpolation: interpolation === "hold" ? "hold" : "linear",
-		};
-	}
-
-	if (channel.valueKind === "color") {
-		if (typeof value !== "string") {
-			throw new Error("Color channel keyframes require string values");
-		}
-
-		return {
-			id,
-			time,
-			value,
-			interpolation: interpolation === "hold" ? "hold" : "linear",
-		};
-	}
-
-	if (channel.valueKind === "vector") {
-		if (!isVectorValue(value)) {
-			throw new Error("Vector channel keyframes require {x, y} values");
-		}
-
-		return {
-			id,
-			time,
-			value,
-			interpolation: interpolation === "hold" ? "hold" : "linear",
-		};
-	}
-
-	if (typeof value !== "string" && typeof value !== "boolean") {
-		throw new Error(
-			"Discrete channel keyframes require boolean or string values",
-		);
-	}
-
-	return {
-		id,
-		time,
-		value,
-		interpolation: "hold",
-	};
-}
-
-function createEmptyChannelForValueKind({
-	valueKind,
-}: {
-	valueKind: AnimationValueKind;
-}): AnimationChannel {
-	if (valueKind === "number") {
-		return {
-			valueKind: "number",
-			keyframes: [],
-		} satisfies NumberAnimationChannel;
-	}
-
-	if (valueKind === "color") {
-		return {
-			valueKind: "color",
-			keyframes: [],
-		} satisfies ColorAnimationChannel;
-	}
-
-	if (valueKind === "vector") {
-		return {
-			valueKind: "vector",
-			keyframes: [],
-		} satisfies VectorAnimationChannel;
-	}
-
-	return {
-		valueKind: "discrete",
-		keyframes: [],
-	} satisfies DiscreteAnimationChannel;
-}
-
-function clampNumericRange({
-	value,
-	numericRange,
-}: {
-	value: number;
-	numericRange: NumericRange | undefined;
-}): number {
-	if (!numericRange) {
-		return value;
-	}
-
-	const steppedValue =
-		numericRange.step != null
-			? snapToStep({ value, step: numericRange.step })
-			: value;
-	const minValue = numericRange.min ?? Number.NEGATIVE_INFINITY;
-	const maxValue = numericRange.max ?? Number.POSITIVE_INFINITY;
-	return Math.min(maxValue, Math.max(minValue, steppedValue));
-}
-
-function coerceAnimationValueForPath({
-	value,
-	valueKind,
-	numericRange,
-}: {
-	value: AnimationValue;
-	valueKind: AnimationValueKind;
-	numericRange?: NumericRange;
-}): AnimationValue | null {
-	if (valueKind === "number") {
-		if (typeof value !== "number" || Number.isNaN(value)) {
-			return null;
-		}
-
-		return clampNumericRange({ value, numericRange });
-	}
-
-	if (valueKind === "color") {
-		return typeof value === "string" ? value : null;
-	}
-
-	if (valueKind === "vector") {
-		return isVectorValue(value) ? value : null;
-	}
-
-	return typeof value === "string" || typeof value === "boolean" ? value : null;
+	const binding = getBinding({ animations, propertyPath });
+	const primaryChannelId =
+		binding != null ? getPrimaryChannelId({ binding }) : null;
+	return primaryChannelId ? animations?.channels[primaryChannelId] : undefined;
 }
 
 export function upsertPathKeyframe({
@@ -245,9 +428,9 @@ export function upsertPathKeyframe({
 	value,
 	interpolation,
 	keyframeId,
-	valueKind,
+	kind,
 	defaultInterpolation,
-	numericRange,
+	coerceValue,
 }: {
 	animations: ElementAnimations | undefined;
 	propertyPath: AnimationPath;
@@ -255,39 +438,80 @@ export function upsertPathKeyframe({
 	value: AnimationValue;
 	interpolation?: AnimationInterpolation;
 	keyframeId?: string;
-	valueKind: AnimationValueKind;
+	kind: AnimationBindingKind;
 	defaultInterpolation: AnimationInterpolation;
-	numericRange?: NumericRange;
+	coerceValue: (value: AnimationValue) => AnimationValue | null;
 }): ElementAnimations | undefined {
-	const coercedValue = coerceAnimationValueForPath({
-		value,
-		valueKind,
-		numericRange,
-	});
+	const coercedValue = coerceValue(value);
 	if (coercedValue === null) {
 		return animations;
 	}
 
-	const channel = getChannel({ animations, propertyPath });
-	const targetChannel =
-		channel && channel.valueKind === valueKind
-			? channel
-			: createEmptyChannelForValueKind({ valueKind });
-	const updatedChannel = upsertKeyframe({
-		channel: targetChannel,
+	const nextAnimations = cloneAnimationsState({ animations });
+	const existingBinding = getBinding({
+		animations,
+		propertyPath,
+	});
+	const binding =
+		existingBinding && existingBinding.kind === kind
+			? cloneAnimationBinding({ binding: existingBinding })
+			: createAnimationBinding({ path: propertyPath, kind });
+	const primaryChannel = getChannel({
+		animations,
+		propertyPath,
+	});
+	const targetKey = getTargetKeyMetadata({
+		channel: primaryChannel,
 		time,
-		value: coercedValue,
-		interpolation: interpolation ?? defaultInterpolation,
 		keyframeId,
 	});
+	const componentValues = decomposeAnimationValue({
+		kind,
+		value: coercedValue,
+	});
+	if (!componentValues) {
+		return animations;
+	}
 
-	return (
-		setChannel({
+	const nextInterpolation = getInterpolationForBinding({
+		kind,
+		interpolation: interpolation ?? defaultInterpolation,
+	});
+	nextAnimations.bindings[propertyPath] = binding;
+	for (const component of binding.components) {
+		const nextValue = componentValues[component.key];
+		if (nextValue == null) {
+			continue;
+		}
+
+		const currentChannel = getChannelById({
 			animations,
-			propertyPath,
-			channel: updatedChannel,
-		}) ?? { channels: {} }
-	);
+			channelId: component.channelId,
+		});
+		const targetChannel =
+			currentChannel?.kind === getBindingChannelKind({ kind })
+				? currentChannel
+				: createEmptyChannelForBindingKind({ kind });
+		nextAnimations.channels[component.channelId] =
+			targetChannel.kind === "discrete"
+				? upsertDiscreteChannelKey({
+						channel: targetChannel,
+						time: targetKey.time,
+						value: nextValue as string | boolean,
+						keyframeId: targetKey.id,
+					})
+				: upsertScalarChannelKey({
+						channel: targetChannel,
+						time: targetKey.time,
+						value: nextValue as number,
+						interpolation: nextInterpolation,
+						keyframeId: targetKey.id,
+					});
+	}
+
+	return toAnimation({
+		animations: nextAnimations,
+	});
 }
 
 export function upsertElementKeyframe({
@@ -321,14 +545,15 @@ export function upsertElementKeyframe({
 		value: coercedValue,
 		interpolation,
 		keyframeId,
-		valueKind: propertyDefinition.valueKind,
-		defaultInterpolation: getDefaultInterpolationForProperty({
-			propertyPath,
-		}),
-		numericRange: propertyDefinition.numericRange,
+		kind: propertyDefinition.kind,
+		defaultInterpolation: propertyDefinition.defaultInterpolation,
+		coerceValue: (nextValue) =>
+			coerceAnimationValueForProperty({
+				propertyPath,
+				value: nextValue,
+			}),
 	});
 }
-
 
 export function upsertKeyframe({
 	channel,
@@ -347,61 +572,29 @@ export function upsertKeyframe({
 		return undefined;
 	}
 
-	const currentKeyframes = channel.keyframes;
-	const nextKeyframes = [...currentKeyframes];
-	const nextInterpolation = getInterpolationForChannel({
-		channel,
-		interpolation,
-	});
-	if (keyframeId) {
-		const keyframeByIdIndex = nextKeyframes.findIndex(
-			(keyframe) => keyframe.id === keyframeId,
-		);
-		if (keyframeByIdIndex >= 0) {
-			nextKeyframes[keyframeByIdIndex] = buildKeyframe({
-				channel,
-				id: nextKeyframes[keyframeByIdIndex].id,
-				time,
-				value,
-				interpolation: nextInterpolation,
-			});
-			return toChannel({
-				keyframes: nextKeyframes,
-				valueKind: channel.valueKind,
-			});
+	if (channel.kind === "discrete") {
+		if (typeof value !== "string" && typeof value !== "boolean") {
+			return channel;
 		}
-	}
 
-	const keyframeAtTimeIndex = nextKeyframes.findIndex((keyframe) =>
-		isNearlySameTime({ leftTime: keyframe.time, rightTime: time }),
-	);
-	if (keyframeAtTimeIndex >= 0) {
-		nextKeyframes[keyframeAtTimeIndex] = buildKeyframe({
+		return upsertDiscreteChannelKey({
 			channel,
-			id: nextKeyframes[keyframeAtTimeIndex].id,
-			time: nextKeyframes[keyframeAtTimeIndex].time,
-			value,
-			interpolation: nextInterpolation,
-		});
-		return toChannel({
-			keyframes: nextKeyframes,
-			valueKind: channel.valueKind,
-		});
-	}
-
-	nextKeyframes.push(
-		buildKeyframe({
-			channel,
-			id: keyframeId ?? generateUUID(),
 			time,
 			value,
-			interpolation: nextInterpolation,
-		}),
-	);
+			keyframeId,
+		});
+	}
 
-	return toChannel({
-		keyframes: nextKeyframes,
-		valueKind: channel.valueKind,
+	if (typeof value !== "number") {
+		return channel;
+	}
+
+	return upsertScalarChannelKey({
+		channel,
+		time,
+		value,
+		interpolation: interpolation ?? "linear",
+		keyframeId,
 	});
 }
 
@@ -416,16 +609,16 @@ export function removeKeyframe({
 		return undefined;
 	}
 
-	const nextKeyframes = channel.keyframes.filter(
-		(keyframe) => keyframe.id !== keyframeId,
-	);
-	if (nextKeyframes.length === 0) {
+	const nextKeys = channel.keys.filter((keyframe) => keyframe.id !== keyframeId);
+	if (nextKeys.length === 0) {
 		return undefined;
 	}
 
-	return toChannel({
-		keyframes: nextKeyframes,
-		valueKind: channel.valueKind,
+	return normalizeChannel({
+		channel: {
+			...channel,
+			keys: nextKeys,
+		} as AnimationChannel,
 	});
 }
 
@@ -442,22 +635,24 @@ export function retimeKeyframe({
 		return undefined;
 	}
 
-	const keyframeByIdIndex = channel.keyframes.findIndex(
+	const keyframeByIdIndex = channel.keys.findIndex(
 		(keyframe) => keyframe.id === keyframeId,
 	);
 	if (keyframeByIdIndex < 0) {
 		return channel;
 	}
 
-	const nextKeyframes = [...channel.keyframes];
-	nextKeyframes[keyframeByIdIndex] = {
-		...nextKeyframes[keyframeByIdIndex],
+	const nextKeys = [...channel.keys];
+	nextKeys[keyframeByIdIndex] = {
+		...nextKeys[keyframeByIdIndex],
 		time,
 	};
 
-	return toChannel({
-		keyframes: nextKeyframes,
-		valueKind: channel.valueKind,
+	return normalizeChannel({
+		channel: {
+			...channel,
+			keys: nextKeys,
+		} as AnimationChannel,
 	});
 }
 
@@ -467,22 +662,145 @@ export function setChannel({
 	channel,
 }: {
 	animations: ElementAnimations | undefined;
-	propertyPath: string;
+	propertyPath: AnimationPath;
 	channel: AnimationChannel | undefined;
 }): ElementAnimations | undefined {
-	const currentChannels = animations?.channels ?? {};
-
-	const nextChannelEntries = Object.entries(currentChannels)
-		.filter(([path]) => path !== propertyPath)
-		.filter(([, ch]) => ch && ch.keyframes.length > 0)
-		.map(([path, ch]) => [path, ch] as [string, AnimationChannel]);
-
-	if (channel && channel.keyframes.length > 0) {
-		nextChannelEntries.push([propertyPath, channel]);
+	const binding = getBinding({ animations, propertyPath });
+	if (!binding) {
+		return animations;
 	}
 
+	if (binding.components.length !== 1) {
+		throw new Error(
+			`setChannel only supports single-component bindings. Received "${propertyPath}" with ${binding.components.length} components.`,
+		);
+	}
+
+	const primaryComponent = getPrimaryComponent({ binding });
+	if (!primaryComponent) {
+		return animations;
+	}
+
+	return setBindingComponentChannel({
+		animations,
+		propertyPath,
+		componentKey: primaryComponent.key,
+		channel,
+	});
+}
+
+export function setBindingComponentChannel({
+	animations,
+	propertyPath,
+	componentKey,
+	channel,
+}: {
+	animations: ElementAnimations | undefined;
+	propertyPath: AnimationPath;
+	componentKey: string;
+	channel: AnimationChannel | undefined;
+}): ElementAnimations | undefined {
+	const binding = getBinding({ animations, propertyPath });
+	if (!binding) {
+		return animations;
+	}
+
+	const component = getBindingComponent({
+		binding,
+		componentKey,
+	});
+	if (!component) {
+		return animations;
+	}
+
+	const nextAnimations = cloneAnimationsState({ animations });
+	if (!channel || !hasChannelKeys({ channel })) {
+		delete nextAnimations.channels[component.channelId];
+		const hasRemainingKeys = binding.components.some((candidate) =>
+			hasChannelKeys({
+				channel: nextAnimations.channels[candidate.channelId],
+			}),
+		);
+		if (!hasRemainingKeys) {
+			delete nextAnimations.bindings[propertyPath];
+		}
+		return toAnimation({
+			animations: nextAnimations,
+		});
+	}
+
+	nextAnimations.channels[component.channelId] = normalizeChannel({
+		channel,
+	});
 	return toAnimation({
-		channelEntries: nextChannelEntries,
+		animations: nextAnimations,
+	});
+}
+
+export function updateScalarKeyframeCurve({
+	animations,
+	propertyPath,
+	componentKey,
+	keyframeId,
+	patch,
+}: {
+	animations: ElementAnimations | undefined;
+	propertyPath: AnimationPath;
+	componentKey: string;
+	keyframeId: string;
+	patch: ScalarCurveKeyframePatch;
+}): ElementAnimations | undefined {
+	const binding = getBinding({ animations, propertyPath });
+	if (!binding) {
+		return animations;
+	}
+
+	const component = getBindingComponent({
+		binding,
+		componentKey,
+	});
+	if (!component) {
+		return animations;
+	}
+
+	const channel = getChannelById({
+		animations,
+		channelId: component.channelId,
+	});
+	if (channel?.kind !== "scalar") {
+		return animations;
+	}
+
+	const keyframeIndex = channel.keys.findIndex((keyframe) => keyframe.id === keyframeId);
+	if (keyframeIndex < 0) {
+		return animations;
+	}
+
+	const nextKeys = [...channel.keys];
+	const currentKey = nextKeys[keyframeIndex];
+	nextKeys[keyframeIndex] = {
+		...currentKey,
+		leftHandle:
+			patch.leftHandle === undefined
+				? currentKey.leftHandle
+				: patch.leftHandle ?? undefined,
+		rightHandle:
+			patch.rightHandle === undefined
+				? currentKey.rightHandle
+				: patch.rightHandle ?? undefined,
+		segmentToNext: patch.segmentToNext ?? currentKey.segmentToNext,
+		tangentMode: patch.tangentMode ?? currentKey.tangentMode,
+	};
+
+	return setBindingComponentChannel({
+		animations,
+		propertyPath,
+		componentKey,
+		channel: {
+			kind: "scalar",
+			keys: nextKeys,
+			extrapolation: channel.extrapolation,
+		},
 	});
 }
 
@@ -497,31 +815,57 @@ export function cloneAnimations({
 		return undefined;
 	}
 
-	const clonedEntries = Object.entries(animations.channels).flatMap(
-		([propertyPath, channel]) => {
-			if (!channel || channel.keyframes.length === 0) {
-				return [];
+	const nextAnimations = cloneAnimationsState({ animations });
+	nextAnimations.bindings = Object.fromEntries(
+		Object.entries(animations.bindings).map(([path, binding]) => [
+			path,
+			binding ? cloneAnimationBinding({ binding }) : binding,
+		]),
+	);
+	nextAnimations.channels = {};
+
+	for (const binding of Object.values(nextAnimations.bindings)) {
+		if (!binding) {
+			continue;
+		}
+
+		const primaryChannel = getChannelById({
+			animations,
+			channelId: getPrimaryChannelId({ binding }) ?? "",
+		});
+		const keyIdMap = new Map<string, string>();
+		if (primaryChannel) {
+			for (const key of primaryChannel.keys) {
+				keyIdMap.set(
+					key.id,
+					shouldRegenerateKeyframeIds ? generateUUID() : key.id,
+				);
+			}
+		}
+
+		for (const component of binding.components) {
+			const currentChannel = getChannelById({
+				animations,
+				channelId: component.channelId,
+			});
+			if (!currentChannel) {
+				continue;
 			}
 
-			const clonedKeyframes = channel.keyframes.map((keyframe) => ({
-				...keyframe,
-				id: shouldRegenerateKeyframeIds ? generateUUID() : keyframe.id,
-			}));
-
-			return [
-				[
-					propertyPath,
-					toChannel({
-						keyframes: clonedKeyframes,
-						valueKind: channel.valueKind,
-					}),
-				] as [string, AnimationChannel],
-			];
-		},
-	);
+			nextAnimations.channels[component.channelId] = normalizeChannel({
+				channel: {
+					...currentChannel,
+					keys: currentChannel.keys.map((key) => ({
+						...key,
+						id: keyIdMap.get(key.id) ?? key.id,
+					})),
+				} as AnimationChannel,
+			});
+		}
+	}
 
 	return toAnimation({
-		channelEntries: clonedEntries,
+		animations: nextAnimations,
 	});
 }
 
@@ -532,38 +876,310 @@ export function clampAnimationsToDuration({
 	animations: ElementAnimations | undefined;
 	duration: number;
 }): ElementAnimations | undefined {
-	if (!animations) {
+	if (!animations || duration <= 0) {
 		return undefined;
 	}
 
-	const clampedEntries = Object.entries(animations.channels).flatMap(
-		([propertyPath, channel]) => {
-			if (!channel) {
-				return [];
-			}
+	return splitAnimationsAtTime({
+		animations,
+		splitTime: duration,
+		shouldIncludeSplitBoundary: true,
+	}).leftAnimations;
+}
 
-			const nextKeyframes = channel.keyframes.filter(
-				(keyframe) => keyframe.time >= 0 && keyframe.time <= duration,
-			);
-			if (nextKeyframes.length === 0) {
-				return [];
-			}
+function lerpPoint({
+	left,
+	right,
+	progress,
+}: {
+	left: { x: number; y: number };
+	right: { x: number; y: number };
+	progress: number;
+}) {
+	return {
+		x: left.x + (right.x - left.x) * progress,
+		y: left.y + (right.y - left.y) * progress,
+	};
+}
 
-			return [
-				[
-					propertyPath,
-					toChannel({
-						keyframes: nextKeyframes,
-						valueKind: channel.valueKind,
-					}),
-				] as [string, AnimationChannel],
+function splitDiscreteChannelAtTime({
+	channel,
+	splitTime,
+	leftBoundaryId,
+	rightBoundaryId,
+	shouldIncludeSplitBoundary,
+}: {
+	channel: DiscreteAnimationChannel | undefined;
+	splitTime: number;
+	leftBoundaryId: string;
+	rightBoundaryId: string;
+	shouldIncludeSplitBoundary: boolean;
+}) {
+	if (!channel || channel.keys.length === 0) {
+		return {
+			leftChannel: undefined,
+			rightChannel: undefined,
+		};
+	}
+
+	const normalizedChannel = normalizeChannel({ channel });
+	let leftKeys = normalizedChannel.keys.filter((key) => key.time <= splitTime);
+	let rightKeys = normalizedChannel.keys
+		.filter((key) => key.time >= splitTime)
+		.map((key) => ({ ...key, time: key.time - splitTime }));
+
+	if (shouldIncludeSplitBoundary) {
+		const hasBoundaryOnLeft = leftKeys.some((key) =>
+			isNearlySameTime({ leftTime: key.time, rightTime: splitTime }),
+		);
+		const hasBoundaryOnRight = rightKeys.some((key) =>
+			isNearlySameTime({ leftTime: key.time, rightTime: 0 }),
+		);
+		const boundaryValue = getChannelValueAtTime({
+			channel: normalizedChannel,
+			time: splitTime,
+			fallbackValue: normalizedChannel.keys[0].value,
+		});
+		if (!hasBoundaryOnLeft) {
+			leftKeys = [
+				...leftKeys,
+				createDiscreteKey({
+					id: leftBoundaryId,
+					time: splitTime,
+					value: boundaryValue as string | boolean,
+				}),
 			];
-		},
-	);
+		}
+		if (!hasBoundaryOnRight) {
+			rightKeys = [
+				createDiscreteKey({
+					id: rightBoundaryId,
+					time: 0,
+					value: boundaryValue as string | boolean,
+				}),
+				...rightKeys,
+			];
+		}
+	}
 
-	return toAnimation({
-		channelEntries: clampedEntries,
-	});
+	return {
+		leftChannel: leftKeys.length
+			? normalizeChannel({ channel: { kind: "discrete", keys: leftKeys } })
+			: undefined,
+		rightChannel: rightKeys.length
+			? normalizeChannel({ channel: { kind: "discrete", keys: rightKeys } })
+			: undefined,
+	};
+}
+
+function splitScalarChannelAtTime({
+	channel,
+	splitTime,
+	leftBoundaryId,
+	rightBoundaryId,
+	shouldIncludeSplitBoundary,
+}: {
+	channel: ScalarAnimationChannel | undefined;
+	splitTime: number;
+	leftBoundaryId: string;
+	rightBoundaryId: string;
+	shouldIncludeSplitBoundary: boolean;
+}) {
+	if (!channel || channel.keys.length === 0) {
+		return {
+			leftChannel: undefined,
+			rightChannel: undefined,
+		};
+	}
+
+	const normalizedChannel = normalizeChannel({ channel });
+	let leftKeys = normalizedChannel.keys.filter((key) => key.time <= splitTime);
+	let rightKeys = normalizedChannel.keys
+		.filter((key) => key.time >= splitTime)
+		.map((key) => ({ ...key, time: key.time - splitTime }));
+
+	const hasBoundaryOnLeft = leftKeys.some((key) =>
+		isNearlySameTime({ leftTime: key.time, rightTime: splitTime }),
+	);
+	const hasBoundaryOnRight = rightKeys.some((key) =>
+		isNearlySameTime({ leftTime: key.time, rightTime: 0 }),
+	);
+	if (!shouldIncludeSplitBoundary || (hasBoundaryOnLeft && hasBoundaryOnRight)) {
+		return {
+			leftChannel: leftKeys.length
+				? normalizeChannel({
+						channel: {
+							kind: "scalar",
+							keys: leftKeys,
+							extrapolation: normalizedChannel.extrapolation,
+						},
+					})
+				: undefined,
+			rightChannel: rightKeys.length
+				? normalizeChannel({
+						channel: {
+							kind: "scalar",
+							keys: rightKeys,
+							extrapolation: normalizedChannel.extrapolation,
+						},
+					})
+				: undefined,
+		};
+	}
+
+	for (let keyIndex = 0; keyIndex < normalizedChannel.keys.length - 1; keyIndex++) {
+		const leftKey = normalizedChannel.keys[keyIndex];
+		const rightKey = normalizedChannel.keys[keyIndex + 1];
+		if (
+			!(
+				splitTime > leftKey.time + TIME_EPSILON_SECONDS &&
+				splitTime < rightKey.time - TIME_EPSILON_SECONDS
+			)
+		) {
+			continue;
+		}
+
+		const boundaryValue = getChannelValueAtTime({
+			channel: normalizedChannel,
+			time: splitTime,
+			fallbackValue: leftKey.value,
+		}) as number;
+
+		if (leftKey.segmentToNext === "bezier") {
+			const rightHandle =
+				leftKey.rightHandle ?? getDefaultRightHandle({ leftKey, rightKey });
+			const leftHandle =
+				rightKey.leftHandle ?? getDefaultLeftHandle({ leftKey, rightKey });
+			const progress = solveBezierProgressForTime({
+				time: splitTime,
+				leftKey,
+				rightKey,
+			});
+			const p0 = { x: leftKey.time, y: leftKey.value };
+			const p1 = {
+				x: leftKey.time + rightHandle.dt,
+				y: leftKey.value + rightHandle.dv,
+			};
+			const p2 = {
+				x: rightKey.time + leftHandle.dt,
+				y: rightKey.value + leftHandle.dv,
+			};
+			const p3 = { x: rightKey.time, y: rightKey.value };
+			const q0 = lerpPoint({ left: p0, right: p1, progress });
+			const q1 = lerpPoint({ left: p1, right: p2, progress });
+			const q2 = lerpPoint({ left: p2, right: p3, progress });
+			const r0 = lerpPoint({ left: q0, right: q1, progress });
+			const r1 = lerpPoint({ left: q1, right: q2, progress });
+			const splitPoint = lerpPoint({ left: r0, right: r1, progress });
+			leftKeys = [
+				...normalizedChannel.keys.filter((key) => key.time < splitTime),
+				{
+					...leftKey,
+					rightHandle: {
+						dt: q0.x - p0.x,
+						dv: q0.y - p0.y,
+					},
+				},
+				{
+					id: leftBoundaryId,
+					time: splitTime,
+					value: boundaryValue,
+					leftHandle: {
+						dt: r0.x - splitPoint.x,
+						dv: r0.y - splitPoint.y,
+					},
+					segmentToNext: leftKey.segmentToNext,
+					tangentMode: leftKey.tangentMode,
+				},
+			];
+			rightKeys = [
+				{
+					id: rightBoundaryId,
+					time: 0,
+					value: boundaryValue,
+					rightHandle: {
+						dt: r1.x - splitPoint.x,
+						dv: r1.y - splitPoint.y,
+					},
+					segmentToNext: "bezier",
+					tangentMode: leftKey.tangentMode,
+				},
+				{
+					...rightKey,
+					time: rightKey.time - splitTime,
+					leftHandle: {
+						dt: q2.x - p3.x,
+						dv: q2.y - p3.y,
+					},
+				},
+				...normalizedChannel.keys
+					.filter((key) => key.time > rightKey.time)
+					.map((key) => ({
+						...key,
+						time: key.time - splitTime,
+					})),
+			];
+		} else {
+			leftKeys = [
+				...leftKeys,
+				createScalarKey({
+					id: leftBoundaryId,
+					time: splitTime,
+					value: boundaryValue,
+					interpolation: "linear",
+				}),
+			];
+			rightKeys = [
+				createScalarKey({
+					id: rightBoundaryId,
+					time: 0,
+					value: boundaryValue,
+					interpolation: getScalarSegmentInterpolation({
+						segment: leftKey.segmentToNext,
+					}),
+				}),
+				...rightKeys,
+			];
+		}
+
+		return {
+			leftChannel: normalizeChannel({
+				channel: {
+					kind: "scalar",
+					keys: leftKeys,
+					extrapolation: normalizedChannel.extrapolation,
+				},
+			}),
+			rightChannel: normalizeChannel({
+				channel: {
+					kind: "scalar",
+					keys: rightKeys,
+					extrapolation: normalizedChannel.extrapolation,
+				},
+			}),
+		};
+	}
+
+	return {
+		leftChannel: leftKeys.length
+			? normalizeChannel({
+					channel: {
+						kind: "scalar",
+						keys: leftKeys,
+						extrapolation: normalizedChannel.extrapolation,
+					},
+				})
+			: undefined,
+		rightChannel: rightKeys.length
+			? normalizeChannel({
+					channel: {
+						kind: "scalar",
+						keys: rightKeys,
+						extrapolation: normalizedChannel.extrapolation,
+					},
+				})
+			: undefined,
+	};
 }
 
 export function splitAnimationsAtTime({
@@ -582,101 +1198,63 @@ export function splitAnimationsAtTime({
 		return { leftAnimations: undefined, rightAnimations: undefined };
 	}
 
-	const leftChannels: Array<[string, AnimationChannel]> = [];
-	const rightChannels: Array<[string, AnimationChannel]> = [];
+	const leftAnimations = cloneAnimationsState({ animations: undefined });
+	const rightAnimations = cloneAnimationsState({ animations: undefined });
 
-	for (const [propertyPath, channel] of Object.entries(animations.channels)) {
-		if (!channel || channel.keyframes.length === 0) {
+	for (const [propertyPath, binding] of Object.entries(animations.bindings)) {
+		if (!binding) {
 			continue;
 		}
 
-		const normalizedChannel = normalizeChannel({ channel });
-		let leftKeyframes = normalizedChannel.keyframes.filter(
-			(keyframe) => keyframe.time <= splitTime,
-		);
-		let rightKeyframes = normalizedChannel.keyframes
-			.filter((keyframe) => keyframe.time >= splitTime)
-			.map((keyframe) => ({
-				...keyframe,
-				time: keyframe.time - splitTime,
-			}));
+		const leftBinding = cloneAnimationBinding({ binding });
+		const rightBinding = cloneAnimationBinding({ binding });
+		const leftBoundaryId = generateUUID();
+		const rightBoundaryId = generateUUID();
+		let hasLeftKeys = false;
+		let hasRightKeys = false;
 
-		const hasBoundaryOnLeft = leftKeyframes.some((keyframe) =>
-			isNearlySameTime({ leftTime: keyframe.time, rightTime: splitTime }),
-		);
-		const hasBoundaryOnRight = rightKeyframes.some((keyframe) =>
-			isNearlySameTime({ leftTime: keyframe.time, rightTime: 0 }),
-		);
-		if (
-			shouldIncludeSplitBoundary &&
-			(!hasBoundaryOnLeft || !hasBoundaryOnRight)
-		) {
-			const boundaryValue = getChannelValueAtTime({
-				channel: normalizedChannel,
-				time: splitTime,
-				fallbackValue: normalizedChannel.keyframes[0].value,
+		for (const component of binding.components) {
+			const channel = getChannelById({
+				animations,
+				channelId: component.channelId,
 			});
-			const knownPropertyPath = isAnimationPropertyPath(propertyPath)
-				? propertyPath
-				: null;
-			const boundaryInterpolation = knownPropertyPath
-				? getDefaultInterpolationForProperty({
-						propertyPath: knownPropertyPath,
-					})
-				: normalizedChannel.valueKind === "discrete"
-					? "hold"
-					: "linear";
-
-			if (!hasBoundaryOnLeft) {
-				leftKeyframes = [
-					...leftKeyframes,
-					buildKeyframe({
-						channel: normalizedChannel,
-						id: generateUUID(),
-						time: splitTime,
-						value: boundaryValue,
-						interpolation: boundaryInterpolation,
-					}),
-				];
+			const splitResult =
+				channel?.kind === "discrete"
+					? splitDiscreteChannelAtTime({
+							channel,
+							splitTime,
+							leftBoundaryId,
+							rightBoundaryId,
+							shouldIncludeSplitBoundary,
+						})
+					: splitScalarChannelAtTime({
+							channel: channel as ScalarAnimationChannel | undefined,
+							splitTime,
+							leftBoundaryId,
+							rightBoundaryId,
+							shouldIncludeSplitBoundary,
+						});
+			if (splitResult.leftChannel) {
+				leftAnimations.channels[component.channelId] = splitResult.leftChannel;
+				hasLeftKeys = true;
 			}
-
-			if (!hasBoundaryOnRight) {
-				rightKeyframes = [
-					buildKeyframe({
-						channel: normalizedChannel,
-						id: generateUUID(),
-						time: 0,
-						value: boundaryValue,
-						interpolation: boundaryInterpolation,
-					}),
-					...rightKeyframes,
-				];
+			if (splitResult.rightChannel) {
+				rightAnimations.channels[component.channelId] = splitResult.rightChannel;
+				hasRightKeys = true;
 			}
 		}
 
-		const leftChannel = leftKeyframes.length
-			? toChannel({
-					keyframes: leftKeyframes,
-					valueKind: normalizedChannel.valueKind,
-				})
-			: undefined;
-		const rightChannel = rightKeyframes.length
-			? toChannel({
-					keyframes: rightKeyframes,
-					valueKind: normalizedChannel.valueKind,
-				})
-			: undefined;
-		if (leftChannel) {
-			leftChannels.push([propertyPath, leftChannel]);
+		if (hasLeftKeys) {
+			leftAnimations.bindings[propertyPath] = leftBinding;
 		}
-		if (rightChannel) {
-			rightChannels.push([propertyPath, rightChannel]);
+		if (hasRightKeys) {
+			rightAnimations.bindings[propertyPath] = rightBinding;
 		}
 	}
 
 	return {
-		leftAnimations: toAnimation({ channelEntries: leftChannels }),
-		rightAnimations: toAnimation({ channelEntries: rightChannels }),
+		leftAnimations: toAnimation({ animations: leftAnimations }),
+		rightAnimations: toAnimation({ animations: rightAnimations }),
 	};
 }
 
@@ -689,15 +1267,31 @@ export function removeElementKeyframe({
 	propertyPath: AnimationPath;
 	keyframeId: string;
 }): ElementAnimations | undefined {
-	const channel = getChannel({ animations, propertyPath });
-	const updatedChannel = removeKeyframe({
-		channel,
-		keyframeId,
-	});
-	return setChannel({
-		animations,
-		propertyPath,
-		channel: updatedChannel,
+	const binding = getBinding({ animations, propertyPath });
+	if (!binding) {
+		return animations;
+	}
+
+	const nextAnimations = cloneAnimationsState({ animations });
+	for (const component of binding.components) {
+		nextAnimations.channels[component.channelId] = removeKeyframe({
+			channel: nextAnimations.channels[component.channelId],
+			keyframeId,
+		});
+	}
+	const hasRemainingKeys = binding.components.some((component) =>
+		hasChannelKeys({
+			channel: nextAnimations.channels[component.channelId],
+		}),
+	);
+	if (!hasRemainingKeys) {
+		delete nextAnimations.bindings[propertyPath];
+		for (const component of binding.components) {
+			delete nextAnimations.channels[component.channelId];
+		}
+	}
+	return toAnimation({
+		animations: nextAnimations,
 	});
 }
 
@@ -712,15 +1306,20 @@ export function retimeElementKeyframe({
 	keyframeId: string;
 	time: number;
 }): ElementAnimations | undefined {
-	const channel = getChannel({ animations, propertyPath });
-	const updatedChannel = retimeKeyframe({
-		channel,
-		keyframeId,
-		time,
-	});
-	return setChannel({
-		animations,
-		propertyPath,
-		channel: updatedChannel,
+	const binding = getBinding({ animations, propertyPath });
+	if (!binding) {
+		return animations;
+	}
+
+	const nextAnimations = cloneAnimationsState({ animations });
+	for (const component of binding.components) {
+		nextAnimations.channels[component.channelId] = retimeKeyframe({
+			channel: nextAnimations.channels[component.channelId],
+			keyframeId,
+			time,
+		});
+	}
+	return toAnimation({
+		animations: nextAnimations,
 	});
 }

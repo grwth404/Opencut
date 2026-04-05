@@ -1,4 +1,4 @@
-import { cloneAnimations, getChannel } from "@/lib/animation";
+import { cloneAnimations } from "@/lib/animation";
 import type { ElementAnimations } from "@/lib/animation/types";
 import type { MediaAsset } from "@/lib/media/types";
 import { DEFAULTS } from "@/lib/timeline/defaults";
@@ -42,11 +42,9 @@ export function canExtractSourceAudio({
 	);
 }
 
-export function canRecoverSourceAudio({
-	element,
-}: {
-	element: TimelineElement;
-}): element is VideoElement {
+export function canRecoverSourceAudio(
+	element: TimelineElement,
+): element is VideoElement {
 	return element.type === "video" && isSourceAudioSeparated({ element });
 }
 
@@ -119,16 +117,27 @@ function cloneVolumeAnimations({
 }: {
 	animations: ElementAnimations | undefined;
 }): ElementAnimations | undefined {
-	const volumeChannel = getChannel({ animations, propertyPath: "volume" });
-	if (!volumeChannel) {
+	const volumeBinding = animations?.bindings.volume;
+	if (!volumeBinding) {
+		return undefined;
+	}
+
+	const subsetChannels = Object.fromEntries(
+		volumeBinding.components.flatMap((component) => {
+			const channel = animations?.channels[component.channelId];
+			return channel ? [[component.channelId, channel] as const] : [];
+		}),
+	);
+	if (Object.keys(subsetChannels).length === 0) {
 		return undefined;
 	}
 
 	return cloneAnimations({
 		animations: {
-			channels: {
-				volume: volumeChannel,
+			bindings: {
+				volume: volumeBinding,
 			},
+			channels: subsetChannels,
 		},
 		shouldRegenerateKeyframeIds: true,
 	});

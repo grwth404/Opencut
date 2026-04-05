@@ -16,6 +16,7 @@ import type {
 	AnimationPath,
 	AnimationInterpolation,
 	AnimationValue,
+	ScalarCurveKeyframePatch,
 } from "@/lib/animation/types";
 import { getLastFrameTime } from "opencut-wasm";
 import { BatchCommand } from "@/lib/commands";
@@ -35,6 +36,7 @@ import {
 	UpsertKeyframeCommand,
 	RemoveKeyframeCommand,
 	RetimeKeyframeCommand,
+	UpdateScalarKeyframeCurveCommand,
 	AddClipEffectCommand,
 	RemoveClipEffectCommand,
 	UpdateClipEffectParamsCommand,
@@ -509,6 +511,45 @@ export class TimelineManager {
 			keyframeId,
 			nextTime: time,
 		});
+		this.editor.command.execute({ command });
+	}
+
+	updateKeyframeCurves({
+		keyframes,
+	}: {
+		keyframes: Array<{
+			trackId: string;
+			elementId: string;
+			propertyPath: AnimationPath;
+			componentKey: string;
+			keyframeId: string;
+			patch: ScalarCurveKeyframePatch;
+		}>;
+	}): void {
+		if (keyframes.length === 0) {
+			return;
+		}
+
+		const commands = keyframes.map(
+			({
+				trackId,
+				elementId,
+				propertyPath,
+				componentKey,
+				keyframeId,
+				patch,
+			}) =>
+				new UpdateScalarKeyframeCurveCommand({
+					trackId,
+					elementId,
+					propertyPath,
+					componentKey,
+					keyframeId,
+					patch,
+				}),
+		);
+		const command =
+			commands.length === 1 ? commands[0] : new BatchCommand(commands);
 		this.editor.command.execute({ command });
 	}
 

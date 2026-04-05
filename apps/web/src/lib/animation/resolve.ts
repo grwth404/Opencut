@@ -1,16 +1,20 @@
 import type {
+	AnimationColorPropertyPath,
+	AnimationNumericPropertyPath,
+	AnimationPath,
 	AnimationPropertyPath,
+	AnimationValueForPath,
 	ElementAnimations,
 } from "@/lib/animation/types";
 import type { Transform } from "@/lib/rendering";
 import {
-	getColorValueAtTime,
-	getNumberChannelValueAtTime,
-	getVectorChannelValueAtTime,
+	type AnimationComponentValue,
+	composeAnimationValue,
+	decomposeAnimationValue,
+} from "./binding-values";
+import {
+	getChannelValueAtTime,
 } from "./interpolation";
-import { getColorChannelForPath } from "./color-channel";
-import { getNumberChannelForPath } from "./number-channel";
-import { getVectorChannelForPath } from "./vector-channel";
 
 export function getElementLocalTime({
 	timelineTime,
@@ -44,36 +48,28 @@ export function resolveTransformAtTime({
 }): Transform {
 	const safeLocalTime = Math.max(0, localTime);
 	return {
-		position: getVectorChannelValueAtTime({
-			channel: getVectorChannelForPath({
-				animations,
-				propertyPath: "transform.position",
-			}),
-			time: safeLocalTime,
+		position: resolveAnimationPathValueAtTime({
+			animations,
+			propertyPath: "transform.position",
+			localTime: safeLocalTime,
 			fallbackValue: baseTransform.position,
 		}),
-		scaleX: getNumberChannelValueAtTime({
-			channel: getNumberChannelForPath({
-				animations,
-				propertyPath: "transform.scaleX",
-			}),
-			time: safeLocalTime,
+		scaleX: resolveAnimationPathValueAtTime({
+			animations,
+			propertyPath: "transform.scaleX",
+			localTime: safeLocalTime,
 			fallbackValue: baseTransform.scaleX,
 		}),
-		scaleY: getNumberChannelValueAtTime({
-			channel: getNumberChannelForPath({
-				animations,
-				propertyPath: "transform.scaleY",
-			}),
-			time: safeLocalTime,
+		scaleY: resolveAnimationPathValueAtTime({
+			animations,
+			propertyPath: "transform.scaleY",
+			localTime: safeLocalTime,
 			fallbackValue: baseTransform.scaleY,
 		}),
-		rotate: getNumberChannelValueAtTime({
-			channel: getNumberChannelForPath({
-				animations,
-				propertyPath: "transform.rotate",
-			}),
-			time: safeLocalTime,
+		rotate: resolveAnimationPathValueAtTime({
+			animations,
+			propertyPath: "transform.rotate",
+			localTime: safeLocalTime,
 			fallbackValue: baseTransform.rotate,
 		}),
 	};
@@ -88,12 +84,10 @@ export function resolveOpacityAtTime({
 	animations: ElementAnimations | undefined;
 	localTime: number;
 }): number {
-	return getNumberChannelValueAtTime({
-		channel: getNumberChannelForPath({
-			animations,
-			propertyPath: "opacity",
-		}),
-		time: Math.max(0, localTime),
+	return resolveAnimationPathValueAtTime({
+		animations,
+		propertyPath: "opacity",
+		localTime: Math.max(0, localTime),
 		fallbackValue: baseOpacity,
 	});
 }
@@ -106,12 +100,13 @@ export function resolveNumberAtTime({
 }: {
 	baseValue: number;
 	animations: ElementAnimations | undefined;
-	propertyPath: AnimationPropertyPath;
+	propertyPath: AnimationNumericPropertyPath;
 	localTime: number;
 }): number {
-	return getNumberChannelValueAtTime({
-		channel: getNumberChannelForPath({ animations, propertyPath }),
-		time: Math.max(0, localTime),
+	return resolveAnimationPathValueAtTime({
+		animations,
+		propertyPath,
+		localTime: Math.max(0, localTime),
 		fallbackValue: baseValue,
 	});
 }
@@ -124,12 +119,58 @@ export function resolveColorAtTime({
 }: {
 	baseColor: string;
 	animations: ElementAnimations | undefined;
-	propertyPath: AnimationPropertyPath;
+	propertyPath: AnimationColorPropertyPath;
 	localTime: number;
 }): string {
-	return getColorValueAtTime({
-		channel: getColorChannelForPath({ animations, propertyPath }),
-		time: Math.max(0, localTime),
+	return resolveAnimationPathValueAtTime({
+		animations,
+		propertyPath,
+		localTime: Math.max(0, localTime),
 		fallbackValue: baseColor,
 	});
+}
+
+export function resolveAnimationPathValueAtTime<TPath extends AnimationPath>({
+	animations,
+	propertyPath,
+	localTime,
+	fallbackValue,
+}: {
+	animations: ElementAnimations | undefined;
+	propertyPath: TPath;
+	localTime: number;
+	fallbackValue: AnimationValueForPath<TPath>;
+}): AnimationValueForPath<TPath> {
+	const binding = animations?.bindings[propertyPath];
+	if (!binding) {
+		return fallbackValue;
+	}
+
+	const fallbackComponents = decomposeAnimationValue({
+		kind: binding.kind,
+		value: fallbackValue,
+	});
+	if (!fallbackComponents) {
+		return fallbackValue;
+	}
+
+	const componentValues = Object.fromEntries(
+		binding.components.map((component) => {
+			const channel = animations?.channels[component.channelId];
+			return [
+				component.key,
+				getChannelValueAtTime({
+					channel,
+					time: localTime,
+					fallbackValue:
+						fallbackComponents[component.key] ??
+						(channel?.kind === "discrete" ? false : 0),
+				}),
+			];
+		}),
+	) as Record<string, AnimationComponentValue | undefined>;
+	return (composeAnimationValue({
+		binding,
+		componentValues,
+	}) ?? fallbackValue) as AnimationValueForPath<TPath>;
 }

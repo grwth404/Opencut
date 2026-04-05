@@ -47,7 +47,7 @@ export class ToggleSourceAudioSeparationCommand extends Command {
 			return;
 		}
 
-		if (canRecoverSourceAudio({ element: sourceElement })) {
+		if (canRecoverSourceAudio(sourceElement)) {
 			editor.timeline.updateTracks(
 				updateSourceAudioEnabled({
 					tracks: this.savedState,
@@ -63,7 +63,7 @@ export class ToggleSourceAudioSeparationCommand extends Command {
 			.media
 			.getAssets()
 			.find((asset) => asset.id === sourceElement.mediaId);
-		if (!canExtractSourceAudio({ element: sourceElement, mediaAsset })) {
+		if (!canExtractSourceAudio(sourceElement, mediaAsset)) {
 			return;
 		}
 		if (sourceElement.duration <= 0) {

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { upsertElementKeyframe } from "@/lib/animation";
 import type { UploadAudioElement, VideoElement } from "@/lib/timeline";
 import {
 	buildSeparatedAudioElement,
@@ -25,32 +26,7 @@ describe("audio separation", () => {
 			volume: -6,
 			muted: true,
 			retime: { rate: 1.25, maintainPitch: true },
-			animations: {
-				channels: {
-					volume: {
-						valueKind: "number",
-						keyframes: [
-							{
-								id: "volume-keyframe",
-								time: 2,
-								value: -12,
-								interpolation: "linear",
-							},
-						],
-					},
-					opacity: {
-						valueKind: "number",
-						keyframes: [
-							{
-								id: "opacity-keyframe",
-								time: 1,
-								value: 0.5,
-								interpolation: "linear",
-							},
-						],
-					},
-				},
-			},
+			animations: buildAnimations(),
 		});
 
 		const separatedAudioElement = buildSeparatedAudioElement({
@@ -71,11 +47,14 @@ describe("audio separation", () => {
 			muted: true,
 			retime: { rate: 1.25, maintainPitch: true },
 		});
-		expect(Object.keys(separatedAudioElement.animations?.channels ?? {})).toEqual([
+		expect(Object.keys(separatedAudioElement.animations?.bindings ?? {})).toEqual([
 			"volume",
 		]);
+		expect(Object.keys(separatedAudioElement.animations?.channels ?? {})).toEqual([
+			"volume:value",
+		]);
 		expect(
-			separatedAudioElement.animations?.channels.volume?.keyframes[0]?.id,
+			separatedAudioElement.animations?.channels["volume:value"]?.keys[0]?.id,
 		).not.toBe("volume-keyframe");
 	});
 
@@ -142,4 +121,24 @@ function buildAudioElement(
 		volume: 0,
 		...overrides,
 	} satisfies UploadAudioElement;
+}
+
+function buildAnimations() {
+	const withVolume = upsertElementKeyframe({
+		animations: undefined,
+		propertyPath: "volume",
+		time: 2,
+		value: -12,
+		interpolation: "linear",
+		keyframeId: "volume-keyframe",
+	});
+
+	return upsertElementKeyframe({
+		animations: withVolume,
+		propertyPath: "opacity",
+		time: 1,
+		value: 0.5,
+		interpolation: "linear",
+		keyframeId: "opacity-keyframe",
+	});
 }

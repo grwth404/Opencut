@@ -1,12 +1,11 @@
 import type {
+	AnimationBindingKind,
 	AnimationInterpolation,
 	AnimationPropertyPath,
 	AnimationValue,
-	AnimationValueKind,
-	DiscreteValue,
 	VectorValue,
 } from "@/lib/animation/types";
-import { isVectorValue } from "./vector-channel";
+import { isVectorValue, parseColorToLinearRgba } from "./binding-values";
 import type { TimelineElement } from "@/lib/timeline";
 import { MIN_TRANSFORM_SCALE } from "@/constants/animation-constants";
 import {
@@ -27,14 +26,13 @@ export interface NumericSpec {
 	step?: number;
 }
 
-export type NumericRange = NumericSpec;
-
 export interface AnimationPropertyDefinition {
-	valueKind: AnimationValueKind;
+	kind: AnimationBindingKind;
 	defaultInterpolation: AnimationInterpolation;
-	numericRange?: NumericSpec;
+	numericRanges?: Partial<Record<string, NumericSpec>>;
 	supportsElement: ({ element }: { element: TimelineElement }) => boolean;
 	getValue: ({ element }: { element: TimelineElement }) => AnimationValue | null;
+	coerceValue: ({ value }: { value: AnimationValue }) => AnimationValue | null;
 	setValue: ({
 		element,
 		value,
@@ -44,16 +42,87 @@ export interface AnimationPropertyDefinition {
 	}) => TimelineElement;
 }
 
+function applyNumericSpec({
+	value,
+	numericRange,
+}: {
+	value: number;
+	numericRange: NumericSpec | undefined;
+}): number {
+	if (!numericRange) {
+		return value;
+	}
+
+	const steppedValue =
+		numericRange.step != null
+			? snapToStep({ value, step: numericRange.step })
+			: value;
+	const minValue = numericRange.min ?? Number.NEGATIVE_INFINITY;
+	const maxValue = numericRange.max ?? Number.POSITIVE_INFINITY;
+	return Math.min(maxValue, Math.max(minValue, steppedValue));
+}
+
+function coerceNumberValue({
+	value,
+	numericRange,
+}: {
+	value: AnimationValue;
+	numericRange?: NumericSpec;
+}): number | null {
+	if (typeof value !== "number" || Number.isNaN(value)) {
+		return null;
+	}
+
+	return applyNumericSpec({ value, numericRange });
+}
+
+function coerceColorValue({
+	value,
+}: {
+	value: AnimationValue;
+}): string | null {
+	return typeof value === "string" && parseColorToLinearRgba({ color: value })
+		? value
+		: null;
+}
+
+function createNumberPropertyDefinition({
+	numericRange,
+	supportsElement,
+	getValue,
+	setValue,
+}: {
+	numericRange?: NumericSpec;
+	supportsElement: AnimationPropertyDefinition["supportsElement"];
+	getValue: AnimationPropertyDefinition["getValue"];
+	setValue: AnimationPropertyDefinition["setValue"];
+}): AnimationPropertyDefinition {
+	return {
+		kind: "number",
+		defaultInterpolation: "linear",
+		numericRanges: numericRange ? { value: numericRange } : undefined,
+		supportsElement,
+		getValue,
+		coerceValue: ({ value }) =>
+			coerceNumberValue({
+				value,
+				numericRange,
+			}),
+		setValue,
+	};
+}
+
 const ANIMATION_PROPERTY_REGISTRY: Record<
 	AnimationPropertyPath,
 	AnimationPropertyDefinition
 > = {
 	"transform.position": {
-		valueKind: "vector",
+		kind: "vector2",
 		defaultInterpolation: "linear",
 		supportsElement: ({ element }) => isVisualElement(element),
 		getValue: ({ element }) =>
 			isVisualElement(element) ? element.transform.position : null,
+		coerceValue: ({ value }) => (isVectorValue(value) ? value : null),
 		setValue: ({ element, value }) =>
 			isVisualElement(element)
 				? {
@@ -65,9 +134,7 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 					}
 				: element,
 	},
-	"transform.scaleX": {
-		valueKind: "number",
-		defaultInterpolation: "linear",
+	"transform.scaleX": createNumberPropertyDefinition({
 		numericRange: { min: MIN_TRANSFORM_SCALE, step: 0.01 },
 		supportsElement: ({ element }) => isVisualElement(element),
 		getValue: ({ element }) =>
@@ -79,10 +146,8 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 						transform: { ...element.transform, scaleX: value as number },
 					}
 				: element,
-	},
-	"transform.scaleY": {
-		valueKind: "number",
-		defaultInterpolation: "linear",
+	}),
+	"transform.scaleY": createNumberPropertyDefinition({
 		numericRange: { min: MIN_TRANSFORM_SCALE, step: 0.01 },
 		supportsElement: ({ element }) => isVisualElement(element),
 		getValue: ({ element }) =>
@@ -94,10 +159,8 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 						transform: { ...element.transform, scaleY: value as number },
 					}
 				: element,
-	},
-	"transform.rotate": {
-		valueKind: "number",
-		defaultInterpolation: "linear",
+	}),
+	"transform.rotate": createNumberPropertyDefinition({
 		numericRange: { min: -360, max: 360, step: 1 },
 		supportsElement: ({ element }) => isVisualElement(element),
 		getValue: ({ element }) =>
@@ -109,10 +172,8 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 						transform: { ...element.transform, rotate: value as number },
 					}
 				: element,
-	},
-	opacity: {
-		valueKind: "number",
-		defaultInterpolation: "linear",
+	}),
+	opacity: createNumberPropertyDefinition({
 		numericRange: { min: 0, max: 1, step: 0.01 },
 		supportsElement: ({ element }) => isVisualElement(element),
 		getValue: ({ element }) =>
@@ -121,10 +182,8 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 			isVisualElement(element)
 				? { ...element, opacity: value as number }
 				: element,
-	},
-	volume: {
-		valueKind: "number",
-		defaultInterpolation: "linear",
+	}),
+	volume: createNumberPropertyDefinition({
 		numericRange: { min: VOLUME_DB_MIN, max: VOLUME_DB_MAX, step: 0.01 },
 		supportsElement: ({ element }) => canElementHaveAudio(element),
 		getValue: ({ element }) =>
@@ -133,23 +192,25 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 			canElementHaveAudio(element)
 				? { ...element, volume: value as number }
 				: element,
-	},
+	}),
 	color: {
-		valueKind: "color",
+		kind: "color",
 		defaultInterpolation: "linear",
 		supportsElement: ({ element }) => element.type === "text",
 		getValue: ({ element }) => (element.type === "text" ? element.color : null),
+		coerceValue: ({ value }) => coerceColorValue({ value }),
 		setValue: ({ element, value }) =>
 			element.type === "text"
 				? { ...element, color: value as string }
 				: element,
 	},
 	"background.color": {
-		valueKind: "color",
+		kind: "color",
 		defaultInterpolation: "linear",
 		supportsElement: ({ element }) => element.type === "text",
 		getValue: ({ element }) =>
 			element.type === "text" ? element.background.color : null,
+		coerceValue: ({ value }) => coerceColorValue({ value }),
 		setValue: ({ element, value }) =>
 			element.type === "text"
 				? {
@@ -158,9 +219,7 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 					}
 				: element,
 	},
-	"background.paddingX": {
-		valueKind: "number",
-		defaultInterpolation: "linear",
+	"background.paddingX": createNumberPropertyDefinition({
 		numericRange: { min: 0, step: 1 },
 		supportsElement: ({ element }) => element.type === "text",
 		getValue: ({ element }) =>
@@ -174,10 +233,8 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 						background: { ...element.background, paddingX: value as number },
 					}
 				: element,
-	},
-	"background.paddingY": {
-		valueKind: "number",
-		defaultInterpolation: "linear",
+	}),
+	"background.paddingY": createNumberPropertyDefinition({
 		numericRange: { min: 0, step: 1 },
 		supportsElement: ({ element }) => element.type === "text",
 		getValue: ({ element }) =>
@@ -191,10 +248,8 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 						background: { ...element.background, paddingY: value as number },
 					}
 				: element,
-	},
-	"background.offsetX": {
-		valueKind: "number",
-		defaultInterpolation: "linear",
+	}),
+	"background.offsetX": createNumberPropertyDefinition({
 		numericRange: { step: 1 },
 		supportsElement: ({ element }) => element.type === "text",
 		getValue: ({ element }) =>
@@ -208,10 +263,8 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 						background: { ...element.background, offsetX: value as number },
 					}
 				: element,
-	},
-	"background.offsetY": {
-		valueKind: "number",
-		defaultInterpolation: "linear",
+	}),
+	"background.offsetY": createNumberPropertyDefinition({
 		numericRange: { step: 1 },
 		supportsElement: ({ element }) => element.type === "text",
 		getValue: ({ element }) =>
@@ -225,11 +278,13 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 						background: { ...element.background, offsetY: value as number },
 					}
 				: element,
-	},
-	"background.cornerRadius": {
-		valueKind: "number",
-		defaultInterpolation: "linear",
-		numericRange: { min: CORNER_RADIUS_MIN, max: CORNER_RADIUS_MAX, step: 1 },
+	}),
+	"background.cornerRadius": createNumberPropertyDefinition({
+		numericRange: {
+			min: CORNER_RADIUS_MIN,
+			max: CORNER_RADIUS_MAX,
+			step: 1,
+		},
 		supportsElement: ({ element }) => element.type === "text",
 		getValue: ({ element }) =>
 			element.type === "text"
@@ -242,7 +297,7 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 						background: { ...element.background, cornerRadius: value as number },
 					}
 				: element,
-	},
+	}),
 };
 
 export function isAnimationPropertyPath(
@@ -293,12 +348,9 @@ export function withElementBaseValueForProperty({
 	propertyPath: AnimationPropertyPath;
 	value: AnimationValue;
 }): TimelineElement {
-	const coercedValue = coerceAnimationValueForProperty({ propertyPath, value });
-	if (coercedValue === null) {
-		return element;
-	}
 	const definition = getAnimationPropertyDefinition({ propertyPath });
-	if (!definition.supportsElement({ element })) {
+	const coercedValue = definition.coerceValue({ value });
+	if (coercedValue === null || !definition.supportsElement({ element })) {
 		return element;
 	}
 	return definition.setValue({ element, value: coercedValue });
@@ -313,26 +365,6 @@ export function getDefaultInterpolationForProperty({
 	return propertyDefinition.defaultInterpolation;
 }
 
-function applyNumericSpec({
-	value,
-	numericRange,
-}: {
-	value: number;
-	numericRange: NumericSpec | undefined;
-}): number {
-	if (!numericRange) {
-		return value;
-	}
-
-	const steppedValue =
-		numericRange.step != null
-			? snapToStep({ value, step: numericRange.step })
-			: value;
-	const minValue = numericRange.min ?? Number.NEGATIVE_INFINITY;
-	const maxValue = numericRange.max ?? Number.POSITIVE_INFINITY;
-	return Math.min(maxValue, Math.max(minValue, steppedValue));
-}
-
 export function coerceAnimationValueForProperty({
 	propertyPath,
 	value,
@@ -341,29 +373,5 @@ export function coerceAnimationValueForProperty({
 	value: AnimationValue;
 }): AnimationValue | null {
 	const propertyDefinition = getAnimationPropertyDefinition({ propertyPath });
-
-	if (propertyDefinition.valueKind === "number") {
-		if (typeof value !== "number" || Number.isNaN(value)) {
-			return null;
-		}
-
-		return applyNumericSpec({
-			value,
-			numericRange: propertyDefinition.numericRange,
-		});
-	}
-
-	if (propertyDefinition.valueKind === "color") {
-		return typeof value === "string" ? value : null;
-	}
-
-	if (propertyDefinition.valueKind === "vector") {
-		return isVectorValue(value) ? value : null;
-	}
-
-	if (typeof value === "string" || typeof value === "boolean") {
-		return value as DiscreteValue;
-	}
-
-	return null;
+	return propertyDefinition.coerceValue({ value });
 }

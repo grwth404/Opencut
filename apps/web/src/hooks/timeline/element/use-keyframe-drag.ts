@@ -6,6 +6,7 @@ import {
 	type MouseEvent as ReactMouseEvent,
 } from "react";
 import { useEditor } from "@/hooks/use-editor";
+import { getKeyframeById } from "@/lib/animation";
 import { useKeyframeSelection } from "./use-keyframe-selection";
 import { snapTimeToFrame, getSnappedSeekTime } from "opencut-wasm";
 import { timelineTimeToSnappedPixels } from "@/lib/timeline";
@@ -84,10 +85,11 @@ export function useKeyframeDrag({
 			deltaTime: number;
 		}) => {
 			const commands: Command[] = keyframeRefs.flatMap((keyframeRef) => {
-				const channel = element.animations?.channels[keyframeRef.propertyPath];
-				const keyframe = channel?.keyframes.find(
-					(keyframe) => keyframe.id === keyframeRef.keyframeId,
-				);
+				const keyframe = getKeyframeById({
+					animations: element.animations,
+					propertyPath: keyframeRef.propertyPath,
+					keyframeId: keyframeRef.keyframeId,
+				});
 				if (!keyframe) return [];
 				const nextTime = Math.max(
 					0,

@@ -1,15 +1,20 @@
 import type {
 	AnimationChannel,
+	AnimationInterpolation,
 	AnimationValue,
-	ColorAnimationChannel,
-	DiscreteValue,
 	DiscreteAnimationChannel,
-	NumberAnimationChannel,
-	VectorAnimationChannel,
-	VectorValue,
+	DiscreteValue,
+	ScalarAnimationChannel,
+	ScalarAnimationKey,
+	ScalarSegmentType,
 } from "@/lib/animation/types";
-import { isVectorValue } from "./vector-channel";
 import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
+import {
+	getBezierPoint,
+	getDefaultLeftHandle,
+	getDefaultRightHandle,
+	solveBezierProgressForTime,
+} from "./bezier";
 
 function byTimeAscending({
 	leftTime,
@@ -40,69 +45,6 @@ function clamp01({ value }: { value: number }): number {
 	return Math.max(0, Math.min(1, value));
 }
 
-function parseHexChannel({ hex }: { hex: string }): number | null {
-	const value = Number.parseInt(hex, 16);
-	return Number.isNaN(value) ? null : value;
-}
-
-function parseHexColor({
-	color,
-}: {
-	color: string;
-}): { red: number; green: number; blue: number; alpha: number } | null {
-	const trimmed = color.trim();
-	if (!trimmed.startsWith("#")) {
-		return null;
-	}
-
-	const rawHex = trimmed.slice(1);
-	if (rawHex.length === 3 || rawHex.length === 4) {
-		const [redHex, greenHex, blueHex, alphaHex = "f"] = rawHex.split("");
-		const red = parseHexChannel({ hex: `${redHex}${redHex}` });
-		const green = parseHexChannel({ hex: `${greenHex}${greenHex}` });
-		const blue = parseHexChannel({ hex: `${blueHex}${blueHex}` });
-		const alpha = parseHexChannel({ hex: `${alphaHex}${alphaHex}` });
-		if (red === null || green === null || blue === null || alpha === null) {
-			return null;
-		}
-
-		return { red, green, blue, alpha: alpha / 255 };
-	}
-
-	if (rawHex.length === 6 || rawHex.length === 8) {
-		const red = parseHexChannel({ hex: rawHex.slice(0, 2) });
-		const green = parseHexChannel({ hex: rawHex.slice(2, 4) });
-		const blue = parseHexChannel({ hex: rawHex.slice(4, 6) });
-		const alphaHex = rawHex.length === 8 ? rawHex.slice(6, 8) : "ff";
-		const alpha = parseHexChannel({ hex: alphaHex });
-		if (red === null || green === null || blue === null || alpha === null) {
-			return null;
-		}
-
-		return { red, green, blue, alpha: alpha / 255 };
-	}
-
-	return null;
-}
-
-function formatRgbaColor({
-	red,
-	green,
-	blue,
-	alpha,
-}: {
-	red: number;
-	green: number;
-	blue: number;
-	alpha: number;
-}): string {
-	const roundedRed = Math.round(red);
-	const roundedGreen = Math.round(green);
-	const roundedBlue = Math.round(blue);
-	const roundedAlpha = Math.round(clamp01({ value: alpha }) * 1000) / 1000;
-	return `rgba(${roundedRed}, ${roundedGreen}, ${roundedBlue}, ${roundedAlpha})`;
-}
-
 function lerpNumber({
 	leftValue,
 	rightValue,
@@ -115,43 +57,99 @@ function lerpNumber({
 	return leftValue + (rightValue - leftValue) * progress;
 }
 
-function interpolateColor({
-	leftColor,
-	rightColor,
-	progress,
+function normalizeRightHandle({
+	handle,
+	leftKey,
+	rightKey,
 }: {
-	leftColor: string;
-	rightColor: string;
-	progress: number;
-}): string {
-	const leftParsed = parseHexColor({ color: leftColor });
-	const rightParsed = parseHexColor({ color: rightColor });
-	if (!leftParsed || !rightParsed) {
-		return progress >= 1 ? rightColor : leftColor;
+	handle: ScalarAnimationKey["rightHandle"];
+	leftKey: ScalarAnimationKey;
+	rightKey: ScalarAnimationKey;
+}) {
+	if (!handle) {
+		return undefined;
 	}
 
-	return formatRgbaColor({
-		red: lerpNumber({
-			leftValue: leftParsed.red,
-			rightValue: rightParsed.red,
-			progress,
-		}),
-		green: lerpNumber({
-			leftValue: leftParsed.green,
-			rightValue: rightParsed.green,
-			progress,
-		}),
-		blue: lerpNumber({
-			leftValue: leftParsed.blue,
-			rightValue: rightParsed.blue,
-			progress,
-		}),
-		alpha: lerpNumber({
-			leftValue: leftParsed.alpha,
-			rightValue: rightParsed.alpha,
-			progress,
-		}),
+	const span = Math.max(TIME_EPSILON_SECONDS, rightKey.time - leftKey.time);
+	return {
+		dt: Math.min(span, Math.max(0, handle.dt)),
+		dv: handle.dv,
+	};
+}
+
+function normalizeLeftHandle({
+	handle,
+	leftKey,
+	rightKey,
+}: {
+	handle: ScalarAnimationKey["leftHandle"];
+	leftKey: ScalarAnimationKey;
+	rightKey: ScalarAnimationKey;
+}) {
+	if (!handle) {
+		return undefined;
+	}
+
+	const span = Math.max(TIME_EPSILON_SECONDS, rightKey.time - leftKey.time);
+	return {
+		dt: Math.max(-span, Math.min(0, handle.dt)),
+		dv: handle.dv,
+	};
+}
+
+function normalizeScalarKey({
+	key,
+}: {
+	key: ScalarAnimationKey;
+}): ScalarAnimationKey {
+	return {
+		...key,
+		tangentMode: key.tangentMode ?? "flat",
+		segmentToNext: key.segmentToNext ?? "linear",
+	};
+}
+
+function normalizeScalarChannel({
+	channel,
+}: {
+	channel: ScalarAnimationChannel;
+}): ScalarAnimationChannel {
+	const sortedKeys = [...channel.keys]
+		.map((key) => normalizeScalarKey({ key }))
+		.sort((leftKey, rightKey) =>
+			byTimeAscending({
+				leftTime: leftKey.time,
+				rightTime: rightKey.time,
+			}),
+		);
+	const nextKeys = sortedKeys.map((key, index) => {
+		const previousKey = sortedKeys[index - 1];
+		const nextKey = sortedKeys[index + 1];
+		return {
+			...key,
+			leftHandle:
+				previousKey != null
+					? normalizeLeftHandle({
+							handle: key.leftHandle,
+							leftKey: previousKey,
+							rightKey: key,
+						})
+					: undefined,
+			rightHandle:
+				nextKey != null
+					? normalizeRightHandle({
+							handle: key.rightHandle,
+							leftKey: key,
+							rightKey: nextKey,
+						})
+					: undefined,
+		};
 	});
+
+	return {
+		...channel,
+		keys: nextKeys,
+	};
 }
 
 export function normalizeChannel<TChannel extends AnimationChannel>({
@@ -159,9 +157,15 @@ export function normalizeChannel<TChannel extends AnimationChannel>({
 }: {
 	channel: TChannel;
 }): TChannel {
+	if (channel.kind === "scalar") {
+		return normalizeScalarChannel({
+			channel,
+		}) as TChannel;
+	}
+
 	return {
 		...channel,
-		keyframes: [...channel.keyframes].sort((leftKeyframe, rightKeyframe) =>
+		keys: [...channel.keys].sort((leftKeyframe, rightKeyframe) =>
 			byTimeAscending({
 				leftTime: leftKeyframe.time,
 				rightTime: rightKeyframe.time,
@@ -170,171 +174,152 @@ export function normalizeChannel<TChannel extends AnimationChannel>({
 	} as TChannel;
 }
 
-function evaluateChannelValueAtTime<
-	TKeyframe extends { time: number; value: TValue },
-	TValue,
->({
-	keyframes,
+function extrapolateScalarEdge({
+	mode,
+	edgeKey,
+	neighborKey,
 	time,
-	fallbackValue,
-	getInterpolatedValue,
 }: {
-	keyframes: TKeyframe[] | undefined;
+	mode: "hold" | "linear";
+	edgeKey: ScalarAnimationKey;
+	neighborKey: ScalarAnimationKey | undefined;
 	time: number;
-	fallbackValue: TValue;
-	getInterpolatedValue: ({
-		leftKeyframe,
-		rightKeyframe,
-		progress,
-	}: {
-		leftKeyframe: TKeyframe;
-		rightKeyframe: TKeyframe;
-		progress: number;
-	}) => TValue;
-}): TValue {
-	if (!keyframes || keyframes.length === 0) {
-		return fallbackValue;
+}) {
+	if (mode === "hold" || !neighborKey) {
+		return edgeKey.value;
 	}
 
-	const firstKeyframe = keyframes[0];
-	const lastKeyframe = keyframes[keyframes.length - 1];
-	if (!firstKeyframe || !lastKeyframe) {
-		return fallbackValue;
+	const span = neighborKey.time - edgeKey.time;
+	if (Math.abs(span) <= TIME_EPSILON_SECONDS) {
+		return edgeKey.value;
 	}
 
-	if (time <= firstKeyframe.time + TIME_EPSILON_SECONDS) {
-		return firstKeyframe.value;
-	}
-
-	if (time >= lastKeyframe.time - TIME_EPSILON_SECONDS) {
-		return lastKeyframe.value;
-	}
-
-	for (
-		let keyframeIndex = 0;
-		keyframeIndex < keyframes.length - 1;
-		keyframeIndex++
-	) {
-		const leftKeyframe = keyframes[keyframeIndex];
-		const rightKeyframe = keyframes[keyframeIndex + 1];
-
-		if (Math.abs(time - rightKeyframe.time) <= TIME_EPSILON_SECONDS) {
-			return rightKeyframe.value;
-		}
-
-		const isBetweenPair = isWithinTimePair({
-			time,
-			leftTime: leftKeyframe.time,
-			rightTime: rightKeyframe.time,
-		});
-		if (!isBetweenPair) {
-			continue;
-		}
-
-		const span = rightKeyframe.time - leftKeyframe.time;
-		if (Math.abs(span) <= TIME_EPSILON_SECONDS) {
-			return rightKeyframe.value;
-		}
-
-		const progress = clamp01({
-			value: (time - leftKeyframe.time) / span,
-		});
-
-		return getInterpolatedValue({
-			leftKeyframe,
-			rightKeyframe,
-			progress,
-		});
-	}
-
-	return lastKeyframe.value;
+	return edgeKey.value + ((time - edgeKey.time) / span) * (neighborKey.value - edgeKey.value);
 }
 
-export function getNumberChannelValueAtTime({
+export function getScalarSegmentInterpolation({
+	segment,
+}: {
+	segment: ScalarSegmentType;
+}): AnimationInterpolation {
+	if (segment === "step") {
+		return "hold";
+	}
+
+	return segment === "bezier" ? "bezier" : "linear";
+}
+
+export function getScalarChannelValueAtTime({
 	channel,
 	time,
 	fallbackValue,
 }: {
-	channel: NumberAnimationChannel | undefined;
+	channel: ScalarAnimationChannel | undefined;
 	time: number;
 	fallbackValue: number;
 }): number {
-	return evaluateChannelValueAtTime({
-		keyframes: channel?.keyframes,
-		time,
-		fallbackValue,
-		getInterpolatedValue: ({ leftKeyframe, rightKeyframe, progress }) => {
-			if (leftKeyframe.interpolation === "hold") {
-				return leftKeyframe.value;
-			}
+	if (!channel || channel.keys.length === 0) {
+		return fallbackValue;
+	}
 
+	const normalizedChannel = normalizeChannel({
+		channel,
+	});
+	const firstKey = normalizedChannel.keys[0];
+	const lastKey = normalizedChannel.keys[normalizedChannel.keys.length - 1];
+	if (!firstKey || !lastKey) {
+		return fallbackValue;
+	}
+
+	if (time <= firstKey.time + TIME_EPSILON_SECONDS) {
+		if (time < firstKey.time - TIME_EPSILON_SECONDS) {
+			return extrapolateScalarEdge({
+				mode: normalizedChannel.extrapolation?.before ?? "hold",
+				edgeKey: firstKey,
+				neighborKey: normalizedChannel.keys[1],
+				time,
+			});
+		}
+
+		return firstKey.value;
+	}
+
+	if (time >= lastKey.time - TIME_EPSILON_SECONDS) {
+		if (time > lastKey.time + TIME_EPSILON_SECONDS) {
+			return extrapolateScalarEdge({
+				mode: normalizedChannel.extrapolation?.after ?? "hold",
+				edgeKey: lastKey,
+				neighborKey: normalizedChannel.keys[normalizedChannel.keys.length - 2],
+				time,
+			});
+		}
+
+		return lastKey.value;
+	}
+
+	for (
+		let keyIndex = 0;
+		keyIndex < normalizedChannel.keys.length - 1;
+		keyIndex++
+	) {
+		const leftKey = normalizedChannel.keys[keyIndex];
+		const rightKey = normalizedChannel.keys[keyIndex + 1];
+		if (Math.abs(time - rightKey.time) <= TIME_EPSILON_SECONDS) {
+			return rightKey.value;
+		}
+
+		if (
+			!isWithinTimePair({
+				time,
+				leftTime: leftKey.time,
+				rightTime: rightKey.time,
+			})
+		) {
+			continue;
+		}
+
+		if (leftKey.segmentToNext === "step") {
+			return leftKey.value;
+		}
+
+		const span = rightKey.time - leftKey.time;
+		if (Math.abs(span) <= TIME_EPSILON_SECONDS) {
+			return rightKey.value;
+		}
+
+		const progress = clamp01({
+			value: (time - leftKey.time) / span,
+		});
+		if (leftKey.segmentToNext === "linear") {
 			return lerpNumber({
-				leftValue: leftKeyframe.value,
-				rightValue: rightKeyframe.value,
+				leftValue: leftKey.value,
+				rightValue: rightKey.value,
 				progress,
 			});
-		},
-	});
+		}
+
+		const curveProgress = solveBezierProgressForTime({
+			time,
+			leftKey,
+			rightKey,
+		});
+		const rightHandle =
+			leftKey.rightHandle ?? getDefaultRightHandle({ leftKey, rightKey });
+		const leftHandle =
+			rightKey.leftHandle ?? getDefaultLeftHandle({ leftKey, rightKey });
+		return getBezierPoint({
+			progress: curveProgress,
+			p0: leftKey.value,
+			p1: leftKey.value + rightHandle.dv,
+			p2: rightKey.value + leftHandle.dv,
+			p3: rightKey.value,
+		});
+	}
+
+	return lastKey.value;
 }
 
-export function getColorValueAtTime({
-	channel,
-	time,
-	fallbackValue,
-}: {
-	channel: ColorAnimationChannel | undefined;
-	time: number;
-	fallbackValue: string;
-}): string {
-	return evaluateChannelValueAtTime({
-		keyframes: channel?.keyframes,
-		time,
-		fallbackValue,
-		getInterpolatedValue: ({ leftKeyframe, rightKeyframe, progress }) => {
-			if (leftKeyframe.interpolation === "hold") {
-				return leftKeyframe.value;
-			}
-
-			return interpolateColor({
-				leftColor: leftKeyframe.value,
-				rightColor: rightKeyframe.value,
-				progress,
-			});
-		},
-	});
-}
-
-export function getVectorChannelValueAtTime({
-	channel,
-	time,
-	fallbackValue,
-}: {
-	channel: VectorAnimationChannel | undefined;
-	time: number;
-	fallbackValue: VectorValue;
-}): VectorValue {
-	return evaluateChannelValueAtTime({
-		keyframes: channel?.keyframes,
-		time,
-		fallbackValue,
-		getInterpolatedValue: ({ leftKeyframe, rightKeyframe, progress }) => {
-			if (leftKeyframe.interpolation === "hold") {
-				return leftKeyframe.value;
-			}
-
-			return {
-				x:
-					leftKeyframe.value.x +
-					(rightKeyframe.value.x - leftKeyframe.value.x) * progress,
-				y:
-					leftKeyframe.value.y +
-					(rightKeyframe.value.y - leftKeyframe.value.y) * progress,
-			};
-		},
-	});
-}
-
-function getDiscreteValueAtTime({
+export function getDiscreteChannelValueAtTime({
 	channel,
 	time,
 	fallbackValue,
@@ -343,12 +328,21 @@ function getDiscreteValueAtTime({
 	time: number;
 	fallbackValue: DiscreteValue;
 }): DiscreteValue {
-	return evaluateChannelValueAtTime({
-		keyframes: channel?.keyframes,
-		time,
-		fallbackValue,
-		getInterpolatedValue: ({ leftKeyframe }) => leftKeyframe.value,
+	if (!channel || channel.keys.length === 0) {
+		return fallbackValue;
+	}
+
+	const normalizedChannel = normalizeChannel({
+		channel,
 	});
+	let currentValue = fallbackValue;
+	for (const key of normalizedChannel.keys) {
+		if (time + TIME_EPSILON_SECONDS < key.time) {
+			break;
+		}
+		currentValue = key.value;
+	}
+	return currentValue;
 }
 
 export function getChannelValueAtTime({
@@ -360,50 +354,25 @@ export function getChannelValueAtTime({
 	time: number;
 	fallbackValue: AnimationValue;
 }): AnimationValue {
-	if (!channel || channel.keyframes.length === 0) {
+	if (!channel || channel.keys.length === 0) {
 		return fallbackValue;
 	}
 
-	if (channel.valueKind === "number") {
-		if (typeof fallbackValue !== "number") {
-			return fallbackValue;
-		}
-
-		return getNumberChannelValueAtTime({
-			channel,
-			time,
-			fallbackValue,
-		});
-	}
-
-	if (channel.valueKind === "color") {
-		if (typeof fallbackValue !== "string") {
-			return fallbackValue;
-		}
-
-		return getColorValueAtTime({
-			channel,
-			time,
-			fallbackValue,
-		});
-	}
-
-	if (channel.valueKind === "vector") {
-		if (!isVectorValue(fallbackValue)) {
-			return fallbackValue;
-		}
-		return getVectorChannelValueAtTime({
-			channel,
-			time,
-			fallbackValue: fallbackValue as VectorValue,
-		});
+	if (channel.kind === "scalar") {
+		return typeof fallbackValue === "number"
+			? getScalarChannelValueAtTime({
+					channel,
+					time,
+					fallbackValue,
+				})
+			: fallbackValue;
 	}
 
 	if (typeof fallbackValue !== "string" && typeof fallbackValue !== "boolean") {
 		return fallbackValue;
 	}
 
-	return getDiscreteValueAtTime({
+	return getDiscreteChannelValueAtTime({
 		channel,
 		time,
 		fallbackValue,

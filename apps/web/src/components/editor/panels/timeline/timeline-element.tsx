@@ -292,10 +292,7 @@ export function TimelineElement({
 	const canToggleCurrentSourceAudio =
 		selectedElements.length === 1 &&
 		isCurrentElementSelected &&
-		canToggleSourceAudio({
-			element,
-			mediaAsset,
-		});
+		canToggleSourceAudio(element, mediaAsset);
 	const sourceAudioLabel =
 		element.type === "video"
 			? getSourceAudioActionLabel({ element })

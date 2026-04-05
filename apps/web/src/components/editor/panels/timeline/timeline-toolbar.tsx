@@ -14,9 +14,7 @@ import {
 	SplitButtonSeparator,
 } from "@/components/ui/split-button";
 import { Slider } from "@/components/ui/slider";
-import {
-	TIMELINE_ZOOM_BUTTON_FACTOR,
-} from "./interaction";
+import { TIMELINE_ZOOM_BUTTON_FACTOR } from "./interaction";
 import { TIMELINE_ZOOM_MAX } from "@/lib/timeline/scale";
 import { sliderToZoom, zoomToSlider } from "@/lib/timeline/zoom-utils";
 import { ScenesView } from "@/components/editor/scenes-view";
@@ -36,7 +34,6 @@ import {
 	SnowIcon,
 	ScissorIcon,
 	MagnetIcon,
-	Link04Icon,
 	SearchAddIcon,
 	SearchMinusIcon,
 	Copy01Icon,
@@ -49,6 +46,9 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { OcRippleIcon } from "@/components/icons";
+import { GraphEditorPopover } from "./graph-editor/popover";
+import { PopoverTrigger } from "@/components/ui/popover";
+import { useGraphEditorController } from "./graph-editor/use-controller";
 
 export function TimelineToolbar({
 	zoomLevel,
@@ -62,10 +62,7 @@ export function TimelineToolbar({
 	const handleZoom = ({ direction }: { direction: "in" | "out" }) => {
 		const newZoomLevel =
 			direction === "in"
-				? Math.min(
-						TIMELINE_ZOOM_MAX,
-						zoomLevel * TIMELINE_ZOOM_BUTTON_FACTOR,
-					)
+				? Math.min(TIMELINE_ZOOM_MAX, zoomLevel * TIMELINE_ZOOM_BUTTON_FACTOR)
 				: Math.max(minZoom, zoomLevel / TIMELINE_ZOOM_BUTTON_FACTOR);
 		setZoomLevel({ zoom: newZoomLevel });
 	};
@@ -90,8 +87,11 @@ export function TimelineToolbar({
 
 function ToolbarLeftSection() {
 	const editor = useEditor();
-	const mediaAssets = useEditor((currentEditor) => currentEditor.media.getAssets());
+	const mediaAssets = useEditor((currentEditor) =>
+		currentEditor.media.getAssets(),
+	);
 	const { selectedElements } = useElementSelection();
+	const graphEditor = useGraphEditorController();
 	const isCurrentlyBookmarked = useEditor((e) =>
 		e.scenes.isBookmarked({ time: e.playback.getCurrentTime() }),
 	);
@@ -115,10 +115,7 @@ function ToolbarLeftSection() {
 	})();
 	const canToggleSelectedSourceAudio =
 		!!selectedElement &&
-		canToggleSourceAudio({
-			element: selectedElement.element,
-			mediaAsset: selectedMediaAsset,
-		});
+		canToggleSourceAudio(selectedElement.element, selectedMediaAsset);
 	const sourceAudioLabel =
 		selectedElement?.element.type === "video"
 			? getSourceAudioActionLabel({
@@ -166,11 +163,11 @@ function ToolbarLeftSection() {
 				/>
 
 				<ToolbarButton
-			icon={
-					<HugeiconsIcon
-						icon={isSelectedSourceAudioSeparated ? Unlink02Icon : Link02Icon}
-					/>
-				}
+					icon={
+						<HugeiconsIcon
+							icon={isSelectedSourceAudioSeparated ? Unlink02Icon : Link02Icon}
+						/>
+					}
 					tooltip={sourceAudioLabel}
 					disabled={!canToggleSelectedSourceAudio}
 					onClick={({ event }) =>
@@ -214,13 +211,35 @@ function ToolbarLeftSection() {
 					/>
 				</Tooltip>
 
-				<Tooltip>
+				<GraphEditorPopover
+					open={graphEditor.open}
+					onOpenChange={graphEditor.onOpenChange}
+					value={
+						graphEditor.state.status === "ready"
+							? graphEditor.state.cubicBezier
+							: null
+					}
+					message={graphEditor.state.message}
+					componentOptions={graphEditor.state.componentOptions}
+					activeComponentKey={graphEditor.state.activeComponentKey}
+					onActiveComponentKeyChange={graphEditor.onActiveComponentKeyChange}
+					onPreviewValue={graphEditor.onPreviewValue}
+					onCommitValue={graphEditor.onCommitValue}
+					onCancelPreview={graphEditor.onCancelPreview}
+				>
 					<ToolbarButton
 						icon={<HugeiconsIcon icon={Chart03Icon} />}
-						tooltip="Open graph editor"
-						onClick={() => {}}
+						tooltip={graphEditor.tooltip}
+						disabled={!graphEditor.canOpen}
+						buttonWrapper={(button) =>
+							graphEditor.canOpen ? (
+								<PopoverTrigger asChild>{button}</PopoverTrigger>
+							) : (
+								button
+							)
+						}
 					/>
-				</Tooltip>
+				</GraphEditorPopover>
 			</TooltipProvider>
 		</div>
 	);
@@ -317,29 +336,40 @@ function ToolbarButton({
 	onClick,
 	disabled,
 	isActive,
+	buttonWrapper,
 }: {
 	icon: React.ReactNode;
 	tooltip: string;
-	onClick: ({ event }: { event: React.MouseEvent }) => void;
+	onClick?: ({ event }: { event: React.MouseEvent }) => void;
 	disabled?: boolean;
 	isActive?: boolean;
+	buttonWrapper?: (button: React.ReactElement) => React.ReactElement;
 }) {
+	const button = (
+		<Button
+			variant={isActive ? "secondary" : "text"}
+			size="icon"
+			disabled={disabled}
+			onClick={onClick ? (event) => onClick({ event }) : undefined}
+			className={cn(
+				"rounded-sm",
+				disabled ? "cursor-not-allowed opacity-50" : "",
+			)}
+		>
+			{icon}
+		</Button>
+	);
+	const trigger = disabled ? (
+		<span className="inline-flex">{button}</span>
+	) : buttonWrapper ? (
+		buttonWrapper(button)
+	) : (
+		button
+	);
+
 	return (
 		<Tooltip delayDuration={200}>
-			<TooltipTrigger asChild>
-				<Button
-					variant={isActive ? "secondary" : "text"}
-					size="icon"
-					disabled={disabled}
-					onClick={(event) => onClick({ event })}
-					className={cn(
-						"rounded-sm",
-						disabled ? "cursor-not-allowed opacity-50" : "",
-					)}
-				>
-					{icon}
-				</Button>
-			</TooltipTrigger>
+			<TooltipTrigger asChild>{trigger}</TooltipTrigger>
 			<TooltipContent>{tooltip}</TooltipContent>
 		</Tooltip>
 	);

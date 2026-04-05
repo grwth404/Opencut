@@ -8,6 +8,7 @@ import { DraggableItem } from "@/components/editor/panels/assets/draggable-item"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEditor } from "@/hooks/use-editor";
 import { resolveStickerIntrinsicSize } from "@/lib/stickers";
 import {
@@ -70,41 +71,25 @@ export function StickersView() {
 				/>
 			</div>
 
-			<div className="mt-2 flex min-h-0 flex-1 flex-col">
-				<div className="border-b border-border px-2">
-					<div
-						role="tablist"
-						aria-label="Sticker categories"
-						className="text-muted-foreground inline-flex h-auto items-center gap-0 bg-transparent p-0"
-					>
-						{Object.entries(STICKER_CATEGORIES).map(([key, label]) => {
-							const isActive = key === selectedCategory;
-							return (
-								<button
-									key={key}
-									type="button"
-									role="tab"
-									aria-selected={isActive}
-									onClick={() =>
-										setSelectedCategory({
-											category: key as StickerCategory,
-										})
-									}
-									className={cn(
-										"text-muted-foreground rounded-none border-b-2 border-transparent px-3 py-2 text-sm font-medium whitespace-nowrap -mb-px",
-										isActive && "text-primary border-primary",
-									)}
-								>
-									{label}
-								</button>
-							);
-						})}
-					</div>
-				</div>
+			<Tabs
+				value={selectedCategory}
+				onValueChange={(value) => {
+					setSelectedCategory({ category: value as StickerCategory });
+				}}
+				variant="underline"
+				className="mt-2 flex min-h-0 flex-1 flex-col"
+			>
+				<TabsList aria-label="Sticker categories">
+					{Object.entries(STICKER_CATEGORIES).map(([key, label]) => (
+						<TabsTrigger key={key} value={key}>
+							{label}
+						</TabsTrigger>
+					))}
+				</TabsList>
 				<div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4">
 					<StickersContentView />
 				</div>
-			</div>
+			</Tabs>
 		</div>
 	);
 }

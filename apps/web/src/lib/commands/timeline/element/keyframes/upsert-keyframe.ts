@@ -73,9 +73,9 @@ export class UpsertKeyframeCommand extends Command {
 						value: this.value,
 						interpolation: this.interpolation,
 						keyframeId: this.keyframeId,
-						valueKind: target.valueKind,
+						kind: target.kind,
 						defaultInterpolation: target.defaultInterpolation,
-						numericRange: target.numericRange,
+						coerceValue: target.coerceValue,
 					}),
 				};
 			},
