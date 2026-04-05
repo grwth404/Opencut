@@ -31,7 +31,7 @@
   },
   "devDependencies": {
     "turbo": "^2.8.20",
-    "typescript": "5.8.3"
+    "typescript": "^6.0.2"
   },
   "trustedDependencies": [
     "@tailwindcss/oxide"

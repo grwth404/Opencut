@@ -165,7 +165,7 @@ export function MasksTab({ element, trackId }: MasksTabProps) {
 					{
 						trackId,
 						elementId: element.id,
-						updates: {
+						patch: {
 							masks: [
 								buildDefaultMaskInstance({
 									maskType,

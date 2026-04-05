@@ -144,7 +144,7 @@ export function useKeyframedNumberProperty({
 				{
 					trackId,
 					elementId,
-					updates: buildBaseUpdates({ value: nextValue }),
+					patch: buildBaseUpdates({ value: nextValue }),
 				},
 			],
 		});

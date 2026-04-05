@@ -9,6 +9,8 @@ import type {
 	VideoElement,
 } from "../types";
 
+type MediaAudioState = Pick<MediaAsset, "hasAudio">;
+
 export function isSourceAudioEnabled({
 	element,
 }: {
@@ -30,7 +32,7 @@ export function canExtractSourceAudio({
 	mediaAsset,
 }: {
 	element: TimelineElement;
-	mediaAsset: MediaAsset | null | undefined;
+	mediaAsset: MediaAudioState | null | undefined;
 }): element is VideoElement {
 	return (
 		element.type === "video" &&
@@ -53,7 +55,7 @@ export function canToggleSourceAudio({
 	mediaAsset,
 }: {
 	element: TimelineElement;
-	mediaAsset: MediaAsset | null | undefined;
+	mediaAsset: MediaAudioState | null | undefined;
 }): element is VideoElement {
 	return (
 		canRecoverSourceAudio({ element }) ||
@@ -66,7 +68,7 @@ export function doesElementHaveEnabledAudio({
 	mediaAsset,
 }: {
 	element: AudioElement | VideoElement;
-	mediaAsset?: MediaAsset | null;
+	mediaAsset?: MediaAudioState | null;
 }): boolean {
 	if (element.type === "audio") {
 		return true;

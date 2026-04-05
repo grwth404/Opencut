@@ -8,7 +8,6 @@ import {
 } from "react";
 import { useEditor } from "@/hooks/use-editor";
 import { useShiftKey } from "@/hooks/use-shift-key";
-import { useTimelineStore } from "@/stores/timeline-store";
 import { useElementSelection } from "@/hooks/timeline/element/use-element-selection";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
 import { TIMELINE_DRAG_THRESHOLD_PX } from "@/components/editor/panels/timeline/interaction";
@@ -161,7 +160,6 @@ export function useElementInteraction({
 	onSnapPointChange,
 }: UseElementInteractionProps) {
 	const editor = useEditor();
-	const rippleEditingEnabled = useTimelineStore((s) => s.rippleEditingEnabled);
 	const isShiftHeldRef = useShiftKey();
 	const tracks = editor.timeline.getTracks();
 	const {
@@ -467,7 +465,6 @@ export function useElementInteraction({
 					elementId: dragState.elementId,
 					newStartTime: snappedTime,
 					createTrack: { type: sourceTrack.type, index: dropTarget.trackIndex },
-					rippleEnabled: rippleEditingEnabled,
 				});
 				selectElement({ trackId: newTrackId, elementId: dragState.elementId });
 			} else {
@@ -478,7 +475,6 @@ export function useElementInteraction({
 						targetTrackId: targetTrack.id,
 						elementId: dragState.elementId,
 						newStartTime: snappedTime,
-						rippleEnabled: rippleEditingEnabled,
 					});
 					if (targetTrack.id !== dragState.trackId) {
 						selectElement({
@@ -509,7 +505,6 @@ export function useElementInteraction({
 		tracksContainerRef,
 		tracksScrollRef,
 		headerRef,
-		rippleEditingEnabled,
 		selectElement,
 	]);
 

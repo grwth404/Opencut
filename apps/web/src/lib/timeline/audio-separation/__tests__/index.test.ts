@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { AudioElement, VideoElement } from "@/lib/timeline";
+import type { UploadAudioElement, VideoElement } from "@/lib/timeline";
 import {
 	buildSeparatedAudioElement,
 	doesElementHaveEnabledAudio,
@@ -80,31 +80,11 @@ describe("audio separation", () => {
 	});
 
 	test("skips source audio collection when the source clip is separated", () => {
-		const mediaAsset = {
-			id: "media-1",
-			type: "video",
-			name: "Clip",
-			size: 1,
-			lastModified: 1,
-			file: new File(["video"], "clip.mp4", { type: "video/mp4" }),
-			url: "blob:clip",
-			hasAudio: true,
-		};
+		const mediaAsset = { hasAudio: true };
 		const videoElement = buildVideoElement({
 			isSourceAudioEnabled: false,
 		});
-		const audioElement = {
-			id: "audio-1",
-			type: "audio",
-			sourceType: "upload",
-			mediaId: "audio-media-1",
-			name: "Detached audio",
-			duration: 5,
-			startTime: 0,
-			trimStart: 0,
-			trimEnd: 0,
-			volume: 0,
-		} as AudioElement;
+		const audioElement = buildAudioElement();
 
 		expect(
 			doesElementHaveEnabledAudio({
@@ -144,4 +124,22 @@ function buildVideoElement(
 		opacity: 1,
 		...overrides,
 	};
+}
+
+function buildAudioElement(
+	overrides: Partial<UploadAudioElement> = {},
+): UploadAudioElement {
+	return {
+		id: "audio-1",
+		type: "audio",
+		sourceType: "upload",
+		mediaId: "audio-media-1",
+		name: "Detached audio",
+		duration: 5,
+		startTime: 0,
+		trimStart: 0,
+		trimEnd: 0,
+		volume: 0,
+		...overrides,
+	} satisfies UploadAudioElement;
 }

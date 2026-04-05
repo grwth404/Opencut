@@ -7,32 +7,31 @@ import type {
 	ClipboardItem,
 	RetimeConfig,
 } from "@/lib/timeline";
+import { calculateTotalDuration } from "@/lib/timeline";
+import {
+	canElementBeHidden,
+	canElementHaveAudio,
+} from "@/lib/timeline/element-utils";
 import type {
 	AnimationPath,
 	AnimationInterpolation,
 	AnimationValue,
 } from "@/lib/animation/types";
-import { calculateTotalDuration } from "@/lib/timeline";
 import { getLastFrameTime } from "opencut-wasm";
+import { BatchCommand } from "@/lib/commands";
 import {
 	AddTrackCommand,
 	RemoveTrackCommand,
 	ToggleTrackMuteCommand,
 	ToggleTrackVisibilityCommand,
 	InsertElementCommand,
-	UpdateElementTrimCommand,
-	UpdateElementDurationCommand,
 	DeleteElementsCommand,
 	DuplicateElementsCommand,
-	ToggleElementsVisibilityCommand,
-	ToggleElementsMutedCommand,
-	UpdateElementCommand,
+	UpdateElementsCommand,
 	SplitElementsCommand,
 	PasteCommand,
-	UpdateElementStartTimeCommand,
 	MoveElementCommand,
 	TracksSnapshotCommand,
-	UpdateElementRetimeCommand,
 	UpsertKeyframeCommand,
 	RemoveKeyframeCommand,
 	RetimeKeyframeCommand,
@@ -47,7 +46,6 @@ import {
 	RemoveEffectParamKeyframeCommand,
 	ToggleSourceAudioSeparationCommand,
 } from "@/lib/commands/timeline";
-import { BatchCommand } from "@/lib/commands";
 import type { InsertElementParams } from "@/lib/commands/timeline/element/insert-element";
 
 export class TimelineManager {
@@ -80,7 +78,6 @@ export class TimelineManager {
 		startTime,
 		duration,
 		pushHistory = true,
-		rippleEnabled = false,
 	}: {
 		elementId: string;
 		trimStart: number;
@@ -88,44 +85,33 @@ export class TimelineManager {
 		startTime?: number;
 		duration?: number;
 		pushHistory?: boolean;
-		rippleEnabled?: boolean;
 	}): void {
-		const command = new UpdateElementTrimCommand({
-			elementId,
+		const trackId = this.findTrackIdForElement({ elementId });
+		if (!trackId) {
+			return;
+		}
+
+		const nextUpdates: Partial<TimelineElement> = {
 			trimStart,
 			trimEnd,
-			startTime,
-			duration,
-			rippleEnabled,
-		});
-		if (pushHistory) {
-			this.editor.command.execute({ command });
-		} else {
-			command.execute();
+		};
+		if (startTime !== undefined) {
+			nextUpdates.startTime = startTime;
 		}
-	}
+		if (duration !== undefined) {
+			nextUpdates.duration = duration;
+		}
 
-	updateElementDuration({
-		trackId,
-		elementId,
-		duration,
-		pushHistory = true,
-	}: {
-		trackId: string;
-		elementId: string;
-		duration: number;
-		pushHistory?: boolean;
-	}): void {
-		const command = new UpdateElementDurationCommand({
-			trackId,
-			elementId,
-			duration,
+		this.updateElements({
+			updates: [
+				{
+					trackId,
+					elementId,
+					patch: nextUpdates,
+				},
+			],
+			pushHistory,
 		});
-		if (pushHistory) {
-			this.editor.command.execute({ command });
-		} else {
-			command.execute();
-		}
 	}
 
 	updateElementRetime({
@@ -139,30 +125,18 @@ export class TimelineManager {
 		retime?: RetimeConfig;
 		pushHistory?: boolean;
 	}): void {
-		const command = new UpdateElementRetimeCommand({
-			trackId,
-			elementId,
-			retime,
+		this.updateElements({
+			updates: [
+				{
+					trackId,
+					elementId,
+					patch: {
+						retime,
+					},
+				},
+			],
+			pushHistory,
 		});
-		if (pushHistory) {
-			this.editor.command.execute({ command });
-		} else {
-			command.execute();
-		}
-	}
-
-	updateElementStartTime({
-		elements,
-		startTime,
-	}: {
-		elements: { trackId: string; elementId: string }[];
-		startTime: number;
-	}): void {
-		const command = new UpdateElementStartTimeCommand({
-			elements,
-			startTime,
-		});
-		this.editor.command.execute({ command });
 	}
 
 	moveElement({
@@ -171,14 +145,12 @@ export class TimelineManager {
 		elementId,
 		newStartTime,
 		createTrack,
-		rippleEnabled = false,
 	}: {
 		sourceTrackId: string;
 		targetTrackId: string;
 		elementId: string;
 		newStartTime: number;
 		createTrack?: { type: TrackType; index: number };
-		rippleEnabled?: boolean;
 	}): void {
 		const command = new MoveElementCommand({
 			sourceTrackId,
@@ -186,7 +158,6 @@ export class TimelineManager {
 			elementId,
 			newStartTime,
 			createTrack,
-			rippleEnabled,
 		});
 		this.editor.command.execute({ command });
 	}
@@ -205,18 +176,15 @@ export class TimelineManager {
 		elements,
 		splitTime,
 		retainSide = "both",
-		rippleEnabled = false,
 	}: {
 		elements: { trackId: string; elementId: string }[];
 		splitTime: number;
 		retainSide?: "both" | "left" | "right";
-		rippleEnabled?: boolean;
 	}): { trackId: string; elementId: string }[] {
 		const command = new SplitElementsCommand({
 			elements,
 			splitTime,
 			retainSide,
-			rippleEnabled,
 		});
 		this.editor.command.execute({ command });
 		return command.getRightSideElements();
@@ -273,12 +241,10 @@ export class TimelineManager {
 
 	deleteElements({
 		elements,
-		rippleEnabled = false,
 	}: {
 		elements: { trackId: string; elementId: string }[];
-		rippleEnabled?: boolean;
 	}): void {
-		const command = new DeleteElementsCommand({ elements, rippleEnabled });
+		const command = new DeleteElementsCommand({ elements });
 		this.editor.command.execute({ command });
 	}
 
@@ -303,20 +269,17 @@ export class TimelineManager {
 		updates: Array<{
 			trackId: string;
 			elementId: string;
-			updates: Partial<TimelineElement>;
+			patch: Partial<TimelineElement>;
 		}>;
 		pushHistory?: boolean;
 	}): void {
-		const commands = updates.map(
-			({ trackId, elementId, updates: elementUpdates }) =>
-				new UpdateElementCommand({
-					trackId,
-					elementId,
-					updates: elementUpdates,
-				}),
-		);
-		const command =
-			commands.length === 1 ? commands[0] : new BatchCommand(commands);
+		if (updates.length === 0) {
+			return;
+		}
+
+		const command = new UpdateElementsCommand({
+			updates,
+		});
 		if (pushHistory) {
 			this.editor.command.execute({ command });
 		} else {
@@ -679,8 +642,27 @@ export class TimelineManager {
 	}: {
 		elements: { trackId: string; elementId: string }[];
 	}): void {
-		const command = new ToggleElementsVisibilityCommand(elements);
-		this.editor.command.execute({ command });
+		const shouldHide = elements.some(({ trackId, elementId }) => {
+			const element = this.getElementByRef({ trackId, elementId });
+			return element && canElementBeHidden(element) && !element.hidden;
+		});
+
+		const nextUpdates = elements.flatMap(({ trackId, elementId }) => {
+			const element = this.getElementByRef({ trackId, elementId });
+			if (!element || !canElementBeHidden(element)) {
+				return [];
+			}
+
+			return [
+				{
+					trackId,
+					elementId,
+					patch: { hidden: shouldHide },
+				},
+			];
+		});
+
+		this.updateElements({ updates: nextUpdates });
 	}
 
 	toggleElementsMuted({
@@ -688,8 +670,27 @@ export class TimelineManager {
 	}: {
 		elements: { trackId: string; elementId: string }[];
 	}): void {
-		const command = new ToggleElementsMutedCommand(elements);
-		this.editor.command.execute({ command });
+		const shouldMute = elements.some(({ trackId, elementId }) => {
+			const element = this.getElementByRef({ trackId, elementId });
+			return element && canElementHaveAudio(element) && !element.muted;
+		});
+
+		const nextUpdates = elements.flatMap(({ trackId, elementId }) => {
+			const element = this.getElementByRef({ trackId, elementId });
+			if (!element || !canElementHaveAudio(element)) {
+				return [];
+			}
+
+			return [
+				{
+					trackId,
+					elementId,
+					patch: { muted: shouldMute },
+				},
+			];
+		});
+
+		this.updateElements({ updates: nextUpdates });
 	}
 
 	getTracks(): TimelineTrack[] {
@@ -710,6 +711,30 @@ export class TimelineManager {
 		this.listeners.forEach((fn) => {
 			fn();
 		});
+	}
+
+	private getElementByRef({
+		trackId,
+		elementId,
+	}: {
+		trackId: string;
+		elementId: string;
+	}): TimelineElement | undefined {
+		return this.getTrackById({ trackId })?.elements.find(
+			(element) => element.id === elementId,
+		);
+	}
+
+	private findTrackIdForElement({
+		elementId,
+	}: {
+		elementId: string;
+	}): string | null {
+		return (
+			this.getTracks().find((track) =>
+				track.elements.some((element) => element.id === elementId),
+			)?.id ?? null
+		);
 	}
 
 	updateTracks(newTracks: TimelineTrack[]): void {

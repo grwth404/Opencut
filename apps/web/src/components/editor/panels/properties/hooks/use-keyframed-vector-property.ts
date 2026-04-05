@@ -152,7 +152,7 @@ export function useKeyframedVectorProperty({
 		}
 		editor.timeline.updateElements({
 			updates: [
-				{ trackId, elementId, updates: buildBaseUpdates({ value: vector }) },
+				{ trackId, elementId, patch: buildBaseUpdates({ value: vector }) },
 			],
 		});
 	};
@@ -172,7 +172,7 @@ export function useKeyframedVectorProperty({
 		}
 		editor.timeline.updateElements({
 			updates: [
-				{ trackId, elementId, updates: buildBaseUpdates({ value: vector }) },
+				{ trackId, elementId, patch: buildBaseUpdates({ value: vector }) },
 			],
 		});
 	};

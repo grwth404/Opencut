@@ -41,7 +41,7 @@ type BlendingElement = {
 	animations?: ElementAnimations;
 };
 
-const BLEND_MODE_GROUPS = [
+const BLEND_MODE_GROUPS: { value: BlendMode; label: string }[][] = [
 	[{ value: "normal", label: "Normal" }],
 	[
 		{ value: "darken", label: "Darken" },
@@ -99,7 +99,7 @@ export function BlendingTab({
 			],
 		});
 
-	const commitBlendMode = (value: string) => {
+	const commitBlendMode = (value: BlendMode) => {
 		if (editor.timeline.isPreviewActive()) {
 			editor.timeline.commitPreview();
 		} else {
@@ -108,7 +108,7 @@ export function BlendingTab({
 					{
 						trackId,
 						elementId: element.id,
-						updates: { blendMode: value as BlendMode },
+						patch: { blendMode: value },
 					},
 				],
 			});
@@ -209,7 +209,7 @@ export function BlendingTab({
 												key={option.value}
 												value={option.value}
 												onPointerEnter={() =>
-													previewBlendMode({ value: option.value as BlendMode })
+													previewBlendMode({ value: option.value })
 												}
 											>
 												{option.label}

@@ -45,9 +45,6 @@ export function useTimelineElementResize({
 	const editor = useEditor();
 	const isShiftHeldRef = useShiftKey();
 	const snappingEnabled = useTimelineStore((state) => state.snappingEnabled);
-	const rippleEditingEnabled = useTimelineStore(
-		(state) => state.rippleEditingEnabled,
-	);
 
 	const [resizing, setResizing] = useState<ResizeState | null>(null);
 	const [currentTrimStart, setCurrentTrimStart] = useState(element.trimStart);
@@ -458,7 +455,6 @@ export function useTimelineElementResize({
 				trimEnd: finalTrimEnd,
 				startTime: startTimeChanged ? finalStartTime : undefined,
 				duration: durationChanged ? finalDuration : undefined,
-				rippleEnabled: rippleEditingEnabled,
 			});
 		}
 
@@ -471,7 +467,6 @@ export function useTimelineElementResize({
 		element.id,
 		onResizeStateChange,
 		onSnapPointChange,
-		rippleEditingEnabled,
 	]);
 
 	useEffect(() => {

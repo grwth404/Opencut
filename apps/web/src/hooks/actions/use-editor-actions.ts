@@ -212,7 +212,6 @@ export function useEditorActions() {
 				elements: elementsToSplit,
 				splitTime: currentTime,
 				retainSide: "right",
-				rippleEnabled: rippleEditingEnabled,
 			});
 
 			if (rippleEditingEnabled && rightSideElements.length > 0) {
@@ -263,7 +262,6 @@ export function useEditorActions() {
 			}
 			editor.timeline.deleteElements({
 				elements: selectedElements,
-				rippleEnabled: rippleEditingEnabled,
 			});
 		},
 		undefined,

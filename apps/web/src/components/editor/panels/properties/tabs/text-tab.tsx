@@ -165,7 +165,7 @@ function TypographySection({
 										{
 											trackId,
 											elementId: element.id,
-											updates: { fontFamily: value },
+											patch: { fontFamily: value },
 										},
 									],
 								})
@@ -188,7 +188,7 @@ function TypographySection({
 										{
 											trackId,
 											elementId: element.id,
-											updates: {
+											patch: {
 												fontSize: DEFAULTS.text.element.fontSize,
 											},
 										},
@@ -291,7 +291,7 @@ function SpacingSection({
 										{
 											trackId,
 											elementId: element.id,
-											updates: { letterSpacing: DEFAULTS.text.letterSpacing },
+											patch: { letterSpacing: DEFAULTS.text.letterSpacing },
 										},
 									],
 								})
@@ -317,7 +317,7 @@ function SpacingSection({
 										{
 											trackId,
 											elementId: element.id,
-											updates: { lineHeight: DEFAULTS.text.lineHeight },
+											patch: { lineHeight: DEFAULTS.text.lineHeight },
 										},
 									],
 								})
@@ -512,7 +512,7 @@ function BackgroundSection({
 				{
 					trackId,
 					elementId: element.id,
-					updates: {
+					patch: {
 						background: {
 							...element.background,
 							enabled,

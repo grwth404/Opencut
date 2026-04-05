@@ -123,7 +123,7 @@ function StrokeSection({
 					{
 						trackId,
 						elementId: element.id,
-						updates: { params: { ...element.params, strokeWidth: 0 } },
+						patch: { params: { ...element.params, strokeWidth: 0 } },
 					},
 				],
 			});
@@ -133,7 +133,7 @@ function StrokeSection({
 					{
 						trackId,
 						elementId: element.id,
-						updates: {
+						patch: {
 							params: {
 								...element.params,
 								strokeWidth: lastStrokeWidth.current,

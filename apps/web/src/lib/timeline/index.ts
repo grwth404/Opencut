@@ -8,7 +8,6 @@ export * from "./element-utils";
 export * from "./audio-separation";
 export * from "./zoom-utils";
 export * from "./ruler-utils";
-export * from "./ripple-utils";
 export * from "./pixel-utils";
 
 export function calculateTotalDuration({

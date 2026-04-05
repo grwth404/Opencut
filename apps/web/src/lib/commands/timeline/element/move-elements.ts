@@ -10,7 +10,6 @@ import {
 	validateElementTrackCompatibility,
 	enforceMainTrackStart,
 } from "@/lib/timeline/placement";
-import { rippleShiftElements } from "@/lib/timeline/ripple-utils";
 
 export class MoveElementCommand extends Command {
 	private savedState: TimelineTrack[] | null = null;
@@ -19,7 +18,6 @@ export class MoveElementCommand extends Command {
 	private readonly elementId: string;
 	private readonly newStartTime: number;
 	private readonly createTrack: { type: TrackType; index: number } | undefined;
-	private readonly rippleEnabled: boolean;
 
 	constructor({
 		sourceTrackId,
@@ -27,14 +25,12 @@ export class MoveElementCommand extends Command {
 		elementId,
 		newStartTime,
 		createTrack,
-		rippleEnabled = false,
 	}: {
 		sourceTrackId: string;
 		targetTrackId: string;
 		elementId: string;
 		newStartTime: number;
 		createTrack?: { type: TrackType; index: number };
-		rippleEnabled?: boolean;
 	}) {
 		super();
 		this.sourceTrackId = sourceTrackId;
@@ -42,7 +38,6 @@ export class MoveElementCommand extends Command {
 		this.elementId = elementId;
 		this.newStartTime = newStartTime;
 		this.createTrack = createTrack;
-		this.rippleEnabled = rippleEnabled;
 	}
 
 	execute(): CommandResult | undefined {
@@ -113,14 +108,7 @@ export class MoveElementCommand extends Command {
 				const remainingElements = track.elements.filter(
 					(trackElement) => trackElement.id !== this.elementId,
 				);
-				const shiftedElements = this.rippleEnabled
-					? rippleShiftElements({
-							elements: remainingElements,
-							afterTime: element.startTime,
-							shiftAmount: element.duration,
-						})
-					: remainingElements;
-				return { ...track, elements: shiftedElements } as typeof track;
+				return { ...track, elements: remainingElements } as typeof track;
 			}
 
 			if (track.id === this.targetTrackId) {

@@ -2,7 +2,7 @@ import { Command, type CommandResult } from "@/lib/commands/base-command";
 import type { TimelineTrack } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { EditorCore } from "@/core";
-import { isRetimableElement, rippleShiftElements } from "@/lib/timeline";
+import { isRetimableElement } from "@/lib/timeline";
 import { splitAnimationsAtTime } from "@/lib/animation";
 import { getSourceSpanAtClipTime } from "@/lib/retime";
 
@@ -12,24 +12,20 @@ export class SplitElementsCommand extends Command {
 	private readonly elements: { trackId: string; elementId: string }[];
 	private readonly splitTime: number;
 	private readonly retainSide: "both" | "left" | "right";
-	private readonly rippleEnabled: boolean;
 
 	constructor({
 		elements,
 		splitTime,
 		retainSide = "both",
-		rippleEnabled = false,
 	}: {
 		elements: { trackId: string; elementId: string }[];
 		splitTime: number;
 		retainSide?: "both" | "left" | "right";
-		rippleEnabled?: boolean;
 	}) {
 		super();
 		this.elements = elements;
 		this.splitTime = splitTime;
 		this.retainSide = retainSide;
-		this.rippleEnabled = rippleEnabled;
 	}
 
 	getRightSideElements(): { trackId: string; elementId: string }[] {
@@ -49,8 +45,6 @@ export class SplitElementsCommand extends Command {
 			if (elementsToSplit.length === 0) {
 				return track;
 			}
-
-			let leftVisibleDurationForRipple: number | null = null;
 
 			let elements = track.elements.flatMap((element) => {
 				const shouldSplit = elementsToSplit.some(
@@ -106,9 +100,6 @@ export class SplitElementsCommand extends Command {
 			}
 
 			if (this.retainSide === "right") {
-				if (this.rippleEnabled && elementsToSplit.length === 1) {
-					leftVisibleDurationForRipple = leftVisibleDuration;
-				}
 				const newId = generateUUID();
 				this.rightSideElements.push({
 					trackId: track.id,
@@ -156,14 +147,6 @@ export class SplitElementsCommand extends Command {
 				},
 			];
 			});
-
-			if (this.rippleEnabled && leftVisibleDurationForRipple !== null) {
-				elements = rippleShiftElements({
-					elements,
-					afterTime: this.splitTime,
-					shiftAmount: leftVisibleDurationForRipple,
-				});
-			}
 
 			return { ...track, elements } as typeof track;
 		});

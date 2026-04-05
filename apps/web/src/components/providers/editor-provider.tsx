@@ -7,6 +7,7 @@ import { EditorCore } from "@/core";
 import { useEditor } from "@/hooks/use-editor";
 import { useKeybindingsListener } from "@/hooks/use-keybindings";
 import { useKeybindingsStore } from "@/stores/keybindings-store";
+import { useTimelineStore } from "@/stores/timeline-store";
 import { useEditorActions } from "@/hooks/actions/use-editor-actions";
 import { loadFontAtlas } from "@/lib/fonts/google-fonts";
 import { initializeGpuRenderer } from "@/services/renderer/gpu-renderer";
@@ -117,6 +118,13 @@ export function EditorProvider({ projectId, children }: EditorProviderProps) {
 
 function EditorRuntimeBindings() {
 	const editor = useEditor();
+	const rippleEditingEnabled = useTimelineStore(
+		(state) => state.rippleEditingEnabled,
+	);
+
+	useEffect(() => {
+		editor.command.isRippleEnabled = rippleEditingEnabled;
+	}, [editor, rippleEditingEnabled]);
 
 	useEffect(() => {
 		const handleBeforeUnload = (event: BeforeUnloadEvent) => {
