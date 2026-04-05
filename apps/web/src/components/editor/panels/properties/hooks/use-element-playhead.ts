@@ -9,8 +9,7 @@ export function useElementPlayhead({
 	startTime: number;
 	duration: number;
 }) {
-	const editor = useEditor();
-	const playheadTime = editor.playback.getCurrentTime();
+	const playheadTime = useEditor((editor) => editor.playback.getCurrentTime());
 	const localTime = getElementLocalTime({
 		timelineTime: playheadTime,
 		elementStartTime: startTime,
