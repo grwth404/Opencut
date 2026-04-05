@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useRef, useState, type PointerEvent } from "react";
+import { useShiftKey } from "@/hooks/use-shift-key";
 import { getBezierPoint } from "@/lib/animation/bezier";
 import type { NormalizedCubicBezier } from "@/lib/animation/types";
 import { cn } from "@/utils/ui";
@@ -85,25 +86,10 @@ export function BezierGraph({
 }) {
 	const svgRef = useRef<SVGSVGElement>(null);
 	const [activeHandle, setActiveHandle] = useState<BezierHandle | null>(null);
-	const isShiftPressedRef = useRef(false);
+	const isShiftPressedRef = useShiftKey();
 	const latestValueRef = useRef(value);
 
 	latestValueRef.current = value;
-
-	useEffect(() => {
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key === "Shift") isShiftPressedRef.current = true;
-		};
-		const onKeyUp = (event: KeyboardEvent) => {
-			if (event.key === "Shift") isShiftPressedRef.current = false;
-		};
-		window.addEventListener("keydown", onKeyDown);
-		window.addEventListener("keyup", onKeyUp);
-		return () => {
-			window.removeEventListener("keydown", onKeyDown);
-			window.removeEventListener("keyup", onKeyUp);
-		};
-	}, []);
 
 	function getPointerPosition({
 		event,
