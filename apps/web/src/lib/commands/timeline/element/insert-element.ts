@@ -109,6 +109,10 @@ export class InsertElementCommand extends Command {
 		}
 
 		editor.timeline.updateTracks(updatedTracks);
+
+		return {
+			select: [{ trackId: targetTrackId, elementId: this.elementId }],
+		};
 	}
 
 	undo(): void {
