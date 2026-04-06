@@ -72,7 +72,6 @@ export function measureTextElement({
 	const block = measureTextBlock({
 		lineMetrics,
 		lineHeightPx,
-		fallbackFontSize: scaledFontSize,
 	});
 
 	const bg = element.background;

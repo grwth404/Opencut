@@ -54,32 +54,19 @@ export function getMetricDescent({
 export function measureTextBlock({
 	lineMetrics,
 	lineHeightPx,
-	fallbackFontSize,
 }: {
 	lineMetrics: TextMetrics[];
 	lineHeightPx: number;
-	fallbackFontSize: number;
 }): TextBlockMeasurement {
-	let top = Number.POSITIVE_INFINITY;
-	let bottom = Number.NEGATIVE_INFINITY;
 	let maxWidth = 0;
 
-	for (let index = 0; index < lineMetrics.length; index++) {
-		const metrics = lineMetrics[index];
-		const lineY = index * lineHeightPx;
-		top = Math.min(
-			top,
-			lineY - getMetricAscent({ metrics, fallbackFontSize }),
-		);
-		bottom = Math.max(
-			bottom,
-			lineY + getMetricDescent({ metrics, fallbackFontSize }),
-		);
+	for (const metrics of lineMetrics) {
 		maxWidth = Math.max(maxWidth, metrics.width);
 	}
 
-	const height = bottom - top;
-	const visualCenterOffset = (top + bottom) / 2;
+	const lineCount = lineMetrics.length;
+	const height = lineCount * lineHeightPx;
+	const visualCenterOffset = ((lineCount - 1) * lineHeightPx) / 2;
 
 	return { visualCenterOffset, height, maxWidth };
 }
