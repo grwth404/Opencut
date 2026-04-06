@@ -440,9 +440,9 @@ export function upsertPathKeyframe({
 	keyframeId?: string;
 	kind: AnimationBindingKind;
 	defaultInterpolation: AnimationInterpolation;
-	coerceValue: (value: AnimationValue) => AnimationValue | null;
+	coerceValue: ({ value }: { value: AnimationValue }) => AnimationValue | null;
 }): ElementAnimations | undefined {
-	const coercedValue = coerceValue(value);
+	const coercedValue = coerceValue({ value });
 	if (coercedValue === null) {
 		return animations;
 	}
@@ -547,7 +547,7 @@ export function upsertElementKeyframe({
 		keyframeId,
 		kind: propertyDefinition.kind,
 		defaultInterpolation: propertyDefinition.defaultInterpolation,
-		coerceValue: (nextValue) =>
+		coerceValue: ({ value: nextValue }) =>
 			coerceAnimationValueForProperty({
 				propertyPath,
 				value: nextValue,

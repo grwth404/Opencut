@@ -1,9 +1,43 @@
-import { parseColorToLinearRgba } from "@/lib/animation/binding-values";
+import { converter, parse } from "culori";
 import type { MigrationResult, ProjectRecord } from "./types";
 import { getProjectId, isRecord } from "./utils";
 
 const COLOR_COMPONENT_KEYS = ["r", "g", "b", "a"] as const;
 type LegacyInterpolation = "linear" | "hold";
+
+const toRgb = converter("rgb");
+
+interface LinearRgba {
+	r: number;
+	g: number;
+	b: number;
+	a: number;
+}
+
+function srgbToLinear({ value }: { value: number }): number {
+	return value <= 0.04045
+		? value / 12.92
+		: Math.pow((value + 0.055) / 1.055, 2.4);
+}
+
+function parseColorToLinearRgba({
+	color,
+}: {
+	color: string;
+}): LinearRgba | null {
+	const parsed = parse(color);
+	const rgb = parsed ? toRgb(parsed) : null;
+	if (!rgb) {
+		return null;
+	}
+
+	return {
+		r: srgbToLinear({ value: rgb.r ?? 0 }),
+		g: srgbToLinear({ value: rgb.g ?? 0 }),
+		b: srgbToLinear({ value: rgb.b ?? 0 }),
+		a: Math.max(0, Math.min(1, rgb.alpha ?? 1)),
+	};
+}
 
 interface LegacyScalarKeyframe {
 	id: string;

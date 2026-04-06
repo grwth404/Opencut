@@ -83,7 +83,7 @@ export function useKeyframedParamProperty({
 								defaultInterpolation: getParamDefaultInterpolation({
 									param,
 								}),
-								coerceValue: (nextValue) =>
+								coerceValue: ({ value: nextValue }) =>
 									coerceAnimationValueForParam({
 										param,
 										value: nextValue,

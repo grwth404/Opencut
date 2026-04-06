@@ -9,6 +9,7 @@ import type {
 	ScalarSegmentType,
 } from "@/lib/animation/types";
 import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
+import { clamp } from "@/utils/math";
 import {
 	getBezierPoint,
 	getDefaultLeftHandle,
@@ -39,10 +40,6 @@ function isWithinTimePair({
 		time >= leftTime - TIME_EPSILON_SECONDS &&
 		time <= rightTime + TIME_EPSILON_SECONDS
 	);
-}
-
-function clamp01({ value }: { value: number }): number {
-	return Math.max(0, Math.min(1, value));
 }
 
 function lerpNumber({
@@ -287,8 +284,10 @@ export function getScalarChannelValueAtTime({
 			return rightKey.value;
 		}
 
-		const progress = clamp01({
+		const progress = clamp({
 			value: (time - leftKey.time) / span,
+			min: 0,
+			max: 1,
 		});
 		if (leftKey.segmentToNext === "linear") {
 			return lerpNumber({

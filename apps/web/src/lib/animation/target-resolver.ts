@@ -32,9 +32,9 @@ export interface AnimationPathDescriptor {
 	kind: AnimationBindingKind;
 	defaultInterpolation: AnimationInterpolation;
 	numericRanges?: Partial<Record<string, NumericSpec>>;
-	coerceValue(value: AnimationValue): AnimationValue | null;
-	getBaseValue(): AnimationValue | null;
-	setBaseValue(value: AnimationValue): TimelineElement;
+	coerceValue: ({ value }: { value: AnimationValue }) => AnimationValue | null;
+	getBaseValue: () => AnimationValue | null;
+	setBaseValue: ({ value }: { value: AnimationValue }) => TimelineElement;
 }
 
 export function getParamValueKind({
@@ -135,9 +135,9 @@ function buildGraphicParamDescriptor({
 		kind: getParamValueKind({ param }),
 		defaultInterpolation: getParamDefaultInterpolation({ param }),
 		numericRanges: getParamNumericRange({ param }),
-		coerceValue: (value) => coerceAnimationValueForParam({ param, value }),
+		coerceValue: ({ value }) => coerceAnimationValueForParam({ param, value }),
 		getBaseValue: () => element.params[param.key] ?? param.default,
-		setBaseValue: (value) => {
+		setBaseValue: ({ value }) => {
 			const coercedValue = coerceAnimationValueForParam({ param, value });
 			if (coercedValue === null) {
 				return element;
@@ -183,9 +183,9 @@ function buildEffectParamDescriptor({
 		kind: getParamValueKind({ param }),
 		defaultInterpolation: getParamDefaultInterpolation({ param }),
 		numericRanges: getParamNumericRange({ param }),
-		coerceValue: (value) => coerceAnimationValueForParam({ param, value }),
+		coerceValue: ({ value }) => coerceAnimationValueForParam({ param, value }),
 		getBaseValue: () => effect.params[param.key] ?? param.default,
-		setBaseValue: (value) => {
+		setBaseValue: ({ value }) => {
 			const coercedValue = coerceAnimationValueForParam({ param, value });
 			if (coercedValue === null) {
 				return element;
@@ -239,7 +239,7 @@ export function resolveAnimationTarget({
 			kind: propertyDefinition.kind,
 			defaultInterpolation: propertyDefinition.defaultInterpolation,
 			numericRanges: propertyDefinition.numericRanges,
-			coerceValue: (value) =>
+			coerceValue: ({ value }) =>
 				coerceAnimationValueForProperty({
 					propertyPath: path,
 					value,
@@ -249,7 +249,7 @@ export function resolveAnimationTarget({
 					element,
 					propertyPath: path,
 				}),
-			setBaseValue: (value) => {
+			setBaseValue: ({ value }) => {
 				const coercedValue = propertyDefinition.coerceValue({ value });
 				if (coercedValue === null) {
 					return element;

@@ -79,7 +79,7 @@ function removeKeyframeAndPersist({
 	const shouldPersistToBase = isChannelNowEmpty && valueBefore !== null;
 
 	const baseElement = shouldPersistToBase
-		? target.setBaseValue(valueBefore)
+		? target.setBaseValue({ value: valueBefore })
 		: element;
 
 	return { ...baseElement, animations: nextAnimations };

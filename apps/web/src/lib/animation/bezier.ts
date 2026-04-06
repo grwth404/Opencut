@@ -1,5 +1,7 @@
 import type { ScalarAnimationKey } from "@/lib/animation/types";
 
+const BEZIER_SOLVE_ITERATIONS = 20;
+
 export function getBezierPoint({
 	progress,
 	p0,
@@ -68,7 +70,7 @@ export function solveBezierProgressForTime({
 	const leftHandle =
 		rightKey.leftHandle ?? getDefaultLeftHandle({ leftKey, rightKey });
 
-	for (let iteration = 0; iteration < 20; iteration++) {
+	for (let iteration = 0; iteration < BEZIER_SOLVE_ITERATIONS; iteration++) {
 		const mid = (lower + upper) / 2;
 		const estimate = getBezierPoint({
 			progress: mid,

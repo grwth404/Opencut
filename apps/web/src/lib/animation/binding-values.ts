@@ -13,6 +13,7 @@ import type {
 	Vector2AnimationBinding,
 	VectorValue,
 } from "@/lib/animation/types";
+import { clamp } from "@/utils/math";
 
 interface LinearRgba {
 	r: number;
@@ -25,10 +26,6 @@ export type AnimationComponentValue = number | DiscreteValue;
 
 const toRgb = converter("rgb");
 
-function clamp01({ value }: { value: number }): number {
-	return Math.max(0, Math.min(1, value));
-}
-
 function srgbToLinear({ value }: { value: number }): number {
 	return value <= 0.04045
 		? value / 12.92
@@ -36,7 +33,7 @@ function srgbToLinear({ value }: { value: number }): number {
 }
 
 function linearToSrgb({ value }: { value: number }): number {
-	const clamped = clamp01({ value });
+	const clamped = clamp({ value, min: 0, max: 1 });
 	return clamped <= 0.0031308
 		? clamped * 12.92
 		: 1.055 * Math.pow(clamped, 1 / 2.4) - 0.055;
@@ -234,7 +231,7 @@ export function parseColorToLinearRgba({
 		r: srgbToLinear({ value: rgb.r ?? 0 }),
 		g: srgbToLinear({ value: rgb.g ?? 0 }),
 		b: srgbToLinear({ value: rgb.b ?? 0 }),
-		a: clamp01({ value: rgb.alpha ?? 1 }),
+		a: clamp({ value: rgb.alpha ?? 1, min: 0, max: 1 }),
 	};
 }
 
@@ -248,7 +245,7 @@ export function formatLinearRgba({
 		r: linearToSrgb({ value: color.r }),
 		g: linearToSrgb({ value: color.g }),
 		b: linearToSrgb({ value: color.b }),
-		alpha: clamp01({ value: color.a }),
+		alpha: clamp({ value: color.a, min: 0, max: 1 }),
 	} as const;
 	return rgb.alpha < 1 ? formatHex8(rgb) : formatHex(rgb);
 }
