@@ -36,7 +36,7 @@ const ContextMenuSub = ContextMenuPrimitive.Sub;
 const ContextMenuRadioGroup = ContextMenuPrimitive.RadioGroup;
 
 const contextMenuItemVariants = cva(
-	"relative flex cursor-pointer select-none items-center gap-2.5 px-4 py-1.5 text-sm outline-hidden data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
+	"relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-3 py-1.5 text-sm text-foreground/85 outline-hidden data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:size-3.5 [&_svg]:shrink-0",
 	{
 		variants: {
 			variant: {
@@ -94,7 +94,7 @@ const ContextMenuSubContent = React.forwardRef<
 	<ContextMenuPrimitive.SubContent
 		ref={ref}
 		className={cn(
-			"bg-popover text-popover-foreground z-50 min-w-48 overflow-hidden rounded-lg border shadow-xl py-2.5",
+			"bg-popover text-popover-foreground z-50 min-w-48 overflow-hidden rounded-md border shadow-xl p-1",
 			className,
 		)}
 		{...props}
@@ -112,7 +112,7 @@ const ContextMenuContent = React.forwardRef<
 		<ContextMenuPrimitive.Content
 			ref={ref}
 			className={cn(
-				"bg-popover text-popover-foreground z-50 min-w-48 overflow-hidden rounded-lg border shadow-xl py-1.5",
+				"bg-popover text-popover-foreground z-50 min-w-48 overflow-hidden rounded-md border shadow-xl p-1",
 				className,
 			)}
 			{...props}
@@ -155,7 +155,7 @@ const ContextMenuItem = React.forwardRef<
 				{...props}
 			>
 				{icon && (
-					<span className="absolute left-3 flex size-3.5 items-center justify-center text-muted-foreground [&_svg]:size-4 [&_svg]:shrink-0">
+					<span className="absolute left-3 flex size-3.5 items-center justify-center text-muted-foreground [&_svg]:size-3.5 [&_svg]:shrink-0">
 						{icon}
 					</span>
 				)}
@@ -242,7 +242,7 @@ const ContextMenuLabel = React.forwardRef<
 	<ContextMenuPrimitive.Label
 		ref={ref}
 		className={cn(
-			"flex items-center gap-2.5 px-4 py-1.5 text-sm font-semibold text-foreground",
+			"flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-foreground",
 			inset && "pl-8",
 			className,
 		)}
@@ -262,7 +262,7 @@ const ContextMenuSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
 	<ContextMenuPrimitive.Separator
 		ref={ref}
-		className={cn("bg-border my-2 h-px", className)}
+		className={cn("bg-border mx-1 my-1.5 h-px", className)}
 		{...props}
 	/>
 ));

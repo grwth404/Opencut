@@ -37,7 +37,7 @@ const DropdownMenuSub = DropdownMenuPrimitive.Sub;
 const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 
 const dropdownMenuItemVariants = cva(
-	"relative flex cursor-pointer select-none items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground outline-hidden data-[highlighted]:bg-popover-hover data-disabled:pointer-events-none data-disabled:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0",
+	"relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2.5 py-1.5 text-sm text-foreground/85 outline-hidden data-[highlighted]:bg-popover-hover data-disabled:pointer-events-none data-disabled:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0",
 	{
 		variants: {
 			variant: {
@@ -83,7 +83,7 @@ const DropdownMenuSubContent = React.forwardRef<
 	<DropdownMenuPrimitive.SubContent
 		ref={ref}
 		className={cn(
-			"group/menu bg-popover text-popover-foreground z-50 min-w-32 overflow-hidden rounded-2xl border p-2 shadow-lg",
+			"group/menu bg-popover text-popover-foreground z-50 min-w-32 overflow-hidden rounded-md border p-1 shadow-lg",
 			className,
 		)}
 		{...props}
@@ -105,12 +105,12 @@ const DropdownMenuContent = React.forwardRef<
 				e.preventDefault();
 			}}
 			className={cn(
-				"group/menu bg-popover text-popover-foreground z-50 min-w-32 overflow-hidden rounded-lg border p-1.5 shadow-lg",
-				className,
-			)}
-			{...props}
-		/>
-	</DropdownMenuPrimitive.Portal>
+			"group/menu bg-popover text-popover-foreground z-50 min-w-32 overflow-hidden rounded-md border p-1 shadow-lg",
+			className,
+		)}
+		{...props}
+	/>
+</DropdownMenuPrimitive.Portal>
 ));
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;
 
@@ -240,7 +240,7 @@ const DropdownMenuLabel = React.forwardRef<
 	<DropdownMenuPrimitive.Label
 		ref={ref}
 		className={cn(
-			"px-3 pb-2 pt-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground",
+			"px-2 pb-1 pt-0.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground",
 			inset && "pl-8",
 			className,
 		)}
@@ -255,7 +255,7 @@ const DropdownMenuSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
 	<DropdownMenuPrimitive.Separator
 		ref={ref}
-		className={cn("bg-border/60 mx-1 my-2 h-px", className)}
+		className={cn("bg-border mx-1 my-1.5 h-px", className)}
 		{...props}
 	/>
 ));
