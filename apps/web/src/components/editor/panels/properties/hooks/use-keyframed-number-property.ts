@@ -21,6 +21,7 @@ export function useKeyframedNumberProperty({
 	valueAtPlayhead,
 	step,
 	buildBaseUpdates,
+	buildAdditionalKeyframes,
 }: {
 	trackId: string;
 	elementId: string;
@@ -33,6 +34,9 @@ export function useKeyframedNumberProperty({
 	valueAtPlayhead: number;
 	step?: number;
 	buildBaseUpdates: ({ value }: { value: number }) => Partial<TimelineElement>;
+	buildAdditionalKeyframes?: ({
+		value,
+	}: { value: number }) => Array<{ propertyPath: AnimationPropertyPath; value: number }>;
 }) {
 	const editor = useEditor();
 	const snapValue = (value: number) =>
@@ -50,19 +54,26 @@ export function useKeyframedNumberProperty({
 	const previewValue = ({ value }: { value: number }) => {
 		const nextValue = snapValue(value);
 		if (shouldUseAnimatedChannel) {
+			const additionalKeyframes = buildAdditionalKeyframes?.({ value: nextValue }) ?? [];
+			const updatedAnimations = [
+				{ propertyPath, value: nextValue },
+				...additionalKeyframes,
+			].reduce(
+				(currentAnimations, keyframe) =>
+					upsertElementKeyframe({
+						animations: currentAnimations,
+						propertyPath: keyframe.propertyPath,
+						time: localTime,
+						value: keyframe.value,
+					}),
+				animations,
+			);
 			editor.timeline.previewElements({
 				updates: [
 					{
 						trackId,
 						elementId,
-						updates: {
-							animations: upsertElementKeyframe({
-								animations,
-								propertyPath,
-								time: localTime,
-								value: nextValue,
-							}),
-						},
+						updates: { animations: updatedAnimations },
 					},
 				],
 			});
@@ -125,15 +136,17 @@ export function useKeyframedNumberProperty({
 	const commitValue = ({ value }: { value: number }) => {
 		const nextValue = snapValue(value);
 		if (shouldUseAnimatedChannel) {
+			const additionalKeyframes = buildAdditionalKeyframes?.({ value: nextValue }) ?? [];
 			editor.timeline.upsertKeyframes({
 				keyframes: [
-					{
+					{ trackId, elementId, propertyPath, time: localTime, value: nextValue },
+					...additionalKeyframes.map((keyframe) => ({
 						trackId,
 						elementId,
-						propertyPath,
+						propertyPath: keyframe.propertyPath,
 						time: localTime,
-						value: nextValue,
-					},
+						value: keyframe.value,
+					})),
 				],
 			});
 			return;

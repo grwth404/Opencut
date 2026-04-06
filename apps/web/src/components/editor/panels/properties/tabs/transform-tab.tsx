@@ -120,6 +120,9 @@ export function TransformTab({
 				...(isScaleLocked ? { scaleY: value } : {}),
 			},
 		}),
+		buildAdditionalKeyframes: isScaleLocked
+			? ({ value }) => [{ propertyPath: "transform.scaleY", value }]
+			: undefined,
 	});
 
 	const scaleY = useKeyframedNumberProperty({
@@ -140,6 +143,9 @@ export function TransformTab({
 				...(isScaleLocked ? { scaleX: value } : {}),
 			},
 		}),
+		buildAdditionalKeyframes: isScaleLocked
+			? ({ value }) => [{ propertyPath: "transform.scaleX", value }]
+			: undefined,
 	});
 
 	const scaleFieldPropsX = {
