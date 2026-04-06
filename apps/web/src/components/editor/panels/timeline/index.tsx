@@ -50,7 +50,7 @@ import {
 	getTimelineZoomMin,
 	getTimelinePaddingPx,
 } from "@/lib/timeline";
-import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
+import { timelineTimeToPixels } from "@/lib/timeline/pixel-utils";
 import {
 	getTrackHeight,
 	getCumulativeHeightBefore,
@@ -340,8 +340,7 @@ export function Timeline() {
 
 	const containerWidth =
 		tracksContainerRef.current?.clientWidth || FALLBACK_CONTAINER_WIDTH;
-	const contentWidth =
-		timelineDuration * BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel;
+	const contentWidth = timelineTimeToPixels({ time: timelineDuration, zoomLevel });
 	const paddingPx = getTimelinePaddingPx({
 		containerWidth,
 		zoomLevel,
