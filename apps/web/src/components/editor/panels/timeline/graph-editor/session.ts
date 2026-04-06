@@ -20,7 +20,7 @@ const FLAT_VALUE_EPSILON = 1e-6;
 const LINEAR_CURVE_EPSILON = 1e-6;
 
 export type GraphEditorUnavailableReason =
-	| "no-keyframe-selected"	
+	| "no-keyframe-selected"
 	| "multiple-keyframes-selected"
 	| "selected-element-missing"
 	| "selected-element-has-no-animations"
