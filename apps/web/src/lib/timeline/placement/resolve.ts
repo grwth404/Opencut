@@ -176,7 +176,7 @@ export function resolveTrackPlacement({
 		return resolveAlwaysNewTrack({
 			tracks,
 			trackType,
-			position: "default",
+			position: "highest",
 		});
 	}
 

@@ -329,7 +329,7 @@ describe("resolveTrackPlacement", () => {
 		).toEqual({
 			kind: "newTrack",
 			trackType: "graphic",
-			insertIndex: 1,
+			insertIndex: 0,
 			insertPosition: null,
 		});
 	});
