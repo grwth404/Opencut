@@ -62,9 +62,9 @@ function curvePath({ curve }: { curve: NormalizedCubicBezier }) {
 	const points: string[] = [];
 	for (let i = 0; i <= CURVE_SEGMENTS; i++) {
 		const progress = i / CURVE_SEGMENTS;
-		points.push(
-			`${toSvgX({ value: getBezierPoint({ progress, p0: 0, p1: curve[0], p2: curve[2], p3: 1 }) })},${toSvgY({ value: getBezierPoint({ progress, p0: 0, p1: curve[1], p2: curve[3], p3: 1 }) })}`,
-		);
+		const x = toSvgX({ value: getBezierPoint({ progress, p0: 0, p1: curve[0], p2: curve[2], p3: 1 }) });
+		const y = toSvgY({ value: getBezierPoint({ progress, p0: 0, p1: curve[1], p2: curve[3], p3: 1 }) });
+		points.push(`${x},${y}`);
 	}
 	return `M${points.join("L")}`;
 }

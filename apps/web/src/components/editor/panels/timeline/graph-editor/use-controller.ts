@@ -89,55 +89,61 @@ export function useGraphEditorController() {
 		[discardPreview],
 	);
 
-	function handlePreviewValue(nextValue: NormalizedCubicBezier) {
-		if (state.status !== "ready") {
-			return;
-		}
+	const handlePreviewValue = useCallback(
+		(nextValue: NormalizedCubicBezier) => {
+			if (state.status !== "ready") {
+				return;
+			}
 
-		const nextAnimations = applyGraphEditorCurvePreview({
-			animations: state.element.animations,
-			context: state.context,
-			cubicBezier: nextValue,
-		});
-		editor.timeline.previewElements({
-			updates: [
-				{
+			const nextAnimations = applyGraphEditorCurvePreview({
+				animations: state.element.animations,
+				context: state.context,
+				cubicBezier: nextValue,
+			});
+			editor.timeline.previewElements({
+				updates: [
+					{
+						trackId: state.trackId,
+						elementId: state.elementId,
+						updates: {
+							animations: nextAnimations,
+						},
+					},
+				],
+			});
+			hasPreviewRef.current = true;
+		},
+		[editor, state],
+	);
+
+	const handleCommitValue = useCallback(
+		(nextValue: NormalizedCubicBezier) => {
+			if (state.status !== "ready") {
+				return;
+			}
+
+			const patches = buildGraphEditorCurvePatches({
+				context: state.context,
+				cubicBezier: nextValue,
+			});
+			if (!patches) {
+				return;
+			}
+
+			editor.timeline.updateKeyframeCurves({
+				keyframes: patches.map(({ keyframeId, patch }) => ({
 					trackId: state.trackId,
 					elementId: state.elementId,
-					updates: {
-						animations: nextAnimations,
-					},
-				},
-			],
-		});
-		hasPreviewRef.current = true;
-	}
-
-	function handleCommitValue(nextValue: NormalizedCubicBezier) {
-		if (state.status !== "ready") {
-			return;
-		}
-
-		const patches = buildGraphEditorCurvePatches({
-			context: state.context,
-			cubicBezier: nextValue,
-		});
-		if (!patches) {
-			return;
-		}
-
-		editor.timeline.updateKeyframeCurves({
-			keyframes: patches.map(({ keyframeId, patch }) => ({
-				trackId: state.trackId,
-				elementId: state.elementId,
-				propertyPath: state.propertyPath,
-				componentKey: state.context.componentKey,
-				keyframeId,
-				patch,
-			})),
-		});
-		hasPreviewRef.current = false;
-	}
+					propertyPath: state.propertyPath,
+					componentKey: state.context.componentKey,
+					keyframeId,
+					patch,
+				})),
+			});
+			hasPreviewRef.current = false;
+		},
+		[editor, state],
+	);
 
 	return {
 		open,

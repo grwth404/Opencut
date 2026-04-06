@@ -299,13 +299,21 @@ function PresetItem({
 	);
 }
 
+function toThumbX({ value }: { value: number }) {
+	return THUMB_PADDING_X + value * (THUMB_WIDTH - THUMB_PADDING_X * 2);
+}
+
+function toThumbY({ value }: { value: number }) {
+	return THUMB_PADDING_Y + (1 - value) * (THUMB_HEIGHT - THUMB_PADDING_Y * 2);
+}
+
 function CurveThumb({ value }: { value: NormalizedCubicBezier }) {
 	const points: string[] = [];
 	for (let i = 0; i <= THUMB_SEGMENTS; i++) {
 		const progress = i / THUMB_SEGMENTS;
-		points.push(
-			`${THUMB_PADDING_X + getBezierPoint({ progress, p0: 0, p1: value[0], p2: value[2], p3: 1 }) * (THUMB_WIDTH - THUMB_PADDING_X * 2)},${THUMB_PADDING_Y + (1 - getBezierPoint({ progress, p0: 0, p1: value[1], p2: value[3], p3: 1 })) * (THUMB_HEIGHT - THUMB_PADDING_Y * 2)}`,
-		);
+		const x = toThumbX({ value: getBezierPoint({ progress, p0: 0, p1: value[0], p2: value[2], p3: 1 }) });
+		const y = toThumbY({ value: getBezierPoint({ progress, p0: 0, p1: value[1], p2: value[3], p3: 1 }) });
+		points.push(`${x},${y}`);
 	}
 	return (
 		<svg
