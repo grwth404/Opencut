@@ -17,11 +17,9 @@ import type { GraphEditorComponentOption } from "./session";
 import {
 	BUILTIN_PRESETS,
 	PRESET_MATCH_TOLERANCE,
-	removePreset,
-	savePreset,
 	type EasingPreset,
-	useCustomPresets,
-} from "./presets";
+} from "./easing-presets";
+import { removePreset, savePreset, useCustomPresets } from "./custom-presets-store";
 import { BezierGraph, BEZIER_GRAPH_MIN_HEIGHT } from "./bezier-graph";
 
 const COLLAPSED_MAX = 6;
@@ -160,12 +158,12 @@ export function GraphEditorPopover({
 									isActive={activePresetId === preset.id}
 									disabled={!canEdit}
 									onSelect={() => onCommitValue?.(preset.value)}
-									onDelete={() => removePreset(preset.id)}
+									onDelete={() => removePreset({ id: preset.id })}
 								/>
 							))}
 							<button
 								type="button"
-								onClick={() => value && savePreset(value)}
+								onClick={() => value && savePreset({ value })}
 								disabled={!canEdit}
 								className={cn(
 									"text-muted-foreground flex flex-col items-center justify-center gap-1 rounded-sm px-1 py-1",

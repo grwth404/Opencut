@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	getCurveHandlesForNormalizedCubicBezier,
 	getEditableScalarChannels,
@@ -22,7 +20,7 @@ const FLAT_VALUE_EPSILON = 1e-6;
 const LINEAR_CURVE_EPSILON = 1e-6;
 
 export type GraphEditorUnavailableReason =
-	| "no-keyframe-selected"
+	| "no-keyframe-selected"	
 	| "multiple-keyframes-selected"
 	| "selected-element-missing"
 	| "selected-element-has-no-animations"
@@ -201,11 +199,11 @@ export function resolveGraphEditorSelectionState({
 	}
 
 	if (selectedKeyframes.length === 2) {
-		const [kf1, kf2] = selectedKeyframes;
+		const [firstKeyframe, secondKeyframe] = selectedKeyframes;
 		if (
-			kf1.trackId !== kf2.trackId ||
-			kf1.elementId !== kf2.elementId ||
-			kf1.propertyPath !== kf2.propertyPath
+			firstKeyframe.trackId !== secondKeyframe.trackId ||
+			firstKeyframe.elementId !== secondKeyframe.elementId ||
+			firstKeyframe.propertyPath !== secondKeyframe.propertyPath
 		) {
 			return createUnavailableState({
 				reason: "multiple-keyframes-selected",
