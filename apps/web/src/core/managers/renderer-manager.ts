@@ -5,7 +5,8 @@ import { CanvasRenderer } from "@/services/renderer/canvas-renderer";
 import { SceneExporter } from "@/services/renderer/scene-exporter";
 import { buildScene } from "@/services/renderer/scene-builder";
 import { createTimelineAudioBuffer } from "@/lib/media/audio";
-import { formatTimeCode } from "opencut-wasm";
+import { formatTimecode } from "opencut-wasm";
+import { frameRateToFloat } from "@/lib/fps/utils";
 import { downloadBlob } from "@/utils/browser";
 
 type SnapshotResult =
@@ -81,7 +82,10 @@ export class RendererManager {
 			}
 
 			const { canvasSize, fps } = activeProject.settings;
-			const renderTime = this.editor.playback.getCurrentTime();
+			const renderTime = Math.min(
+				this.editor.playback.getCurrentTime(),
+				this.editor.timeline.getLastFrameTime(),
+			);
 
 			const renderer = new CanvasRenderer({
 				width: canvasSize.width,
@@ -107,7 +111,7 @@ export class RendererManager {
 				return { success: false, error: "Failed to create image" };
 			}
 
-			const timecode = formatTimeCode({ timeInSeconds: renderTime, fps })!.replace(/:/g, "-");
+			const timecode = formatTimecode({ time: renderTime, rate: fps })!.replace(/:/g, "-");
 			const safeName =
 				activeProject.metadata.name.replace(/[<>:"/\\|?*]/g, "-").trim() ||
 				"snapshot";
@@ -148,7 +152,7 @@ export class RendererManager {
 				return { success: false, error: "Project is empty" };
 			}
 
-			const exportFps = fps || activeProject.settings.fps;
+			const exportFps = fps ?? activeProject.settings.fps;
 			const canvasSize = activeProject.settings.canvasSize;
 
 			let audioBuffer: AudioBuffer | null = null;

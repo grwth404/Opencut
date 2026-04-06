@@ -1,4 +1,4 @@
-import { DEFAULT_NEW_ELEMENT_DURATION_SECONDS } from "@/lib/timeline/creation";
+import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
 import type { TTimelineViewState } from "@/lib/project/types";
 import type { BlendMode, Transform } from "@/lib/rendering";
 import type { TextElement } from "./types";
@@ -41,7 +41,7 @@ const defaultTextElement: Omit<TextElement, "id"> = {
 	textDecoration: "none",
 	letterSpacing: defaultTextLetterSpacing,
 	lineHeight: defaultTextLineHeight,
-	duration: DEFAULT_NEW_ELEMENT_DURATION_SECONDS,
+	duration: DEFAULT_NEW_ELEMENT_DURATION,
 	startTime: 0,
 	trimStart: 0,
 	trimEnd: 0,

@@ -15,7 +15,6 @@ import {
 	PlusSignIcon,
 	RotateClockwiseIcon,
 } from "@hugeicons/core-free-icons";
-import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "@/components/ui/color-picker";
@@ -102,7 +101,7 @@ export function MasksTab({ element, trackId }: MasksTabProps) {
 	const elementBounds = useMemo(() => {
 		const clampedTime = Math.min(
 			Math.max(currentTime, element.startTime),
-			element.startTime + element.duration - TIME_EPSILON_SECONDS,
+			element.startTime + element.duration - 1,
 		);
 
 		return (

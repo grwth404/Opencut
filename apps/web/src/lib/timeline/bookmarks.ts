@@ -1,7 +1,6 @@
 import type { Bookmark } from "@/lib/timeline";
+import type { FrameRate } from "opencut-wasm";
 import { roundToFrame } from "opencut-wasm";
-
-export const BOOKMARK_TIME_EPSILON = 0.001;
 
 function bookmarkTimeEqual({
 	bookmarkTime,
@@ -10,7 +9,7 @@ function bookmarkTimeEqual({
 	bookmarkTime: number;
 	frameTime: number;
 }): boolean {
-	return Math.abs(bookmarkTime - frameTime) < BOOKMARK_TIME_EPSILON;
+	return bookmarkTime === frameTime;
 }
 
 export function findBookmarkIndex({
@@ -112,9 +111,9 @@ export function getFrameTime({
 	fps,
 }: {
 	time: number;
-	fps: number;
+	fps: FrameRate;
 }): number {
-	return roundToFrame({ time, fps });
+	return roundToFrame({ time, rate: fps }) ?? time;
 }
 
 export function getBookmarkAtTime({
@@ -141,9 +140,6 @@ export function getBookmarksActiveAtTime({
 			bookmark.duration != null && bookmark.duration > 0
 				? start + bookmark.duration
 				: start;
-		return (
-			time >= start - BOOKMARK_TIME_EPSILON &&
-			time <= end + BOOKMARK_TIME_EPSILON
-		);
+		return time >= start && time <= end;
 	});
 }

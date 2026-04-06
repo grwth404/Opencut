@@ -1,4 +1,5 @@
 import type { EditorCore } from "@/core";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
 import {
 	clampRetimeRate,
 	shouldMaintainPitch,
@@ -93,7 +94,7 @@ export class AudioManager {
 			this.lastIsPlaying = isPlaying;
 			if (isPlaying) {
 				void this.startPlayback({
-					time: this.editor.playback.getCurrentTime(),
+					time: this.editor.playback.getCurrentTime() / TICKS_PER_SECOND,
 				});
 			} else {
 				this.stopPlayback();
@@ -111,7 +112,7 @@ export class AudioManager {
 		}
 
 		if (this.editor.playback.getIsPlaying()) {
-			void this.startPlayback({ time: detail.time });
+			void this.startPlayback({ time: detail.time / TICKS_PER_SECOND });
 			return;
 		}
 
@@ -125,7 +126,7 @@ export class AudioManager {
 
 		if (!this.editor.playback.getIsPlaying()) return;
 
-		void this.startPlayback({ time: this.editor.playback.getCurrentTime() });
+		void this.startPlayback({ time: this.editor.playback.getCurrentTime() / TICKS_PER_SECOND });
 	};
 
 	private ensureAudioContext(): AudioContext | null {

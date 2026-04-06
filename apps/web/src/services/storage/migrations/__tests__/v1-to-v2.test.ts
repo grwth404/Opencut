@@ -4,7 +4,7 @@ import {
 	DEFAULT_BACKGROUND_COLOR,
 } from "@/lib/background/constants";
 import { DEFAULT_CANVAS_SIZE } from "@/lib/canvas/constants";
-import { DEFAULT_FPS } from "@/lib/fps/constants";
+const DEFAULT_FPS = 30;
 import type { MediaAssetData } from "@/services/storage/types";
 import { getProjectId, transformProjectV1ToV2 } from "../transformers/v1-to-v2";
 import {

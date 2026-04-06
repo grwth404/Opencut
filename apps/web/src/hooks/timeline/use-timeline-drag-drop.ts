@@ -3,9 +3,9 @@ import { useEditor } from "@/hooks/use-editor";
 import { processMediaAssets } from "@/lib/media/processing";
 import { toast } from "sonner";
 import { showMediaUploadToast } from "@/lib/media/upload-toast";
-import { DEFAULT_NEW_ELEMENT_DURATION_SECONDS } from "@/lib/timeline/creation";
+import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
-import { snapTimeToFrame } from "opencut-wasm";
+import { roundToFrame } from "opencut-wasm";
 import {
 	buildTextElement,
 	buildGraphicElement,
@@ -47,7 +47,7 @@ export function useTimelineDragDrop({
 	const getSnappedTime = useCallback(
 		({ time }: { time: number }) => {
 			const projectFps = editor.project.getActive().settings.fps;
-			return snapTimeToFrame({ time, fps: projectFps });
+			return roundToFrame({ time, rate: projectFps }) ?? time;
 		},
 		[editor],
 	);
@@ -83,14 +83,14 @@ export function useTimelineDragDrop({
 				elementType === "sticker" ||
 				elementType === "effect"
 			) {
-				return DEFAULT_NEW_ELEMENT_DURATION_SECONDS;
+				return DEFAULT_NEW_ELEMENT_DURATION;
 			}
 			if (mediaId) {
 				const mediaAssets = editor.media.getAssets();
 				const media = mediaAssets.find((m) => m.id === mediaId);
-				return media?.duration ?? DEFAULT_NEW_ELEMENT_DURATION_SECONDS;
+				return media?.duration ?? DEFAULT_NEW_ELEMENT_DURATION;
 			}
-			return DEFAULT_NEW_ELEMENT_DURATION_SECONDS;
+			return DEFAULT_NEW_ELEMENT_DURATION;
 		},
 		[editor],
 	);
@@ -331,7 +331,7 @@ export function useTimelineDragDrop({
 				dragData.mediaType === "audio" ? "audio" : "video";
 
 			const duration =
-				mediaAsset.duration ?? DEFAULT_NEW_ELEMENT_DURATION_SECONDS;
+				mediaAsset.duration ?? DEFAULT_NEW_ELEMENT_DURATION;
 			const element = buildElementFromMedia({
 				mediaId: mediaAsset.id,
 				mediaType: mediaAsset.type,
@@ -446,7 +446,7 @@ export function useTimelineDragDrop({
 
 						const duration =
 							createdAsset.duration ??
-							DEFAULT_NEW_ELEMENT_DURATION_SECONDS;
+							DEFAULT_NEW_ELEMENT_DURATION;
 						const currentTracks = editor.timeline.getTracks();
 						const currentTime = editor.playback.getCurrentTime();
 						const onlyTrack = currentTracks[0];

@@ -5,6 +5,7 @@ import { useTimelineStore } from "@/stores/timeline-store";
 import { useActionHandler } from "@/hooks/actions/use-action-handler";
 import { useEditor } from "../use-editor";
 import { useElementSelection } from "../timeline/element/use-element-selection";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { useKeyframeSelection } from "../timeline/element/use-keyframe-selection";
 import {
 	getElementsAtTime,
@@ -110,10 +111,11 @@ export function useEditorActions() {
 		"frame-step-forward",
 		() => {
 			const fps = editor.project.getActive().settings.fps;
+			const ticksPerFrame = Math.round(TICKS_PER_SECOND * fps.denominator / fps.numerator);
 			editor.playback.seek({
 				time: Math.min(
 					editor.timeline.getTotalDuration(),
-					editor.playback.getCurrentTime() + 1 / fps,
+					editor.playback.getCurrentTime() + ticksPerFrame,
 				),
 			});
 		},
@@ -124,8 +126,9 @@ export function useEditorActions() {
 		"frame-step-backward",
 		() => {
 			const fps = editor.project.getActive().settings.fps;
+			const ticksPerFrame = Math.round(TICKS_PER_SECOND * fps.denominator / fps.numerator);
 			editor.playback.seek({
-				time: Math.max(0, editor.playback.getCurrentTime() - 1 / fps),
+				time: Math.max(0, editor.playback.getCurrentTime() - ticksPerFrame),
 			});
 		},
 		undefined,

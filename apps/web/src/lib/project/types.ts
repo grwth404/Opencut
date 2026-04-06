@@ -1,3 +1,4 @@
+import type { FrameRate } from "opencut-wasm";
 import type { TScene } from "@/lib/timeline/types";
 
 export type TBackground =
@@ -25,7 +26,7 @@ export interface TProjectMetadata {
 }
 
 export interface TProjectSettings {
-	fps: number;
+	fps: FrameRate;
 	canvasSize: TCanvasSize;
 	canvasSizeMode?: "preset" | "custom";
 	lastCustomCanvasSize?: TCanvasSize | null;

@@ -1,12 +1,8 @@
 use wgpu::util::DeviceExt;
 
-use crate::{
-    GPU_TEXTURE_FORMAT, GpuError,
-    effect_pipeline::{ApplyEffectsOptions, apply_effects},
-    mask_feather::{ApplyMaskFeatherOptions, MaskFeatherPipeline},
-    sdf_pipeline::SdfPipeline,
-    shader_registry::ShaderRegistry,
-};
+use crate::{FULLSCREEN_SHADER_SOURCE, GPU_TEXTURE_FORMAT, GpuError};
+
+const BLIT_SHADER_SOURCE: &str = include_str!("shaders/blit.wgsl");
 
 const FULLSCREEN_QUAD_POSITIONS: [[f32; 2]; 6] = [
     [-1.0, -1.0],
@@ -25,9 +21,8 @@ pub struct GpuContext {
     fullscreen_quad: wgpu::Buffer,
     linear_sampler: wgpu::Sampler,
     nearest_sampler: wgpu::Sampler,
-    shader_registry: ShaderRegistry,
-    sdf_pipeline: SdfPipeline,
-    mask_feather_pipeline: MaskFeatherPipeline,
+    texture_sampler_bind_group_layout: wgpu::BindGroupLayout,
+    blit_pipeline: wgpu::RenderPipeline,
 }
 
 impl GpuContext {
@@ -77,9 +72,74 @@ impl GpuContext {
             mipmap_filter: wgpu::MipmapFilterMode::Nearest,
             ..Default::default()
         });
-        let shader_registry = ShaderRegistry::new(&device);
-        let sdf_pipeline = SdfPipeline::new(&device);
-        let mask_feather_pipeline = MaskFeatherPipeline::new(&device);
+        let texture_sampler_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("gpu-texture-sampler-bind-group-layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+            });
+        let vertex_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("gpu-fullscreen-shader"),
+            source: wgpu::ShaderSource::Wgsl(FULLSCREEN_SHADER_SOURCE.into()),
+        });
+        let blit_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("gpu-blit-shader"),
+            source: wgpu::ShaderSource::Wgsl(BLIT_SHADER_SOURCE.into()),
+        });
+        let blit_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("gpu-blit-pipeline-layout"),
+            bind_group_layouts: &[Some(&texture_sampler_bind_group_layout)],
+            immediate_size: 0,
+        });
+        let blit_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("gpu-blit-pipeline"),
+            layout: Some(&blit_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &vertex_shader_module,
+                entry_point: Some("vertex_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: std::mem::size_of::<[f32; 2]>() as u64,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[wgpu::VertexAttribute {
+                        format: wgpu::VertexFormat::Float32x2,
+                        offset: 0,
+                        shader_location: 0,
+                    }],
+                }],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &blit_shader_module,
+                entry_point: Some("fragment_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: GPU_TEXTURE_FORMAT,
+                    blend: None,
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            }),
+            primitive: wgpu::PrimitiveState::default(),
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview_mask: None,
+            cache: None,
+        });
 
         Ok(Self {
             instance,
@@ -89,24 +149,9 @@ impl GpuContext {
             fullscreen_quad,
             linear_sampler,
             nearest_sampler,
-            shader_registry,
-            sdf_pipeline,
-            mask_feather_pipeline,
+            texture_sampler_bind_group_layout,
+            blit_pipeline,
         })
-    }
-
-    pub fn apply_effects(
-        &self,
-        options: ApplyEffectsOptions<'_>,
-    ) -> Result<wgpu::Texture, GpuError> {
-        apply_effects(self, options)
-    }
-
-    pub fn apply_mask_feather(
-        &self,
-        options: ApplyMaskFeatherOptions<'_>,
-    ) -> wgpu::Texture {
-        self.mask_feather_pipeline.apply_mask_feather(self, options)
     }
 
     pub fn create_render_texture(
@@ -162,12 +207,8 @@ impl GpuContext {
         &self.nearest_sampler
     }
 
-    pub fn shader_registry(&self) -> &ShaderRegistry {
-        &self.shader_registry
-    }
-
-    pub fn sdf_pipeline(&self) -> &SdfPipeline {
-        &self.sdf_pipeline
+    pub fn texture_sampler_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
+        &self.texture_sampler_bind_group_layout
     }
 
     pub fn render_texture_to_surface(
@@ -202,7 +243,7 @@ impl GpuContext {
             .create_view(&wgpu::TextureViewDescriptor::default());
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("gpu-blit-bind-group"),
-            layout: self.shader_registry.effect_texture_bind_group_layout(),
+            layout: &self.texture_sampler_bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -237,7 +278,7 @@ impl GpuContext {
                 timestamp_writes: None,
                 multiview_mask: None,
             });
-            render_pass.set_pipeline(self.shader_registry.blit_pipeline());
+            render_pass.set_pipeline(&self.blit_pipeline);
             render_pass.set_vertex_buffer(0, self.fullscreen_quad.slice(..));
             render_pass.set_bind_group(0, &bind_group, &[]);
             render_pass.draw(0..6, 0..1);
@@ -246,5 +287,51 @@ impl GpuContext {
         self.queue.submit([encoder.finish()]);
         surface_texture.present();
         Ok(())
+    }
+
+    #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+    pub fn import_offscreen_canvas_texture(
+        &self,
+        canvas: &wgpu::web_sys::OffscreenCanvas,
+        width: u32,
+        height: u32,
+        label: &'static str,
+    ) -> wgpu::Texture {
+        let texture = self.create_render_texture(width, height, label);
+        self.queue.copy_external_image_to_texture(
+            &wgpu::CopyExternalImageSourceInfo {
+                source: wgpu::ExternalImageSource::OffscreenCanvas(canvas.clone()),
+                origin: wgpu::Origin2d::ZERO,
+                flip_y: true,
+            },
+            wgpu::CopyExternalImageDestInfo {
+                texture: &texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+                color_space: wgpu::PredefinedColorSpace::Srgb,
+                premultiplied_alpha: false,
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+        texture
+    }
+
+    #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+    pub fn render_texture_to_offscreen_canvas(
+        &self,
+        texture: &wgpu::Texture,
+        canvas: &wgpu::web_sys::OffscreenCanvas,
+        width: u32,
+        height: u32,
+    ) -> Result<(), GpuError> {
+        let surface = self
+            .instance
+            .create_surface(wgpu::SurfaceTarget::OffscreenCanvas(canvas.clone()))?;
+        self.render_texture_to_surface(texture, &surface, width, height)
     }
 }

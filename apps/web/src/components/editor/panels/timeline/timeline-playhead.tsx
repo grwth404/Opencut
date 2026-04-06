@@ -7,6 +7,7 @@ import {
 	timelineTimeToSnappedPixels,
 } from "@/lib/timeline";
 import { useTimelinePlayhead } from "@/hooks/timeline/use-timeline-playhead";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { useEditor } from "@/hooks/use-editor";
 import {
 	TIMELINE_SCROLLBAR_SIZE_PX,
@@ -72,10 +73,11 @@ export function TimelinePlayhead({
 		if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
 
 		event.preventDefault();
-		const step = 1 / Math.max(1, editor.project.getActive().settings.fps);
+		const fps = editor.project.getActive().settings.fps;
+		const ticksPerFrame = Math.round(TICKS_PER_SECOND * fps.denominator / fps.numerator);
 		const direction = event.key === "ArrowRight" ? 1 : -1;
 		const now = editor.playback.getCurrentTime();
-		const nextTime = Math.max(0, Math.min(duration, now + direction * step));
+		const nextTime = Math.max(0, Math.min(duration, now + direction * ticksPerFrame));
 
 		editor.playback.seek({ time: nextTime });
 	};

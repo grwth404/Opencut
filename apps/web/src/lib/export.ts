@@ -1,3 +1,4 @@
+import type { FrameRate } from "opencut-wasm";
 import { EXPORT_MIME_TYPES } from "@/constants/export-constants";
 
 export const EXPORT_QUALITY_VALUES = [
@@ -15,7 +16,7 @@ export type ExportQuality = (typeof EXPORT_QUALITY_VALUES)[number];
 export interface ExportOptions {
 	format: ExportFormat;
 	quality: ExportQuality;
-	fps?: number;
+	fps?: FrameRate;
 	includeAudio?: boolean;
 }
 

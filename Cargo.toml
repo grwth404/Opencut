@@ -4,5 +4,8 @@ members = [
     "apps/desktop",
     "rust/crates/time",
     "rust/crates/bridge",
-    "rust/wasm", "rust/crates/gpu",
+    "rust/crates/effects",
+    "rust/crates/gpu",
+    "rust/crates/masks",
+    "rust/wasm",
 ]

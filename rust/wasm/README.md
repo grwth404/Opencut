@@ -11,7 +11,10 @@ npm install opencut-wasm
 ## Usage
 
 ```ts
-import { formatTimeCode } from "opencut-wasm";
+import { formatTimecode, mediaTimeFromSeconds } from "opencut-wasm";
+
+const ticks = mediaTimeFromSeconds(1.5);
+const label = formatTimecode({ ticks });
 ```
 
 All exports are documented in the [TypeScript definitions](./opencut_wasm.d.ts).

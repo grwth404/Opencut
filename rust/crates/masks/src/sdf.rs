@@ -1,9 +1,7 @@
 use bytemuck::{Pod, Zeroable};
+use gpu::{FULLSCREEN_SHADER_SOURCE, GPU_TEXTURE_FORMAT, GpuContext};
 use wgpu::util::DeviceExt;
 
-use crate::{GPU_TEXTURE_FORMAT, context::GpuContext};
-
-const FULLSCREEN_SHADER_SOURCE: &str = include_str!("shaders/fullscreen.wgsl");
 const JFA_INIT_SHADER_SOURCE: &str = include_str!("shaders/jfa_init.wgsl");
 const JFA_STEP_SHADER_SOURCE: &str = include_str!("shaders/jfa_step.wgsl");
 
@@ -36,7 +34,8 @@ struct JfaStepUniformBuffer {
 }
 
 impl SdfPipeline {
-    pub fn new(device: &wgpu::Device) -> Self {
+    pub fn new(context: &GpuContext) -> Self {
+        let device = context.device();
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("gpu-sdf-texture-bind-group-layout"),
@@ -213,13 +212,14 @@ impl SdfPipeline {
                     },
                 ],
             });
-        let uniform_buffer = context
-            .device()
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("gpu-sdf-uniform-buffer"),
-                contents: uniform_buffer_bytes,
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            });
+        let uniform_buffer =
+            context
+                .device()
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("gpu-sdf-uniform-buffer"),
+                    contents: uniform_buffer_bytes,
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                });
         let uniform_bind_group = context
             .device()
             .create_bind_group(&wgpu::BindGroupDescriptor {
@@ -230,11 +230,12 @@ impl SdfPipeline {
                     resource: uniform_buffer.as_entire_binding(),
                 }],
             });
-        let mut encoder = context
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("gpu-sdf-command-encoder"),
-            });
+        let mut encoder =
+            context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("gpu-sdf-command-encoder"),
+                });
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {

@@ -1,9 +1,9 @@
 use bytemuck::{Pod, Zeroable};
+use gpu::{FULLSCREEN_SHADER_SOURCE, GPU_TEXTURE_FORMAT, GpuContext};
 use wgpu::util::DeviceExt;
 
-use crate::{GPU_TEXTURE_FORMAT, context::GpuContext};
+use crate::SdfPipeline;
 
-const FULLSCREEN_SHADER_SOURCE: &str = include_str!("shaders/fullscreen.wgsl");
 const JFA_DISTANCE_SHADER_SOURCE: &str = include_str!("shaders/jfa_distance.wgsl");
 
 pub struct ApplyMaskFeatherOptions<'a> {
@@ -14,6 +14,7 @@ pub struct ApplyMaskFeatherOptions<'a> {
 }
 
 pub struct MaskFeatherPipeline {
+    sdf_pipeline: SdfPipeline,
     inside_texture_bind_group_layout: wgpu::BindGroupLayout,
     outside_texture_bind_group_layout: wgpu::BindGroupLayout,
     uniform_bind_group_layout: wgpu::BindGroupLayout,
@@ -29,7 +30,8 @@ struct DistanceUniformBuffer {
 }
 
 impl MaskFeatherPipeline {
-    pub fn new(device: &wgpu::Device) -> Self {
+    pub fn new(context: &GpuContext) -> Self {
+        let device = context.device();
         let inside_texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("gpu-mask-distance-inside-layout"),
@@ -140,6 +142,7 @@ impl MaskFeatherPipeline {
         });
 
         Self {
+            sdf_pipeline: SdfPipeline::new(context),
             inside_texture_bind_group_layout,
             outside_texture_bind_group_layout,
             uniform_bind_group_layout,
@@ -157,11 +160,10 @@ impl MaskFeatherPipeline {
             feather,
         }: ApplyMaskFeatherOptions<'_>,
     ) -> wgpu::Texture {
-        let sdf = context
-            .sdf_pipeline()
+        let sdf = self
+            .sdf_pipeline
             .compute_signed_distance_field(context, mask, width, height);
-        let output_texture =
-            context.create_render_texture(width, height, "gpu-mask-feather-output");
+        let output_texture = context.create_render_texture(width, height, "masks-feather-output");
         let inside_view = sdf
             .inside_texture
             .create_view(&wgpu::TextureViewDescriptor::default());
@@ -201,17 +203,18 @@ impl MaskFeatherPipeline {
                     },
                 ],
             });
-        let uniform_buffer = context
-            .device()
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("gpu-mask-distance-uniform-buffer"),
-                contents: bytemuck::bytes_of(&DistanceUniformBuffer {
-                    resolution: [width as f32, height as f32],
-                    feather_half: feather / 2.0,
-                    _padding: 0.0,
-                }),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            });
+        let uniform_buffer =
+            context
+                .device()
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("gpu-mask-distance-uniform-buffer"),
+                    contents: bytemuck::bytes_of(&DistanceUniformBuffer {
+                        resolution: [width as f32, height as f32],
+                        feather_half: feather / 2.0,
+                        _padding: 0.0,
+                    }),
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                });
         let uniform_bind_group = context
             .device()
             .create_bind_group(&wgpu::BindGroupDescriptor {
@@ -222,11 +225,12 @@ impl MaskFeatherPipeline {
                     resource: uniform_buffer.as_entire_binding(),
                 }],
             });
-        let mut encoder = context
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("gpu-mask-distance-command-encoder"),
-            });
+        let mut encoder =
+            context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("gpu-mask-distance-command-encoder"),
+                });
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {

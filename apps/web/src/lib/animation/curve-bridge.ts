@@ -1,4 +1,3 @@
-import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
 import {
 	getDefaultLeftHandle,
 	getDefaultRightHandle,
@@ -25,7 +24,7 @@ export function getNormalizedCubicBezierForScalarSegment({
 	const spanTime = rightKey.time - leftKey.time;
 	const spanValue = rightKey.value - leftKey.value;
 	if (
-		Math.abs(spanTime) <= TIME_EPSILON_SECONDS ||
+		spanTime === 0 ||
 		Math.abs(spanValue) <= VALUE_EPSILON
 	) {
 		return null;
@@ -59,7 +58,7 @@ export function getCurveHandlesForNormalizedCubicBezier({
 	const spanTime = rightKey.time - leftKey.time;
 	const spanValue = rightKey.value - leftKey.value;
 	if (
-		Math.abs(spanTime) <= TIME_EPSILON_SECONDS ||
+		spanTime === 0 ||
 		Math.abs(spanValue) <= VALUE_EPSILON
 	) {
 		return null;

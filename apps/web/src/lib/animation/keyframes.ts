@@ -14,7 +14,6 @@ import type {
 	ScalarCurveKeyframePatch,
 	ScalarSegmentType,
 } from "@/lib/animation/types";
-import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
 import { generateUUID } from "@/utils/id";
 import {
 	cloneAnimationBinding,
@@ -44,7 +43,7 @@ function isNearlySameTime({
 	leftTime: number;
 	rightTime: number;
 }): boolean {
-	return Math.abs(leftTime - rightTime) <= TIME_EPSILON_SECONDS;
+	return leftTime === rightTime;
 }
 
 function hasChannelKeys({
@@ -1032,8 +1031,8 @@ function splitScalarChannelAtTime({
 		const rightKey = normalizedChannel.keys[keyIndex + 1];
 		if (
 			!(
-				splitTime > leftKey.time + TIME_EPSILON_SECONDS &&
-				splitTime < rightKey.time - TIME_EPSILON_SECONDS
+				splitTime > leftKey.time &&
+				splitTime < rightKey.time
 			)
 		) {
 			continue;

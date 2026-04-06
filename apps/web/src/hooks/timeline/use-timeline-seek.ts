@@ -1,7 +1,8 @@
 import { useCallback, useRef } from "react";
 import type { MutableRefObject, RefObject } from "react";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
-import { getSnappedSeekTime } from "opencut-wasm";
+import { snappedSeekTime } from "opencut-wasm";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { useEditor } from "../use-editor";
 
 interface UseTimelineSeekProps {
@@ -127,17 +128,18 @@ export function useTimelineSeek({
 			const mouseX = event.clientX - rect.left;
 			const scrollLeft = scrollContainer.scrollLeft;
 
-			const rawTime = Math.max(
-				0,
-				Math.min(
-					duration,
-					(mouseX + scrollLeft) /
-						(BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel),
-				),
-			);
+		const rawTimeSeconds = Math.max(
+			0,
+			Math.min(
+				duration / TICKS_PER_SECOND,
+				(mouseX + scrollLeft) /
+					(BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel),
+			),
+		);
+		const rawTime = Math.round(rawTimeSeconds * TICKS_PER_SECOND);
 
-			const projectFps = activeProject?.settings.fps || 30;
-			const time = getSnappedSeekTime({ rawTime, duration, fps: projectFps });
+		const rate = activeProject?.settings.fps;
+		const time = rate ? (snappedSeekTime({ time: rawTime, duration, rate }) ?? rawTime) : rawTime;
 			seek(time);
 			editor.project.setTimelineViewState({
 				viewState: {
@@ -154,7 +156,8 @@ export function useTimelineSeek({
 			tracksScrollRef,
 			seek,
 			editor,
-			activeProject?.settings.fps,
+			activeProject?.settings.fps.numerator,
+		activeProject?.settings.fps.denominator,
 		],
 	);
 

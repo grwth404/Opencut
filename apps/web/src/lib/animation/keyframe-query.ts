@@ -1,4 +1,3 @@
-import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
 import type {
 	AnimationBindingInstance,
 	AnimationChannel,
@@ -76,8 +75,7 @@ function getUniqueBindingKeyframeMatches({
 		const previousMatch = uniqueMatches[uniqueMatches.length - 1];
 		if (
 			!previousMatch ||
-			Math.abs(previousMatch.keyframe.time - match.keyframe.time) >
-				TIME_EPSILON_SECONDS
+			previousMatch.keyframe.time !== match.keyframe.time
 		) {
 			uniqueMatches.push(match);
 			continue;
@@ -249,9 +247,7 @@ export function getKeyframeAtTime({
 		matches: getBindingKeyframeMatches({
 			animations,
 			binding,
-		}).filter(({ keyframe }) =>
-			Math.abs(keyframe.time - time) <= TIME_EPSILON_SECONDS,
-		),
+		}).filter(({ keyframe }) => keyframe.time === time),
 	});
 	if (!keyframeMatch) {
 		return null;

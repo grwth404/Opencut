@@ -8,7 +8,7 @@ import { enforceMainTrackStart } from "@/lib/timeline/placement";
 import type { RetimeConfig, TimelineElement, TimelineTrack } from "@/lib/timeline";
 import { isRetimableElement } from "@/lib/timeline";
 
-type ElementUpdateField = keyof TimelineElement;
+type ElementUpdateField = keyof TimelineElement | string;
 
 export interface ElementUpdateContext {
 	tracks: TimelineTrack[];

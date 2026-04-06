@@ -2,6 +2,8 @@ import { type JSX, useLayoutEffect, useRef } from "react";
 import {
 	BASE_TIMELINE_PIXELS_PER_SECOND,
 } from "@/lib/timeline/scale";
+import { mediaTimeToSeconds } from "opencut-wasm";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { TIMELINE_RULER_HEIGHT_PX } from "./layout";
 import { DEFAULT_FPS } from "@/lib/fps/constants";
 import { useEditor } from "@/hooks/use-editor";
@@ -30,17 +32,18 @@ export function TimelineRuler({
 	handleRulerTrackingMouseDown,
 	handleRulerMouseDown,
 }: TimelineRulerProps) {
-	const duration = useEditor((e) => e.timeline.getTotalDuration());
+	const durationTicks = useEditor((e) => e.timeline.getTotalDuration());
+	const durationSeconds = mediaTimeToSeconds({ time: durationTicks });
 	const pixelsPerSecond = BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel;
-	const visibleDuration = dynamicTimelineWidth / pixelsPerSecond;
-	const effectiveDuration = Math.max(duration, visibleDuration);
+	const visibleDurationSeconds = dynamicTimelineWidth / pixelsPerSecond;
+	const effectiveDurationSeconds = Math.max(durationSeconds, visibleDurationSeconds);
 	const fps =
 		useEditor((e) => e.project.getActiveOrNull()?.settings.fps) ?? DEFAULT_FPS;
 	const { labelIntervalSeconds, tickIntervalSeconds } = getRulerConfig({
 		zoomLevel,
 		fps,
 	});
-	const tickCount = Math.ceil(effectiveDuration / tickIntervalSeconds) + 1;
+	const tickCount = Math.ceil(effectiveDurationSeconds / tickIntervalSeconds) + 1;
 
 	const { scrollLeft, viewportWidth } = useScrollPosition({
 		scrollRef: tracksScrollRef,
@@ -61,20 +64,20 @@ export function TimelineRuler({
 		prevZoomRef.current = zoomLevel;
 	}, [zoomLevel]);
 
-	const visibleStartTime = Math.max(
+	const visibleStartTimeSeconds = Math.max(
 		0,
 		(scrollLeft - bufferPx) / pixelsPerSecond,
 	);
-	const visibleEndTime =
+	const visibleEndTimeSeconds =
 		(scrollLeft + viewportWidth + bufferPx) / pixelsPerSecond;
 
 	const startTickIndex = Math.max(
 		0,
-		Math.floor(visibleStartTime / tickIntervalSeconds),
+		Math.floor(visibleStartTimeSeconds / tickIntervalSeconds),
 	);
 	const endTickIndex = Math.min(
 		tickCount - 1,
-		Math.ceil(visibleEndTime / tickIntervalSeconds),
+		Math.ceil(visibleEndTimeSeconds / tickIntervalSeconds),
 	);
 
 	const timelineTicks: Array<JSX.Element> = [];
@@ -83,14 +86,16 @@ export function TimelineRuler({
 		tickIndex <= endTickIndex;
 		tickIndex += 1
 	) {
-		const time = tickIndex * tickIntervalSeconds;
-		if (time > effectiveDuration) break;
+		const timeSeconds = tickIndex * tickIntervalSeconds;
+		if (timeSeconds > effectiveDurationSeconds) break;
 
-		const showLabel = shouldShowLabel({ time, labelIntervalSeconds });
+		const timeTicks = Math.round(timeSeconds * TICKS_PER_SECOND);
+		const showLabel = shouldShowLabel({ time: timeSeconds, labelIntervalSeconds });
 		timelineTicks.push(
 			<TimelineTick
 				key={tickIndex}
-				time={time}
+				time={timeTicks}
+				timeInSeconds={timeSeconds}
 				zoomLevel={zoomLevel}
 				fps={fps}
 				showLabel={showLabel}
@@ -104,7 +109,7 @@ export function TimelineRuler({
 			tabIndex={0}
 			aria-label="Timeline ruler"
 			aria-valuemin={0}
-			aria-valuemax={effectiveDuration}
+			aria-valuemax={effectiveDurationSeconds}
 			aria-valuenow={0}
 			className="relative flex-1 overflow-x-visible"
 			style={{ height: TIMELINE_RULER_HEIGHT_PX }}

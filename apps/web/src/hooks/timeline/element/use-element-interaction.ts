@@ -10,8 +10,9 @@ import { useEditor } from "@/hooks/use-editor";
 import { useShiftKey } from "@/hooks/use-shift-key";
 import { useElementSelection } from "@/hooks/timeline/element/use-element-selection";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { TIMELINE_DRAG_THRESHOLD_PX } from "@/components/editor/panels/timeline/interaction";
-import { snapTimeToFrame } from "opencut-wasm";
+import { roundToFrame } from "opencut-wasm";
 import { computeDropTarget } from "@/components/editor/panels/timeline/drop-target";
 import { getMouseTimeFromClientX } from "@/lib/timeline/drag-utils";
 import { generateUUID } from "@/utils/id";
@@ -67,7 +68,8 @@ function getClickOffsetTime({
 	zoomLevel: number;
 }): number {
 	const clickOffsetX = clientX - elementRect.left;
-	return clickOffsetX / (BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel);
+	const seconds = clickOffsetX / (BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel);
+	return Math.round(seconds * TICKS_PER_SECOND);
 }
 
 function getVerticalDragDirection({
@@ -297,15 +299,17 @@ export function useElementInteraction({
 						zoomLevel,
 						scrollLeft,
 					});
-					const adjustedTime =
-						mouseTime - pendingDragRef.current.clickOffsetTime;
-					const snappedTime = snapTimeToFrame({
-						time: adjustedTime,
-						fps: activeProject.settings.fps,
-					});
-					startDrag({
-						...pendingDragRef.current,
-						initialCurrentTime: snappedTime,
+				const adjustedTime = Math.max(
+					0,
+					mouseTime - pendingDragRef.current.clickOffsetTime,
+				);
+				const snappedTime = roundToFrame({
+					time: adjustedTime,
+					rate: activeProject.settings.fps,
+				}) ?? adjustedTime;
+				startDrag({
+					...pendingDragRef.current,
+					initialCurrentTime: snappedTime,
 						initialCurrentMouseY: clientY,
 					});
 					startedDragThisEvent = true;
@@ -343,9 +347,9 @@ export function useElementInteraction({
 				zoomLevel,
 				scrollLeft,
 			});
-			const adjustedTime = mouseTime - dragState.clickOffsetTime;
+			const adjustedTime = Math.max(0, mouseTime - dragState.clickOffsetTime);
 			const fps = activeProject.settings.fps;
-			const frameSnappedTime = snapTimeToFrame({ time: adjustedTime, fps });
+			const frameSnappedTime = roundToFrame({ time: adjustedTime, rate: fps }) ?? adjustedTime;
 
 			const sourceTrack = tracks.find(({ id }) => id === dragState.trackId);
 			const movingElement = sourceTrack?.elements.find(

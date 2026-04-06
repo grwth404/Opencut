@@ -12,7 +12,6 @@ import {
 	resolveTransformAtTime,
 } from "@/lib/animation";
 import { resolveEffectParamsAtTime } from "@/lib/animation/effect-param-channel";
-import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
 import { effectsRegistry, resolveEffectPasses } from "@/lib/effects";
 import { masksRegistry } from "@/lib/masks";
 import { getSourceTimeAtClipTime } from "@/lib/retime";
@@ -58,7 +57,7 @@ export abstract class VisualNode<
 	protected isInRange({ time }: { time: number }): boolean {
 		const localTime = time - this.params.timeOffset;
 		return (
-			localTime >= -TIME_EPSILON_SECONDS &&
+			localTime >= 0 &&
 			localTime < this.params.duration
 		);
 	}

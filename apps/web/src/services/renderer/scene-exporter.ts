@@ -12,6 +12,10 @@ import {
 	QUALITY_HIGH,
 	QUALITY_VERY_HIGH,
 } from "mediabunny";
+import type { FrameRate } from "opencut-wasm";
+import { mediaTimeToSeconds } from "opencut-wasm";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
+import { frameRateToFloat } from "@/lib/fps/utils";
 import type { RootNode } from "./nodes/root-node";
 import type { ExportFormat, ExportQuality } from "@/lib/export";
 import { CanvasRenderer } from "./canvas-renderer";
@@ -19,7 +23,7 @@ import { CanvasRenderer } from "./canvas-renderer";
 type ExportParams = {
 	width: number;
 	height: number;
-	fps: number;
+	fps: FrameRate;
 	format: ExportFormat;
 	quality: ExportQuality;
 	shouldIncludeAudio?: boolean;
@@ -80,8 +84,10 @@ export class SceneExporter extends EventEmitter<SceneExporterEvents> {
 	}: {
 		rootNode: RootNode;
 	}): Promise<ArrayBuffer | null> {
-		const { fps } = this.renderer;
-		const frameCount = Math.ceil(rootNode.duration * fps);
+		const fps = this.renderer.fps;
+		const fpsFloat = frameRateToFloat(fps);
+		const ticksPerFrame = Math.round(TICKS_PER_SECOND * fps.denominator / fps.numerator);
+		const frameCount = Math.floor(rootNode.duration / ticksPerFrame);
 
 		const outputFormat =
 			this.format === "webm" ? new WebMOutputFormat() : new Mp4OutputFormat();
@@ -96,7 +102,7 @@ export class SceneExporter extends EventEmitter<SceneExporterEvents> {
 			bitrate: qualityMap[this.quality],
 		});
 
-		output.addVideoTrack(videoSource, { frameRate: fps });
+		output.addVideoTrack(videoSource, { frameRate: fpsFloat });
 
 		let audioSource: AudioBufferSource | null = null;
 		if (this.shouldIncludeAudio && this.audioBuffer) {
@@ -134,9 +140,10 @@ export class SceneExporter extends EventEmitter<SceneExporterEvents> {
 				return null;
 			}
 
-			const time = i / fps;
-			await this.renderer.render({ node: rootNode, time });
-			await videoSource.add(time, 1 / fps);
+			const timeTicks = i * ticksPerFrame;
+			const timeSeconds = mediaTimeToSeconds({ time: timeTicks });
+			await this.renderer.render({ node: rootNode, time: timeTicks });
+			await videoSource.add(timeSeconds, 1 / fpsFloat);
 
 			this.emit("progress", i / frameCount);
 		}

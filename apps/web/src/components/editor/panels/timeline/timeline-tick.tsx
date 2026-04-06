@@ -1,17 +1,20 @@
 "use client";
 
+import type { FrameRate } from "opencut-wasm";
 import { timelineTimeToSnappedPixels } from "@/lib/timeline";
 import { formatRulerLabel } from "@/lib/timeline/ruler-utils";
 
 interface TimelineTickProps {
 	time: number;
+	timeInSeconds: number;
 	zoomLevel: number;
-	fps: number;
+	fps: FrameRate;
 	showLabel: boolean;
 }
 
 export function TimelineTick({
 	time,
+	timeInSeconds,
 	zoomLevel,
 	fps,
 	showLabel,
@@ -19,7 +22,7 @@ export function TimelineTick({
 	const leftPosition = timelineTimeToSnappedPixels({ time, zoomLevel });
 
 	if (showLabel) {
-		const label = formatRulerLabel({ timeInSeconds: time, fps });
+		const label = formatRulerLabel({ timeInSeconds, fps });
 		return (
 			<span
 				className="text-muted-foreground/85 absolute top-1 select-none text-[10px] leading-none"

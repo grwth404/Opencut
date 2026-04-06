@@ -1,4 +1,6 @@
+import type { FrameRate } from "opencut-wasm";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
+import { frameRateToFloat } from "@/lib/fps/utils";
 
 /**
  * frame intervals for labels - starts at 2 so there's always at least
@@ -54,15 +56,16 @@ export function getRulerConfig({
 	fps,
 }: {
 	zoomLevel: number;
-	fps: number;
+	fps: FrameRate;
 }): RulerConfig {
+	const fpsFloat = frameRateToFloat(fps);
 	const pixelsPerSecond = BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel;
-	const pixelsPerFrame = pixelsPerSecond / fps;
+	const pixelsPerFrame = pixelsPerSecond / fpsFloat;
 
 	const labelIntervalSeconds = findOptimalInterval({
 		pixelsPerFrame,
 		pixelsPerSecond,
-		fps,
+		fps: fpsFloat,
 		minSpacingPx: MIN_LABEL_SPACING_PX,
 		frameIntervals: LABEL_FRAME_INTERVALS,
 	});
@@ -70,7 +73,7 @@ export function getRulerConfig({
 	const rawTickIntervalSeconds = findOptimalInterval({
 		pixelsPerFrame,
 		pixelsPerSecond,
-		fps,
+		fps: fpsFloat,
 		minSpacingPx: MIN_TICK_SPACING_PX,
 		frameIntervals: TICK_FRAME_INTERVALS,
 	});
@@ -81,7 +84,7 @@ export function getRulerConfig({
 		labelIntervalSeconds,
 		pixelsPerFrame,
 		pixelsPerSecond,
-		fps,
+		fps: fpsFloat,
 	});
 
 	return { labelIntervalSeconds, tickIntervalSeconds };
@@ -197,13 +200,13 @@ export function formatRulerLabel({
 	fps,
 }: {
 	timeInSeconds: number;
-	fps: number;
+	fps: FrameRate;
 }): string {
 	if (isSecondBoundary({ timeInSeconds })) {
 		return formatTimestamp({ timeInSeconds });
 	}
 
-	const frameWithinSecond = getFrameWithinSecond({ timeInSeconds, fps });
+	const frameWithinSecond = getFrameWithinSecond({ timeInSeconds, fps: frameRateToFloat(fps) });
 	return `${frameWithinSecond}f`;
 }
 

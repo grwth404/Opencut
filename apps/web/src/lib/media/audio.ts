@@ -21,6 +21,8 @@ import { mediaSupportsAudio } from "@/lib/media/media-utils";
 import { getSourceTimeAtClipTime, renderRetimedBuffer } from "@/lib/retime";
 import { Input, ALL_FORMATS, BlobSource, AudioBufferSink } from "mediabunny";
 
+import { TICKS_PER_SECOND } from "@/lib/wasm";
+
 const MAX_AUDIO_CHANNELS = 2;
 const EXPORT_SAMPLE_RATE = 44100;
 const COARSE_SAMPLE_COUNT = 2048;
@@ -122,10 +124,10 @@ export async function collectAudioElements({
 						return {
 							timelineElement: element,
 							buffer: audioBuffer,
-							startTime: element.startTime,
-							duration: element.duration,
-							trimStart: element.trimStart,
-							trimEnd: element.trimEnd,
+							startTime: element.startTime / TICKS_PER_SECOND,
+							duration: element.duration / TICKS_PER_SECOND,
+							trimStart: element.trimStart / TICKS_PER_SECOND,
+							trimEnd: element.trimEnd / TICKS_PER_SECOND,
 							volume: resolveEffectiveAudioGain({
 								element,
 								trackMuted: isTrackMuted,
@@ -152,10 +154,10 @@ export async function collectAudioElements({
 						return {
 							timelineElement: element,
 							buffer: audioBuffer,
-							startTime: element.startTime,
-							duration: element.duration,
-							trimStart: element.trimStart,
-							trimEnd: element.trimEnd,
+							startTime: element.startTime / TICKS_PER_SECOND,
+							duration: element.duration / TICKS_PER_SECOND,
+							trimStart: element.trimStart / TICKS_PER_SECOND,
+							trimEnd: element.trimEnd / TICKS_PER_SECOND,
 							volume: resolveEffectiveAudioGain({
 								element,
 								trackMuted: isTrackMuted,
@@ -337,16 +339,16 @@ async function fetchLibraryAudioSource({
 			type: "audio/mpeg",
 		});
 
-		return {
-			timelineElement: element,
-			file,
-			startTime: element.startTime,
-			duration: element.duration,
-			trimStart: element.trimStart,
-			trimEnd: element.trimEnd,
-			volume,
-			retime: element.retime,
-		};
+	return {
+		timelineElement: element,
+		file,
+		startTime: element.startTime / TICKS_PER_SECOND,
+		duration: element.duration / TICKS_PER_SECOND,
+		trimStart: element.trimStart / TICKS_PER_SECOND,
+		trimEnd: element.trimEnd / TICKS_PER_SECOND,
+		volume,
+		retime: element.retime,
+	};
 	} catch (error) {
 		console.warn("Failed to fetch library audio:", error);
 		return null;
@@ -404,10 +406,10 @@ function collectMediaAudioSource({
 	return {
 		timelineElement: element,
 		file: mediaAsset.file,
-		startTime: element.startTime,
-		duration: element.duration,
-		trimStart: element.trimStart,
-		trimEnd: element.trimEnd,
+		startTime: element.startTime / TICKS_PER_SECOND,
+		duration: element.duration / TICKS_PER_SECOND,
+		trimStart: element.trimStart / TICKS_PER_SECOND,
+		trimEnd: element.trimEnd / TICKS_PER_SECOND,
 		volume,
 		retime: element.retime,
 	};
@@ -429,10 +431,10 @@ function collectMediaAudioClip({
 		id: element.id,
 		sourceKey: mediaAsset.id,
 		file: mediaAsset.file,
-		startTime: element.startTime,
-		duration: element.duration,
-		trimStart: element.trimStart,
-		trimEnd: element.trimEnd,
+		startTime: element.startTime / TICKS_PER_SECOND,
+		duration: element.duration / TICKS_PER_SECOND,
+		trimStart: element.trimStart / TICKS_PER_SECOND,
+		trimEnd: element.trimEnd / TICKS_PER_SECOND,
 		volume,
 		muted,
 		retime: element.retime,
@@ -602,7 +604,8 @@ export async function createTimelineAudioBuffer({
 	if (audioElements.length === 0) return null;
 
 	const outputChannels = 2;
-	const outputLength = Math.ceil(duration * sampleRate);
+	const durationSeconds = duration / TICKS_PER_SECOND;
+	const outputLength = Math.ceil(durationSeconds * sampleRate);
 	const outputBuffer = context.createBuffer(
 		outputChannels,
 		outputLength,

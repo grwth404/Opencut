@@ -1,4 +1,5 @@
 import type { CanvasRenderer } from "../canvas-renderer";
+import { mediaTimeToSeconds } from "opencut-wasm";
 import { VisualNode, type VisualNodeParams } from "./visual-node";
 import { videoCache } from "@/services/video-cache/service";
 
@@ -16,12 +17,13 @@ export class VideoNode extends VisualNode<VideoNodeParams> {
 			return;
 		}
 
-		const videoTime = this.getSourceLocalTime({ time });
+		const videoTimeTicks = this.getSourceLocalTime({ time });
+		const videoTimeSeconds = mediaTimeToSeconds({ time: videoTimeTicks });
 
 		const frame = await videoCache.getFrameAt({
 			mediaId: this.params.mediaId,
 			file: this.params.file,
-			time: videoTime,
+			time: videoTimeSeconds,
 		});
 
 		if (frame) {

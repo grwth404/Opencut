@@ -8,7 +8,6 @@ import type {
 	ScalarAnimationKey,
 	ScalarSegmentType,
 } from "@/lib/animation/types";
-import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
 import { clamp } from "@/utils/math";
 import {
 	getBezierPoint,
@@ -36,10 +35,7 @@ function isWithinTimePair({
 	leftTime: number;
 	rightTime: number;
 }): boolean {
-	return (
-		time >= leftTime - TIME_EPSILON_SECONDS &&
-		time <= rightTime + TIME_EPSILON_SECONDS
-	);
+	return time >= leftTime && time <= rightTime;
 }
 
 function lerpNumber({
@@ -67,7 +63,7 @@ function normalizeRightHandle({
 		return undefined;
 	}
 
-	const span = Math.max(TIME_EPSILON_SECONDS, rightKey.time - leftKey.time);
+	const span = Math.max(1, rightKey.time - leftKey.time);
 	return {
 		dt: Math.min(span, Math.max(0, handle.dt)),
 		dv: handle.dv,
@@ -87,7 +83,7 @@ function normalizeLeftHandle({
 		return undefined;
 	}
 
-	const span = Math.max(TIME_EPSILON_SECONDS, rightKey.time - leftKey.time);
+	const span = Math.max(1, rightKey.time - leftKey.time);
 	return {
 		dt: Math.max(-span, Math.min(0, handle.dt)),
 		dv: handle.dv,
@@ -187,7 +183,7 @@ function extrapolateScalarEdge({
 	}
 
 	const span = neighborKey.time - edgeKey.time;
-	if (Math.abs(span) <= TIME_EPSILON_SECONDS) {
+	if (span === 0) {
 		return edgeKey.value;
 	}
 
@@ -228,8 +224,8 @@ export function getScalarChannelValueAtTime({
 		return fallbackValue;
 	}
 
-	if (time <= firstKey.time + TIME_EPSILON_SECONDS) {
-		if (time < firstKey.time - TIME_EPSILON_SECONDS) {
+	if (time <= firstKey.time) {
+		if (time < firstKey.time) {
 			return extrapolateScalarEdge({
 				mode: normalizedChannel.extrapolation?.before ?? "hold",
 				edgeKey: firstKey,
@@ -241,8 +237,8 @@ export function getScalarChannelValueAtTime({
 		return firstKey.value;
 	}
 
-	if (time >= lastKey.time - TIME_EPSILON_SECONDS) {
-		if (time > lastKey.time + TIME_EPSILON_SECONDS) {
+	if (time >= lastKey.time) {
+		if (time > lastKey.time) {
 			return extrapolateScalarEdge({
 				mode: normalizedChannel.extrapolation?.after ?? "hold",
 				edgeKey: lastKey,
@@ -261,7 +257,7 @@ export function getScalarChannelValueAtTime({
 	) {
 		const leftKey = normalizedChannel.keys[keyIndex];
 		const rightKey = normalizedChannel.keys[keyIndex + 1];
-		if (Math.abs(time - rightKey.time) <= TIME_EPSILON_SECONDS) {
+		if (time === rightKey.time) {
 			return rightKey.value;
 		}
 
@@ -280,7 +276,7 @@ export function getScalarChannelValueAtTime({
 		}
 
 		const span = rightKey.time - leftKey.time;
-		if (Math.abs(span) <= TIME_EPSILON_SECONDS) {
+		if (span === 0) {
 			return rightKey.value;
 		}
 
@@ -336,7 +332,7 @@ export function getDiscreteChannelValueAtTime({
 	});
 	let currentValue = fallbackValue;
 	for (const key of normalizedChannel.keys) {
-		if (time + TIME_EPSILON_SECONDS < key.time) {
+		if (time < key.time) {
 			break;
 		}
 		currentValue = key.value;

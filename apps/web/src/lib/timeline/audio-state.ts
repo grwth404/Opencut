@@ -32,6 +32,8 @@ export function hasAnimatedVolume({
 	});
 }
 
+import { TICKS_PER_SECOND } from "@/lib/wasm";
+
 export function resolveEffectiveAudioGain({
 	element,
 	trackMuted = false,
@@ -49,7 +51,7 @@ export function resolveEffectiveAudioGain({
 		baseValue: element.volume ?? 0,
 		animations: element.animations,
 		propertyPath: "volume",
-		localTime,
+		localTime: Math.round(localTime * TICKS_PER_SECOND),
 	});
 
 	return dBToLinear(resolvedDb);

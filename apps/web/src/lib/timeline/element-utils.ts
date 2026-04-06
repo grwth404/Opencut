@@ -1,4 +1,4 @@
-import { DEFAULT_NEW_ELEMENT_DURATION_SECONDS } from "@/lib/timeline/creation";
+import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
 import {
 	MASKABLE_ELEMENT_TYPES,
 	RETIMABLE_ELEMENT_TYPES,
@@ -115,7 +115,7 @@ export function buildTextElement({
 		type: "text",
 		name: t.name ?? DEFAULTS.text.element.name,
 		content: t.content ?? DEFAULTS.text.element.content,
-		duration: t.duration ?? DEFAULT_NEW_ELEMENT_DURATION_SECONDS,
+		duration: t.duration ?? DEFAULT_NEW_ELEMENT_DURATION,
 		startTime,
 		trimStart: 0,
 		trimEnd: 0,
@@ -150,7 +150,7 @@ export function buildEffectElement({
 		name: capitalizeFirstLetter({ string: instance.type }),
 		effectType,
 		params: instance.params,
-		duration: duration ?? DEFAULT_NEW_ELEMENT_DURATION_SECONDS,
+		duration: duration ?? DEFAULT_NEW_ELEMENT_DURATION,
 		startTime,
 		trimStart: 0,
 		trimEnd: 0,
@@ -178,7 +178,7 @@ export function buildStickerElement({
 		stickerId,
 		intrinsicWidth,
 		intrinsicHeight,
-		duration: DEFAULT_NEW_ELEMENT_DURATION_SECONDS,
+		duration: DEFAULT_NEW_ELEMENT_DURATION,
 		startTime,
 		trimStart: 0,
 		trimEnd: 0,
@@ -208,7 +208,7 @@ export function buildGraphicElement({
 		name: name ?? capitalizeFirstLetter({ string: instance.definitionId }),
 		definitionId: instance.definitionId,
 		params: { ...instance.params, ...(params ?? {}) } as ParamValues,
-		duration: DEFAULT_NEW_ELEMENT_DURATION_SECONDS,
+		duration: DEFAULT_NEW_ELEMENT_DURATION,
 		startTime,
 		trimStart: 0,
 		trimEnd: 0,

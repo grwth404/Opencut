@@ -13,8 +13,8 @@ import {
 import {
 	TIMELINE_ZOOM_MAX,
 	TIMELINE_ZOOM_MIN,
-	BASE_TIMELINE_PIXELS_PER_SECOND,
 } from "@/lib/timeline/scale";
+import { timelineTimeToPixels } from "@/lib/timeline/pixel-utils";
 import { useEditor } from "@/hooks/use-editor";
 import { zoomToSlider } from "@/lib/timeline/zoom-utils";
 
@@ -186,10 +186,8 @@ export function useTimelineZoom({
 		}
 
 		if (sliderPercent >= TIMELINE_ZOOM_ANCHOR_PLAYHEAD_THRESHOLD) {
-			const playheadPixelsBefore =
-				playheadTime * BASE_TIMELINE_PIXELS_PER_SECOND * previousZoom;
-			const playheadPixelsAfter =
-				playheadTime * BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel;
+		const playheadPixelsBefore = timelineTimeToPixels({ time: playheadTime, zoomLevel: previousZoom });
+		const playheadPixelsAfter = timelineTimeToPixels({ time: playheadTime, zoomLevel });
 
 			const viewportOffset = playheadPixelsBefore - currentScrollLeft;
 			const newScrollLeft = playheadPixelsAfter - viewportOffset;

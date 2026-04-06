@@ -7,3 +7,7 @@ edition = "2024"
 bytemuck = { version = "1.25.0", features = ["derive"] }
 thiserror = "2.0.18"
 wgpu = "29.0.1"
+
+[features]
+default = []
+wasm = []

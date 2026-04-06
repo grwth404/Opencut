@@ -4,16 +4,17 @@ import { toast } from "sonner";
 import type { MediaAsset } from "@/lib/media/types";
 import { generateUUID } from "@/utils/id";
 import { storageService } from "@/services/storage/service";
+import type { FrameRate } from "opencut-wasm";
 import { hasMediaId } from "@/lib/timeline/element-utils";
-import { getHighestImportedVideoFps } from "@/lib/fps/utils";
+import { frameRatesEqual, getHighestImportedVideoFps } from "@/lib/fps/utils";
 import { UpdateProjectSettingsCommand } from "@/lib/commands/project";
 
 export class AddMediaAssetCommand extends Command {
 	private assetId: string;
 	private savedAssets: MediaAsset[] | null = null;
 	private createdAsset: MediaAsset | null = null;
-	private previousProjectFps: number | null = null;
-	private appliedProjectFps: number | null = null;
+	private previousProjectFps: FrameRate | null = null;
+	private appliedProjectFps: FrameRate | null = null;
 
 	constructor(
 		private projectId: string,
@@ -112,14 +113,15 @@ export class AddMediaAssetCommand extends Command {
 
 		const activeProject = editor.project.getActiveOrNull();
 		if (!activeProject) return;
-		if (activeProject.settings.fps !== this.appliedProjectFps) return;
+		if (!this.appliedProjectFps || !frameRatesEqual(activeProject.settings.fps, this.appliedProjectFps)) return;
 
 		const highestRemainingVideoFps = getHighestImportedVideoFps({
 			mediaAssets: editor.media.getAssets(),
 		});
+		const appliedFpsFloat = this.appliedProjectFps.numerator / this.appliedProjectFps.denominator;
 		if (
 			highestRemainingVideoFps !== null &&
-			highestRemainingVideoFps >= this.appliedProjectFps
+			highestRemainingVideoFps >= appliedFpsFloat
 		) {
 			return;
 		}

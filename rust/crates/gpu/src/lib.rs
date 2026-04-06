@@ -1,17 +1,12 @@
 mod context;
-mod effect_pipeline;
-mod mask_feather;
-mod sdf_pipeline;
-mod shader_registry;
 
 use thiserror::Error;
 
-pub use wgpu;
 pub use context::GpuContext;
-pub use effect_pipeline::{ApplyEffectsOptions, EffectPass, UniformValue};
-pub use mask_feather::ApplyMaskFeatherOptions;
+pub use wgpu;
 
 pub const GPU_TEXTURE_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8Unorm;
+pub const FULLSCREEN_SHADER_SOURCE: &str = include_str!("shaders/fullscreen.wgsl");
 
 #[derive(Debug, Error)]
 pub enum GpuError {
@@ -23,18 +18,4 @@ pub enum GpuError {
     CreateSurface(#[from] wgpu::CreateSurfaceError),
     #[error("The output surface does not support the required texture format")]
     UnsupportedSurfaceFormat,
-    #[error("Unknown effect shader '{shader}'")]
-    UnknownEffectShader { shader: String },
-    #[error("Missing uniform '{uniform}' for shader '{shader}'")]
-    MissingUniform { shader: String, uniform: String },
-    #[error("Uniform '{uniform}' for shader '{shader}' must be a number")]
-    InvalidNumberUniform { shader: String, uniform: String },
-    #[error("Uniform '{uniform}' for shader '{shader}' must be a vector of length {expected_length}")]
-    InvalidVectorUniform {
-        shader: String,
-        uniform: String,
-        expected_length: usize,
-    },
-    #[error("Shader '{shader}' does not support uniform '{uniform}'")]
-    UnsupportedUniform { shader: String, uniform: String },
 }

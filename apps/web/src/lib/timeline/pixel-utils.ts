@@ -1,4 +1,5 @@
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
 
 export const TIMELINE_INDICATOR_LINE_WIDTH_PX = 2;
 
@@ -41,7 +42,7 @@ export function timelineTimeToPixels({
 	time: number;
 	zoomLevel: number;
 }): number {
-	return time * getTimelinePixelsPerSecond({ zoomLevel });
+	return (time / TICKS_PER_SECOND) * getTimelinePixelsPerSecond({ zoomLevel });
 }
 
 export function snapPixelToDeviceGrid({

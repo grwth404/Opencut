@@ -9,7 +9,8 @@ import type {
 import { generateUUID } from "@/utils/id";
 import { requiresMediaId } from "@/lib/timeline/element-utils";
 import type { MediaAsset } from "@/lib/media/types";
-import { DEFAULT_NEW_ELEMENT_DURATION_SECONDS } from "@/lib/timeline/creation";
+import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
+import { floatToFrameRate } from "@/lib/fps/utils";
 import { graphicsRegistry, registerDefaultGraphics } from "@/lib/graphics";
 import {
 	applyPlacement,
@@ -99,12 +100,12 @@ export class InsertElementCommand extends Command {
 				});
 			}
 
-			if (asset?.type === "video" && asset?.fps) {
-				editor.project.updateSettings({
-					settings: { fps: asset.fps },
-					pushHistory: false,
-				});
-			}
+		if (asset?.type === "video" && asset?.fps) {
+			editor.project.updateSettings({
+				settings: { fps: floatToFrameRate(asset.fps) },
+				pushHistory: false,
+			});
+		}
 		}
 
 		editor.timeline.updateTracks(updatedTracks);
@@ -136,7 +137,7 @@ export class InsertElementCommand extends Command {
 			startTime: element.startTime,
 			trimStart: element.trimStart ?? 0,
 			trimEnd: element.trimEnd ?? 0,
-			duration: element.duration ?? DEFAULT_NEW_ELEMENT_DURATION_SECONDS,
+			duration: element.duration ?? DEFAULT_NEW_ELEMENT_DURATION,
 		} as TimelineElement;
 	}
 

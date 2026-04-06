@@ -36,16 +36,16 @@ describe("getRaisedProjectFpsForImportedMedia", () => {
 	test("raises the project fps to match a higher-fps import", () => {
 		expect(
 			getRaisedProjectFpsForImportedMedia({
-				currentFps: 30,
+				currentFps: { numerator: 30, denominator: 1 },
 				importedAssets: [{ type: "video", fps: 60 }],
 			}),
-		).toBe(60);
+		).toEqual({ numerator: 60, denominator: 1 });
 	});
 
 	test("does not lower the project fps for lower-fps imports", () => {
 		expect(
 			getRaisedProjectFpsForImportedMedia({
-				currentFps: 60,
+				currentFps: { numerator: 60, denominator: 1 },
 				importedAssets: [{ type: "video", fps: 10 }],
 			}),
 		).toBeNull();
@@ -54,7 +54,7 @@ describe("getRaisedProjectFpsForImportedMedia", () => {
 	test("ignores non-video imports", () => {
 		expect(
 			getRaisedProjectFpsForImportedMedia({
-				currentFps: 30,
+				currentFps: { numerator: 30, denominator: 1 },
 				importedAssets: [
 					{ type: "image", fps: 60 },
 					{ type: "audio", fps: 120 },

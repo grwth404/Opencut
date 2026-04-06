@@ -7,6 +7,7 @@ import { useRafLoop } from "@/hooks/use-raf-loop";
 import { useContainerSize } from "@/hooks/use-container-size";
 import { useFullscreen } from "@/hooks/use-fullscreen";
 import { CanvasRenderer } from "@/services/renderer/canvas-renderer";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
 import type { RootNode } from "@/services/renderer/nodes/root-node";
 import { buildScene } from "@/services/renderer/scene-builder";
 import { PreviewInteractionOverlay } from "./preview-interaction-overlay";
@@ -129,12 +130,16 @@ function PreviewCanvas({
 			height: nativeHeight,
 			fps: activeProject.settings.fps,
 		});
-	}, [nativeWidth, nativeHeight, activeProject.settings.fps]);
+	}, [nativeWidth, nativeHeight, activeProject.settings.fps.numerator, activeProject.settings.fps.denominator]);
 
 	const render = useCallback(() => {
 		if (canvasRef.current && renderTree && !renderingRef.current) {
-			const renderTime = editor.playback.getCurrentTime();
-			const frame = Math.floor(renderTime * renderer.fps);
+		const renderTime = Math.min(
+			editor.playback.getCurrentTime(),
+			editor.timeline.getLastFrameTime(),
+		);
+		const ticksPerFrame = Math.round(TICKS_PER_SECOND * renderer.fps.denominator / renderer.fps.numerator);
+		const frame = Math.floor(renderTime / ticksPerFrame);
 
 			if (
 				frame !== lastFrameRef.current ||

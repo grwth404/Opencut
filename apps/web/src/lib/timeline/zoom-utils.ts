@@ -2,6 +2,7 @@ import {
 	BASE_TIMELINE_PIXELS_PER_SECOND,
 	TIMELINE_ZOOM_MAX,
 } from "@/lib/timeline/scale";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
 
 const PADDING_MAX_RATIO = 0.75;
 const PADDING_MIN_RATIO = 0.15;
@@ -14,12 +15,12 @@ export function getTimelineZoomMin({
 	duration: number;
 	containerWidth: number | null | undefined;
 }): number {
-	const safeDuration = Math.max(duration, 1);
+	const safeDurationSeconds = Math.max(duration / TICKS_PER_SECOND, 1);
 	const safeContainerWidth = containerWidth ?? 1000;
 	const contentRatioAtMinZoom = 1 - PADDING_MAX_RATIO;
 	const availableWidth = safeContainerWidth * contentRatioAtMinZoom;
 	const zoomToFit =
-		availableWidth / (safeDuration * BASE_TIMELINE_PIXELS_PER_SECOND);
+		availableWidth / (safeDurationSeconds * BASE_TIMELINE_PIXELS_PER_SECOND);
 
 	return Math.min(TIMELINE_ZOOM_MAX, zoomToFit);
 }

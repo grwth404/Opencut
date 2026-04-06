@@ -1,4 +1,5 @@
-import { getSnappedSeekTime } from "opencut-wasm";
+import { snappedSeekTime } from "opencut-wasm";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { useEffect, useCallback, useRef } from "react";
 import { useEdgeAutoScroll } from "@/hooks/timeline/use-edge-auto-scroll";
 import { useEditor } from "../use-editor";
@@ -6,6 +7,7 @@ import { useShiftKey } from "@/hooks/use-shift-key";
 import { findSnapPoints, snapToNearestPoint } from "@/lib/timeline/snap-utils";
 import {
 	getCenteredLineLeft,
+	timelineTimeToPixels,
 	timelineTimeToSnappedPixels,
 } from "@/lib/timeline";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
@@ -66,24 +68,24 @@ export function useTimelinePlayhead({
 			const rulerRect = ruler.getBoundingClientRect();
 			const relativeMouseX = event.clientX - rulerRect.left;
 
-			const timelineContentWidth =
-				duration * BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel;
+		const timelineContentWidth = timelineTimeToPixels({ time: duration, zoomLevel });
 
-			const clampedMouseX = Math.max(
-				0,
-				Math.min(timelineContentWidth, relativeMouseX),
-			);
+		const clampedMouseX = Math.max(
+			0,
+			Math.min(timelineContentWidth, relativeMouseX),
+		);
 
-			const rawTime = Math.max(
-				0,
-				Math.min(
-					duration,
-					clampedMouseX / (BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel),
-				),
-			);
+		const rawTimeSeconds = Math.max(
+			0,
+			Math.min(
+				duration / TICKS_PER_SECOND,
+				clampedMouseX / (BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel),
+			),
+		);
+		const rawTime = Math.round(rawTimeSeconds * TICKS_PER_SECOND);
 
-			const framesPerSecond = activeProject.settings.fps;
-			const frameTime = getSnappedSeekTime({ rawTime, duration, fps: framesPerSecond });
+		const rate = activeProject.settings.fps;
+		const frameTime = snappedSeekTime({ time: rawTime, duration, rate }) ?? rawTime;
 
 			const shouldSnap = snappingEnabled && !isShiftHeldRef.current;
 			const time = (() => {
@@ -161,7 +163,7 @@ export function useTimelinePlayhead({
 		getMouseClientX: () => lastMouseXRef.current,
 		rulerScrollRef,
 		tracksScrollRef,
-		contentWidth: duration * BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel,
+		contentWidth: timelineTimeToPixels({ time: duration, zoomLevel }),
 	});
 
 	useEffect(() => {
@@ -247,8 +249,10 @@ export function useTimelinePlayhead({
 			const tracksViewport = tracksScrollRef.current;
 			if (!rulerViewport || !tracksViewport) return;
 
-			const playheadPixels =
-				time * BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevelRef.current;
+		const playheadPixels = timelineTimeToPixels({
+			time,
+			zoomLevel: zoomLevelRef.current,
+		});
 			const viewportWidth = rulerViewport.clientWidth;
 			const scrollMinimum = 0;
 			const scrollMaximum = rulerViewport.scrollWidth - viewportWidth;

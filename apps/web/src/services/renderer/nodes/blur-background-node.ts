@@ -1,5 +1,5 @@
-import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
 import { buildGaussianBlurPasses, intensityToSigma } from "@/lib/effects/definitions/blur";
+import { mediaTimeToSeconds } from "opencut-wasm";
 import { getSourceTimeAtClipTime } from "@/lib/retime";
 import { videoCache } from "@/services/video-cache/service";
 import type { RetimeConfig } from "@/lib/timeline";
@@ -39,9 +39,7 @@ export class BlurBackgroundNode extends BaseNode<BlurBackgroundNodeParams> {
 
 	private isInRange({ time }: { time: number }): boolean {
 		const localTime = time - this.params.timeOffset;
-		return (
-			localTime >= -TIME_EPSILON_SECONDS && localTime < this.params.duration
-		);
+		return localTime >= 0 && localTime < this.params.duration;
 	}
 
 	private getSourceLocalTime({ time }: { time: number }): number {
@@ -61,10 +59,11 @@ export class BlurBackgroundNode extends BaseNode<BlurBackgroundNodeParams> {
 		time: number;
 	}): Promise<BackdropSource | null> {
 		if (this.params.mediaType === "video") {
+			const sourceTimeTicks = this.getSourceLocalTime({ time });
 			const frame = await videoCache.getFrameAt({
 				mediaId: this.params.mediaId,
 				file: this.params.file,
-				time: this.getSourceLocalTime({ time }),
+				time: mediaTimeToSeconds({ time: sourceTimeTicks }),
 			});
 
 			if (!frame) {

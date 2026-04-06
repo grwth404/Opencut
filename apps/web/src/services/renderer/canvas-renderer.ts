@@ -1,9 +1,11 @@
+import type { FrameRate } from "opencut-wasm";
+import { frameRateToFloat } from "@/lib/fps/utils";
 import type { BaseNode } from "./nodes/base-node";
 
 export type CanvasRendererParams = {
 	width: number;
 	height: number;
-	fps: number;
+	fps: FrameRate;
 };
 
 export class CanvasRenderer {
@@ -11,7 +13,7 @@ export class CanvasRenderer {
 	context: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D;
 	width: number;
 	height: number;
-	fps: number;
+	fps: FrameRate;
 
 	constructor({ width, height, fps }: CanvasRendererParams) {
 		this.width = width;

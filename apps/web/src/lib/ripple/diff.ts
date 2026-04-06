@@ -1,4 +1,4 @@
-import { TIME_EPSILON_SECONDS } from "@/constants/animation-constants";
+
 import type { TimelineElement, TimelineTrack } from "@/lib/timeline/types";
 import type { RippleAdjustment } from "./apply";
 
@@ -105,7 +105,7 @@ function collectTrackIntervals({
 			continue;
 		}
 
-		if (beforeElement.endTime > afterElement.endTime + TIME_EPSILON_SECONDS) {
+		if (beforeElement.endTime > afterElement.endTime) {
 			pushInterval({
 				intervals: vacatedIntervals,
 				startTime: afterElement.endTime,
@@ -141,7 +141,7 @@ function buildAdjustments({
 }): RippleAdjustment[] {
 	return intervals.flatMap((interval): RippleAdjustment[] => {
 		const shiftAmount = interval.endTime - interval.startTime;
-		if (shiftAmount <= TIME_EPSILON_SECONDS) {
+		if (shiftAmount <= 0) {
 			return [];
 		}
 
@@ -203,7 +203,7 @@ function normalizeIntervals({
 	const mergedIntervals: Interval[] = [{ ...sortedIntervals[0] }];
 	for (const interval of sortedIntervals.slice(1)) {
 		const previousInterval = mergedIntervals[mergedIntervals.length - 1];
-		if (interval.startTime <= previousInterval.endTime + TIME_EPSILON_SECONDS) {
+		if (interval.startTime <= previousInterval.endTime) {
 			previousInterval.endTime = Math.max(
 				previousInterval.endTime,
 				interval.endTime,
@@ -228,12 +228,10 @@ function subtractSingleInterval({
 
 	for (const overlappingInterval of overlappingIntervals) {
 		remainingIntervals = remainingIntervals.flatMap((remainingInterval) => {
-			if (
-				overlappingInterval.endTime <=
-					remainingInterval.startTime + TIME_EPSILON_SECONDS ||
-				overlappingInterval.startTime >=
-					remainingInterval.endTime - TIME_EPSILON_SECONDS
-			) {
+		if (
+			overlappingInterval.endTime <= remainingInterval.startTime ||
+			overlappingInterval.startTime >= remainingInterval.endTime
+		) {
 				return [remainingInterval];
 			}
 
@@ -264,7 +262,7 @@ function pushInterval({
 	startTime,
 	endTime,
 }: { intervals: Interval[]; startTime: number; endTime: number }): void {
-	if (endTime - startTime <= TIME_EPSILON_SECONDS) {
+	if (endTime <= startTime) {
 		return;
 	}
 

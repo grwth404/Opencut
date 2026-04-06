@@ -4,13 +4,12 @@ import { useEffect, useState } from "react";
 import type { EditorCore } from "@/core";
 import { useEditor } from "@/hooks/use-editor";
 import type { BookmarkDragState } from "@/hooks/timeline/use-bookmark-drag";
-import { BOOKMARK_TIME_EPSILON } from "@/lib/timeline/bookmarks";
 import {
 	DEFAULT_TIMELINE_BOOKMARK_COLOR,
 } from "./theme";
 import { TIMELINE_BOOKMARK_ROW_HEIGHT_PX } from "./layout";
 import { DEFAULT_FPS } from "@/lib/fps/constants";
-import { getSnappedSeekTime } from "opencut-wasm";
+import { snappedSeekTime } from "opencut-wasm";
 import {
 	ArrowTurnBackwardIcon,
 	Delete02Icon,
@@ -49,8 +48,8 @@ function seekToBookmarkTime({
 }) {
 	const activeProject = editor.project.getActive();
 	const duration = editor.timeline.getTotalDuration();
-	const fps = activeProject?.settings.fps ?? DEFAULT_FPS;
-	const snappedTime = getSnappedSeekTime({ rawTime: time, duration, fps });
+	const rate = activeProject?.settings.fps ?? DEFAULT_FPS;
+	const snappedTime = snappedSeekTime({ time, duration, rate }) ?? time;
 	editor.playback.seek({ time: snappedTime });
 }
 
@@ -139,7 +138,7 @@ function TimelineBookmark({
 	const isDragging =
 		dragState.isDragging &&
 		dragState.bookmarkTime !== null &&
-		Math.abs(dragState.bookmarkTime - bookmark.time) < BOOKMARK_TIME_EPSILON;
+		dragState.bookmarkTime === bookmark.time;
 
 	const displayTime = isDragging ? dragState.currentTime : bookmark.time;
 	const time = bookmark.time;

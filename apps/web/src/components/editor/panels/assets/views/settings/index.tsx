@@ -10,6 +10,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { FPS_PRESETS } from "@/lib/fps/constants";
+import { floatToFrameRate, frameRateToFloat } from "@/lib/fps/utils";
 import { useEditor } from "@/hooks/use-editor";
 import {
 	Section,
@@ -232,12 +233,12 @@ export function SettingsView() {
 					<Section showTopBorder={false}>
 						<SectionHeader className="justify-between">
 							<SectionTitle className="flex-1">Frame rate</SectionTitle>
-							<Select
-								value={activeProject.settings.fps.toString()}
-								onValueChange={(value) => {
-									const fps = parseFloat(value);
-									editor.project.updateSettings({ settings: { fps } });
-								}}
+					<Select
+							value={String(Math.round(frameRateToFloat(activeProject.settings.fps)))}
+							onValueChange={(value) => {
+								const fps = floatToFrameRate(parseFloat(value));
+								editor.project.updateSettings({ settings: { fps } });
+							}}
 							>
 								<SelectTrigger className="bg-transparent border-none p-1 h-auto">
 									<SelectValue placeholder="Select a frame rate" />

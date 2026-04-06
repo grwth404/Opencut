@@ -3,7 +3,7 @@ import {
 	DEFAULT_BACKGROUND_COLOR,
 } from "@/lib/background/constants";
 import { DEFAULT_CANVAS_SIZE } from "@/lib/canvas/constants";
-import { DEFAULT_FPS } from "@/lib/fps/constants";
+const DEFAULT_FPS = 30;
 import { IndexedDBAdapter } from "@/services/storage/indexeddb-adapter";
 import type { MediaAssetData } from "@/services/storage/types";
 import type { MigrationResult, ProjectRecord } from "./types";

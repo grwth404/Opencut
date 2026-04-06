@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatTimeCode, parseTimeCode, type TimeCodeFormat } from "opencut-wasm";
+import { formatTimecode, parseTimecode, snappedSeekTime, type FrameRate, type TimeCodeFormat } from "opencut-wasm";
 import { cn } from "@/utils/ui";
 
 interface EditableTimecodeProps {
 	time: number;
 	duration: number;
 	format?: TimeCodeFormat;
-	fps: number;
+	fps: FrameRate;
 	onTimeChange?: ({ time }: { time: number }) => void;
 	className?: string;
 	disabled?: boolean;
@@ -28,7 +28,7 @@ export function EditableTimecode({
 	const [hasError, setHasError] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const enterPressedRef = useRef(false);
-	const formattedTime = formatTimeCode({ timeInSeconds: time, format, fps }) ?? "";
+	const formattedTime = formatTimecode({ time, format, rate: fps }) ?? "";
 
 	const startEditing = () => {
 		if (disabled) return;
@@ -46,17 +46,16 @@ export function EditableTimecode({
 	};
 
 	const applyEdit = () => {
-		const parsedTime = parseTimeCode({ timeCode: inputValue, format, fps });
+		const parsedTime = parseTimecode({ timeCode: inputValue, format, rate: fps });
 
 		if (parsedTime == null) {
 			setHasError(true);
 			return;
 		}
 
-		const clampedTime = Math.max(
-			0,
-			duration ? Math.min(duration, parsedTime) : parsedTime,
-		);
+		const clampedTime = duration
+			? (snappedSeekTime({ time: parsedTime, duration, rate: fps }) ?? parsedTime)
+			: parsedTime;
 
 		onTimeChange?.({ time: clampedTime });
 		setIsEditing(false);

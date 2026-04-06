@@ -1,5 +1,5 @@
 import type { TimelineTrack } from "@/lib/timeline";
-import { getTimelinePixelsPerSecond } from "@/lib/timeline/pixel-utils";
+import { timelineTimeToPixels } from "@/lib/timeline/pixel-utils";
 import {
 	TIMELINE_CONTENT_TOP_PADDING_PX,
 } from "./layout";
@@ -96,7 +96,6 @@ export function resolveTimelineElementIntersections({
 		startPos,
 		endPos: currentPos,
 	});
-	const pixelsPerSecond = getTimelinePixelsPerSecond({ zoomLevel });
 	const selectedElements: TimelineElementRef[] = [];
 
 	for (const [trackIndex, track] of tracks.entries()) {
@@ -109,8 +108,8 @@ export function resolveTimelineElementIntersections({
 		const elementBottom = elementTop + trackHeight;
 
 		for (const element of track.elements) {
-			const elementLeft = element.startTime * pixelsPerSecond;
-			const elementRight = elementLeft + element.duration * pixelsPerSecond;
+			const elementLeft = timelineTimeToPixels({ time: element.startTime, zoomLevel });
+			const elementRight = timelineTimeToPixels({ time: element.startTime + element.duration, zoomLevel });
 			const elementRectangle = {
 				left: elementLeft,
 				top: elementTop,
