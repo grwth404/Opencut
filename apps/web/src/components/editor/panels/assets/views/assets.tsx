@@ -26,6 +26,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { useEditor } from "@/hooks/use-editor";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { invokeAction } from "@/lib/actions";
@@ -257,7 +258,9 @@ function MediaAssetDraggable({
 		startTime: number;
 	}) => {
 		const duration =
-			asset.duration ?? DEFAULT_NEW_ELEMENT_DURATION;
+			asset.duration != null
+				? Math.round(asset.duration * TICKS_PER_SECOND)
+				: DEFAULT_NEW_ELEMENT_DURATION;
 		const element = buildElementFromMedia({
 			mediaId: asset.id,
 			mediaType: asset.type,
