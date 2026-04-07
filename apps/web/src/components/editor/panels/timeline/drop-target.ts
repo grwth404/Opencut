@@ -105,6 +105,8 @@ export function computeDropTarget({
 	excludeElementId,
 	targetElementTypes,
 }: ComputeDropTargetParams): DropTarget {
+	const orderedTracks = [...tracks.overlay, tracks.main, ...tracks.audio];
+	const mainTrackIndex = tracks.overlay.length;
 	const xPosition =
 		typeof startTimeOverride === "number"
 			? startTimeOverride
@@ -112,7 +114,7 @@ export function computeDropTarget({
 				? playheadTime
 				: Math.max(0, mouseX / (pixelsPerSecond * zoomLevel));
 
-	if (tracks.length === 0) {
+	if (orderedTracks.length === 0) {
 		const placementResult = resolveTrackPlacement({
 			tracks,
 			elementType,
@@ -139,7 +141,11 @@ export function computeDropTarget({
 		};
 	}
 
-	const trackAtMouse = getTrackAtY({ mouseY, tracks, verticalDragDirection });
+	const trackAtMouse = getTrackAtY({
+		mouseY,
+		tracks: orderedTracks,
+		verticalDragDirection,
+	});
 
 	if (!trackAtMouse) {
 		const isAboveAllTracks = mouseY < 0;
@@ -150,7 +156,7 @@ export function computeDropTarget({
 			timeSpans: [{ startTime: xPosition, duration: elementDuration, excludeElementId }],
 			strategy: {
 				type: "preferIndex",
-				trackIndex: isAboveAllTracks ? 0 : tracks.length - 1,
+				trackIndex: isAboveAllTracks ? 0 : orderedTracks.length - 1,
 				hoverDirection: isAboveAllTracks ? "above" : "below",
 				createNewTrackOnly: true,
 			},
@@ -171,12 +177,12 @@ export function computeDropTarget({
 	}
 
 	const { trackIndex, relativeY } = trackAtMouse;
-	const track = tracks[trackIndex];
+	const track = orderedTracks[trackIndex];
 
 	if (targetElementTypes && targetElementTypes.length > 0) {
 		const targetElement = findElementAtPosition({
 			mouseX,
-			tracks,
+			tracks: orderedTracks,
 			trackIndex,
 			targetElementTypes,
 			pixelsPerSecond,

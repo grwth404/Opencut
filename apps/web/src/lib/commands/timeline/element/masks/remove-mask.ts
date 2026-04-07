@@ -1,7 +1,7 @@
 import { EditorCore } from "@/core";
 import { Command, type CommandResult } from "@/lib/commands/base-command";
-import { isMaskableElement, updateElementInTracks } from "@/lib/timeline";
-import type { TimelineTrack, MaskableElement } from "@/lib/timeline";
+import { isMaskableElement, updateElementInSceneTracks } from "@/lib/timeline";
+import type { SceneTracks, MaskableElement } from "@/lib/timeline";
 
 function removeMaskFromElement({
 	element,
@@ -16,7 +16,7 @@ function removeMaskFromElement({
 }
 
 export class RemoveMaskCommand extends Command {
-	private savedState: TimelineTrack[] | null = null;
+	private savedState: SceneTracks | null = null;
 	private readonly trackId: string;
 	private readonly elementId: string;
 	private readonly maskId: string;
@@ -38,9 +38,9 @@ export class RemoveMaskCommand extends Command {
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
-		this.savedState = editor.timeline.getTracks();
+		this.savedState = editor.scenes.getActiveScene().tracks;
 
-		const updatedTracks = updateElementInTracks({
+		const updatedTracks = updateElementInSceneTracks({
 			tracks: this.savedState,
 			trackId: this.trackId,
 			elementId: this.elementId,

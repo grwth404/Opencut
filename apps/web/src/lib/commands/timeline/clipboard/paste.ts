@@ -1,21 +1,16 @@
 import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import type {
-	TimelineTrack,
+	SceneTracks,
 	TimelineElement,
 	ClipboardItem,
 } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
-import {
-	applyPlacement,
-	resolveTrackPlacement,
-	isMainTrack,
-	enforceMainTrackStart,
-} from "@/lib/timeline/placement";
+import { applyPlacement, resolveTrackPlacement, enforceMainTrackStart } from "@/lib/timeline/placement";
 import { cloneAnimations } from "@/lib/animation";
 
 export class PasteCommand extends Command {
-	private savedState: TimelineTrack[] | null = null;
+	private savedState: SceneTracks | null = null;
 	private pastedElements: { trackId: string; elementId: string }[] = [];
 	private readonly time: number;
 	private readonly clipboardItems: ClipboardItem[];
@@ -36,14 +31,14 @@ export class PasteCommand extends Command {
 		if (this.clipboardItems.length === 0) return undefined;
 
 		const editor = EditorCore.getInstance();
-		this.savedState = editor.timeline.getTracks();
+		this.savedState = editor.scenes.getActiveScene().tracks;
 		this.pastedElements = [];
 
 		const minStart = Math.min(
 			...this.clipboardItems.map((item) => item.element.startTime),
 		);
 
-		let updatedTracks = [...this.savedState];
+		let updatedTracks = this.savedState;
 		const itemsByTrackId = groupClipboardItemsByTrackId({
 			clipboardItems: this.clipboardItems,
 		});
@@ -60,9 +55,11 @@ export class PasteCommand extends Command {
 			}
 
 			const trackType = items[0].trackType;
-			const sourceTrackIndex = updatedTracks.findIndex(
-				(track) => track.id === trackId,
-			);
+			const sourceTrackIndex = [
+				...updatedTracks.overlay,
+				updatedTracks.main,
+				...updatedTracks.audio,
+			].findIndex((track) => track.id === trackId);
 			const placementResult = resolveTrackPlacement({
 				tracks: updatedTracks,
 				trackType,
@@ -78,8 +75,15 @@ export class PasteCommand extends Command {
 
 			let elementsForPlacement = elementsToAdd;
 			if (placementResult.kind === "existingTrack") {
-				const targetTrack = updatedTracks[placementResult.trackIndex];
-				if (isMainTrack(targetTrack)) {
+				const targetTrack =
+					placementResult.trackIndex < updatedTracks.overlay.length
+						? updatedTracks.overlay[placementResult.trackIndex]
+						: placementResult.trackIndex === updatedTracks.overlay.length
+							? updatedTracks.main
+							: updatedTracks.audio[
+									placementResult.trackIndex - updatedTracks.overlay.length - 1
+								];
+				if (targetTrack?.id === updatedTracks.main.id) {
 					const earliestElement = elementsToAdd.reduce((earliest, element) =>
 						element.startTime < earliest.startTime ? element : earliest,
 					);

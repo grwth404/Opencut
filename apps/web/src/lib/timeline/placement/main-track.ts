@@ -1,55 +1,14 @@
-import type { TimelineElement, TimelineTrack, VideoTrack } from "@/lib/timeline";
-import { generateUUID } from "@/utils/id";
+import type { SceneTracks, TimelineElement, VideoTrack } from "@/lib/timeline";
 
-const MAIN_TRACK_NAME = "Main Track";
-
-export function isMainTrack(track: TimelineTrack): track is VideoTrack {
-	return track.type === "video" && track.isMain === true;
-}
-
-export function getMainTrack({
-	tracks,
-}: {
-	tracks: TimelineTrack[];
-}): VideoTrack | null {
-	return tracks.find((track) => isMainTrack(track)) ?? null;
-}
-
-export function ensureMainTrack({
-	tracks,
-}: {
-	tracks: TimelineTrack[];
-}): TimelineTrack[] {
-	if (tracks.some((track) => isMainTrack(track))) {
-		return tracks;
-	}
-
-	return [
-		{
-			id: generateUUID(),
-			name: MAIN_TRACK_NAME,
-			type: "video",
-			elements: [],
-			muted: false,
-			isMain: true,
-			hidden: false,
-		},
-		...tracks,
-	];
-}
+export const MAIN_TRACK_NAME = "Main Track";
 
 export function getEarliestMainTrackElement({
-	tracks,
+	mainTrack,
 	excludeElementId,
 }: {
-	tracks: TimelineTrack[];
+	mainTrack: VideoTrack;
 	excludeElementId?: string;
 }): TimelineElement | null {
-	const mainTrack = getMainTrack({ tracks });
-	if (!mainTrack) {
-		return null;
-	}
-
 	const elements = mainTrack.elements.filter((element) => {
 		return !excludeElementId || element.id !== excludeElementId;
 	});
@@ -70,18 +29,17 @@ export function enforceMainTrackStart({
 	requestedStartTime,
 	excludeElementId,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	targetTrackId: string;
 	requestedStartTime: number;
 	excludeElementId?: string;
 }): number {
-	const mainTrack = getMainTrack({ tracks });
-	if (!mainTrack || mainTrack.id !== targetTrackId) {
+	if (tracks.main.id !== targetTrackId) {
 		return requestedStartTime;
 	}
 
 	const earliestElement = getEarliestMainTrackElement({
-		tracks,
+		mainTrack: tracks.main,
 		excludeElementId,
 	});
 	if (!earliestElement) {

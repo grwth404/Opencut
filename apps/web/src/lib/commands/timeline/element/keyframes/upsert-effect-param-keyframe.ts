@@ -5,13 +5,13 @@ import {
 	resolveAnimationTarget,
 	upsertPathKeyframe,
 } from "@/lib/animation";
-import { updateElementInTracks } from "@/lib/timeline";
+import { updateElementInSceneTracks } from "@/lib/timeline";
 import { isVisualElement } from "@/lib/timeline/element-utils";
 import type { AnimationInterpolation } from "@/lib/animation/types";
-import type { TimelineTrack } from "@/lib/timeline";
+import type { SceneTracks } from "@/lib/timeline";
 
 export class UpsertEffectParamKeyframeCommand extends Command {
-	private savedState: TimelineTrack[] | null = null;
+	private savedState: SceneTracks | null = null;
 	private readonly trackId: string;
 	private readonly elementId: string;
 	private readonly effectId: string;
@@ -53,9 +53,9 @@ export class UpsertEffectParamKeyframeCommand extends Command {
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
-		this.savedState = editor.timeline.getTracks();
+		this.savedState = editor.scenes.getActiveScene().tracks;
 
-		const updatedTracks = updateElementInTracks({
+		const updatedTracks = updateElementInSceneTracks({
 			tracks: this.savedState,
 			trackId: this.trackId,
 			elementId: this.elementId,

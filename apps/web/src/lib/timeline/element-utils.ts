@@ -13,6 +13,7 @@ import {
 	type CreateLibraryAudioElement,
 	type TextBackground,
 	type TextElement,
+	type SceneTracks,
 	type TimelineElement,
 	type TimelineTrack,
 	type AudioElement,
@@ -382,12 +383,13 @@ export function getElementsAtTime({
 	tracks,
 	time,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	time: number;
 }): { trackId: string; elementId: string }[] {
 	const result: { trackId: string; elementId: string }[] = [];
+	const orderedTracks = [...tracks.overlay, tracks.main, ...tracks.audio];
 
-	for (const track of tracks) {
+	for (const track of orderedTracks) {
 		for (const element of track.elements) {
 			const elementStart = element.startTime;
 			const elementEnd = element.startTime + element.duration;
@@ -404,10 +406,10 @@ export function getElementsAtTime({
 export function getElementFontFamilies({
 	tracks,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 }): string[] {
 	const families = new Set<string>();
-	for (const track of tracks) {
+	for (const track of [...tracks.overlay, tracks.main, ...tracks.audio]) {
 		for (const element of track.elements) {
 			if (element.type === "text" && element.fontFamily) {
 				families.add(element.fontFamily);

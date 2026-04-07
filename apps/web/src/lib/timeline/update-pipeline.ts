@@ -4,14 +4,13 @@ import {
 	getSourceSpanAtClipTime,
 	getTimelineDurationForSourceSpan,
 } from "@/lib/retime";
-import { enforceMainTrackStart } from "@/lib/timeline/placement";
-import type { RetimeConfig, TimelineElement, TimelineTrack } from "@/lib/timeline";
+import type { RetimeConfig, SceneTracks, TimelineElement } from "@/lib/timeline";
 import { isRetimableElement } from "@/lib/timeline";
 
 type ElementUpdateField = keyof TimelineElement | string;
 
 export interface ElementUpdateContext {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	trackId: string;
 }
 
@@ -94,17 +93,36 @@ const enforceRules: ElementUpdateRule[] = [
 	},
 	{
 		triggers: ["startTime"],
-		apply: ({ element, context }) => ({
-			element: {
-				...element,
-				startTime: enforceMainTrackStart({
-					tracks: context.tracks,
-					targetTrackId: context.trackId,
-					requestedStartTime: Math.max(0, element.startTime),
-					excludeElementId: element.id,
-				}),
-			},
-		}),
+		apply: ({ element, context }) => {
+			const requestedStartTime = Math.max(0, element.startTime);
+			if (context.trackId !== context.tracks.main.id) {
+				return {
+					element: {
+						...element,
+						startTime: requestedStartTime,
+					},
+				};
+			}
+
+			const earliestElement = context.tracks.main.elements
+				.filter((candidate) => candidate.id !== element.id)
+				.reduce<TimelineElement | null>((earliest, candidate) => {
+					if (!earliest || candidate.startTime < earliest.startTime) {
+						return candidate;
+					}
+					return earliest;
+				}, null);
+
+			return {
+				element: {
+					...element,
+					startTime:
+						!earliestElement || requestedStartTime <= earliestElement.startTime
+							? 0
+							: requestedStartTime,
+				},
+			};
+		},
 	},
 ];
 

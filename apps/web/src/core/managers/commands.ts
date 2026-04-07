@@ -1,7 +1,7 @@
 import type { EditorCore } from "@/core";
 import type { Command, CommandResult } from "@/lib/commands";
 import { applyRippleAdjustments, computeRippleAdjustments } from "@/lib/ripple";
-import type { TimelineTrack, ElementRef } from "@/lib/timeline/types";
+import type { ElementRef, SceneTracks } from "@/lib/timeline/types";
 
 interface CommandHistoryEntry {
 	command: Command;
@@ -18,7 +18,9 @@ export class CommandManager {
 	constructor(private editor: EditorCore) {}
 
 	execute({ command }: { command: Command }): Command {
-		const beforeTracks = this.isRippleEnabled ? this.editor.timeline.getTracks() : null;
+		const beforeTracks = this.isRippleEnabled
+			? this.editor.scenes.getActiveSceneOrNull()?.tracks ?? null
+			: null;
 		const previousSelection = this.getSelectionSnapshot();
 		const result = command.execute();
 		this.applyRippleIfEnabled({ beforeTracks });
@@ -71,7 +73,9 @@ export class CommandManager {
 			return;
 		}
 
-		const beforeTracks = this.isRippleEnabled ? this.editor.timeline.getTracks() : null;
+		const beforeTracks = this.isRippleEnabled
+			? this.editor.scenes.getActiveSceneOrNull()?.tracks ?? null
+			: null;
 		const previousSelection = this.getSelectionSnapshot();
 		const result = entry.command.redo();
 		this.applyRippleIfEnabled({ beforeTracks });
@@ -123,13 +127,16 @@ export class CommandManager {
 	private applyRippleIfEnabled({
 		beforeTracks,
 	}: {
-		beforeTracks: TimelineTrack[] | null;
+		beforeTracks: SceneTracks | null;
 	}): void {
 		if (!this.isRippleEnabled || !beforeTracks) {
 			return;
 		}
 
-		const afterTracks = this.editor.timeline.getTracks();
+		const afterTracks = this.editor.scenes.getActiveSceneOrNull()?.tracks;
+		if (!afterTracks) {
+			return;
+		}
 		const adjustments = computeRippleAdjustments({
 			beforeTracks,
 			afterTracks,

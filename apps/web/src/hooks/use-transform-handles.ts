@@ -132,7 +132,9 @@ export function useTransformHandles({
 	);
 
 	const selectedElements = useEditor((e) => e.selection.getSelectedElements());
-	const tracks = useEditor((e) => e.timeline.getRenderTracks());
+	const tracks = useEditor(
+		(e) => e.timeline.getPreviewTracks() ?? e.scenes.getActiveScene().tracks,
+	);
 	const currentTime = useEditor((e) => e.playback.getCurrentTime());
 	const currentTimeRef = useRef(currentTime);
 	currentTimeRef.current = currentTime;

@@ -1,6 +1,5 @@
-import type { TimelineTrack, TimelineElement } from "@/lib/timeline";
+import type { SceneTracks, TimelineElement } from "@/lib/timeline";
 import type { MediaAsset } from "@/lib/media/types";
-import { isMainTrack } from "@/lib/timeline/placement";
 import { STICKER_INTRINSIC_SIZE_FALLBACK } from "@/constants/sticker-constants";
 import { DEFAULT_GRAPHIC_SOURCE_SIZE } from "@/lib/graphics";
 import { measureTextElement } from "@/lib/text/measure-element";
@@ -266,18 +265,15 @@ export function getVisibleElementsWithBounds({
 	canvasSize,
 	mediaAssets,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	currentTime: number;
 	canvasSize: { width: number; height: number };
 	mediaAssets: MediaAsset[];
 }): ElementWithBounds[] {
 	const mediaMap = new Map(mediaAssets.map((m) => [m.id, m]));
-	const visibleTracks = tracks.filter(
-		(track) => !("hidden" in track && track.hidden),
-	);
 	const orderedTracks = [
-		...visibleTracks.filter((track) => !isMainTrack(track)),
-		...visibleTracks.filter((track) => isMainTrack(track)),
+		...tracks.overlay.filter((track) => !("hidden" in track && track.hidden)),
+		...(!tracks.main.hidden ? [tracks.main] : []),
 	].reverse();
 
 	const result: ElementWithBounds[] = [];

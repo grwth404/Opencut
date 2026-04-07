@@ -163,7 +163,7 @@ export class AudioManager {
 		this.playbackSessionId++;
 		this.playbackLatencyCompensationSeconds = 0;
 
-		const tracks = this.editor.timeline.getTracks();
+		const tracks = this.editor.scenes.getActiveScene().tracks;
 		const mediaAssets = this.editor.media.getAssets();
 		const duration = this.editor.timeline.getTotalDuration();
 

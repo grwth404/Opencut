@@ -1,4 +1,4 @@
-import type { TimelineTrack } from "@/lib/timeline/types";
+import type { SceneTracks, TimelineTrack } from "@/lib/timeline/types";
 import { rippleShiftElements } from "./shift";
 
 export interface RippleAdjustment {
@@ -11,9 +11,9 @@ export function applyRippleAdjustments({
 	tracks,
 	adjustments,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	adjustments: RippleAdjustment[];
-}): TimelineTrack[] {
+}): SceneTracks {
 	if (adjustments.length === 0) {
 		return tracks;
 	}
@@ -25,12 +25,24 @@ export function applyRippleAdjustments({
 		adjustmentsByTrack.set(adjustment.trackId, trackAdjustments);
 	}
 
-	return tracks.map((track) =>
-		applyTrackRippleAdjustments({
-			track,
-			adjustments: adjustmentsByTrack.get(track.id) ?? [],
+	return {
+		overlay: tracks.overlay.map((track) =>
+			applyTrackRippleAdjustments({
+				track,
+				adjustments: adjustmentsByTrack.get(track.id) ?? [],
+			}),
+		),
+		main: applyTrackRippleAdjustments({
+			track: tracks.main,
+			adjustments: adjustmentsByTrack.get(tracks.main.id) ?? [],
 		}),
-	);
+		audio: tracks.audio.map((track) =>
+			applyTrackRippleAdjustments({
+				track,
+				adjustments: adjustmentsByTrack.get(track.id) ?? [],
+			}),
+		),
+	};
 }
 
 function applyTrackRippleAdjustments<

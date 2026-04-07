@@ -1,7 +1,18 @@
-import type { TimelineElement, TimelineTrack } from "@/lib/timeline";
+import type {
+	AudioTrack,
+	EffectTrack,
+	GraphicTrack,
+	OverlayTrack,
+	SceneTracks,
+	TextTrack,
+	TimelineElement,
+	TimelineTrack,
+	VideoTrack,
+} from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { buildEmptyTrack } from "./track-factory";
 import type { PlacementResult } from "./types";
+import { updateTrackInSceneTracks } from "@/lib/timeline/track-element-update";
 
 export function applyPlacement({
 	tracks,
@@ -9,37 +20,139 @@ export function applyPlacement({
 	elements,
 	newTrackInsertIndexOverride,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	placementResult: PlacementResult;
 	elements: TimelineElement[];
 	newTrackInsertIndexOverride?: number;
-}): { updatedTracks: TimelineTrack[]; targetTrackId: string } | null {
+}): { updatedTracks: SceneTracks; targetTrackId: string } | null {
+	const orderedTracks = [...tracks.overlay, tracks.main, ...tracks.audio];
 	if (placementResult.kind === "existingTrack") {
-		const targetTrack = tracks[placementResult.trackIndex];
+		const targetTrack = orderedTracks[placementResult.trackIndex];
 		if (!targetTrack) {
 			return null;
 		}
 
-		const updatedTracks = tracks.map((track, trackIndex) =>
-			trackIndex === placementResult.trackIndex
-				? {
-						...track,
-						elements: [...track.elements, ...elements],
-					}
-				: track,
-		) as TimelineTrack[];
+		const updatedTracks = updateTrackInSceneTracks({
+			tracks,
+			trackId: targetTrack.id,
+			update: (track) => ({
+				...track,
+				elements: [...track.elements, ...elements],
+			}),
+		});
 
 		return { updatedTracks, targetTrackId: targetTrack.id };
 	}
 
 	const newTrackId = generateUUID();
-	const newTrack = {
-		...buildEmptyTrack({ id: newTrackId, type: placementResult.trackType }),
-		elements,
-	} as TimelineTrack;
 	const insertIndex =
 		newTrackInsertIndexOverride ?? placementResult.insertIndex;
-	const updatedTracks = [...tracks];
-	updatedTracks.splice(insertIndex, 0, newTrack);
+	const updatedTracks =
+		placementResult.trackType === "audio"
+			? {
+					...tracks,
+					audio: insertIntoAudioTracks({
+						tracks,
+						insertIndex,
+						track: buildPlacedAudioTrack({
+							id: newTrackId,
+							elements,
+						}),
+					}),
+				}
+			: {
+					...tracks,
+					overlay: insertIntoOverlayTracks({
+						tracks,
+						insertIndex,
+						track: buildPlacedOverlayTrack({
+							id: newTrackId,
+							type: placementResult.trackType,
+							elements,
+						}),
+					}),
+				};
 	return { updatedTracks, targetTrackId: newTrackId };
+}
+
+function insertIntoOverlayTracks({
+	tracks,
+	insertIndex,
+	track,
+}: {
+	tracks: SceneTracks;
+	insertIndex: number;
+	track: OverlayTrack;
+}): OverlayTrack[] {
+	const normalizedInsertIndex = Math.max(
+		0,
+		Math.min(insertIndex, tracks.overlay.length),
+	);
+	const nextTracks = [...tracks.overlay];
+	nextTracks.splice(normalizedInsertIndex, 0, track);
+	return nextTracks;
+}
+
+function insertIntoAudioTracks({
+	tracks,
+	insertIndex,
+	track,
+}: {
+	tracks: SceneTracks;
+	insertIndex: number;
+	track: AudioTrack;
+}): AudioTrack[] {
+	const audioInsertIndex = Math.max(
+		0,
+		Math.min(insertIndex - tracks.overlay.length - 1, tracks.audio.length),
+	);
+	const nextTracks = [...tracks.audio];
+	nextTracks.splice(audioInsertIndex, 0, track);
+	return nextTracks;
+}
+
+function buildPlacedAudioTrack({
+	id,
+	elements,
+}: {
+	id: string;
+	elements: TimelineElement[];
+}): AudioTrack {
+	return {
+		...buildEmptyTrack({ id, type: "audio" }),
+		elements: elements as AudioTrack["elements"],
+	};
+}
+
+function buildPlacedOverlayTrack({
+	id,
+	type,
+	elements,
+}: {
+	id: string;
+	type: Exclude<OverlayTrack["type"], "audio">;
+	elements: TimelineElement[];
+}): OverlayTrack {
+	switch (type) {
+		case "video":
+			return {
+				...buildEmptyTrack({ id, type: "video" }),
+				elements: elements as VideoTrack["elements"],
+			};
+		case "text":
+			return {
+				...buildEmptyTrack({ id, type: "text" }),
+				elements: elements as TextTrack["elements"],
+			};
+		case "graphic":
+			return {
+				...buildEmptyTrack({ id, type: "graphic" }),
+				elements: elements as GraphicTrack["elements"],
+			};
+		case "effect":
+			return {
+				...buildEmptyTrack({ id, type: "effect" }),
+				elements: elements as EffectTrack["elements"],
+			};
+	}
 }

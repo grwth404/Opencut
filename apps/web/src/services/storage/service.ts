@@ -21,7 +21,7 @@ import {
 	migrations,
 	runStorageMigrations,
 } from "@/services/storage/migrations";
-import type { Bookmark, TimelineTrack, TScene } from "@/lib/timeline";
+import type { Bookmark, SceneTracks, TScene } from "@/lib/timeline";
 
 function normalizeBookmarks({ raw }: { raw: unknown }): Bookmark[] {
 	if (!Array.isArray(raw)) return [];
@@ -116,18 +116,18 @@ class StorageService {
 	private stripAudioBuffers({
 		tracks,
 	}: {
-		tracks: TimelineTrack[];
-	}): TimelineTrack[] {
-		return tracks.map((track) => {
-			if (track.type !== "audio") return track;
-			return {
+		tracks: SceneTracks;
+	}): SceneTracks {
+		return {
+			...tracks,
+			audio: tracks.audio.map((track) => ({
 				...track,
 				elements: track.elements.map((element) => {
 					const { buffer: _buffer, ...rest } = element;
 					return rest;
 				}),
-			};
-		});
+			})),
+		};
 	}
 
 	async saveProject({ project }: { project: TProject }): Promise<void> {
@@ -178,11 +178,7 @@ class StorageService {
 				id: scene.id,
 				name: scene.name,
 				isMain: scene.isMain,
-				tracks: (scene.tracks ?? []).map((track) =>
-					track.type === "video"
-						? { ...track, isMain: track.isMain ?? false } // legacy: isMain was optional
-						: track,
-				),
+				tracks: scene.tracks,
 				bookmarks: normalizeBookmarks({ raw: scene.bookmarks }),
 				createdAt: new Date(scene.createdAt),
 				updatedAt: new Date(scene.updatedAt),

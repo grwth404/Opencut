@@ -17,7 +17,6 @@ import { AddTrackCommand, InsertElementCommand } from "@/lib/commands/timeline";
 import { BatchCommand } from "@/lib/commands";
 import { computeDropTarget } from "@/components/editor/panels/timeline/drop-target";
 import { getDragData, hasDragData } from "@/lib/drag-data";
-import { isMainTrack } from "@/lib/timeline/placement";
 import type { TrackType, DropTarget, ElementType } from "@/lib/timeline";
 import type {
 	MediaDragData,
@@ -149,13 +148,13 @@ export function useTimelineDragDrop({
 						? (dragData as MediaDragData).targetElementTypes
 						: undefined;
 
-			const tracks = editor.timeline.getTracks();
+			const sceneTracks = editor.scenes.getActiveScene().tracks;
 			const currentTime = editor.playback.getCurrentTime();
 			const target = computeDropTarget({
 				elementType,
 				mouseX,
 				mouseY,
-				tracks,
+				tracks: sceneTracks,
 				playheadTime: currentTime,
 				isExternalDrop: isExternal,
 				elementDuration: duration,
@@ -230,7 +229,11 @@ export function useTimelineDragDrop({
 				return;
 			}
 
-			const tracks = editor.timeline.getTracks();
+			const tracks = [
+				...editor.scenes.getActiveScene().tracks.overlay,
+				editor.scenes.getActiveScene().tracks.main,
+				...editor.scenes.getActiveScene().tracks.audio,
+			];
 			const track = tracks[target.trackIndex];
 			if (!track) return;
 			editor.timeline.insertElement({
@@ -267,7 +270,11 @@ export function useTimelineDragDrop({
 				return;
 			}
 
-			const tracks = editor.timeline.getTracks();
+			const tracks = [
+				...editor.scenes.getActiveScene().tracks.overlay,
+				editor.scenes.getActiveScene().tracks.main,
+				...editor.scenes.getActiveScene().tracks.audio,
+			];
 			const track = tracks[target.trackIndex];
 			if (!track) return;
 			editor.timeline.insertElement({
@@ -305,7 +312,11 @@ export function useTimelineDragDrop({
 				return;
 			}
 
-			const tracks = editor.timeline.getTracks();
+			const tracks = [
+				...editor.scenes.getActiveScene().tracks.overlay,
+				editor.scenes.getActiveScene().tracks.main,
+				...editor.scenes.getActiveScene().tracks.audio,
+			];
 			const track = tracks[target.trackIndex];
 			if (!track) return;
 			editor.timeline.insertElement({
@@ -352,7 +363,11 @@ export function useTimelineDragDrop({
 				return;
 			}
 
-			const tracks = editor.timeline.getTracks();
+			const tracks = [
+				...editor.scenes.getActiveScene().tracks.overlay,
+				editor.scenes.getActiveScene().tracks.main,
+				...editor.scenes.getActiveScene().tracks.audio,
+			];
 			const track = tracks[target.trackIndex];
 			if (!track) return;
 			editor.timeline.insertElement({
@@ -380,7 +395,11 @@ export function useTimelineDragDrop({
 				return;
 			}
 
-			const tracks = editor.timeline.getTracks();
+			const tracks = [
+				...editor.scenes.getActiveScene().tracks.overlay,
+				editor.scenes.getActiveScene().tracks.main,
+				...editor.scenes.getActiveScene().tracks.audio,
+			];
 			const effectTrack = tracks.find((t) => t.type === "effect");
 			let trackId: string;
 
@@ -447,16 +466,14 @@ export function useTimelineDragDrop({
 						const duration =
 							createdAsset.duration ??
 							DEFAULT_NEW_ELEMENT_DURATION;
-						const currentTracks = editor.timeline.getTracks();
+						const sceneTracks = editor.scenes.getActiveScene().tracks;
 						const currentTime = editor.playback.getCurrentTime();
-						const onlyTrack = currentTracks[0];
 						const reuseMainTrackId =
 							createdAsset.type !== "audio" &&
-							currentTracks.length === 1 &&
-							!!onlyTrack &&
-							isMainTrack(onlyTrack) &&
-							onlyTrack.elements.length === 0
-								? onlyTrack.id
+							sceneTracks.overlay.length === 0 &&
+							sceneTracks.audio.length === 0 &&
+							sceneTracks.main.elements.length === 0
+								? sceneTracks.main.id
 								: null;
 						const dropTarget = reuseMainTrackId
 							? null
@@ -464,7 +481,7 @@ export function useTimelineDragDrop({
 									elementType: createdAsset.type,
 									mouseX,
 									mouseY,
-									tracks: currentTracks,
+									tracks: sceneTracks,
 									playheadTime: currentTime,
 									isExternalDrop: true,
 									elementDuration: duration,
@@ -488,7 +505,11 @@ export function useTimelineDragDrop({
 								trackId = addTrackCmd.getTrackId();
 								editor.command.execute({ command: addTrackCmd });
 							} else {
-								trackId = currentTracks[dropTarget.trackIndex]?.id;
+								trackId = [
+									...sceneTracks.overlay,
+									sceneTracks.main,
+									...sceneTracks.audio,
+								][dropTarget.trackIndex]?.id;
 							}
 						}
 

@@ -4,6 +4,8 @@ import type {
 	AudioTrack,
 	GraphicElement,
 	GraphicTrack,
+	OverlayTrack,
+	SceneTracks,
 	TextElement,
 	TextTrack,
 	TimelineTrack,
@@ -134,53 +136,45 @@ type BuildTrackParams =
 			id: string;
 			type: "audio";
 			elements?: AudioTrack["elements"];
-			isMain?: boolean;
 	  }
 	| {
 			id: string;
 			type: "graphic";
 			elements?: GraphicTrack["elements"];
-			isMain?: boolean;
 	  }
 	| {
 			id: string;
 			type: "text";
 			elements?: TextTrack["elements"];
-			isMain?: boolean;
 	  }
 	| {
 			id: string;
 			type: "video";
 			elements?: VideoTrack["elements"];
-			isMain?: boolean;
 	  };
 
 function buildTrack(params: {
 	id: string;
 	type: "audio";
 	elements?: AudioTrack["elements"];
-	isMain?: boolean;
 }): AudioTrack;
 function buildTrack(params: {
 	id: string;
 	type: "graphic";
 	elements?: GraphicTrack["elements"];
-	isMain?: boolean;
 }): GraphicTrack;
 function buildTrack(params: {
 	id: string;
 	type: "text";
 	elements?: TextTrack["elements"];
-	isMain?: boolean;
 }): TextTrack;
 function buildTrack(params: {
 	id: string;
 	type: "video";
 	elements?: VideoTrack["elements"];
-	isMain?: boolean;
 }): VideoTrack;
 function buildTrack(params: BuildTrackParams): TimelineTrack {
-	const { id, type, isMain = false } = params;
+	const { id, type } = params;
 
 	switch (type) {
 		case "audio":
@@ -213,7 +207,6 @@ function buildTrack(params: BuildTrackParams): TimelineTrack {
 				type: "video",
 				name: id,
 				elements: params.elements ?? [],
-				isMain,
 				muted: false,
 				hidden: false,
 			};
@@ -234,9 +227,32 @@ function buildTimeSpan({
 	return { startTime, duration, excludeElementId };
 }
 
+function buildSceneTracks({
+	overlay = [],
+	main,
+	audio = [],
+}: {
+	overlay?: Array<OverlayTrack>;
+	main?: VideoTrack;
+	audio?: Array<AudioTrack>;
+}): SceneTracks {
+	return {
+		overlay,
+		main:
+			main ??
+			buildTrack({
+				id: "video-main",
+				type: "video",
+			}),
+		audio,
+	};
+}
+
 describe("resolveTrackPlacement", () => {
 	test("explicit returns the requested compatible track", () => {
-		const tracks = [buildTrack({ id: "text-1", type: "text" })];
+		const tracks = buildSceneTracks({
+			overlay: [buildTrack({ id: "text-1", type: "text" })],
+		});
 
 		expect(
 			resolveTrackPlacement({
@@ -254,7 +270,9 @@ describe("resolveTrackPlacement", () => {
 	});
 
 	test("explicit rejects missing and incompatible tracks", () => {
-		const tracks = [buildTrack({ id: "video-1", type: "video", isMain: true })];
+		const tracks = buildSceneTracks({
+			main: buildTrack({ id: "video-1", type: "video" }),
+		});
 
 		expect(
 			resolveTrackPlacement({
@@ -276,16 +294,18 @@ describe("resolveTrackPlacement", () => {
 	});
 
 	test("firstAvailable picks the first compatible track without overlap", () => {
-		const tracks = [
-			buildTrack({
-				id: "text-1",
-				type: "text",
-				elements: [
-					buildElement({ id: "a", type: "text", startTime: 0, duration: 5 }),
-				],
-			}),
-			buildTrack({ id: "text-2", type: "text" }),
-		];
+		const tracks = buildSceneTracks({
+			overlay: [
+				buildTrack({
+					id: "text-1",
+					type: "text",
+					elements: [
+						buildElement({ id: "a", type: "text", startTime: 0, duration: 5 }),
+					],
+				}),
+				buildTrack({ id: "text-2", type: "text" }),
+			],
+		});
 
 		expect(
 			resolveTrackPlacement({
@@ -303,21 +323,22 @@ describe("resolveTrackPlacement", () => {
 	});
 
 	test("firstAvailable creates a new track when all compatible tracks are full", () => {
-		const tracks = [
-			buildTrack({
-				id: "graphic-1",
-				type: "graphic",
-				elements: [
-					buildElement({ id: "a", type: "graphic", startTime: 0, duration: 5 }),
-				],
-			}),
-			buildTrack({
+		const tracks = buildSceneTracks({
+			overlay: [
+				buildTrack({
+					id: "graphic-1",
+					type: "graphic",
+					elements: [
+						buildElement({ id: "a", type: "graphic", startTime: 0, duration: 5 }),
+					],
+				}),
+			],
+			main: buildTrack({
 				id: "video-main",
 				type: "video",
-				isMain: true,
 			}),
-			buildTrack({ id: "audio-1", type: "audio" }),
-		];
+			audio: [buildTrack({ id: "audio-1", type: "audio" })],
+		});
 
 		expect(
 			resolveTrackPlacement({
@@ -335,7 +356,9 @@ describe("resolveTrackPlacement", () => {
 	});
 
 	test("preferIndex uses the preferred track when it fits", () => {
-		const tracks = [buildTrack({ id: "audio-1", type: "audio" })];
+		const tracks = buildSceneTracks({
+			audio: [buildTrack({ id: "audio-1", type: "audio" })],
+		});
 
 		expect(
 			resolveTrackPlacement({
@@ -349,18 +372,18 @@ describe("resolveTrackPlacement", () => {
 				},
 			}),
 		).toEqual({
-			kind: "existingTrack",
-			trackId: "audio-1",
-			trackIndex: 0,
+			kind: "newTrack",
 			trackType: "audio",
+			insertIndex: 1,
+			insertPosition: "below",
 		});
 	});
 
 	test("preferIndex creates a new overlay track above the main track", () => {
-		const tracks = [
-			buildTrack({ id: "video-main", type: "video", isMain: true }),
-			buildTrack({ id: "audio-1", type: "audio" }),
-		];
+		const tracks = buildSceneTracks({
+			main: buildTrack({ id: "video-main", type: "video" }),
+			audio: [buildTrack({ id: "audio-1", type: "audio" })],
+		});
 
 		expect(
 			resolveTrackPlacement({
@@ -382,11 +405,11 @@ describe("resolveTrackPlacement", () => {
 	});
 
 	test("preferIndex keeps audio tracks below the main track", () => {
-		const tracks = [
-			buildTrack({ id: "text-1", type: "text" }),
-			buildTrack({ id: "video-main", type: "video", isMain: true }),
-			buildTrack({ id: "audio-1", type: "audio" }),
-		];
+		const tracks = buildSceneTracks({
+			overlay: [buildTrack({ id: "text-1", type: "text" })],
+			main: buildTrack({ id: "video-main", type: "video" }),
+			audio: [buildTrack({ id: "audio-1", type: "audio" })],
+		});
 
 		expect(
 			resolveTrackPlacement({
@@ -409,17 +432,19 @@ describe("resolveTrackPlacement", () => {
 	});
 
 	test("aboveSource tries the track above source, then any compatible track", () => {
-		const tracks = [
-			buildTrack({ id: "text-top", type: "text" }),
-			buildTrack({
-				id: "text-middle",
-				type: "text",
-				elements: [
-					buildElement({ id: "a", type: "text", startTime: 0, duration: 5 }),
-				],
-			}),
-			buildTrack({ id: "text-source", type: "text" }),
-		];
+		const tracks = buildSceneTracks({
+			overlay: [
+				buildTrack({ id: "text-top", type: "text" }),
+				buildTrack({
+					id: "text-middle",
+					type: "text",
+					elements: [
+						buildElement({ id: "a", type: "text", startTime: 0, duration: 5 }),
+					],
+				}),
+				buildTrack({ id: "text-source", type: "text" }),
+			],
+		});
 
 		expect(
 			resolveTrackPlacement({
@@ -436,23 +461,25 @@ describe("resolveTrackPlacement", () => {
 		});
 	});
 
-	test("aboveSource creates a new track near the source when none fit", () => {
-		const tracks = [
-			buildTrack({
-				id: "text-top",
-				type: "text",
-				elements: [
-					buildElement({ id: "a", type: "text", startTime: 0, duration: 5 }),
-				],
-			}),
-			buildTrack({
-				id: "text-source",
-				type: "text",
-				elements: [
-					buildElement({ id: "b", type: "text", startTime: 0, duration: 5 }),
-				],
-			}),
-		];
+	test("aboveSource creates a new overlay track in the overlay zone when none fit", () => {
+		const tracks = buildSceneTracks({
+			overlay: [
+				buildTrack({
+					id: "text-top",
+					type: "text",
+					elements: [
+						buildElement({ id: "a", type: "text", startTime: 0, duration: 5 }),
+					],
+				}),
+				buildTrack({
+					id: "text-source",
+					type: "text",
+					elements: [
+						buildElement({ id: "b", type: "text", startTime: 0, duration: 5 }),
+					],
+				}),
+			],
+		});
 
 		expect(
 			resolveTrackPlacement({
@@ -464,16 +491,16 @@ describe("resolveTrackPlacement", () => {
 		).toEqual({
 			kind: "newTrack",
 			trackType: "text",
-			insertIndex: 1,
+			insertIndex: 0,
 			insertPosition: null,
 		});
 	});
 
 	test("alwaysNew honors highest and default insertion rules", () => {
-		const tracks = [
-			buildTrack({ id: "video-main", type: "video", isMain: true }),
-			buildTrack({ id: "audio-1", type: "audio" }),
-		];
+		const tracks = buildSceneTracks({
+			main: buildTrack({ id: "video-main", type: "video" }),
+			audio: [buildTrack({ id: "audio-1", type: "audio" })],
+		});
 
 		expect(
 			resolveTrackPlacement({
@@ -505,16 +532,18 @@ describe("resolveTrackPlacement", () => {
 	});
 
 	test("batch time spans reject tracks when any span overlaps", () => {
-		const tracks = [
-			buildTrack({
-				id: "audio-1",
-				type: "audio",
-				elements: [
-					buildElement({ id: "a", type: "audio", startTime: 0, duration: 2 }),
-					buildElement({ id: "b", type: "audio", startTime: 5, duration: 2 }),
-				],
-			}),
-		];
+		const tracks = buildSceneTracks({
+			audio: [
+				buildTrack({
+					id: "audio-1",
+					type: "audio",
+					elements: [
+						buildElement({ id: "a", type: "audio", startTime: 0, duration: 2 }),
+						buildElement({ id: "b", type: "audio", startTime: 5, duration: 2 }),
+					],
+				}),
+			],
+		});
 
 		expect(
 			resolveTrackPlacement({
@@ -534,10 +563,10 @@ describe("resolveTrackPlacement", () => {
 		});
 	});
 
-	test("handles empty timelines, single tracks, and track-type derivation", () => {
+	test("handles main-only timelines, single tracks, and track-type derivation", () => {
 		expect(
 			resolveTrackPlacement({
-				tracks: [],
+				tracks: buildSceneTracks({}),
 				elementType: "video",
 				timeSpans: [buildTimeSpan({ startTime: 0, duration: 3 })],
 				strategy: {
@@ -551,12 +580,14 @@ describe("resolveTrackPlacement", () => {
 			kind: "newTrack",
 			trackType: "video",
 			insertIndex: 0,
-			insertPosition: null,
+			insertPosition: "above",
 		});
 
 		expect(
 			resolveTrackPlacement({
-				tracks: [buildTrack({ id: "audio-1", type: "audio" })],
+				tracks: buildSceneTracks({
+					audio: [buildTrack({ id: "audio-1", type: "audio" })],
+				}),
 				elementType: "audio",
 				timeSpans: [],
 				strategy: { type: "alwaysNew", position: "default" },
@@ -564,22 +595,21 @@ describe("resolveTrackPlacement", () => {
 		).toEqual({
 			kind: "newTrack",
 			trackType: "audio",
-			insertIndex: 1,
+			insertIndex: 2,
 			insertPosition: null,
 		});
 	});
 
 	test("existingTrack on main video includes adjustedStartTime when start snaps", () => {
-		const tracks = [
-			buildTrack({
+		const tracks = buildSceneTracks({
+			main: buildTrack({
 				id: "video-main",
 				type: "video",
-				isMain: true,
 				elements: [
 					buildElement({ id: "a", type: "video", startTime: 5, duration: 5 }),
 				],
 			}),
-		];
+		});
 
 		expect(
 			resolveTrackPlacement({
@@ -598,11 +628,11 @@ describe("resolveTrackPlacement", () => {
 	});
 
 	test("preferIndex uses vertical drag direction when hovered track is incompatible", () => {
-		const tracks = [
-			buildTrack({ id: "text-1", type: "text" }),
-			buildTrack({ id: "video-main", type: "video", isMain: true }),
-			buildTrack({ id: "audio-1", type: "audio" }),
-		];
+		const tracks = buildSceneTracks({
+			overlay: [buildTrack({ id: "text-1", type: "text" })],
+			main: buildTrack({ id: "video-main", type: "video" }),
+			audio: [buildTrack({ id: "audio-1", type: "audio" })],
+		});
 
 		expect(
 			resolveTrackPlacement({

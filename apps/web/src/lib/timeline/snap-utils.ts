@@ -1,4 +1,4 @@
-import type { Bookmark, TimelineTrack } from "@/lib/timeline";
+import type { Bookmark, SceneTracks } from "@/lib/timeline";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
 import { getElementKeyframes } from "@/lib/animation";
 import { TICKS_PER_SECOND } from "@/lib/wasm";
@@ -29,7 +29,7 @@ export function findSnapPoints({
 	enableBookmarkSnapping = true,
 	enableKeyframeSnapping = true,
 }: {
-	tracks: Array<TimelineTrack>;
+	tracks: SceneTracks;
 	playheadTime: number;
 	excludeElementId?: string;
 	bookmarks?: Array<Bookmark>;
@@ -40,8 +40,9 @@ export function findSnapPoints({
 	enableKeyframeSnapping?: boolean;
 }): SnapPoint[] {
 	const snapPoints: SnapPoint[] = [];
+	const orderedTracks = [...tracks.overlay, tracks.main, ...tracks.audio];
 
-	for (const track of tracks) {
+	for (const track of orderedTracks) {
 		for (const element of track.elements) {
 			if (element.id === excludeElementId) continue;
 
@@ -140,7 +141,7 @@ export function snapElementEdge({
 }: {
 	targetTime: number;
 	elementDuration: number;
-	tracks: Array<TimelineTrack>;
+	tracks: SceneTracks;
 	playheadTime: number;
 	zoomLevel: number;
 	excludeElementId?: string;

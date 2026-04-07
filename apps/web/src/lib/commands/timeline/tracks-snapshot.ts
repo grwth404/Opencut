@@ -1,11 +1,11 @@
 import { Command, type CommandResult } from "@/lib/commands/base-command";
-import type { TimelineTrack } from "@/lib/timeline";
+import type { SceneTracks } from "@/lib/timeline";
 import { EditorCore } from "@/core";
 
 export class TracksSnapshotCommand extends Command {
 	constructor(
-		private before: TimelineTrack[],
-		private after: TimelineTrack[],
+		private before: SceneTracks,
+		private after: SceneTracks,
 	) {
 		super();
 	}

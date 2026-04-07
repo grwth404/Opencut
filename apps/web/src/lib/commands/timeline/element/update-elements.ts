@@ -1,11 +1,14 @@
 import { EditorCore } from "@/core";
 import { Command, type CommandResult } from "@/lib/commands/base-command";
-import type { TimelineElement, TimelineTrack } from "@/lib/timeline";
-import { updateElementInTracks } from "@/lib/timeline";
+import type { SceneTracks, TimelineElement } from "@/lib/timeline";
+import {
+	findTrackInSceneTracks,
+	updateElementInSceneTracks,
+} from "@/lib/timeline";
 import { applyElementUpdate } from "@/lib/timeline/update-pipeline";
 
 export class UpdateElementsCommand extends Command {
-	private savedState: TimelineTrack[] | null = null;
+	private savedState: SceneTracks | null = null;
 	private readonly updates: Array<{
 		trackId: string;
 		elementId: string;
@@ -27,13 +30,14 @@ export class UpdateElementsCommand extends Command {
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
-		this.savedState = editor.timeline.getTracks();
+		this.savedState = editor.scenes.getActiveScene().tracks;
 		let updatedTracks = this.savedState;
 
 		for (const updateEntry of this.updates) {
-			const currentTrack = updatedTracks.find(
-				(track) => track.id === updateEntry.trackId,
-			);
+			const currentTrack = findTrackInSceneTracks({
+				tracks: updatedTracks,
+				trackId: updateEntry.trackId,
+			});
 			const currentElement = currentTrack?.elements.find(
 				(element) => element.id === updateEntry.elementId,
 			);
@@ -50,7 +54,7 @@ export class UpdateElementsCommand extends Command {
 				},
 			});
 
-			updatedTracks = updateElementInTracks({
+			updatedTracks = updateElementInSceneTracks({
 				tracks: updatedTracks,
 				trackId: updateEntry.trackId,
 				elementId: updateEntry.elementId,

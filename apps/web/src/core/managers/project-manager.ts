@@ -156,9 +156,14 @@ export class ProjectManager {
 
 			await this.editor.media.loadProjectMedia({ projectId: id });
 
-			const allTracks = (project.scenes ?? []).flatMap((scene) => scene.tracks);
 			await loadFonts({
-				families: getElementFontFamilies({ tracks: allTracks }),
+				families: [
+					...new Set(
+						(project.scenes ?? []).flatMap((scene) =>
+							getElementFontFamilies({ tracks: scene.tracks }),
+						),
+					),
+				],
 			});
 
 			if (!project.metadata.thumbnail) {
@@ -643,7 +648,7 @@ export class ProjectManager {
 	private async updateThumbnailFromTimeline(): Promise<boolean> {
 		if (!this.active) return false;
 
-		const tracks = this.editor.timeline.getTracks();
+		const tracks = this.editor.scenes.getActiveScene().tracks;
 		const mediaAssets = this.editor.media.getAssets();
 		const duration = this.editor.timeline.getTotalDuration();
 		const { canvasSize, background } = this.active.settings;

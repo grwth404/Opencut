@@ -1,10 +1,9 @@
 import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
-import type { TimelineTrack } from "@/lib/timeline";
-import { getMainTrack } from "@/lib/timeline/placement";
+import type { SceneTracks } from "@/lib/timeline";
 
 export class RemoveTrackCommand extends Command {
-	private savedState: TimelineTrack[] | null = null;
+	private savedState: SceneTracks | null = null;
 
 	constructor(private trackId: string) {
 		super();
@@ -12,18 +11,14 @@ export class RemoveTrackCommand extends Command {
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
-		this.savedState = editor.timeline.getTracks();
-		const targetTrack = this.savedState.find(
-			(track) => track.id === this.trackId,
-		);
-		const mainTrack = getMainTrack({ tracks: this.savedState });
-		if (mainTrack?.id === targetTrack?.id) {
-			return;
-		}
-		const updatedTracks = this.savedState.filter(
-			(track) => track.id !== this.trackId,
-		);
+		this.savedState = editor.scenes.getActiveScene().tracks;
+		const updatedTracks: SceneTracks = {
+			...this.savedState,
+			overlay: this.savedState.overlay.filter((track) => track.id !== this.trackId),
+			audio: this.savedState.audio.filter((track) => track.id !== this.trackId),
+		};
 		editor.timeline.updateTracks(updatedTracks);
+		return undefined;
 	}
 
 	undo(): void {

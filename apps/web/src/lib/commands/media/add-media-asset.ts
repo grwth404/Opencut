@@ -54,11 +54,15 @@ export class AddMediaAssetCommand extends Command {
 					assets: currentAssets.filter((asset) => asset.id !== this.assetId),
 				});
 
-				const currentTracks = editor.timeline.getTracks();
+				const currentTracks = editor.scenes.getActiveScene().tracks;
 				const orphanedElements: Array<{ trackId: string; elementId: string }> =
 					[];
 
-				for (const track of currentTracks) {
+				for (const track of [
+					...currentTracks.overlay,
+					currentTracks.main,
+					...currentTracks.audio,
+				]) {
 					for (const element of track.elements) {
 						if (hasMediaId(element) && element.mediaId === this.assetId) {
 							orphanedElements.push({

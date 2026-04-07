@@ -196,7 +196,7 @@ export function useTimelineElementResize({
 		const minDuration = Math.round(TICKS_PER_SECOND * projectFps.denominator / projectFps.numerator);
 			const shouldSnap = snappingEnabled && !isShiftHeldRef.current;
 			if (shouldSnap) {
-				const tracks = editor.timeline.getTracks();
+				const tracks = editor.scenes.getActiveScene().tracks;
 				const playheadTime = editor.playback.getCurrentTime();
 				const snapPoints = findSnapPoints({
 					tracks,

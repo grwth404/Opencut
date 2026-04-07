@@ -1,6 +1,6 @@
 import { Input, ALL_FORMATS, BlobSource } from "mediabunny";
 import { createTimelineAudioBuffer } from "@/lib/media/audio";
-import type { TimelineTrack } from "@/lib/timeline";
+import type { SceneTracks } from "@/lib/timeline";
 import type { MediaAsset } from "@/lib/media/types";
 
 export async function getVideoInfo({
@@ -48,7 +48,7 @@ export const extractTimelineAudio = async ({
 	totalDuration,
 	onProgress,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	mediaAssets: MediaAsset[];
 	totalDuration: number;
 	onProgress?: (progress: number) => void;

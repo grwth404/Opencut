@@ -1,7 +1,7 @@
 import type { TScene } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { calculateTotalDuration } from "@/lib/timeline";
-import { ensureMainTrack } from "@/lib/timeline/placement";
+import { MAIN_TRACK_NAME } from "@/lib/timeline/placement/main-track";
 
 export function getMainScene({ scenes }: { scenes: TScene[] }): TScene | null {
 	return scenes.find((scene) => scene.isMain) || null;
@@ -23,12 +23,22 @@ export function buildDefaultScene({
 	name: string;
 	isMain: boolean;
 }): TScene {
-	const tracks = ensureMainTrack({ tracks: [] });
 	return {
 		id: generateUUID(),
 		name,
 		isMain,
-		tracks,
+		tracks: {
+			overlay: [],
+			main: {
+				id: generateUUID(),
+				name: MAIN_TRACK_NAME,
+				type: "video",
+				elements: [],
+				muted: false,
+				hidden: false,
+			},
+			audio: [],
+		},
 		bookmarks: [],
 		createdAt: new Date(),
 		updatedAt: new Date(),
@@ -81,7 +91,7 @@ export function getProjectDurationFromScenes({
 	scenes: TScene[];
 }): number {
 	const mainScene = getMainScene({ scenes }) ?? scenes[0] ?? null;
-	if (!mainScene?.tracks || !Array.isArray(mainScene.tracks)) {
+	if (!mainScene?.tracks) {
 		return 0;
 	}
 

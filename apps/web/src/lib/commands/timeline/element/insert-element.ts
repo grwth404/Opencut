@@ -2,6 +2,7 @@ import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import type {
 	CreateTimelineElement,
+	SceneTracks,
 	TimelineTrack,
 	TimelineElement,
 	TrackType,
@@ -30,7 +31,7 @@ export interface InsertElementParams {
 
 export class InsertElementCommand extends Command {
 	private elementId: string;
-	private savedState: TimelineTrack[] | null = null;
+	private savedState: SceneTracks | null = null;
 	private targetTrackId: string | null = null;
 
 	constructor({ element, placement }: InsertElementParams) {
@@ -45,21 +46,22 @@ export class InsertElementCommand extends Command {
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
-		this.savedState = editor.timeline.getTracks();
-
-		if (!this.savedState) {
-			console.error("Tracks not available");
-			return;
-		}
+		this.savedState = editor.scenes.getActiveScene().tracks;
 
 		if (!this.validateElementBasics({ element: this.element })) {
 			return;
 		}
 
-		const totalElementsInTimeline = this.savedState.reduce(
-			(total, t) => total + t.elements.length,
-			0,
-		);
+		const totalElementsInTimeline =
+			this.savedState.main.elements.length +
+			this.savedState.overlay.reduce(
+				(total, track) => total + track.elements.length,
+				0,
+			) +
+			this.savedState.audio.reduce(
+				(total, track) => total + track.elements.length,
+				0,
+			);
 		const isFirstElement = totalElementsInTimeline === 0;
 
 		const newElement = this.buildElement({ element: this.element });
@@ -194,9 +196,9 @@ export class InsertElementCommand extends Command {
 		tracks,
 		element,
 	}: {
-		tracks: TimelineTrack[];
+		tracks: SceneTracks;
 		element: TimelineElement;
-	}): { updatedTracks: TimelineTrack[]; targetTrackId: string } | null {
+	}): { updatedTracks: SceneTracks; targetTrackId: string } | null {
 		const placement = this.placement;
 
 		if (
@@ -231,7 +233,11 @@ export class InsertElementCommand extends Command {
 		});
 		if (!placementResult) {
 			if (placement.mode === "explicit") {
-				const targetTrack = tracks.find((track) => track.id === placement.trackId);
+				const targetTrack =
+					tracks.main.id === placement.trackId
+						? tracks.main
+						: tracks.overlay.find((track) => track.id === placement.trackId) ??
+							tracks.audio.find((track) => track.id === placement.trackId);
 				if (!targetTrack) {
 					console.error("Track not found:", placement.trackId);
 					return null;
@@ -256,7 +262,7 @@ export class InsertElementCommand extends Command {
 					}
 				: element;
 
-		return applyPlacement({
+		const appliedPlacement = applyPlacement({
 			tracks,
 			placementResult,
 			elements: [elementToPlace],
@@ -265,5 +271,13 @@ export class InsertElementCommand extends Command {
 					? placement.insertIndex
 					: undefined,
 		});
+		if (!appliedPlacement) {
+			return null;
+		}
+
+		return {
+			updatedTracks: appliedPlacement.updatedTracks,
+			targetTrackId: appliedPlacement.targetTrackId,
+		};
 	}
 }

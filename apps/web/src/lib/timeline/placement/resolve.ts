@@ -1,4 +1,4 @@
-import type { TrackType, TimelineTrack } from "@/lib/timeline";
+import type { SceneTracks, TrackType, TimelineTrack } from "@/lib/timeline";
 import {
 	getDefaultInsertIndexForTrack,
 	getHighestInsertIndexForTrack,
@@ -15,7 +15,7 @@ import type {
 } from "./types";
 
 type ResolveTrackPlacementParams = PlacementSubject & {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	timeSpans: PlacementTimeSpan[];
 	strategy: PlacementStrategy;
 };
@@ -28,7 +28,7 @@ function buildExistingTrackResult({
 }: {
 	track: TimelineTrack;
 	trackIndex: number;
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	timeSpans: PlacementTimeSpan[];
 }): PlacementResult {
 	const firstSpan = timeSpans[0];
@@ -90,7 +90,7 @@ function resolveAlwaysNewTrack({
 	trackType,
 	position,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	trackType: TrackType;
 	position: "highest" | "default";
 }): PlacementResult {
@@ -134,6 +134,7 @@ export function resolveTrackPlacement({
 	tracks,
 	...placement
 }: ResolveTrackPlacementParams): PlacementResult | null {
+	const orderedTracks = [...tracks.overlay, tracks.main, ...tracks.audio];
 	const trackType =
 		"trackType" in placement
 			? placement.trackType
@@ -143,30 +144,35 @@ export function resolveTrackPlacement({
 	const { timeSpans, strategy } = placement;
 
 	if (strategy.type === "explicit") {
-		const trackIndex = tracks.findIndex(
+		const trackIndex = orderedTracks.findIndex(
 			(track) => track.id === strategy.trackId,
 		);
 		if (trackIndex < 0) {
 			return null;
 		}
 
-		const track = tracks[trackIndex];
+		const track = orderedTracks[trackIndex];
 		if (track.type !== trackType) {
 			return null;
 		}
 
-		return buildExistingTrackResult({ track, trackIndex, tracks, timeSpans });
+		return buildExistingTrackResult({
+			track,
+			trackIndex,
+			tracks,
+			timeSpans,
+		});
 	}
 
 	if (strategy.type === "firstAvailable") {
 		const existingTrackIndex = findFirstAvailableTrackIndex({
-			tracks,
+			tracks: orderedTracks,
 			trackType,
 			timeSpans,
 		});
 		if (existingTrackIndex >= 0) {
 			return buildExistingTrackResult({
-				track: tracks[existingTrackIndex],
+				track: orderedTracks[existingTrackIndex],
 				trackIndex: existingTrackIndex,
 				tracks,
 				timeSpans,
@@ -181,7 +187,7 @@ export function resolveTrackPlacement({
 	}
 
 	if (strategy.type === "preferIndex") {
-		const preferredTrack = tracks[strategy.trackIndex];
+		const preferredTrack = orderedTracks[strategy.trackIndex];
 		const isPreferredTrackCompatible =
 			!!preferredTrack && preferredTrack.type === trackType;
 		const canUseExistingTrack =
@@ -220,7 +226,7 @@ export function resolveTrackPlacement({
 
 	if (strategy.type === "aboveSource") {
 		const aboveTrackIndex = strategy.sourceTrackIndex - 1;
-		const aboveTrack = tracks[aboveTrackIndex];
+		const aboveTrack = orderedTracks[aboveTrackIndex];
 		if (
 			aboveTrack &&
 			aboveTrack.type === trackType &&
@@ -238,26 +244,23 @@ export function resolveTrackPlacement({
 		}
 
 		const firstAvailableTrackIndex = findFirstAvailableTrackIndex({
-			tracks,
+			tracks: orderedTracks,
 			trackType,
 			timeSpans,
 		});
 		if (firstAvailableTrackIndex >= 0) {
 			return buildExistingTrackResult({
-				track: tracks[firstAvailableTrackIndex],
+				track: orderedTracks[firstAvailableTrackIndex],
 				trackIndex: firstAvailableTrackIndex,
 				tracks,
 				timeSpans,
 			});
 		}
 
-		const insertIndex =
-			strategy.sourceTrackIndex >= 0
-				? strategy.sourceTrackIndex
-				: getHighestInsertIndexForTrack({
-						tracks,
-						trackType,
-					});
+		const insertIndex = getHighestInsertIndexForTrack({
+			tracks,
+			trackType,
+		});
 
 		return buildNewTrackResult({
 			trackType,

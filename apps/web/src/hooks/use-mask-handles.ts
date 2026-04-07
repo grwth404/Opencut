@@ -45,7 +45,9 @@ export function useMaskHandles({
 		null,
 	);
 
-	const tracks = useEditor((e) => e.timeline.getRenderTracks());
+	const tracks = useEditor(
+		(e) => e.timeline.getPreviewTracks() ?? e.scenes.getActiveScene().tracks,
+	);
 	const currentTime = useEditor((e) => e.playback.getCurrentTime());
 	const mediaAssets = useEditor((e) => e.media.getAssets());
 	const canvasSize = useEditor(

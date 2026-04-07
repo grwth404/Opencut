@@ -1,5 +1,4 @@
-
-import type { TimelineElement, TimelineTrack } from "@/lib/timeline/types";
+import type { SceneTracks, TimelineElement, TimelineTrack } from "@/lib/timeline/types";
 import type { RippleAdjustment } from "./apply";
 
 interface Interval {
@@ -15,15 +14,25 @@ export function computeRippleAdjustments({
 	beforeTracks,
 	afterTracks,
 }: {
-	beforeTracks: TimelineTrack[];
-	afterTracks: TimelineTrack[];
+	beforeTracks: SceneTracks;
+	afterTracks: SceneTracks;
 }): RippleAdjustment[] {
-	const afterTracksById = new Map(afterTracks.map((track) => [track.id, track]));
+	const beforeTrackList = [
+		...beforeTracks.overlay,
+		beforeTracks.main,
+		...beforeTracks.audio,
+	];
+	const afterTrackList = [
+		...afterTracks.overlay,
+		afterTracks.main,
+		...afterTracks.audio,
+	];
+	const afterTracksById = new Map(afterTrackList.map((track) => [track.id, track]));
 	const allAfterElementIds = new Set(
-		afterTracks.flatMap((track) => track.elements.map((element) => element.id)),
+		afterTrackList.flatMap((track) => track.elements.map((element) => element.id)),
 	);
 
-	return beforeTracks.flatMap((beforeTrack): RippleAdjustment[] =>
+	return beforeTrackList.flatMap((beforeTrack): RippleAdjustment[] =>
 		computeTrackRippleAdjustments({
 			trackId: beforeTrack.id,
 			beforeElements: beforeTrack.elements,

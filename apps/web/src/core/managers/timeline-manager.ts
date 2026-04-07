@@ -1,6 +1,7 @@
 import type { EditorCore } from "@/core";
 import type { ParamValues } from "@/lib/params";
 import type {
+	SceneTracks,
 	TrackType,
 	TimelineTrack,
 	TimelineElement,
@@ -8,6 +9,10 @@ import type {
 	RetimeConfig,
 } from "@/lib/timeline";
 import { calculateTotalDuration } from "@/lib/timeline";
+import {
+	findTrackInSceneTracks,
+	updateElementInSceneTracks,
+} from "@/lib/timeline/track-element-update";
 import {
 	canElementBeHidden,
 	canElementHaveAudio,
@@ -53,7 +58,7 @@ import type { InsertElementParams } from "@/lib/commands/timeline/element/insert
 export class TimelineManager {
 	private listeners = new Set<() => void>();
 	private previewOverlay = new Map<string, Partial<TimelineElement>>();
-	private previewTracks: TimelineTrack[] | null = null;
+	private previewTracks: SceneTracks | null = null;
 
 	constructor(private editor: EditorCore) {}
 
@@ -193,7 +198,12 @@ export class TimelineManager {
 	}
 
 	getTotalDuration(): number {
-		return calculateTotalDuration({ tracks: this.getTracks() });
+		const activeScene = this.editor.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return 0;
+		}
+
+		return calculateTotalDuration({ tracks: activeScene.tracks });
 	}
 
 	getLastFrameTime(): number {
@@ -204,7 +214,12 @@ export class TimelineManager {
 	}
 
 	getTrackById({ trackId }: { trackId: string }): TimelineTrack | null {
-		return this.getTracks().find((track) => track.id === trackId) ?? null;
+		const activeScene = this.editor.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return null;
+		}
+
+		return findTrackInSceneTracks({ tracks: activeScene.tracks, trackId });
 	}
 
 	getElementsWithTracks({
@@ -629,14 +644,20 @@ export class TimelineManager {
 			} as Partial<TimelineElement>;
 			this.previewOverlay.set(elementId, mergedOverlay);
 		}
-		const committedTracks = this.editor.scenes.getActiveScene()?.tracks ?? [];
+		const committedTracks = this.editor.scenes.getActiveSceneOrNull()?.tracks;
+		if (!committedTracks) {
+			return;
+		}
 		this.previewTracks = this.applyPreviewOverlay(committedTracks);
 		this.notify();
 	}
 
 	commitPreview(): void {
 		if (this.previewOverlay.size === 0) return;
-		const committedTracks = this.editor.scenes.getActiveScene()?.tracks ?? [];
+		const committedTracks = this.editor.scenes.getActiveSceneOrNull()?.tracks;
+		if (!committedTracks) {
+			return;
+		}
 		const afterTracks =
 			this.previewTracks ?? this.applyPreviewOverlay(committedTracks);
 		const command = new TracksSnapshotCommand(committedTracks, afterTracks);
@@ -653,19 +674,32 @@ export class TimelineManager {
 		this.notify();
 	}
 
-	private applyPreviewOverlay(tracks: TimelineTrack[]): TimelineTrack[] {
+	private applyPreviewOverlay(tracks: SceneTracks): SceneTracks {
 		if (this.previewOverlay.size === 0) return tracks;
-		return tracks.map((track) => {
-			const hasOverlay = track.elements.some((el) =>
-				this.previewOverlay.has(el.id),
+
+		const applyTrackOverlay = <TTrack extends TimelineTrack>(track: TTrack): TTrack => {
+			const hasOverlay = track.elements.some((element) =>
+				this.previewOverlay.has(element.id),
 			);
-			if (!hasOverlay) return track;
-			const newElements = track.elements.map((el) => {
-				const overlay = this.previewOverlay.get(el.id);
-				return overlay ? ({ ...el, ...overlay } as TimelineElement) : el;
+			if (!hasOverlay) {
+				return track;
+			}
+
+			const nextElements = track.elements.map((element) => {
+				const overlay = this.previewOverlay.get(element.id);
+				return overlay
+					? ({ ...element, ...overlay } as TimelineElement)
+					: element;
 			});
-			return { ...track, elements: newElements } as TimelineTrack;
-		});
+
+			return { ...track, elements: nextElements } as TTrack;
+		};
+
+		return {
+			overlay: tracks.overlay.map((track) => applyTrackOverlay(track)),
+			main: applyTrackOverlay(tracks.main),
+			audio: tracks.audio.map((track) => applyTrackOverlay(track)),
+		};
 	}
 
 	duplicateElements({
@@ -734,13 +768,8 @@ export class TimelineManager {
 		this.updateElements({ updates: nextUpdates });
 	}
 
-	getTracks(): TimelineTrack[] {
-		return this.editor.scenes.getActiveScene()?.tracks ?? [];
-	}
-
-	getRenderTracks(): TimelineTrack[] {
-		if (this.previewTracks !== null) return this.previewTracks;
-		return this.getTracks();
+	getPreviewTracks(): SceneTracks | null {
+		return this.previewTracks ?? this.editor.scenes.getActiveSceneOrNull()?.tracks ?? null;
 	}
 
 	subscribe(listener: () => void): () => void {
@@ -771,14 +800,35 @@ export class TimelineManager {
 	}: {
 		elementId: string;
 	}): string | null {
-		return (
-			this.getTracks().find((track) =>
-				track.elements.some((element) => element.id === elementId),
-			)?.id ?? null
-		);
+		const activeScene = this.editor.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return null;
+		}
+
+		if (
+			activeScene.tracks.main.elements.some(
+				(element) => element.id === elementId,
+			)
+		) {
+			return activeScene.tracks.main.id;
+		}
+
+		for (const track of activeScene.tracks.overlay) {
+			if (track.elements.some((element) => element.id === elementId)) {
+				return track.id;
+			}
+		}
+
+		for (const track of activeScene.tracks.audio) {
+			if (track.elements.some((element) => element.id === elementId)) {
+				return track.id;
+			}
+		}
+
+		return null;
 	}
 
-	updateTracks(newTracks: TimelineTrack[]): void {
+	updateTracks(newTracks: SceneTracks): void {
 		this.previewOverlay.clear();
 		this.previewTracks = null;
 		this.editor.scenes.updateSceneTracks({ tracks: newTracks });

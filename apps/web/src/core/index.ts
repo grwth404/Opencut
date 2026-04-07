@@ -10,7 +10,6 @@ import { AudioManager } from "./managers/audio-manager";
 import { SelectionManager } from "./managers/selection-manager";
 import { registerDefaultEffects } from "@/lib/effects";
 import { registerDefaultMasks } from "@/lib/masks";
-import { isMainTrack } from "@/lib/timeline/placement";
 
 export class EditorCore {
 	private static instance: EditorCore | null = null;
@@ -39,11 +38,21 @@ export class EditorCore {
 		this.audio = new AudioManager(this);
 		this.selection = new SelectionManager(this);
 		this.command.registerReactor(() => {
-			const tracks = this.timeline.getTracks();
-			const prunedTracks = tracks.filter(
-				(track) => track.elements.length > 0 || isMainTrack(track),
-			);
-			if (prunedTracks.length !== tracks.length) {
+			const activeScene = this.scenes.getActiveSceneOrNull();
+			if (!activeScene) {
+				return;
+			}
+
+			const tracks = activeScene.tracks;
+			const prunedTracks = {
+				...tracks,
+				overlay: tracks.overlay.filter((track) => track.elements.length > 0),
+				audio: tracks.audio.filter((track) => track.elements.length > 0),
+			};
+			if (
+				prunedTracks.overlay.length !== tracks.overlay.length ||
+				prunedTracks.audio.length !== tracks.audio.length
+			) {
 				this.timeline.updateTracks(prunedTracks);
 			}
 		});

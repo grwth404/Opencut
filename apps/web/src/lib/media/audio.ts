@@ -2,7 +2,7 @@ import type {
 	AudioElement,
 	LibraryAudioElement,
 	RetimeConfig,
-	TimelineTrack,
+	SceneTracks,
 } from "@/lib/timeline";
 import { shouldMaintainPitch } from "@/lib/retime/rate";
 import type { MediaAsset } from "@/lib/media/types";
@@ -89,16 +89,17 @@ export async function collectAudioElements({
 	mediaAssets,
 	audioContext,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	mediaAssets: MediaAsset[];
 	audioContext: AudioContext;
 }): Promise<CollectedAudioElement[]> {
+	const orderedTracks = [...tracks.overlay, tracks.main, ...tracks.audio];
 	const mediaMap = new Map<string, MediaAsset>(
 		mediaAssets.map((media) => [media.id, media]),
 	);
 	const pendingElements: Array<Promise<CollectedAudioElement | null>> = [];
 
-	for (const track of tracks) {
+	for (const track of orderedTracks) {
 		if (canTrackHaveAudio(track) && track.muted) continue;
 
 		for (const element of track.elements) {
@@ -445,16 +446,17 @@ export async function collectAudioMixSources({
 	tracks,
 	mediaAssets,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	mediaAssets: MediaAsset[];
 }): Promise<AudioMixSource[]> {
+	const orderedTracks = [...tracks.overlay, tracks.main, ...tracks.audio];
 	const audioMixSources: AudioMixSource[] = [];
 	const mediaMap = new Map<string, MediaAsset>(
 		mediaAssets.map((asset) => [asset.id, asset]),
 	);
 	const pendingLibrarySources: Array<Promise<AudioMixSource | null>> = [];
 
-	for (const track of tracks) {
+	for (const track of orderedTracks) {
 		if (canTrackHaveAudio(track) && track.muted) continue;
 
 		for (const element of track.elements) {
@@ -507,16 +509,17 @@ export async function collectAudioClips({
 	tracks,
 	mediaAssets,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	mediaAssets: MediaAsset[];
 }): Promise<AudioClipSource[]> {
+	const orderedTracks = [...tracks.overlay, tracks.main, ...tracks.audio];
 	const clips: AudioClipSource[] = [];
 	const mediaMap = new Map<string, MediaAsset>(
 		mediaAssets.map((asset) => [asset.id, asset]),
 	);
 	const pendingLibraryClips: Array<Promise<AudioClipSource | null>> = [];
 
-	for (const track of tracks) {
+	for (const track of orderedTracks) {
 		const isTrackMuted = canTrackHaveAudio(track) && track.muted;
 
 		for (const element of track.elements) {
@@ -587,7 +590,7 @@ export async function createTimelineAudioBuffer({
 	sampleRate = EXPORT_SAMPLE_RATE,
 	audioContext,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	mediaAssets: MediaAsset[];
 	duration: number;
 	sampleRate?: number;

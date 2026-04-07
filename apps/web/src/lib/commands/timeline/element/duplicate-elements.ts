@@ -1,5 +1,5 @@
 import { Command, type CommandResult } from "@/lib/commands/base-command";
-import type { TimelineElement, TimelineTrack } from "@/lib/timeline";
+import type { SceneTracks, TimelineElement } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { EditorCore } from "@/core";
 import { applyPlacement, resolveTrackPlacement } from "@/lib/timeline/placement";
@@ -11,7 +11,7 @@ interface DuplicateElementsParams {
 
 export class DuplicateElementsCommand extends Command {
 	private duplicatedElements: { trackId: string; elementId: string }[] = [];
-	private savedState: TimelineTrack[] | null = null;
+	private savedState: SceneTracks | null = null;
 	private elements: DuplicateElementsParams["elements"];
 
 	constructor({ elements }: DuplicateElementsParams) {
@@ -21,12 +21,16 @@ export class DuplicateElementsCommand extends Command {
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
-		this.savedState = editor.timeline.getTracks();
+		this.savedState = editor.scenes.getActiveScene().tracks;
 		this.duplicatedElements = [];
 
-		let updatedTracks = [...this.savedState];
+		let updatedTracks = this.savedState;
 
-		for (const track of this.savedState) {
+		for (const track of [
+			...this.savedState.overlay,
+			this.savedState.main,
+			...this.savedState.audio,
+		]) {
 			const elementsToDuplicate = this.elements.filter(
 				(elementEntry) => elementEntry.trackId === track.id,
 			);

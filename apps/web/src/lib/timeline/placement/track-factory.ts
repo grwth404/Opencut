@@ -1,6 +1,69 @@
 import { DEFAULT_TRACK_NAMES } from "@/lib/timeline/tracks";
-import type { TrackType, TimelineTrack } from "@/lib/timeline";
+import type {
+	AudioTrack,
+	EffectTrack,
+	GraphicTrack,
+	TextTrack,
+	TrackType,
+	TimelineTrack,
+	VideoTrack,
+} from "@/lib/timeline";
 
+export function buildEmptyTrack({
+	id,
+	type,
+	name,
+}: {
+	id: string;
+	type: "video";
+	name?: string;
+}): VideoTrack;
+export function buildEmptyTrack({
+	id,
+	type,
+	name,
+}: {
+	id: string;
+	type: "text";
+	name?: string;
+}): TextTrack;
+export function buildEmptyTrack({
+	id,
+	type,
+	name,
+}: {
+	id: string;
+	type: "audio";
+	name?: string;
+}): AudioTrack;
+export function buildEmptyTrack({
+	id,
+	type,
+	name,
+}: {
+	id: string;
+	type: "graphic";
+	name?: string;
+}): GraphicTrack;
+export function buildEmptyTrack({
+	id,
+	type,
+	name,
+}: {
+	id: string;
+	type: "effect";
+	name?: string;
+}): EffectTrack;
+
+export function buildEmptyTrack({
+	id,
+	type,
+	name,
+}: {
+	id: string;
+	type: TrackType;
+	name?: string;
+}): TimelineTrack;
 export function buildEmptyTrack({
 	id,
 	type,
@@ -21,7 +84,6 @@ export function buildEmptyTrack({
 				elements: [],
 				hidden: false,
 				muted: false,
-				isMain: false,
 			};
 		case "text":
 			return {

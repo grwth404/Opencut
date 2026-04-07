@@ -1,44 +1,32 @@
-import type { TrackType, TimelineTrack } from "@/lib/timeline";
-import { isMainTrack } from "./main-track";
+import type { SceneTracks, TrackType } from "@/lib/timeline";
 
 export function getDefaultInsertIndexForTrack({
 	tracks,
 	trackType,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	trackType: TrackType;
 }): number {
 	if (trackType === "audio") {
-		return tracks.length;
+		return tracks.overlay.length + 1 + tracks.audio.length;
 	}
 
 	if (trackType === "effect") {
 		return 0;
 	}
 
-	const mainTrackIndex = tracks.findIndex((track) => isMainTrack(track));
-	if (mainTrackIndex >= 0) {
-		return mainTrackIndex;
-	}
-
-	const firstAudioTrackIndex = tracks.findIndex((track) => track.type === "audio");
-	if (firstAudioTrackIndex >= 0) {
-		return firstAudioTrackIndex;
-	}
-
-	return tracks.length;
+	return tracks.overlay.length;
 }
 
 export function getHighestInsertIndexForTrack({
 	tracks,
 	trackType,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	trackType: TrackType;
 }): number {
-	const mainTrackIndex = tracks.findIndex((track) => isMainTrack(track));
 	if (trackType === "audio") {
-		return mainTrackIndex >= 0 ? mainTrackIndex + 1 : tracks.length;
+		return tracks.overlay.length + 1;
 	}
 
 	return 0;
@@ -50,12 +38,13 @@ export function resolvePreferredNewTrackPlacement({
 	preferredIndex,
 	direction,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	trackType: TrackType;
 	preferredIndex: number;
 	direction: "above" | "below";
 }): { insertIndex: number; insertPosition: "above" | "below" | null } {
-	if (tracks.length === 0) {
+	const trackCount = tracks.overlay.length + 1 + tracks.audio.length;
+	if (trackCount === 0) {
 		return {
 			insertIndex: 0,
 			insertPosition: trackType === "audio" ? "below" : null,
@@ -64,9 +53,9 @@ export function resolvePreferredNewTrackPlacement({
 
 	const safePreferredIndex = Math.min(
 		Math.max(preferredIndex, 0),
-		tracks.length - 1,
+		trackCount - 1,
 	);
-	const mainTrackIndex = tracks.findIndex((track) => isMainTrack(track));
+	const mainTrackIndex = tracks.overlay.length;
 
 	if (trackType === "audio") {
 		if (safePreferredIndex <= mainTrackIndex) {

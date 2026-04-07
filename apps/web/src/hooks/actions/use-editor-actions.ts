@@ -179,11 +179,12 @@ export function useEditorActions() {
 		"split",
 		() => {
 			const currentTime = editor.playback.getCurrentTime();
+			const tracks = editor.scenes.getActiveScene().tracks;
 			const elementsToSplit =
 				selectedElements.length > 0
 					? selectedElements
 					: getElementsAtTime({
-							tracks: editor.timeline.getTracks(),
+							tracks,
 							time: currentTime,
 						});
 
@@ -201,11 +202,12 @@ export function useEditorActions() {
 		"split-left",
 		() => {
 			const currentTime = editor.playback.getCurrentTime();
+			const tracks = editor.scenes.getActiveScene().tracks;
 			const elementsToSplit =
 				selectedElements.length > 0
 					? selectedElements
 					: getElementsAtTime({
-							tracks: editor.timeline.getTracks(),
+							tracks,
 							time: currentTime,
 						});
 
@@ -233,11 +235,12 @@ export function useEditorActions() {
 		"split-right",
 		() => {
 			const currentTime = editor.playback.getCurrentTime();
+			const tracks = editor.scenes.getActiveScene().tracks;
 			const elementsToSplit =
 				selectedElements.length > 0
 					? selectedElements
 					: getElementsAtTime({
-							tracks: editor.timeline.getTracks(),
+							tracks,
 							time: currentTime,
 						});
 
@@ -310,7 +313,12 @@ export function useEditorActions() {
 	useActionHandler(
 		"select-all",
 		() => {
-			const allElements = editor.timeline.getTracks().flatMap((track) =>
+			const scene = editor.scenes.getActiveScene();
+			const allElements = [
+				...scene.tracks.overlay,
+				scene.tracks.main,
+				...scene.tracks.audio,
+			].flatMap((track) =>
 				track.elements.map((element) => ({
 					trackId: track.id,
 					elementId: element.id,

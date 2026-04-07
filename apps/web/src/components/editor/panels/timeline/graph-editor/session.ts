@@ -13,7 +13,7 @@ import type {
 	ScalarGraphKeyframeContext,
 	SelectedKeyframeRef,
 } from "@/lib/animation/types";
-import type { TimelineElement, TimelineTrack } from "@/lib/timeline";
+import type { SceneTracks, TimelineElement } from "@/lib/timeline";
 
 const GRAPH_LINEAR_CURVE: NormalizedCubicBezier = [0, 0, 1, 1];
 const FLAT_VALUE_EPSILON = 1e-6;
@@ -91,10 +91,10 @@ function findElementByKeyframe({
 	tracks,
 	keyframe,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	keyframe: SelectedKeyframeRef;
 }): { element: TimelineElement; trackId: string; elementId: string } | null {
-	for (const track of tracks) {
+	for (const track of [...tracks.overlay, tracks.main, ...tracks.audio]) {
 		if (track.id !== keyframe.trackId) {
 			continue;
 		}
@@ -180,7 +180,7 @@ export function resolveGraphEditorSelectionState({
 	selectedKeyframes,
 	preferredComponentKey,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	selectedKeyframes: SelectedKeyframeRef[];
 	preferredComponentKey?: string | null;
 }): GraphEditorSelectionState {

@@ -21,6 +21,7 @@ import { registerCanceller } from "@/lib/cancel-interaction";
 import type {
 	DropTarget,
 	ElementDragState,
+	SceneTracks,
 	TimelineElement,
 	TimelineTrack,
 } from "@/lib/timeline";
@@ -101,7 +102,7 @@ function getDragDropTarget({
 	clientY: number;
 	elementId: string;
 	trackId: string;
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	tracksContainerRef: RefObject<HTMLDivElement | null>;
 	tracksScrollRef: RefObject<HTMLDivElement | null>;
 	headerRef?: RefObject<HTMLElement | null>;
@@ -113,7 +114,11 @@ function getDragDropTarget({
 	const scrollContainer = tracksScrollRef.current;
 	if (!containerRect || !scrollContainer) return null;
 
-	const sourceTrack = tracks.find(({ id }) => id === trackId);
+	const sourceTrack = [
+		...tracks.overlay,
+		tracks.main,
+		...tracks.audio,
+	].find(({ id }) => id === trackId);
 	const movingElement = sourceTrack?.elements.find(
 		({ id }) => id === elementId,
 	);
@@ -163,7 +168,12 @@ export function useElementInteraction({
 }: UseElementInteractionProps) {
 	const editor = useEditor();
 	const isShiftHeldRef = useShiftKey();
-	const tracks = editor.timeline.getTracks();
+	const sceneTracks = editor.scenes.getActiveScene().tracks;
+	const tracks = [
+		...sceneTracks.overlay,
+		sceneTracks.main,
+		...sceneTracks.audio,
+	];
 	const {
 		isElementSelected,
 		selectElement,
@@ -242,7 +252,7 @@ export function useElementInteraction({
 			const startSnap = snapElementEdge({
 				targetTime: frameSnappedTime,
 				elementDuration,
-				tracks,
+				tracks: sceneTracks,
 				playheadTime,
 				zoomLevel,
 				excludeElementId: movingElement.id,
@@ -252,7 +262,7 @@ export function useElementInteraction({
 			const endSnap = snapElementEdge({
 				targetTime: frameSnappedTime,
 				elementDuration,
-				tracks,
+				tracks: sceneTracks,
 				playheadTime,
 				zoomLevel,
 				excludeElementId: movingElement.id,
@@ -376,7 +386,7 @@ export function useElementInteraction({
 					clientY,
 					elementId: dragState.elementId,
 					trackId: dragState.trackId,
-					tracks,
+					tracks: sceneTracks,
 					tracksContainerRef,
 					tracksScrollRef,
 					headerRef,
@@ -436,7 +446,7 @@ export function useElementInteraction({
 				clientY,
 				elementId: dragState.elementId,
 				trackId: dragState.trackId,
-				tracks,
+				tracks: sceneTracks,
 				tracksContainerRef,
 				tracksScrollRef,
 				headerRef,

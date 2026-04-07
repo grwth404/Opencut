@@ -20,7 +20,7 @@ export interface TScene {
 	id: string;
 	name: string;
 	isMain: boolean;
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	bookmarks: Bookmark[];
 	createdAt: Date;
 	updatedAt: Date;
@@ -36,7 +36,6 @@ interface BaseTrack {
 export interface VideoTrack extends BaseTrack {
 	type: "video";
 	elements: (VideoElement | ImageElement)[];
-	isMain: boolean;
 	muted: boolean;
 	hidden: boolean;
 }
@@ -71,6 +70,14 @@ export type TimelineTrack =
 	| AudioTrack
 	| GraphicTrack
 	| EffectTrack;
+
+export type OverlayTrack = VideoTrack | TextTrack | GraphicTrack | EffectTrack;
+
+export interface SceneTracks {
+	overlay: OverlayTrack[];
+	main: VideoTrack;
+	audio: AudioTrack[];
+}
 
 export interface RetimeConfig {
 	rate: number;
@@ -286,7 +293,7 @@ export interface ComputeDropTargetParams {
 	elementType: ElementType;
 	mouseX: number;
 	mouseY: number;
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	playheadTime: number;
 	isExternalDrop: boolean;
 	elementDuration: number;

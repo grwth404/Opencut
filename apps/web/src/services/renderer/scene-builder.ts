@@ -1,4 +1,4 @@
-import type { TimelineTrack } from "@/lib/timeline";
+import type { SceneTracks, TimelineTrack } from "@/lib/timeline";
 import type { MediaAsset } from "@/lib/media/types";
 import { RootNode } from "./nodes/root-node";
 import { VideoNode } from "./nodes/video-node";
@@ -12,7 +12,6 @@ import { EffectLayerNode } from "./nodes/effect-layer-node";
 import type { BaseNode } from "./nodes/base-node";
 import type { TBackground, TCanvasSize } from "@/lib/project/types";
 import { DEFAULT_BACKGROUND_BLUR_INTENSITY } from "@/lib/background/constants";
-import { isMainTrack } from "@/lib/timeline/placement";
 
 const PREVIEW_MAX_IMAGE_SIZE = 2048;
 
@@ -209,7 +208,7 @@ function buildBlurBackgroundNodes({
 
 export type BuildSceneParams = {
 	canvasSize: TCanvasSize;
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	mediaAssets: MediaAsset[];
 	duration: number;
 	background: TBackground;
@@ -227,19 +226,12 @@ export function buildScene({
 	const rootNode = new RootNode({ duration });
 	const mediaMap = new Map(mediaAssets.map((m) => [m.id, m]));
 
-	const visibleTracks = tracks.filter(
-		(track) => !("hidden" in track && track.hidden),
-	);
-
-	const orderedTracksTopToBottom = [
-		...visibleTracks.filter((track) => !isMainTrack(track)),
-		...visibleTracks.filter((track) => isMainTrack(track)),
+	const visibleTracks = [
+		...tracks.overlay.filter((track) => !("hidden" in track && track.hidden)),
+		...(!tracks.main.hidden ? [tracks.main] : []),
 	];
-
-	const orderedTracksBottomToTop = orderedTracksTopToBottom.slice().reverse();
-	const mainTrack = orderedTracksBottomToTop.find((track) =>
-		isMainTrack(track),
-	);
+	const orderedTracksBottomToTop = visibleTracks.slice().reverse();
+	const mainTrack = tracks.main.hidden ? undefined : tracks.main;
 
 	const allNodes = buildTrackNodes({
 		tracks: orderedTracksBottomToTop,

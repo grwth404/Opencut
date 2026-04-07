@@ -7,9 +7,9 @@ import {
 	resolveAnimationTarget,
 } from "@/lib/animation";
 import { Command, type CommandResult } from "@/lib/commands/base-command";
-import { updateElementInTracks } from "@/lib/timeline";
+import { updateElementInSceneTracks } from "@/lib/timeline";
 import type { AnimationPath, AnimationValue } from "@/lib/animation/types";
-import type { TimelineElement, TimelineTrack } from "@/lib/timeline";
+import type { SceneTracks, TimelineElement } from "@/lib/timeline";
 
 function sampleValueBeforeRemoval({
 	element,
@@ -86,7 +86,7 @@ function removeKeyframeAndPersist({
 }
 
 export class RemoveKeyframeCommand extends Command {
-	private savedState: TimelineTrack[] | null = null;
+	private savedState: SceneTracks | null = null;
 	private readonly trackId: string;
 	private readonly elementId: string;
 	private readonly propertyPath: AnimationPath;
@@ -112,9 +112,9 @@ export class RemoveKeyframeCommand extends Command {
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
-		this.savedState = editor.timeline.getTracks();
+		this.savedState = editor.scenes.getActiveScene().tracks;
 
-		const updatedTracks = updateElementInTracks({
+		const updatedTracks = updateElementInSceneTracks({
 			tracks: this.savedState,
 			trackId: this.trackId,
 			elementId: this.elementId,

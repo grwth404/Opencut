@@ -4,11 +4,11 @@ import type { MediaAsset } from "@/lib/media/types";
 import { storageService } from "@/services/storage/service";
 import { videoCache } from "@/services/video-cache/service";
 import { hasMediaId } from "@/lib/timeline/element-utils";
-import type { TimelineTrack } from "@/lib/timeline";
+import type { SceneTracks } from "@/lib/timeline";
 
 export class RemoveMediaAssetCommand extends Command {
 	private savedAssets: MediaAsset[] | null = null;
-	private savedTracks: TimelineTrack[] | null = null;
+	private savedTracks: SceneTracks | null = null;
 	private removedAsset: MediaAsset | null = null;
 
 	constructor(
@@ -23,7 +23,7 @@ export class RemoveMediaAssetCommand extends Command {
 		const assets = editor.media.getAssets();
 
 		this.savedAssets = [...assets];
-		this.savedTracks = editor.timeline.getTracks();
+		this.savedTracks = editor.scenes.getActiveScene().tracks;
 
 		this.removedAsset =
 			assets.find((media) => media.id === this.assetId) ?? null;
@@ -48,7 +48,11 @@ export class RemoveMediaAssetCommand extends Command {
 
 		const elementsToRemove: Array<{ trackId: string; elementId: string }> = [];
 
-		for (const track of this.savedTracks) {
+		for (const track of [
+			...this.savedTracks.overlay,
+			this.savedTracks.main,
+			...this.savedTracks.audio,
+		]) {
 			for (const element of track.elements) {
 				if (hasMediaId(element) && element.mediaId === this.assetId) {
 					elementsToRemove.push({ trackId: track.id, elementId: element.id });

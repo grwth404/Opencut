@@ -1,5 +1,5 @@
 import { Command, type CommandResult } from "@/lib/commands/base-command";
-import type { TimelineTrack } from "@/lib/timeline";
+import type { SceneTracks, TimelineElement } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { EditorCore } from "@/core";
 import { isRetimableElement } from "@/lib/timeline";
@@ -7,7 +7,7 @@ import { splitAnimationsAtTime } from "@/lib/animation";
 import { getSourceSpanAtClipTime } from "@/lib/retime";
 
 export class SplitElementsCommand extends Command {
-	private savedState: TimelineTrack[] | null = null;
+	private savedState: SceneTracks | null = null;
 	private rightSideElements: { trackId: string; elementId: string }[] = [];
 	private readonly elements: { trackId: string; elementId: string }[];
 	private readonly splitTime: number;
@@ -34,10 +34,12 @@ export class SplitElementsCommand extends Command {
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
-		this.savedState = editor.timeline.getTracks();
+		this.savedState = editor.scenes.getActiveScene().tracks;
 		this.rightSideElements = [];
 
-		const updatedTracks = this.savedState.map((track) => {
+		const splitTrack = <TTrack extends { id: string; elements: TimelineElement[] }>(
+			track: TTrack,
+		): TTrack => {
 			const elementsToSplit = this.elements.filter(
 				(target) => target.trackId === track.id,
 			);
@@ -148,8 +150,14 @@ export class SplitElementsCommand extends Command {
 			];
 			});
 
-			return { ...track, elements } as typeof track;
-		});
+			return { ...track, elements } as TTrack;
+		};
+
+		const updatedTracks: SceneTracks = {
+			overlay: this.savedState.overlay.map((track) => splitTrack(track)),
+			main: splitTrack(this.savedState.main),
+			audio: this.savedState.audio.map((track) => splitTrack(track)),
+		};
 
 		editor.timeline.updateTracks(updatedTracks);
 

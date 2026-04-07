@@ -1,10 +1,10 @@
 import { Command, type CommandResult } from "@/lib/commands/base-command";
-import type { TimelineTrack } from "@/lib/timeline";
+import type { SceneTracks } from "@/lib/timeline";
 import { EditorCore } from "@/core";
-import { canTrackBeHidden } from "@/lib/timeline";
+import { canTrackBeHidden, findTrackInSceneTracks, updateTrackInSceneTracks } from "@/lib/timeline";
 
 export class ToggleTrackVisibilityCommand extends Command {
-	private savedState: TimelineTrack[] | null = null;
+	private savedState: SceneTracks | null = null;
 
 	constructor(private trackId: string) {
 		super();
@@ -12,20 +12,25 @@ export class ToggleTrackVisibilityCommand extends Command {
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
-		this.savedState = editor.timeline.getTracks();
+		this.savedState = editor.scenes.getActiveScene().tracks;
 
-		const targetTrack = this.savedState.find(
-			(track) => track.id === this.trackId,
-		);
+		const targetTrack = findTrackInSceneTracks({
+			tracks: this.savedState,
+			trackId: this.trackId,
+		});
 		if (!targetTrack) {
 			return;
 		}
 
-		const updatedTracks = this.savedState.map((track) => {
-			if (track.id === this.trackId && canTrackBeHidden(track)) {
-				return { ...track, hidden: !track.hidden };
-			}
-			return track;
+		const updatedTracks = updateTrackInSceneTracks({
+			tracks: this.savedState,
+			trackId: this.trackId,
+			update: (track) => {
+				if (canTrackBeHidden(track)) {
+					return { ...track, hidden: !track.hidden };
+				}
+				return track;
+			},
 		});
 
 		editor.timeline.updateTracks(updatedTracks);

@@ -215,7 +215,7 @@ export const useSoundsStore = create<SoundsStore>((set, get) => ({
 		try {
 			const editor = EditorCore.getInstance();
 			const currentTime = editor.playback.getCurrentTime();
-			const tracks = editor.timeline.getTracks();
+			const tracks = editor.scenes.getActiveScene().tracks;
 
 			const response = await fetch(audioUrl);
 			if (!response.ok)
@@ -225,7 +225,7 @@ export const useSoundsStore = create<SoundsStore>((set, get) => ({
 			const audioContext = new AudioContext();
 			const buffer = await audioContext.decodeAudioData(arrayBuffer);
 
-			const audioTrack = tracks.find((t) => t.type === "audio");
+			const audioTrack = tracks.audio[0];
 			let trackId: string;
 
 			if (audioTrack) {

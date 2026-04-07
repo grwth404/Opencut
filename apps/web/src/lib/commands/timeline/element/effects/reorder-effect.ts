@@ -1,7 +1,7 @@
 import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
-import { isVisualElement, updateElementInTracks } from "@/lib/timeline";
-import type { TimelineTrack, VisualElement } from "@/lib/timeline";
+import { isVisualElement, updateElementInSceneTracks } from "@/lib/timeline";
+import type { SceneTracks, VisualElement } from "@/lib/timeline";
 
 function reorderEffectsOnElement({
 	element,
@@ -19,7 +19,7 @@ function reorderEffectsOnElement({
 }
 
 export class ReorderClipEffectsCommand extends Command {
-	private savedState: TimelineTrack[] | null = null;
+	private savedState: SceneTracks | null = null;
 	private readonly trackId: string;
 	private readonly elementId: string;
 	private readonly fromIndex: number;
@@ -45,9 +45,9 @@ export class ReorderClipEffectsCommand extends Command {
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
-		this.savedState = editor.timeline.getTracks();
+		this.savedState = editor.scenes.getActiveScene().tracks;
 
-		const updatedTracks = updateElementInTracks({
+		const updatedTracks = updateElementInSceneTracks({
 			tracks: this.savedState,
 			trackId: this.trackId,
 			elementId: this.elementId,

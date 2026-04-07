@@ -139,7 +139,7 @@ export class RendererManager {
 		const { format, quality, fps, includeAudio } = options;
 
 		try {
-			const tracks = this.editor.timeline.getTracks();
+			const tracks = this.editor.scenes.getActiveScene().tracks;
 			const mediaAssets = this.editor.media.getAssets();
 			const activeProject = this.editor.project.getActive();
 

@@ -90,7 +90,7 @@ export function useTimelinePlayhead({
 			const shouldSnap = snappingEnabled && !isShiftHeldRef.current;
 			const time = (() => {
 				if (!shouldSnap) return frameTime;
-				const tracks = editor.timeline.getTracks();
+				const tracks = editor.scenes.getActiveScene().tracks;
 				const bookmarks = editor.scenes.getActiveScene()?.bookmarks ?? [];
 				const snapPoints = findSnapPoints({
 					tracks,

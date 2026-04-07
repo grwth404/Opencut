@@ -180,7 +180,7 @@ export function usePreviewInteraction({
 		({ clientX, clientY }: React.MouseEvent) => {
 			if (editingText || isMaskMode) return;
 
-			const tracks = editor.timeline.getTracks();
+			const tracks = editor.scenes.getActiveScene().tracks;
 			const currentTime = editor.playback.getCurrentTime();
 			const mediaAssets = editor.media.getAssets();
 			const canvasSize = editor.project.getActive().settings.canvasSize;
@@ -238,7 +238,7 @@ export function usePreviewInteraction({
 			if (isMaskMode) return;
 			if (button !== 0) return;
 
-			const tracks = editor.timeline.getTracks();
+			const tracks = editor.scenes.getActiveScene().tracks;
 			const currentTime = editor.playback.getCurrentTime();
 			const mediaAssets = editor.media.getAssets();
 			const canvasSize = editor.project.getActive().settings.canvasSize;

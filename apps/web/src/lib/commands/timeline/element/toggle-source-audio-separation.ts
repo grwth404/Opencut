@@ -3,18 +3,20 @@ import { Command, type CommandResult } from "@/lib/commands/base-command";
 import {
 	buildSeparatedAudioElement,
 	canExtractSourceAudio,
-	canRecoverSourceAudio,
+	isSourceAudioSeparated,
 } from "@/lib/timeline/audio-separation";
-import {
-	applyPlacement,
-	resolveTrackPlacement,
-} from "@/lib/timeline/placement";
-import { updateElementInTracks } from "@/lib/timeline/track-element-update";
-import type { TimelineTrack, VideoElement } from "@/lib/timeline/types";
+import { buildEmptyTrack } from "@/lib/timeline/placement";
+import { updateElementInSceneTracks } from "@/lib/timeline/track-element-update";
+import type {
+	AudioTrack,
+	SceneTracks,
+	TimelineElement,
+	VideoElement,
+} from "@/lib/timeline/types";
 import { generateUUID } from "@/utils/id";
 
 export class ToggleSourceAudioSeparationCommand extends Command {
-	private savedState: TimelineTrack[] | null = null;
+	private savedState: SceneTracks | null = null;
 
 	constructor(
 		private readonly params: {
@@ -27,27 +29,27 @@ export class ToggleSourceAudioSeparationCommand extends Command {
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
-		this.savedState = editor.timeline.getTracks();
+		this.savedState = editor.scenes.getActiveScene().tracks;
 
-		const trackIndex = this.savedState.findIndex(
+		const sourceTrack = [
+			...this.savedState.overlay,
+			this.savedState.main,
+			...this.savedState.audio,
+		].find(
 			(track) => track.id === this.params.trackId,
 		);
-		if (trackIndex < 0) {
+		if (!sourceTrack) {
 			return;
 		}
-
-		const sourceTrack = this.savedState[trackIndex];
 		const sourceElement = sourceTrack.elements.find(
 			(element) => element.id === this.params.elementId,
-		);
-		if (!sourceElement) {
+		) as TimelineElement | undefined;
+		if (!sourceElement || sourceElement.type !== "video") {
 			return;
 		}
-		if (sourceElement.type !== "video") {
-			return;
-		}
+		const videoElement: VideoElement = sourceElement;
 
-		if (canRecoverSourceAudio(sourceElement)) {
+		if (isSourceAudioSeparated({ element: videoElement })) {
 			editor.timeline.updateTracks(
 				updateSourceAudioEnabled({
 					tracks: this.savedState,
@@ -62,47 +64,34 @@ export class ToggleSourceAudioSeparationCommand extends Command {
 		const mediaAsset = editor
 			.media
 			.getAssets()
-			.find((asset) => asset.id === sourceElement.mediaId);
-		if (!canExtractSourceAudio(sourceElement, mediaAsset)) {
+			.find((asset) => asset.id === videoElement.mediaId);
+		if (!canExtractSourceAudio(videoElement, mediaAsset)) {
 			return;
 		}
-		if (sourceElement.duration <= 0) {
+		if (videoElement.duration <= 0) {
 			return;
 		}
 
 		const separatedAudioElement = {
 			...buildSeparatedAudioElement({
-				sourceElement,
+				sourceElement: videoElement,
 			}),
 			id: generateUUID(),
 		};
-		const placementResult = resolveTrackPlacement({
-			tracks: this.savedState,
-			trackType: "audio",
-			timeSpans: [
-				{
-					startTime: separatedAudioElement.startTime,
-					duration: separatedAudioElement.duration,
-				},
-			],
-			strategy: { type: "aboveSource", sourceTrackIndex: trackIndex },
-		});
-		if (!placementResult) {
-			return;
-		}
-
-		const appliedPlacement = applyPlacement({
-			tracks: this.savedState,
-			placementResult,
+		const newAudioTrack = {
+			...buildEmptyTrack({
+				id: generateUUID(),
+				type: "audio",
+			}),
 			elements: [separatedAudioElement],
-		});
-		if (!appliedPlacement) {
-			return;
-		}
+		} as AudioTrack;
 
 		editor.timeline.updateTracks(
 			updateSourceAudioEnabled({
-				tracks: appliedPlacement.updatedTracks,
+				tracks: {
+					...this.savedState,
+					audio: [...this.savedState.audio, newAudioTrack],
+				},
 				trackId: this.params.trackId,
 				elementId: this.params.elementId,
 				isSourceAudioEnabled: false,
@@ -126,12 +115,12 @@ function updateSourceAudioEnabled({
 	elementId,
 	isSourceAudioEnabled,
 }: {
-	tracks: TimelineTrack[];
+	tracks: SceneTracks;
 	trackId: string;
 	elementId: string;
 	isSourceAudioEnabled: boolean;
-}): TimelineTrack[] {
-	return updateElementInTracks({
+}): SceneTracks {
+	return updateElementInSceneTracks({
 		tracks,
 		trackId,
 		elementId,
