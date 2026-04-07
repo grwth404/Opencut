@@ -638,14 +638,14 @@ export function useElementInteraction({
 				trackId: track.id,
 				elementId: element.id,
 			});
-			if (!alreadySelected) {
+			if (!alreadySelected || selectedElements.length > 1) {
 				selectElement({ trackId: track.id, elementId: element.id });
 				return;
 			}
 
 			editor.selection.clearKeyframeSelection();
 		},
-		[editor.selection, isElementSelected, selectElement],
+		[editor.selection, isElementSelected, selectElement, selectedElements],
 	);
 
 	return {
