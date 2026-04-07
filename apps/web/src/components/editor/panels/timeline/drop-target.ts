@@ -3,6 +3,7 @@ import type { ComputeDropTargetParams, DropTarget } from "@/lib/timeline";
 import { resolveTrackPlacement } from "@/lib/timeline/placement";
 import { TIMELINE_TRACK_GAP_PX } from "./layout";
 import { getTrackHeight } from "./track-layout";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
 
 function findElementAtPosition({
 	mouseX,
@@ -19,7 +20,9 @@ function findElementAtPosition({
 	pixelsPerSecond: number;
 	zoomLevel: number;
 }): { elementId: string; trackId: string } | null {
-	const time = mouseX / (pixelsPerSecond * zoomLevel);
+	const time = Math.round(
+		(mouseX / (pixelsPerSecond * zoomLevel)) * TICKS_PER_SECOND,
+	);
 	const track = tracks[trackIndex];
 	if (!track || !("elements" in track)) return null;
 
@@ -112,7 +115,9 @@ export function computeDropTarget({
 			? startTimeOverride
 			: isExternalDrop
 				? playheadTime
-				: Math.max(0, mouseX / (pixelsPerSecond * zoomLevel));
+				: Math.round(
+				Math.max(0, mouseX / (pixelsPerSecond * zoomLevel)) * TICKS_PER_SECOND,
+			);
 
 	if (orderedTracks.length === 0) {
 		const placementResult = resolveTrackPlacement({
