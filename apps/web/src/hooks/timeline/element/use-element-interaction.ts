@@ -153,7 +153,7 @@ function getDragDropTarget({
 interface StartDragParams
 	extends Omit<
 		ElementDragState,
-		"isDragging" | "currentTime" | "currentMouseY"
+		"isDragging" | "currentTime" | "currentMouseY" | "dragElementIds" | "dragTimeOffsets"
 	> {
 	initialCurrentTime: number;
 	initialCurrentMouseY: number;
@@ -177,6 +177,7 @@ export function useElementInteraction({
 		...sceneTracks.audio,
 	];
 	const {
+		selectedElements,
 		isElementSelected,
 		selectElement,
 		handleElementClick: handleSelectionClick,
