@@ -2,7 +2,7 @@ import { useCallback, useSyncExternalStore } from "react";
 import { useEditor } from "@/hooks/use-editor";
 import type { SelectedKeyframeRef } from "@/lib/animation/types";
 
-function getSelectedKeyframeId({
+export function getSelectedKeyframeId({
 	keyframe,
 }: {
 	keyframe: SelectedKeyframeRef;

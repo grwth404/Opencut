@@ -1,6 +1,7 @@
 import {
 	getCurveHandlesForNormalizedCubicBezier,
 	getEditableScalarChannels,
+	getEasingModeForKind,
 	getNormalizedCubicBezierForScalarSegment,
 	getScalarKeyframeContext,
 	updateScalarKeyframeCurve,
@@ -54,7 +55,14 @@ export interface GraphEditorReadyState extends GraphEditorBaseSelectionState {
 	propertyPath: SelectedKeyframeRef["propertyPath"];
 	keyframeId: string;
 	element: TimelineElement;
+	/** Primary channel context, used for displaying the curve. */
 	context: ScalarGraphKeyframeContext;
+	/**
+	 * All channel contexts that share this curve. For independent-easing bindings
+	 * this is [context]. For shared-easing bindings (e.g. color) this contains
+	 * all component contexts so patches can be applied to every channel at once.
+	 */
+	allContexts: ScalarGraphKeyframeContext[];
 	cubicBezier: NormalizedCubicBezier;
 }
 
@@ -234,16 +242,17 @@ export function resolveGraphEditorSelectionState({
 		});
 	}
 
-	const scalarChannels = getEditableScalarChannels({
+	const scalarResult = getEditableScalarChannels({
 		animations: selectedElement.element.animations,
 		propertyPath: primaryKeyframe.propertyPath,
 	});
-	if (scalarChannels.length === 0) {
+	if (!scalarResult || scalarResult.channels.length === 0) {
 		return createUnavailableState({
 			reason: "selected-keyframe-has-no-scalar-channel",
 			message: "The selected keyframe has no editable graph channel.",
 		});
 	}
+	const { binding: resolvedBinding, channels: scalarChannels } = scalarResult;
 
 	// When 2 keyframes are selected, resolve the earlier one as the outgoing-segment
 	// anchor so the graph editor edits the curve between the two selected keyframes.
@@ -263,6 +272,8 @@ export function resolveGraphEditorSelectionState({
 			resolvedKeyframeId = secondaryKeyframeId;
 		}
 	}
+
+	const easingMode = getEasingModeForKind(resolvedBinding.kind);
 
 	const contexts = scalarChannels.flatMap((channel) => {
 		const context = getScalarKeyframeContext({
@@ -293,14 +304,20 @@ export function resolveGraphEditorSelectionState({
 		});
 	}
 
-	const nextSegmentContexts = contexts.filter(
+	// For shared-easing bindings (e.g. color), all components always use the same
+	// curve. Collapse to a single option so no per-component tabs are shown.
+	const visibleContexts =
+		easingMode === "shared" ? [contexts[0]] : contexts;
+	const allContexts = contexts.map(({ context }) => context);
+
+	const nextSegmentContexts = visibleContexts.filter(
 		({ context }) => context.nextKey !== null,
 	);
 	const preferredContext =
-		contexts.find(({ option }) => option.key === preferredComponentKey) ?? null;
+		visibleContexts.find(({ option }) => option.key === preferredComponentKey) ?? null;
 	const activeContext =
-		preferredContext ?? nextSegmentContexts[0] ?? contexts[0];
-	const componentOptions = contexts.map(({ option }) => option);
+		preferredContext ?? nextSegmentContexts[0] ?? visibleContexts[0];
+	const componentOptions = visibleContexts.map(({ option }) => option);
 
 	if (!activeContext.context.nextKey) {
 		return createUnavailableState({
@@ -356,6 +373,7 @@ export function resolveGraphEditorSelectionState({
 		keyframeId: resolvedKeyframeId,
 		element: selectedElement.element,
 		context: activeContext.context,
+		allContexts,
 		cubicBezier,
 	};
 }

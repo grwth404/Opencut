@@ -41,6 +41,8 @@ const MOUSE_BUTTON_RIGHT = 2;
 const initialDragState: ElementDragState = {
 	isDragging: false,
 	elementId: null,
+	dragElementIds: [],
+	dragTimeOffsets: {},
 	trackId: null,
 	startMouseX: 0,
 	startMouseY: 0,
@@ -202,6 +204,8 @@ export function useElementInteraction({
 			setDragState({
 				isDragging: true,
 				elementId,
+				dragElementIds: elementId ? [elementId] : [],
+				dragTimeOffsets: {},
 				trackId,
 				startMouseX,
 				startMouseY,
@@ -521,6 +525,7 @@ export function useElementInteraction({
 	}, [
 		dragState.isDragging,
 		dragState.elementId,
+		dragState.startElementTime,
 		dragState.startMouseY,
 		dragState.trackId,
 		dragState.currentTime,

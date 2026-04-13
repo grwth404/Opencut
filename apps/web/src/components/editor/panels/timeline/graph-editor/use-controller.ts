@@ -96,19 +96,17 @@ export function useGraphEditorController() {
 				return;
 			}
 
-			const nextAnimations = applyGraphEditorCurvePreview({
-				animations: state.element.animations,
-				context: state.context,
-				cubicBezier: nextValue,
-			});
+			const nextAnimations = state.allContexts.reduce(
+				(animations, context) =>
+					applyGraphEditorCurvePreview({ animations, context, cubicBezier: nextValue }),
+				state.element.animations,
+			);
 			editor.timeline.previewElements({
 				updates: [
 					{
 						trackId: state.trackId,
 						elementId: state.elementId,
-						updates: {
-							animations: nextAnimations,
-						},
+						updates: { animations: nextAnimations },
 					},
 				],
 			});
@@ -123,6 +121,8 @@ export function useGraphEditorController() {
 				return;
 			}
 
+			// Build patches from the primary context (all shared-easing channels have
+			// the same keyframe IDs, so the same patches apply to each).
 			const patches = buildGraphEditorCurvePatches({
 				context: state.context,
 				cubicBezier: nextValue,
@@ -132,14 +132,16 @@ export function useGraphEditorController() {
 			}
 
 			editor.timeline.updateKeyframeCurves({
-				keyframes: patches.map(({ keyframeId, patch }) => ({
-					trackId: state.trackId,
-					elementId: state.elementId,
-					propertyPath: state.propertyPath,
-					componentKey: state.context.componentKey,
-					keyframeId,
-					patch,
-				})),
+				keyframes: state.allContexts.flatMap((context) =>
+					patches.map(({ keyframeId, patch }) => ({
+						trackId: state.trackId,
+						elementId: state.elementId,
+						propertyPath: state.propertyPath,
+						componentKey: context.componentKey,
+						keyframeId,
+						patch,
+					})),
+				),
 			});
 			hasPreviewRef.current = false;
 		},

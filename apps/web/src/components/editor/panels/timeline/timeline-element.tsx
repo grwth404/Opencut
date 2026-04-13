@@ -3,13 +3,14 @@
 import { useEditor } from "@/hooks/use-editor";
 import { useAssetsPanelStore } from "@/stores/assets-panel-store";
 import { AudioWaveform } from "./audio-waveform";
-import { useTimelineElementResize } from "@/hooks/timeline/element/use-element-resize";
+import { useElementPreview } from "@/hooks/use-element-preview";
 import {
 	useKeyframeDrag,
 	type KeyframeDragState,
 } from "@/hooks/timeline/element/use-keyframe-drag";
 import { useKeyframeSelection } from "@/hooks/timeline/element/use-keyframe-selection";
-import type { SnapPoint } from "@/lib/timeline/snap-utils";
+import { useKeyframeBoxSelect } from "@/hooks/timeline/element/use-keyframe-box-select";
+import { SelectionBox } from "@/lib/selection/selection-box";
 import { getElementKeyframes } from "@/lib/animation";
 import {
 	canElementHaveAudio,
@@ -20,10 +21,7 @@ import {
 	timelineTimeToSnappedPixels,
 } from "@/lib/timeline";
 import { getTrackHeight } from "./track-layout";
-import {
-	getTimelineElementClassName,
-	TIMELINE_TRACK_THEME,
-} from "./theme";
+import { getTimelineElementClassName, TIMELINE_TRACK_THEME } from "./theme";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -68,19 +66,25 @@ import {
 	Search01Icon,
 	Exchange01Icon,
 	KeyframeIcon,
-	Link02Icon,
 	MagicWand05Icon,
-	Unlink02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { uppercase } from "@/utils/string";
-import type { ComponentProps, ReactNode } from "react";
+import { useMemo, type ComponentProps, type ReactNode } from "react";
 import type {
 	SelectedKeyframeRef,
 	ElementKeyframe,
 } from "@/lib/animation/types";
 import { cn } from "@/utils/ui";
 import { usePropertiesStore } from "@/components/editor/panels/properties/stores/properties-store";
+import { getTrackTypeForElementType } from "@/lib/timeline/placement/compatibility";
+import { useTimelineStore } from "@/stores/timeline-store";
+import { KEYFRAME_LANE_HEIGHT_PX } from "./layout";
+import {
+	getExpandedRows,
+	getExpansionHeight,
+	type ExpandedRow,
+} from "./expanded-layout";
 
 const KEYFRAME_INDICATOR_MIN_WIDTH_PX = 40;
 const ELEMENT_RING_WIDTH_PX = 1.5;
@@ -191,8 +195,12 @@ interface TimelineElementProps {
 	track: TimelineTrack;
 	zoomLevel: number;
 	isSelected: boolean;
-	onSnapPointChange?: (snapPoint: SnapPoint | null) => void;
-	onResizeStateChange?: (params: { isResizing: boolean }) => void;
+	onResizeStart: (params: {
+		event: React.MouseEvent;
+		element: TimelineElementType;
+		track: TimelineTrack;
+		side: "left" | "right";
+	}) => void;
 	onElementMouseDown: (
 		event: React.MouseEvent,
 		element: TimelineElementType,
@@ -210,8 +218,7 @@ export function TimelineElement({
 	track,
 	zoomLevel,
 	isSelected,
-	onSnapPointChange,
-	onResizeStateChange,
+	onResizeStart,
 	onElementMouseDown,
 	onElementClick,
 	dragState,
@@ -220,6 +227,11 @@ export function TimelineElement({
 	const mediaAssets = useEditor((e) => e.media.getAssets());
 	const { selectedElements } = useElementSelection();
 	const requestRevealMedia = useAssetsPanelStore((s) => s.requestRevealMedia);
+	const { renderElement } = useElementPreview({
+		trackId: track.id,
+		elementId: element.id,
+		fallback: element,
+	});
 
 	let mediaAsset: MediaAsset | null = null;
 
@@ -230,31 +242,23 @@ export function TimelineElement({
 
 	const hasAudio = mediaSupportsAudio({ media: mediaAsset });
 
-	const { handleResizeStart, isResizing, currentStartTime, currentDuration } =
-		useTimelineElementResize({
-			element,
-			track,
-			zoomLevel,
-			onSnapPointChange,
-			onResizeStateChange,
-		});
-
 	const isCurrentElementSelected = selectedElements.some(
 		(selected) =>
 			selected.elementId === element.id && selected.trackId === track.id,
 	);
 
-	const isBeingDragged = dragState.elementId === element.id;
+	const isBeingDragged = dragState.dragElementIds.includes(element.id);
 	const dragOffsetY =
 		isBeingDragged && dragState.isDragging
 			? dragState.currentMouseY - dragState.startMouseY
 			: 0;
+	const dragTimeOffset = dragState.dragTimeOffsets[element.id] ?? 0;
 	const elementStartTime =
 		isBeingDragged && dragState.isDragging
-			? dragState.currentTime
-			: element.startTime;
-	const displayedStartTime = isResizing ? currentStartTime : elementStartTime;
-	const displayedDuration = isResizing ? currentDuration : element.duration;
+			? dragState.currentTime + dragTimeOffset
+			: renderElement.startTime;
+	const displayedStartTime = elementStartTime;
+	const displayedDuration = renderElement.duration;
 	const elementWidth = timelineTimeToPixels({
 		time: displayedDuration,
 		zoomLevel,
@@ -281,6 +285,41 @@ export function TimelineElement({
 		handleKeyframeClick,
 		getVisualOffsetPx,
 	} = useKeyframeDrag({ zoomLevel, element, displayedStartTime });
+
+	const elementKeyframes = getElementKeyframes({
+		animations: element.animations,
+	});
+
+	const isExpanded = useTimelineStore((s) =>
+		s.expandedElementIds.has(element.id),
+	);
+	const toggleElementExpanded = useTimelineStore(
+		(s) => s.toggleElementExpanded,
+	);
+	const expandedRows = useMemo(
+		() =>
+			isExpanded
+				? getExpandedRows({ animations: element.animations })
+				: [],
+		[isExpanded, element.animations],
+	);
+
+	const {
+		containerRef: expandedLanesRef,
+		selectionBox: keyframeSelectionBox,
+		isBoxSelecting: isKeyframeBoxSelecting,
+		handleExpandedAreaMouseDown,
+		handleExpandedAreaClick,
+	} = useKeyframeBoxSelect({
+		trackId: track.id,
+		elementId: element.id,
+		rows: expandedRows,
+		keyframes: elementKeyframes,
+		displayedStartTime,
+		zoomLevel,
+		elementLeft,
+	});
+
 	const handleRevealInMedia = ({ event }: { event: React.MouseEvent }) => {
 		event.stopPropagation();
 		if (hasMediaId(element)) {
@@ -299,15 +338,44 @@ export function TimelineElement({
 			: "Extract audio";
 	const isElementSourceAudioSeparated =
 		element.type === "video" && isSourceAudioSeparated({ element });
+	const hasKeyframes = elementKeyframes.length > 0;
+	const expansionHeight = getExpansionHeight({ rows: expandedRows });
+	const baseTrackHeight = getTrackHeight({ type: track.type });
+
+	const expandedContent =
+		isExpanded && expandedRows.length > 0 ? (
+			<ExpandedKeyframeLanes
+				rows={expandedRows}
+				keyframes={elementKeyframes}
+				trackId={track.id}
+				elementId={element.id}
+				displayedStartTime={displayedStartTime}
+				zoomLevel={zoomLevel}
+				elementLeft={elementLeft}
+				keyframeDragState={keyframeDragState}
+				onKeyframeMouseDown={handleKeyframeMouseDown}
+				onKeyframeClick={handleKeyframeClick}
+				getVisualOffsetPx={getVisualOffsetPx}
+				containerRef={expandedLanesRef}
+				onLaneMouseDown={handleExpandedAreaMouseDown}
+				onLaneClick={handleExpandedAreaClick}
+				selectionBox={keyframeSelectionBox}
+				isBoxSelecting={isKeyframeBoxSelecting}
+			/>
+		) : null;
 
 	return (
 		<ContextMenu>
 			<ContextMenuTrigger asChild>
 				<div
-					className="absolute top-0 h-full select-none"
+					className="absolute top-0 select-none"
 					style={{
 						left: `${elementLeft}px`,
 						width: `${elementWidth}px`,
+						height:
+							expandedRows.length > 0
+								? `${baseTrackHeight + expansionHeight}px`
+								: "100%",
 						transform:
 							isBeingDragged && dragState.isDragging
 								? `translate3d(0, ${dragOffsetY}px, 0)`
@@ -318,13 +386,19 @@ export function TimelineElement({
 						element={element}
 						track={track}
 						isSelected={isSelected}
+						isExpanded={expandedRows.length > 0}
+						baseTrackHeight={baseTrackHeight}
+						expandedContent={expandedContent}
 						onElementClick={onElementClick}
 						onElementMouseDown={onElementMouseDown}
-						handleResizeStart={handleResizeStart}
+						onResizeStart={onResizeStart}
 						isDropTarget={isDropTarget}
 					/>
 					{isSelected && (
-						<div className="pointer-events-none absolute inset-0 overflow-hidden">
+						<div
+							className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
+							style={{ height: `${baseTrackHeight}px` }}
+						>
 							<KeyframeIndicators
 								indicators={keyframeIndicators}
 								dragState={keyframeDragState}
@@ -346,6 +420,14 @@ export function TimelineElement({
 					Split
 				</ActionMenuItem>
 				<CopyMenuItem />
+				{selectedElements.length === 1 && (
+					<ActionMenuItem
+						action="duplicate-selected"
+						icon={<HugeiconsIcon icon={Copy01Icon} />}
+					>
+						Duplicate
+					</ActionMenuItem>
+				)}
 				{canElementHaveAudio(element) && hasAudio && (
 					<MuteMenuItem
 						isMultipleSelected={selectedElements.length > 1}
@@ -355,11 +437,11 @@ export function TimelineElement({
 				)}
 				{canToggleCurrentSourceAudio && (
 					<ContextMenuItem
-					icon={
-						<HugeiconsIcon
-							icon={isElementSourceAudioSeparated ? Unlink02Icon : Link02Icon}
-						/>
-					}
+						icon={
+							<HugeiconsIcon
+								icon={isElementSourceAudioSeparated ? ScissorIcon : ScissorIcon}
+							/>
+						}
 						onClick={(event: React.MouseEvent) => {
 							event.stopPropagation();
 							invokeAction("toggle-source-audio");
@@ -375,13 +457,16 @@ export function TimelineElement({
 						isCurrentElementSelected={isCurrentElementSelected}
 					/>
 				)}
-				{selectedElements.length === 1 && (
-					<ActionMenuItem
-						action="duplicate-selected"
-						icon={<HugeiconsIcon icon={Copy01Icon} />}
+				{hasKeyframes && (
+					<ContextMenuItem
+						icon={<HugeiconsIcon icon={KeyframeIcon} />}
+						onClick={(event: React.MouseEvent) => {
+							event.stopPropagation();
+							toggleElementExpanded(element.id);
+						}}
 					>
-						Duplicate
-					</ActionMenuItem>
+						{isExpanded ? "Collapse keyframes" : "Expand keyframes"}
+					</ContextMenuItem>
 				)}
 				{selectedElements.length === 1 && hasMediaId(element) && (
 					<>
@@ -417,14 +502,20 @@ function ElementInner({
 	element,
 	track,
 	isSelected,
+	isExpanded,
+	baseTrackHeight,
+	expandedContent,
 	onElementClick,
 	onElementMouseDown,
-	handleResizeStart,
+	onResizeStart,
 	isDropTarget = false,
 }: {
 	element: TimelineElementType;
 	track: TimelineTrack;
 	isSelected: boolean;
+	isExpanded: boolean;
+	baseTrackHeight: number;
+	expandedContent: React.ReactNode;
 	onElementClick: (
 		event: React.MouseEvent,
 		element: TimelineElementType,
@@ -433,9 +524,10 @@ function ElementInner({
 		event: React.MouseEvent,
 		element: TimelineElementType,
 	) => void;
-	handleResizeStart: (params: {
+	onResizeStart: (params: {
 		event: React.MouseEvent;
-		elementId: string;
+		element: TimelineElementType;
+		track: TimelineTrack;
 		side: "left" | "right";
 	}) => void;
 	isDropTarget?: boolean;
@@ -463,8 +555,7 @@ function ElementInner({
 				<div
 					className={cn(
 						"absolute inset-0 overflow-hidden rounded-sm",
-						getTimelineElementClassName({ type: track.type }),
-						isReducedOpacity && "opacity-50",
+						isExpanded && "bg-background",
 					)}
 				>
 					<button
@@ -474,9 +565,23 @@ function ElementInner({
 						onClick={(event) => onElementClick(event, element)}
 						onMouseDown={(event) => onElementMouseDown(event, element)}
 					>
-						<div className="flex flex-1 min-h-0 items-center overflow-hidden">
-							<ElementContent element={element} track={track} />
+						<div
+							className={cn(
+								"flex shrink-0 items-center overflow-hidden",
+								getTimelineElementClassName({
+									type: getTrackTypeForElementType({
+										elementType: element.type,
+									}),
+								}),
+								isReducedOpacity && "opacity-50",
+							)}
+							style={{ height: `${baseTrackHeight}px` }}
+						>
+							<div className="flex flex-1 min-h-0 items-center overflow-hidden">
+								<ElementContent element={element} track={track} />
+							</div>
 						</div>
+						{expandedContent}
 					</button>
 				</div>
 			</div>
@@ -485,13 +590,15 @@ function ElementInner({
 				<>
 					<ResizeHandle
 						side="left"
-						elementId={element.id}
-						handleResizeStart={handleResizeStart}
+						element={element}
+						track={track}
+						onResizeStart={onResizeStart}
 					/>
 					<ResizeHandle
 						side="right"
-						elementId={element.id}
-						handleResizeStart={handleResizeStart}
+						element={element}
+						track={track}
+						onResizeStart={onResizeStart}
 					/>
 				</>
 			)}
@@ -501,14 +608,17 @@ function ElementInner({
 
 function ResizeHandle({
 	side,
-	elementId,
-	handleResizeStart,
+	element,
+	track,
+	onResizeStart,
 }: {
 	side: "left" | "right";
-	elementId: string;
-	handleResizeStart: (params: {
+	element: TimelineElementType;
+	track: TimelineTrack;
+	onResizeStart: (params: {
 		event: React.MouseEvent;
-		elementId: string;
+		element: TimelineElementType;
+		track: TimelineTrack;
 		side: "left" | "right";
 	}) => void;
 }) {
@@ -520,7 +630,7 @@ function ResizeHandle({
 				"absolute top-0 bottom-0 w-2",
 				isLeft ? "-left-1 cursor-w-resize" : "-right-1 cursor-e-resize",
 			)}
-			onMouseDown={(event) => handleResizeStart({ event, elementId, side })}
+			onMouseDown={(event) => onResizeStart({ event, element, track, side })}
 			onClick={(event) => event.stopPropagation()}
 			aria-label={`${isLeft ? "Left" : "Right"} resize handle`}
 		></button>
@@ -582,7 +692,7 @@ function KeyframeIndicators({
 			<button
 				key={indicator.time}
 				type="button"
-				className="pointer-events-auto absolute top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-grab"
+				className="pointer-events-auto absolute top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-grab mr-0.5"
 				style={{ left: visualOffsetPx }}
 				onMouseDown={(event) =>
 					onKeyframeMouseDown({ event, keyframes: indicator.keyframes })
@@ -608,6 +718,177 @@ function KeyframeIndicators({
 			</button>
 		);
 	});
+}
+
+function ExpandedKeyframeLanes({
+	rows,
+	keyframes,
+	trackId,
+	elementId,
+	displayedStartTime,
+	zoomLevel,
+	elementLeft,
+	keyframeDragState,
+	onKeyframeMouseDown,
+	onKeyframeClick,
+	getVisualOffsetPx,
+	containerRef,
+	onLaneMouseDown,
+	onLaneClick,
+	selectionBox,
+	isBoxSelecting,
+}: {
+	rows: ExpandedRow[];
+	keyframes: ElementKeyframe[];
+	trackId: string;
+	elementId: string;
+	displayedStartTime: number;
+	zoomLevel: number;
+	elementLeft: number;
+	keyframeDragState: KeyframeDragState;
+	onKeyframeMouseDown: (params: {
+		event: React.MouseEvent;
+		keyframes: SelectedKeyframeRef[];
+	}) => void;
+	containerRef: React.RefObject<HTMLDivElement | null>;
+	onLaneMouseDown: (event: React.MouseEvent) => void;
+	onLaneClick: (event: React.MouseEvent) => void;
+	selectionBox: {
+		startPos: { x: number; y: number };
+		currentPos: { x: number; y: number };
+		isActive: boolean;
+	} | null;
+	isBoxSelecting: boolean;
+	onKeyframeClick: (params: {
+		event: React.MouseEvent;
+		keyframes: SelectedKeyframeRef[];
+		orderedKeyframes: SelectedKeyframeRef[];
+		indicatorTime: number;
+	}) => void;
+	getVisualOffsetPx: (params: {
+		indicatorTime: number;
+		indicatorOffsetPx: number;
+		isBeingDragged: boolean;
+		displayedStartTime: number;
+		elementLeft: number;
+	}) => number;
+}) {
+	const { isKeyframeSelected } = useKeyframeSelection();
+
+	const orderedKeyframes = useMemo(
+		() =>
+			[...keyframes]
+				.sort(
+					(a, b) =>
+						a.time - b.time ||
+						a.propertyPath.localeCompare(b.propertyPath),
+				)
+				.map((kf) => ({
+					trackId,
+					elementId,
+					propertyPath: kf.propertyPath,
+					keyframeId: kf.id,
+				})),
+		[keyframes, trackId, elementId],
+	);
+
+	return (
+		<div
+			ref={containerRef}
+			className="relative flex flex-col"
+			onMouseDown={onLaneMouseDown}
+			onClick={onLaneClick}
+		>
+			{rows.map((row) => {
+				const laneKeyframes = keyframes.filter(
+					(kf) => kf.propertyPath === row.propertyPath,
+				);
+				return (
+					<div
+						key={row.propertyPath}
+						className={cn(
+							"relative flex items-center bg-muted/50",
+						)}
+						style={{ height: `${KEYFRAME_LANE_HEIGHT_PX}px` }}
+					>
+						{laneKeyframes.map((kf) => {
+							const keyframeRef: SelectedKeyframeRef = {
+								trackId,
+								elementId,
+								propertyPath: row.propertyPath,
+								keyframeId: kf.id,
+							};
+							const isBeingDragged =
+								keyframeDragState.draggingKeyframeIds.has(kf.id);
+							const kfLeft = timelineTimeToSnappedPixels({
+								time: displayedStartTime + kf.time,
+								zoomLevel,
+							});
+							const offsetPx = kfLeft - elementLeft;
+							const visualOffset = getVisualOffsetPx({
+								indicatorTime: kf.time,
+								indicatorOffsetPx: offsetPx,
+								isBeingDragged,
+								displayedStartTime,
+								elementLeft,
+							});
+							const isSelected = isKeyframeSelected({
+								keyframe: keyframeRef,
+							});
+
+							return (
+								<button
+									key={kf.id}
+									type="button"
+									className={cn(
+										"pointer-events-auto absolute top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-grab",
+										isBoxSelecting && "pointer-events-none",
+									)}
+									style={{ left: visualOffset }}
+									onMouseDown={(event) => {
+										event.stopPropagation();
+										onKeyframeMouseDown({
+											event,
+											keyframes: [keyframeRef],
+										});
+									}}
+									onClick={(event) => {
+										event.stopPropagation();
+										onKeyframeClick({
+											event,
+											keyframes: [keyframeRef],
+											orderedKeyframes,
+											indicatorTime: kf.time,
+										});
+									}}
+									aria-label="Select keyframe"
+								>
+									<HugeiconsIcon
+										icon={KeyframeIcon}
+										className={cn(
+											"size-3.5 text-black mr-1",
+											isSelected
+												? "fill-primary"
+												: "fill-white",
+										)}
+										strokeWidth={1.5}
+									/>
+								</button>
+							);
+						})}
+					</div>
+				);
+			})}
+			{selectionBox && (
+				<SelectionBox
+					startPos={selectionBox.startPos}
+					currentPos={selectionBox.currentPos}
+					containerRef={containerRef}
+					isActive={selectionBox.isActive}
+				/>
+			)}
+		</div>
+	);
 }
 
 interface ElementContentProps {
