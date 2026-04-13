@@ -96,11 +96,16 @@ export function useGraphEditorController() {
 				return;
 			}
 
-			const nextAnimations = state.allContexts.reduce(
-				(animations, context) =>
-					applyGraphEditorCurvePreview({ animations, context, cubicBezier: nextValue }),
-				state.element.animations,
-			);
+		const nextAnimations = state.allContexts.reduce(
+			(animations, context) =>
+				applyGraphEditorCurvePreview({
+					animations,
+					context,
+					cubicBezier: nextValue,
+					referenceSpanValue: state.referenceSpanValue,
+				}),
+			state.element.animations,
+		);
 			editor.timeline.previewElements({
 				updates: [
 					{
@@ -123,10 +128,11 @@ export function useGraphEditorController() {
 
 			// Build patches from the primary context (all shared-easing channels have
 			// the same keyframe IDs, so the same patches apply to each).
-			const patches = buildGraphEditorCurvePatches({
-				context: state.context,
-				cubicBezier: nextValue,
-			});
+		const patches = buildGraphEditorCurvePatches({
+			context: state.context,
+			cubicBezier: nextValue,
+			referenceSpanValue: state.referenceSpanValue,
+		});
 			if (!patches) {
 				return;
 			}

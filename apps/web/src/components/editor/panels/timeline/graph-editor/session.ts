@@ -64,6 +64,12 @@ export interface GraphEditorReadyState extends GraphEditorBaseSelectionState {
 	 */
 	allContexts: ScalarGraphKeyframeContext[];
 	cubicBezier: NormalizedCubicBezier;
+	/**
+	 * Y-axis scale used for flat segments (where spanValue ≈ 0). Derived from
+	 * the nearest non-flat adjacent segment so that handle positions correspond
+	 * to a meaningful value range. Always positive.
+	 */
+	referenceSpanValue: number;
 }
 
 export type GraphEditorSelectionState =
@@ -155,19 +161,35 @@ function getComponentLabel({ componentKey }: { componentKey: string }): string {
 	}
 }
 
-function isFlatSegment({
+/**
+ * Returns the absolute value span of the nearest non-flat adjacent segment,
+ * used as the Y-axis scale when editing a flat segment in the graph editor.
+ * Falls back to 1.0 if all surrounding segments are also flat.
+ */
+function getReferenceSpanValue({
 	context,
 }: {
 	context: ScalarGraphKeyframeContext;
-}): boolean {
-	if (!context.nextKey) {
-		return true;
+}): number {
+	const sorted = [...context.channel.keys].sort((a, b) => a.time - b.time);
+	const leftIndex = sorted.findIndex((k) => k.id === context.keyframe.id);
+	const rightIndex = context.nextKey
+		? sorted.findIndex((k) => k.id === context.nextKey?.id)
+		: -1;
+
+	for (let i = leftIndex - 1; i >= 0; i--) {
+		const span = Math.abs(sorted[i + 1].value - sorted[i].value);
+		if (span > FLAT_VALUE_EPSILON) return span;
 	}
 
-	return (
-		Math.abs(context.nextKey.value - context.keyframe.value) <=
-		FLAT_VALUE_EPSILON
-	);
+	if (rightIndex !== -1) {
+		for (let i = rightIndex; i < sorted.length - 1; i++) {
+			const span = Math.abs(sorted[i + 1].value - sorted[i].value);
+			if (span > FLAT_VALUE_EPSILON) return span;
+		}
+	}
+
+	return 1.0;
 }
 
 function isLinearCurve({
@@ -328,35 +350,28 @@ export function resolveGraphEditorSelectionState({
 		});
 	}
 
-	if (isFlatSegment({ context: activeContext.context })) {
-		return createUnavailableState({
-			reason: "selected-segment-is-flat",
-			message: "Flat segments are not graph-editable in this popover yet.",
-			componentOptions,
-			activeComponentKey: activeContext.option.key,
-		});
-	}
-
 	if (activeContext.context.keyframe.segmentToNext === "step") {
 		return createUnavailableState({
 			reason: "selected-segment-is-hold",
-			message: "Hold segments are not graph-editable in this popover yet.",
+			message: "Hold segments have a fixed value — easing has no effect here.",
 			componentOptions,
 			activeComponentKey: activeContext.option.key,
 		});
 	}
 
+	const referenceSpanValue = getReferenceSpanValue({ context: activeContext.context });
 	const cubicBezier =
 		activeContext.context.keyframe.segmentToNext === "linear"
 			? GRAPH_LINEAR_CURVE
 			: getNormalizedCubicBezierForScalarSegment({
 					leftKey: activeContext.context.keyframe,
 					rightKey: activeContext.context.nextKey,
+					referenceSpanValue,
 				});
 	if (!cubicBezier) {
 		return createUnavailableState({
 			reason: "selected-segment-is-flat",
-			message: "The selected segment cannot be represented in this graph view.",
+			message: "Cannot edit a segment where both keyframes are at the same time.",
 			componentOptions,
 			activeComponentKey: activeContext.option.key,
 		});
@@ -375,15 +390,18 @@ export function resolveGraphEditorSelectionState({
 		context: activeContext.context,
 		allContexts,
 		cubicBezier,
+		referenceSpanValue,
 	};
 }
 
 export function buildGraphEditorCurvePatches({
 	context,
 	cubicBezier,
+	referenceSpanValue,
 }: {
 	context: ScalarGraphKeyframeContext;
 	cubicBezier: NormalizedCubicBezier;
+	referenceSpanValue: number;
 }): GraphEditorCurvePatch[] | null {
 	if (!context.nextKey) {
 		return null;
@@ -411,6 +429,7 @@ export function buildGraphEditorCurvePatches({
 		leftKey: context.keyframe,
 		rightKey: context.nextKey,
 		cubicBezier,
+		referenceSpanValue,
 	});
 	if (!handles) {
 		return null;
@@ -437,14 +456,17 @@ export function applyGraphEditorCurvePreview({
 	animations,
 	context,
 	cubicBezier,
+	referenceSpanValue,
 }: {
 	animations: ElementAnimations | undefined;
 	context: ScalarGraphKeyframeContext;
 	cubicBezier: NormalizedCubicBezier;
+	referenceSpanValue: number;
 }): ElementAnimations | undefined {
 	const patches = buildGraphEditorCurvePatches({
 		context,
 		cubicBezier,
+		referenceSpanValue,
 	});
 	if (!patches) {
 		return animations;

@@ -17,16 +17,23 @@ function clamp01({ value }: { value: number }): number {
 export function getNormalizedCubicBezierForScalarSegment({
 	leftKey,
 	rightKey,
+	referenceSpanValue,
 }: {
 	leftKey: ScalarAnimationKey;
 	rightKey: ScalarAnimationKey;
+	/** Fallback Y-axis scale used when the segment is flat (spanValue ≈ 0). */
+	referenceSpanValue?: number;
 }): NormalizedCubicBezier | null {
 	const spanTime = rightKey.time - leftKey.time;
 	const spanValue = rightKey.value - leftKey.value;
-	if (
-		spanTime === 0 ||
-		Math.abs(spanValue) <= VALUE_EPSILON
-	) {
+	const effectiveSpanValue =
+		Math.abs(spanValue) > VALUE_EPSILON
+			? spanValue
+			: referenceSpanValue !== undefined && Math.abs(referenceSpanValue) > VALUE_EPSILON
+				? referenceSpanValue
+				: null;
+
+	if (spanTime === 0 || effectiveSpanValue === null) {
 		return null;
 	}
 
@@ -37,9 +44,9 @@ export function getNormalizedCubicBezierForScalarSegment({
 
 	return [
 		clamp01({ value: rightHandle.dt / spanTime }),
-		rightHandle.dv / spanValue,
+		rightHandle.dv / effectiveSpanValue,
 		clamp01({ value: 1 + leftHandle.dt / spanTime }),
-		1 + leftHandle.dv / spanValue,
+		1 + leftHandle.dv / effectiveSpanValue,
 	];
 }
 
@@ -47,20 +54,27 @@ export function getCurveHandlesForNormalizedCubicBezier({
 	leftKey,
 	rightKey,
 	cubicBezier,
+	referenceSpanValue,
 }: {
 	leftKey: ScalarAnimationKey;
 	rightKey: ScalarAnimationKey;
 	cubicBezier: NormalizedCubicBezier;
+	/** Fallback Y-axis scale used when the segment is flat (spanValue ≈ 0). */
+	referenceSpanValue?: number;
 }): {
 	rightHandle: CurveHandle;
 	leftHandle: CurveHandle;
 } | null {
 	const spanTime = rightKey.time - leftKey.time;
 	const spanValue = rightKey.value - leftKey.value;
-	if (
-		spanTime === 0 ||
-		Math.abs(spanValue) <= VALUE_EPSILON
-	) {
+	const effectiveSpanValue =
+		Math.abs(spanValue) > VALUE_EPSILON
+			? spanValue
+			: referenceSpanValue !== undefined && Math.abs(referenceSpanValue) > VALUE_EPSILON
+				? referenceSpanValue
+				: null;
+
+	if (spanTime === 0 || effectiveSpanValue === null) {
 		return null;
 	}
 
@@ -71,11 +85,11 @@ export function getCurveHandlesForNormalizedCubicBezier({
 	return {
 		rightHandle: {
 			dt: spanTime * x1,
-			dv: spanValue * y1,
+			dv: effectiveSpanValue * y1,
 		},
 		leftHandle: {
 			dt: spanTime * (x2 - 1),
-			dv: spanValue * (y2 - 1),
+			dv: effectiveSpanValue * (y2 - 1),
 		},
 	};
 }
