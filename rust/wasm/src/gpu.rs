@@ -21,6 +21,8 @@ thread_local! {
 
 #[wasm_bindgen(js_name = initializeGpu)]
 pub async fn initialize_gpu() -> Result<(), JsValue> {
+    console_error_panic_hook::set_once();
+
     if GPU_RUNTIME.with(|runtime| runtime.borrow().is_some()) {
         return Ok(());
     }

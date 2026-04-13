@@ -956,6 +956,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "compositor"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "effects",
+ "gpu",
+ "masks",
+ "serde",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "compression-codecs"
 version = "0.4.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -980,6 +992,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ca0197aee26d1ae37445ee532fefce43251d24cc7c166799f4d46817f1d3973"
 dependencies = [
  "crossbeam-utils",
+]
+
+[[package]]
+name = "console_error_panic_hook"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
+dependencies = [
+ "cfg-if",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -2114,6 +2136,8 @@ version = "0.1.0"
 dependencies = [
  "bytemuck",
  "thiserror 2.0.18",
+ "wasm-bindgen",
+ "web-sys",
  "wgpu",
 ]
 
@@ -2158,7 +2182,7 @@ dependencies = [
  "log",
  "presser",
  "thiserror 2.0.18",
- "windows 0.61.3",
+ "windows 0.62.2",
 ]
 
 [[package]]
@@ -3796,9 +3820,11 @@ dependencies = [
 
 [[package]]
 name = "opencut-wasm"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "bridge",
+ "compositor",
+ "console_error_panic_hook",
  "effects",
  "gpu",
  "js-sys",
@@ -6513,6 +6539,7 @@ dependencies = [
  "thiserror 2.0.18",
  "wgpu-core-deps-apple",
  "wgpu-core-deps-emscripten",
+ "wgpu-core-deps-wasm",
  "wgpu-core-deps-windows-linux-android",
  "wgpu-hal",
  "wgpu-naga-bridge",
@@ -6533,6 +6560,15 @@ name = "wgpu-core-deps-emscripten"
 version = "29.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef043bf135cc68b6f667c55ff4e345ce2b5924d75bad36a47921b0287ca4b24a"
+dependencies = [
+ "wgpu-hal",
+]
+
+[[package]]
+name = "wgpu-core-deps-wasm"
+version = "29.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f7b75e72f49035f000dd5262e4126242e92a090a4fd75931ecfe7e60784e6fa"
 dependencies = [
  "wgpu-hal",
 ]
