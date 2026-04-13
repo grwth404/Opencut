@@ -26,11 +26,6 @@ export function AssetsPanel() {
 			</div>
 		),
 		captions: <Captions />,
-		filters: (
-			<div className="text-muted-foreground p-4">
-				Filters view coming soon...
-			</div>
-		),
 		adjustment: (
 			<div className="text-muted-foreground p-4">
 				Adjustment view coming soon...

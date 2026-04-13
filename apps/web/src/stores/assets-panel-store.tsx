@@ -23,7 +23,6 @@ export const TAB_KEYS = [
 	"effects",
 	"transitions",
 	"captions",
-	"filters",
 	"adjustment",
 	"settings",
 ] as const;
@@ -64,10 +63,6 @@ export const tabs = {
 	captions: {
 		icon: createHugeiconsIcon({ icon: ClosedCaptionIcon }),
 		label: "Captions",
-	},
-	filters: {
-		icon: createHugeiconsIcon({ icon: ColorsIcon }),
-		label: "Filters",
 	},
 	adjustment: {
 		icon: createHugeiconsIcon({ icon: SlidersHorizontalIcon }),
