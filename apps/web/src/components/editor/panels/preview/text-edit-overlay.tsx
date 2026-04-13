@@ -9,67 +9,9 @@ import {
 } from "@/constants/text-constants";
 import { DEFAULTS } from "@/lib/timeline/defaults";
 import {
-	getMetricAscent,
-	getMetricDescent,
-	setCanvasLetterSpacing,
-} from "@/lib/text/layout";
-
-let cachedCanvas: HTMLCanvasElement | null = null;
-
-function getMeasurementContext(): CanvasRenderingContext2D | null {
-	if (!cachedCanvas) cachedCanvas = document.createElement("canvas");
-	return cachedCanvas.getContext("2d");
-}
-
-/**
- * Uses fontBoundingBox metrics (which CSS uses for line box layout) rather than
- * actualBoundingBox to model where the browser places the baseline within the
- * line box, then measures actual glyph bounds to find the visual center.
- */
-function measureCSSVisualCenterOffset({
-	lines,
-	fontString,
-	letterSpacingPx,
-	lineHeightPx,
-	displayFontSize,
-}: {
-	lines: string[];
-	fontString: string;
-	letterSpacingPx: number;
-	lineHeightPx: number;
-	displayFontSize: number;
-}): number {
-	const ctx = getMeasurementContext();
-	if (!ctx) return 0;
-
-	ctx.font = fontString;
-	ctx.textBaseline = "alphabetic";
-	setCanvasLetterSpacing({ ctx, letterSpacingPx });
-
-	const probe = ctx.measureText("M");
-	const fontAscent = probe.fontBoundingBoxAscent ?? displayFontSize * 0.8;
-	const fontDescent = probe.fontBoundingBoxDescent ?? displayFontSize * 0.2;
-	const halfLeading = (lineHeightPx - fontAscent - fontDescent) / 2;
-
-	let visualTop = Number.POSITIVE_INFINITY;
-	let visualBottom = Number.NEGATIVE_INFINITY;
-
-	for (let i = 0; i < lines.length; i++) {
-		const metrics = ctx.measureText(lines[i] || " ");
-		const baseline = i * lineHeightPx + halfLeading + fontAscent;
-		visualTop = Math.min(
-			visualTop,
-			baseline - getMetricAscent({ metrics, fallbackFontSize: displayFontSize }),
-		);
-		visualBottom = Math.max(
-			visualBottom,
-			baseline + getMetricDescent({ metrics, fallbackFontSize: displayFontSize }),
-		);
-	}
-
-	const cssBlockHeight = lines.length * lineHeightPx;
-	return (visualTop + visualBottom) / 2 - cssBlockHeight / 2;
-}
+	getElementLocalTime,
+	resolveTransformAtTime,
+} from "@/lib/animation";
 
 export function TextEditOverlay({
 	trackId,
@@ -122,47 +64,43 @@ export function TextEditOverlay({
 
 	if (!canvasSize) return null;
 
+	const currentTime = editor.playback.getCurrentTime();
+	const localTime = getElementLocalTime({
+		timelineTime: currentTime,
+		elementStartTime: element.startTime,
+		elementDuration: element.duration,
+	});
+	const transform = resolveTransformAtTime({
+		baseTransform: element.transform,
+		animations: element.animations,
+		localTime,
+	});
+
 	const { x: posX, y: posY } = viewport.positionToOverlay({
-		positionX: element.transform.position.x,
-		positionY: element.transform.position.y,
+		positionX: transform.position.x,
+		positionY: transform.position.y,
 	});
 
 	const { x: displayScaleX } = viewport.getDisplayScale();
 
-	const displayFontSize =
-		element.fontSize *
-		(canvasSize.height / FONT_SIZE_SCALE_REFERENCE) *
-		displayScaleX;
+	const scaledFontSize =
+		element.fontSize * (canvasSize.height / FONT_SIZE_SCALE_REFERENCE);
 
 	const lineHeight = element.lineHeight ?? DEFAULTS.text.lineHeight;
 	const fontWeight = element.fontWeight === "bold" ? "bold" : "normal";
 	const fontStyle = element.fontStyle === "italic" ? "italic" : "normal";
-	const displayLetterSpacing = (element.letterSpacing ?? 0) * displayScaleX;
-	const lineHeightPx = displayFontSize * lineHeight;
-	const lines = (element.content || "").split("\n");
-	const fontString = `${fontStyle} ${fontWeight} ${displayFontSize}px "${element.fontFamily}", sans-serif`;
-
-	const cssVisualCenterOffset = measureCSSVisualCenterOffset({
-		lines,
-		fontString,
-		letterSpacingPx: displayLetterSpacing,
-		lineHeightPx,
-		displayFontSize,
-	});
+	const canvasLetterSpacing = element.letterSpacing ?? 0;
+	const lineHeightPx = scaledFontSize * lineHeight;
 
 	const bg = element.background;
 	const shouldShowBackground =
 		bg.enabled && bg.color && bg.color !== "transparent";
 	const fontSizeRatio = element.fontSize / DEFAULTS.text.element.fontSize;
-	const displayPaddingX = shouldShowBackground
-		? (bg.paddingX ?? DEFAULTS.text.background.paddingX) *
-			fontSizeRatio *
-			displayScaleX
+	const canvasPaddingX = shouldShowBackground
+		? (bg.paddingX ?? DEFAULTS.text.background.paddingX) * fontSizeRatio
 		: 0;
-	const displayPaddingY = shouldShowBackground
-		? (bg.paddingY ?? DEFAULTS.text.background.paddingY) *
-			fontSizeRatio *
-			displayScaleX
+	const canvasPaddingY = shouldShowBackground
+		? (bg.paddingY ?? DEFAULTS.text.background.paddingY) * fontSizeRatio
 		: 0;
 
 	return (
@@ -170,8 +108,8 @@ export function TextEditOverlay({
 			className="absolute"
 			style={{
 				left: posX,
-				top: posY - cssVisualCenterOffset,
-				transform: `translate(-50%, -50%) scale(${element.transform.scaleX}, ${element.transform.scaleY}) rotate(${element.transform.rotate}deg)`,
+				top: posY,
+				transform: `translate(-50%, -50%) scale(${transform.scaleX * displayScaleX}, ${transform.scaleY * displayScaleX}) rotate(${transform.rotate}deg)`,
 				transformOrigin: "center center",
 			}}
 		>
@@ -185,19 +123,20 @@ export function TextEditOverlay({
 				aria-label="Edit text"
 				className="cursor-text select-text outline-none whitespace-pre"
 				style={{
-					fontSize: displayFontSize,
+					fontSize: scaledFontSize,
 					fontFamily: element.fontFamily,
 					fontWeight,
 					fontStyle,
 					textAlign: element.textAlign,
-					letterSpacing: `${displayLetterSpacing}px`,
+					letterSpacing: `${canvasLetterSpacing}px`,
 					lineHeight,
-					color: element.color,
+					color: "transparent",
+					caretColor: element.color,
 					backgroundColor: shouldShowBackground ? bg.color : "transparent",
 					minHeight: lineHeightPx,
 					textDecoration: element.textDecoration ?? "none",
 					padding: shouldShowBackground
-						? `${displayPaddingY}px ${displayPaddingX}px`
+						? `${canvasPaddingY}px ${canvasPaddingX}px`
 						: 0,
 					minWidth: 1,
 				}}

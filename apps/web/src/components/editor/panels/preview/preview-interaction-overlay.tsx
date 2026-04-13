@@ -65,19 +65,6 @@ export function PreviewInteractionOverlay() {
 		onPointerUp(event);
 	};
 
-	const handleContextMenu = (e: React.MouseEvent) => {
-		const x = e.nativeEvent.offsetX;
-		const y = e.nativeEvent.offsetY;
-		const outsideCanvas =
-			x < viewport.sceneLeft ||
-			x > viewport.sceneLeft + viewport.sceneWidth ||
-			y < viewport.sceneTop ||
-			y > viewport.sceneTop + viewport.sceneHeight;
-		if (outsideCanvas) {
-			e.stopPropagation();
-		}
-	};
-
 	return (
 		<div className="absolute inset-0">
 			<div
@@ -97,7 +84,6 @@ export function PreviewInteractionOverlay() {
 				onPointerCancel={handlePointerUp}
 				onDoubleClick={onDoubleClick}
 				onDragStart={(e) => e.preventDefault()}
-				onContextMenu={handleContextMenu}
 			/>
 			{editingText ? (
 				<TextEditOverlay

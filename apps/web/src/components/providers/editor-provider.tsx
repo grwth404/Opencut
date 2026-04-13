@@ -10,7 +10,7 @@ import { useKeybindingsStore } from "@/stores/keybindings-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useEditorActions } from "@/hooks/actions/use-editor-actions";
 import { loadFontAtlas } from "@/lib/fonts/google-fonts";
-import { initializeGpuRenderer } from "@/services/renderer/gpu-renderer";
+import { initializeGpuRenderer, isGpuAvailable } from "@/services/renderer/gpu-renderer";
 
 interface EditorProviderProps {
 	projectId: string;
@@ -36,6 +36,7 @@ export function EditorProvider({ projectId, children }: EditorProviderProps) {
 			try {
 				setIsLoading(true);
 				await initializeGpuRenderer();
+				editor.renderer.setDegraded(!isGpuAvailable());
 				await editor.project.loadProject({ id: projectId });
 
 				if (cancelled) return;

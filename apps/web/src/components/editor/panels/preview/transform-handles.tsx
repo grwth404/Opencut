@@ -6,7 +6,7 @@ import { isVisualElement } from "@/lib/timeline/element-utils";
 import {
 	getCornerPosition,
 	getEdgeHandlePosition,
-	getRotationHandlePosition,
+	ROTATION_HANDLE_OFFSET,
 	type Corner,
 	type Edge,
 } from "@/lib/preview/element-bounds";
@@ -67,11 +67,16 @@ export function TransformHandles({
 	const outlineWidth = Math.abs(bounds.width) * displayScale.x;
 	const outlineHeight = Math.abs(bounds.height) * displayScale.y;
 
-	const rotationHandleCanvas = getRotationHandlePosition({ bounds });
-	const rotationHandleScreen = toOverlay({
-		canvasX: rotationHandleCanvas.x,
-		canvasY: rotationHandleCanvas.y,
+	const rotationAngleRad = (bounds.rotation * Math.PI) / 180;
+	const topCenterLocalY = -bounds.height / 2;
+	const topCenterScreen = toOverlay({
+		canvasX: bounds.cx - topCenterLocalY * Math.sin(rotationAngleRad),
+		canvasY: bounds.cy + topCenterLocalY * Math.cos(rotationAngleRad),
 	});
+	const rotationHandleScreen = {
+		x: topCenterScreen.x + Math.sin(rotationAngleRad) * ROTATION_HANDLE_OFFSET,
+		y: topCenterScreen.y - Math.cos(rotationAngleRad) * ROTATION_HANDLE_OFFSET,
+	};
 
 	const onPointerMove = (event: React.PointerEvent) =>
 		handlePointerMove({ event });

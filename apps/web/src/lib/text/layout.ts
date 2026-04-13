@@ -14,15 +14,18 @@ export interface TextBlockMeasurement {
 	maxWidth: number;
 }
 
-type CanvasContext =
+export type TextCanvasContext =
 	| CanvasRenderingContext2D
 	| OffscreenCanvasRenderingContext2D;
+
+const TEXT_DECORATION_THICKNESS_RATIO = 0.07;
+const STRIKETHROUGH_VERTICAL_RATIO = 0.35;
 
 export function setCanvasLetterSpacing({
 	ctx,
 	letterSpacingPx,
 }: {
-	ctx: CanvasContext;
+	ctx: TextCanvasContext;
 	letterSpacingPx: number;
 }): void {
 	if ("letterSpacing" in ctx) {
@@ -176,4 +179,48 @@ export function getTextVisualRect({
 		width: right - left,
 		height: bottom - top,
 	};
+}
+
+export function drawTextDecoration({
+	ctx,
+	textDecoration,
+	lineWidth,
+	lineY,
+	metrics,
+	scaledFontSize,
+	textAlign,
+}: {
+	ctx: TextCanvasContext;
+	textDecoration: string;
+	lineWidth: number;
+	lineY: number;
+	metrics: TextMetrics;
+	scaledFontSize: number;
+	textAlign: CanvasTextAlign;
+}): void {
+	if (textDecoration === "none" || !textDecoration) return;
+
+	const thickness = Math.max(
+		1,
+		scaledFontSize * TEXT_DECORATION_THICKNESS_RATIO,
+	);
+	const ascent = getMetricAscent({ metrics, fallbackFontSize: scaledFontSize });
+	const descent = getMetricDescent({
+		metrics,
+		fallbackFontSize: scaledFontSize,
+	});
+
+	let xStart = -lineWidth / 2;
+	if (textAlign === "left") xStart = 0;
+	if (textAlign === "right") xStart = -lineWidth;
+
+	if (textDecoration === "underline") {
+		const underlineY = lineY + descent + thickness;
+		ctx.fillRect(xStart, underlineY, lineWidth, thickness);
+	}
+
+	if (textDecoration === "line-through") {
+		const strikeY = lineY - (ascent - descent) * STRIKETHROUGH_VERTICAL_RATIO;
+		ctx.fillRect(xStart, strikeY, lineWidth, thickness);
+	}
 }

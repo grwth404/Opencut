@@ -13,24 +13,32 @@ export class PlaybackManager {
 	private playbackTimer: number | null = null;
 	private playbackStartWallTime = 0;
 	private playbackStartTime = 0;
+	private timelineScopeBound = false;
 
-	constructor(private editor: EditorCore) {
-		this.editor.timeline.subscribe(() => {
-			const maxTime = this.editor.timeline.getTotalDuration();
-			if (this.currentTime > maxTime && maxTime > 0) {
-				this.currentTime = maxTime;
-				this.notify();
-			}
-		});
+	constructor(private editor: EditorCore) {}
+
+	bindTimelineScope(): void {
+		if (this.timelineScopeBound) {
+			return;
+		}
+
+		const reconcile = () => {
+			this.reconcileTimelineScope();
+		};
+		this.editor.timeline.subscribe(reconcile);
+		this.editor.scenes.subscribe(reconcile);
+		this.timelineScopeBound = true;
+		this.reconcileTimelineScope();
 	}
 
 	play(): void {
 		const maxTime = this.editor.timeline.getTotalDuration();
+		if (maxTime <= 0) {
+			return;
+		}
 
-		if (maxTime > 0) {
-			if (this.currentTime >= maxTime) {
-				this.seek({ time: 0 });
-			}
+		if (this.currentTime >= maxTime) {
+			this.seek({ time: 0 });
 		}
 
 		this.isPlaying = true;
@@ -53,19 +61,13 @@ export class PlaybackManager {
 	}
 
 	seek({ time }: { time: number }): void {
-		const maxTime = this.editor.timeline.getTotalDuration();
-		this.currentTime = Math.max(0, Math.min(maxTime, time));
+		this.currentTime = this.clampTimeToTimeline(time);
 		if (this.isPlaying) {
 			this.playbackStartWallTime = performance.now();
 			this.playbackStartTime = this.currentTime;
 		}
 		this.notify();
-
-		window.dispatchEvent(
-			new CustomEvent("playback-seek", {
-				detail: { time: this.currentTime },
-			}),
-		);
+		this.dispatchSeekEvent(this.currentTime);
 	}
 
 	setVolume({ volume }: { volume: number }): void {
@@ -131,6 +133,29 @@ export class PlaybackManager {
 		return () => this.listeners.delete(listener);
 	}
 
+	private reconcileTimelineScope(): void {
+		const maxTime = this.editor.timeline.getTotalDuration();
+		const nextTime = this.clampTimeToTimeline(this.currentTime);
+		const shouldPause = this.isPlaying && nextTime >= maxTime;
+		const timeChanged = nextTime !== this.currentTime;
+
+		if (!timeChanged && !shouldPause) {
+			return;
+		}
+
+		if (shouldPause) {
+			this.isPlaying = false;
+			this.stopTimer();
+		}
+
+		this.currentTime = nextTime;
+		this.notify();
+
+		if (timeChanged) {
+			this.dispatchSeekEvent(this.currentTime);
+		}
+	}
+
 	private notify(): void {
 		this.listeners.forEach((fn) => {
 			fn();
@@ -158,31 +183,54 @@ export class PlaybackManager {
 		if (!this.isPlaying) return;
 
 		const fps = this.editor.project.getActive()?.settings.fps;
-		const elapsedSeconds = (performance.now() - this.playbackStartWallTime) / 1000;
-		const rawTime = this.playbackStartTime + Math.round(elapsedSeconds * TICKS_PER_SECOND);
-		const newTime = fps ? (roundToFrame({ time: rawTime, rate: fps }) ?? rawTime) : rawTime;
+		const elapsedSeconds =
+			(performance.now() - this.playbackStartWallTime) / 1000;
+		const rawTime =
+			this.playbackStartTime + Math.round(elapsedSeconds * TICKS_PER_SECOND);
+		const newTime = fps
+			? (roundToFrame({ time: rawTime, rate: fps }) ?? rawTime)
+			: rawTime;
 		const maxTime = this.editor.timeline.getTotalDuration();
 
-		if (maxTime > 0 && newTime >= maxTime) {
+		if (newTime >= maxTime) {
 			this.pause();
 			this.currentTime = maxTime;
 			this.notify();
-
-			window.dispatchEvent(
-				new CustomEvent("playback-seek", {
-					detail: { time: maxTime },
-				}),
-			);
-		} else {
-			this.currentTime = newTime;
-
-			window.dispatchEvent(
-				new CustomEvent("playback-update", {
-					detail: { time: newTime },
-				}),
-			);
+			this.dispatchSeekEvent(maxTime);
+			return;
 		}
 
+		this.currentTime = newTime;
+		this.dispatchUpdateEvent(newTime);
 		this.playbackTimer = requestAnimationFrame(this.updateTime);
 	};
+
+	private clampTimeToTimeline(time: number): number {
+		const maxTime = this.editor.timeline.getTotalDuration();
+		return Math.max(0, Math.min(maxTime, time));
+	}
+
+	private dispatchSeekEvent(time: number): void {
+		if (typeof window === "undefined") {
+			return;
+		}
+
+		window.dispatchEvent(
+			new CustomEvent("playback-seek", {
+				detail: { time },
+			}),
+		);
+	}
+
+	private dispatchUpdateEvent(time: number): void {
+		if (typeof window === "undefined") {
+			return;
+		}
+
+		window.dispatchEvent(
+			new CustomEvent("playback-update", {
+				detail: { time },
+			}),
+		);
+	}
 }

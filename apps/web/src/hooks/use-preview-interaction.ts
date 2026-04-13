@@ -134,15 +134,6 @@ export function usePreviewInteraction({
 		const current = editingTextRef.current;
 		if (!current) return;
 		editingTextRef.current = null;
-		editor.timeline.previewElements({
-			updates: [
-				{
-					trackId: current.trackId,
-					elementId: current.elementId,
-					updates: { opacity: current.originalOpacity },
-				},
-			],
-		});
 		editor.timeline.commitPreview();
 		setEditingText(null);
 	}, [editor.timeline]);
@@ -207,15 +198,6 @@ export function usePreviewInteraction({
 			if (!hit || hit.element.type !== "text") return;
 
 			const textElement = hit.element as TextElement;
-			editor.timeline.previewElements({
-				updates: [
-					{
-						trackId: hit.trackId,
-						elementId: hit.elementId,
-						updates: { opacity: 0 },
-					},
-				],
-			});
 			setEditingText({
 				trackId: hit.trackId,
 				elementId: hit.elementId,

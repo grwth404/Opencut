@@ -5,7 +5,6 @@ import type {
 	TrackType,
 	TimelineTrack,
 	TimelineElement,
-	ClipboardItem,
 	RetimeConfig,
 } from "@/lib/timeline";
 import { calculateTotalDuration } from "@/lib/timeline";
@@ -23,6 +22,11 @@ import type {
 	AnimationValue,
 	ScalarCurveKeyframePatch,
 } from "@/lib/animation/types";
+import {
+	getElementLocalTime,
+	resolveAnimationTarget,
+	resolveAnimationPathValueAtTime,
+} from "@/lib/animation";
 import { lastFrameTime } from "opencut-wasm";
 import { BatchCommand } from "@/lib/commands";
 import {
@@ -35,7 +39,6 @@ import {
 	DuplicateElementsCommand,
 	UpdateElementsCommand,
 	SplitElementsCommand,
-	PasteCommand,
 	MoveElementCommand,
 	TracksSnapshotCommand,
 	UpsertKeyframeCommand,
@@ -242,18 +245,6 @@ export class TimelineManager {
 		}
 
 		return result;
-	}
-
-	pasteAtTime({
-		time,
-		clipboardItems,
-	}: {
-		time: number;
-		clipboardItems: ClipboardItem[];
-	}): { trackId: string; elementId: string }[] {
-		const command = new PasteCommand({ time, clipboardItems });
-		this.editor.command.execute({ command });
-		return command.getPastedElements();
 	}
 
 	deleteElements({
@@ -492,6 +483,45 @@ export class TimelineManager {
 			return;
 		}
 
+		// Pre-sample values at playhead for each (element, property) pair.
+		// This preserves "what you see is what you get" when all keyframes are deleted.
+		const playheadTime = this.editor.playback.getCurrentTime();
+		const valueAtPlayheadMap = new Map<string, AnimationValue | null>();
+
+		for (const { trackId, elementId, propertyPath } of keyframes) {
+			const key = `${elementId}:${propertyPath}`;
+			if (valueAtPlayheadMap.has(key)) {
+				continue;
+			}
+
+			const element = this.getElementByRef({ trackId, elementId });
+			if (!element) {
+				valueAtPlayheadMap.set(key, null);
+				continue;
+			}
+
+			const localTime = getElementLocalTime({
+				timelineTime: playheadTime,
+				elementStartTime: element.startTime,
+				elementDuration: element.duration,
+			});
+
+			const target = resolveAnimationTarget({ element, path: propertyPath });
+			const baseValue = target?.getBaseValue() ?? null;
+			if (baseValue === null) {
+				valueAtPlayheadMap.set(key, null);
+				continue;
+			}
+
+			const value = resolveAnimationPathValueAtTime({
+				animations: element.animations,
+				propertyPath,
+				localTime,
+				fallbackValue: baseValue,
+			});
+			valueAtPlayheadMap.set(key, value);
+		}
+
 		const commands = keyframes.map(
 			({ trackId, elementId, propertyPath, keyframeId }) =>
 				new RemoveKeyframeCommand({
@@ -499,6 +529,8 @@ export class TimelineManager {
 					elementId,
 					propertyPath,
 					keyframeId,
+					valueAtPlayhead:
+						valueAtPlayheadMap.get(`${elementId}:${propertyPath}`) ?? null,
 				}),
 		);
 		const command =

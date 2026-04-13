@@ -33,12 +33,39 @@ export interface MeasuredTextElement {
 	visualRect: { left: number; top: number; width: number; height: number };
 }
 
-/**
- * Shared text measurement used by both the renderer and preview bounds.
- * Accepts the canvas context to measure on so callers can reuse an existing
- * context (e.g. the renderer's) rather than creating a throwaway canvas.
- * The context state is preserved via save/restore.
- */
+let textMeasurementContext:
+	| CanvasRenderingContext2D
+	| OffscreenCanvasRenderingContext2D
+	| null = null;
+
+export function getTextMeasurementContext():
+	| CanvasRenderingContext2D
+	| OffscreenCanvasRenderingContext2D {
+	if (textMeasurementContext) {
+		return textMeasurementContext;
+	}
+
+	if (typeof OffscreenCanvas !== "undefined") {
+		const canvas = new OffscreenCanvas(1, 1);
+		const context = canvas.getContext("2d");
+		if (context) {
+			textMeasurementContext = context;
+			return context;
+		}
+	}
+
+	if (typeof document !== "undefined") {
+		const canvas = document.createElement("canvas");
+		const context = canvas.getContext("2d");
+		if (context) {
+			textMeasurementContext = context;
+			return context;
+		}
+	}
+
+	throw new Error("Failed to create text measurement context");
+}
+
 export function measureTextElement({
 	element,
 	canvasHeight,

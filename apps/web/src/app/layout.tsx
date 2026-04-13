@@ -35,13 +35,6 @@ export default function RootLayout({
 							crossOrigin="anonymous"
 							strategy="beforeInteractive"
 						/>
-
-						{/* code to figma */}
-						{/* <script
-							dangerouslySetInnerHTML={{
-								__html: `(function(){var s=document.createElement('script');s.src='https://mcp.figma.com/mcp/html-to-design/capture.js';document.head.appendChild(s);})();`,
-							}}
-						/> */}
 					</>
 				)}
 			</head>

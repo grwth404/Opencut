@@ -15,9 +15,20 @@ type SnapshotResult =
 
 export class RendererManager {
 	private renderTree: RootNode | null = null;
+	private _isDegraded = false;
 	private listeners = new Set<() => void>();
 
 	constructor(private editor: EditorCore) {}
+
+	get isDegraded(): boolean {
+		return this._isDegraded;
+	}
+
+	setDegraded(degraded: boolean): void {
+		if (this._isDegraded === degraded) return;
+		this._isDegraded = degraded;
+		this.notify();
+	}
 
 	setRenderTree({ renderTree }: { renderTree: RootNode | null }): void {
 		this.renderTree = renderTree;
