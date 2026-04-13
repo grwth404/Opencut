@@ -1,6 +1,9 @@
-import type { CanvasRenderer } from "../canvas-renderer";
 import { resolveStickerId } from "@/lib/stickers";
-import { VisualNode, type VisualNodeParams } from "./visual-node";
+import {
+	VisualNode,
+	type ResolvedVisualSourceNodeState,
+	type VisualNodeParams,
+} from "./visual-node";
 
 export interface StickerNodeParams extends VisualNodeParams {
 	stickerId: string;
@@ -16,7 +19,11 @@ interface CachedStickerSource {
 
 const stickerSourceCache = new Map<string, Promise<CachedStickerSource>>();
 
-function loadStickerSource({ stickerId }: { stickerId: string }): Promise<CachedStickerSource> {
+export function loadStickerSource({
+	stickerId,
+}: {
+	stickerId: string;
+}): Promise<CachedStickerSource> {
 	const cached = stickerSourceCache.get(stickerId);
 	if (cached) return cached;
 
@@ -42,35 +49,7 @@ function loadStickerSource({ stickerId }: { stickerId: string }): Promise<Cached
 	return promise;
 }
 
-export class StickerNode extends VisualNode<StickerNodeParams> {
-	private cachedSource: Promise<CachedStickerSource>;
-
-	constructor(params: StickerNodeParams) {
-		super(params);
-		this.cachedSource = loadStickerSource({ stickerId: params.stickerId });
-	}
-
-	async render({ renderer, time }: { renderer: CanvasRenderer; time: number }) {
-		await super.render({ renderer, time });
-
-		if (!this.isInRange({ time })) {
-			return;
-		}
-
-		const { source, width: loadedWidth, height: loadedHeight } =
-			await this.cachedSource;
-
-		// Prefer element-stored intrinsic dimensions as the geometry authority.
-		// The loaded image is only the drawable source.
-		const sourceWidth = this.params.intrinsicWidth ?? loadedWidth;
-		const sourceHeight = this.params.intrinsicHeight ?? loadedHeight;
-
-		this.renderVisual({
-			renderer,
-			source,
-			sourceWidth,
-			sourceHeight,
-			timelineTime: time,
-		});
-	}
-}
+export class StickerNode extends VisualNode<
+	StickerNodeParams,
+	ResolvedVisualSourceNodeState
+> {}

@@ -1,5 +1,8 @@
-import type { CanvasRenderer } from "../canvas-renderer";
-import { VisualNode, type VisualNodeParams } from "./visual-node";
+import {
+	VisualNode,
+	type ResolvedVisualSourceNodeState,
+	type VisualNodeParams,
+} from "./visual-node";
 
 export interface ImageNodeParams extends VisualNodeParams {
 	url: string;
@@ -62,29 +65,7 @@ export function loadImageSource(
 	return promise;
 }
 
-export class ImageNode extends VisualNode<ImageNodeParams> {
-	private cachedSource: Promise<CachedImageSource>;
-
-	constructor(params: ImageNodeParams) {
-		super(params);
-		this.cachedSource = loadImageSource(params.url, params.maxSourceSize);
-	}
-
-	async render({ renderer, time }: { renderer: CanvasRenderer; time: number }) {
-		await super.render({ renderer, time });
-
-		if (!this.isInRange({ time })) {
-			return;
-		}
-
-		const { source, width, height } = await this.cachedSource;
-
-		this.renderVisual({
-			renderer,
-			source,
-			sourceWidth: width || renderer.width,
-			sourceHeight: height || renderer.height,
-			timelineTime: time,
-		});
-	}
-}
+export class ImageNode extends VisualNode<
+	ImageNodeParams,
+	ResolvedVisualSourceNodeState
+> {}

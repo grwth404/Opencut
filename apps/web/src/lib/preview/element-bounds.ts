@@ -244,21 +244,6 @@ export function getEdgeHandlePosition({
 	};
 }
 
-export function getRotationHandlePosition({
-	bounds,
-}: {
-	bounds: ElementBounds;
-}): { x: number; y: number } {
-	const angleRad = (bounds.rotation * Math.PI) / 180;
-	const cos = Math.cos(angleRad);
-	const sin = Math.sin(angleRad);
-	const localY = -bounds.height / 2 - ROTATION_HANDLE_OFFSET;
-	return {
-		x: bounds.cx - localY * sin,
-		y: bounds.cy + localY * cos,
-	};
-}
-
 export function getVisibleElementsWithBounds({
 	tracks,
 	currentTime,

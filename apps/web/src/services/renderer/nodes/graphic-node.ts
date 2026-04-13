@@ -1,20 +1,29 @@
-import type { CanvasRenderer } from "../canvas-renderer";
 import { createOffscreenCanvas } from "../canvas-utils";
 import {
 	DEFAULT_GRAPHIC_SOURCE_SIZE,
 	getGraphicDefinition,
 	registerDefaultGraphics,
 } from "@/lib/graphics";
-import { resolveGraphicParamsAtTime } from "@/lib/animation";
 import type { ParamValues } from "@/lib/params";
-import { VisualNode, type VisualNodeParams } from "./visual-node";
+import {
+	VisualNode,
+	type ResolvedVisualNodeState,
+	type VisualNodeParams,
+} from "./visual-node";
 
 export interface GraphicNodeParams extends VisualNodeParams {
 	definitionId: string;
 	params: ParamValues;
 }
 
-export class GraphicNode extends VisualNode<GraphicNodeParams> {
+export interface ResolvedGraphicNodeState extends ResolvedVisualNodeState {
+	resolvedParams: ParamValues;
+}
+
+export class GraphicNode extends VisualNode<
+	GraphicNodeParams,
+	ResolvedGraphicNodeState
+> {
 	private cachedKey: string | null = null;
 	private cachedSource: OffscreenCanvas | HTMLCanvasElement | null = null;
 
@@ -23,17 +32,13 @@ export class GraphicNode extends VisualNode<GraphicNodeParams> {
 		registerDefaultGraphics();
 	}
 
-	private getSource({
-		localTime,
+	getSource({
+		resolvedParams,
 	}: {
-		localTime: number;
+		resolvedParams: ParamValues;
 	}): OffscreenCanvas | HTMLCanvasElement | null {
 		const definition = getGraphicDefinition({
 			definitionId: this.params.definitionId,
-		});
-		const resolvedParams = resolveGraphicParamsAtTime({
-			element: this.params,
-			localTime,
 		});
 		const cacheKey = JSON.stringify({
 			definitionId: this.params.definitionId,
@@ -65,28 +70,5 @@ export class GraphicNode extends VisualNode<GraphicNodeParams> {
 		this.cachedKey = cacheKey;
 		this.cachedSource = canvas;
 		return canvas;
-	}
-
-	async render({ renderer, time }: { renderer: CanvasRenderer; time: number }) {
-		await super.render({ renderer, time });
-
-		if (!this.isInRange({ time })) {
-			return;
-		}
-
-		const source = this.getSource({
-			localTime: this.getAnimationLocalTime({ time }),
-		});
-		if (!source) {
-			return;
-		}
-
-		this.renderVisual({
-			renderer,
-			source,
-			sourceWidth: DEFAULT_GRAPHIC_SOURCE_SIZE,
-			sourceHeight: DEFAULT_GRAPHIC_SOURCE_SIZE,
-			timelineTime: time,
-		});
 	}
 }

@@ -9,7 +9,7 @@ import { GraphicNode } from "./nodes/graphic-node";
 import { ColorNode } from "./nodes/color-node";
 import { BlurBackgroundNode } from "./nodes/blur-background-node";
 import { EffectLayerNode } from "./nodes/effect-layer-node";
-import type { BaseNode } from "./nodes/base-node";
+import type { AnyBaseNode } from "./nodes/base-node";
 import type { TBackground, TCanvasSize } from "@/lib/project/types";
 import { DEFAULT_BACKGROUND_BLUR_INTENSITY } from "@/lib/background/constants";
 
@@ -35,8 +35,8 @@ function buildTrackNodes({
 	mediaMap: Map<string, MediaAsset>;
 	canvasSize: TCanvasSize;
 	isPreview?: boolean;
-}): BaseNode[] {
-	const nodes: BaseNode[] = [];
+}): AnyBaseNode[] {
+	const nodes: AnyBaseNode[] = [];
 
 	for (const track of tracks) {
 		const elements = getVisibleSortedElements({ track });
@@ -75,8 +75,8 @@ function buildTrackNodes({
 							animations: element.animations,
 							opacity: element.opacity,
 							blendMode: element.blendMode,
-							effects: element.effects,
-							masks: element.masks,
+							effects: element.effects ?? [],
+							masks: element.masks ?? [],
 						}),
 					);
 				}
@@ -92,8 +92,8 @@ function buildTrackNodes({
 							animations: element.animations,
 							opacity: element.opacity,
 							blendMode: element.blendMode,
-							effects: element.effects,
-							masks: element.masks,
+							effects: element.effects ?? [],
+							masks: element.masks ?? [],
 							...(isPreview && {
 								maxSourceSize: PREVIEW_MAX_IMAGE_SIZE,
 							}),
@@ -109,7 +109,7 @@ function buildTrackNodes({
 						canvasCenter: { x: canvasSize.width / 2, y: canvasSize.height / 2 },
 						canvasHeight: canvasSize.height,
 						textBaseline: "middle",
-						effects: element.effects,
+						effects: element.effects ?? [],
 					}),
 				);
 			}
@@ -128,7 +128,7 @@ function buildTrackNodes({
 						animations: element.animations,
 						opacity: element.opacity,
 						blendMode: element.blendMode,
-						effects: element.effects,
+						effects: element.effects ?? [],
 					}),
 				);
 			}
@@ -146,8 +146,8 @@ function buildTrackNodes({
 						animations: element.animations,
 						opacity: element.opacity,
 						blendMode: element.blendMode,
-						effects: element.effects,
-						masks: element.masks,
+						effects: element.effects ?? [],
+						masks: element.masks ?? [],
 					}),
 				);
 			}
@@ -165,12 +165,12 @@ function buildBlurBackgroundNodes({
 	track: TimelineTrack | undefined;
 	mediaMap: Map<string, MediaAsset>;
 	blurIntensity: number;
-}): BaseNode[] {
+}): AnyBaseNode[] {
 	if (!track) {
 		return [];
 	}
 
-	const nodes: BaseNode[] = [];
+	const nodes: AnyBaseNode[] = [];
 	const elements = getVisibleSortedElements({ track });
 
 	for (const element of elements) {

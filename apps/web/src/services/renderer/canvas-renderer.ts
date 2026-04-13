@@ -1,6 +1,8 @@
 import type { FrameRate } from "opencut-wasm";
-import { frameRateToFloat } from "@/lib/fps/utils";
-import type { BaseNode } from "./nodes/base-node";
+import type { AnyBaseNode } from "./nodes/base-node";
+import { buildFrameDescriptor } from "./compositor/frame-descriptor";
+import { wasmCompositor } from "./compositor/wasm-compositor";
+import { resolveRenderTree } from "./resolve";
 
 export type CanvasRendererParams = {
 	width: number;
@@ -38,6 +40,14 @@ export class CanvasRenderer {
 			| CanvasRenderingContext2D;
 	}
 
+	getOutputCanvas(): HTMLCanvasElement {
+		wasmCompositor.ensureInitialized({
+			width: this.width,
+			height: this.height,
+		});
+		return wasmCompositor.getCanvas();
+	}
+
 	setSize({ width, height }: { width: number; height: number }) {
 		this.width = width;
 		this.height = height;
@@ -58,14 +68,18 @@ export class CanvasRenderer {
 			| CanvasRenderingContext2D;
 	}
 
-	private clear() {
-		this.context.fillStyle = "black";
-		this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
-	}
-
-	async render({ node, time }: { node: BaseNode; time: number }) {
-		this.clear();
-		await node.render({ renderer: this, time });
+	async render({ node, time }: { node: AnyBaseNode; time: number }) {
+		await resolveRenderTree({ node, renderer: this, time });
+		const { frame, textures } = await buildFrameDescriptor({
+			node,
+			renderer: this,
+		});
+		wasmCompositor.ensureInitialized({
+			width: this.width,
+			height: this.height,
+		});
+		wasmCompositor.syncTextures(textures);
+		wasmCompositor.render(frame);
 	}
 
 	async renderToCanvas({
@@ -73,7 +87,7 @@ export class CanvasRenderer {
 		time,
 		targetCanvas,
 	}: {
-		node: BaseNode;
+		node: AnyBaseNode;
 		time: number;
 		targetCanvas: HTMLCanvasElement;
 	}) {
@@ -84,6 +98,12 @@ export class CanvasRenderer {
 			throw new Error("Failed to get target canvas context");
 		}
 
-		ctx.drawImage(this.canvas, 0, 0, targetCanvas.width, targetCanvas.height);
+		ctx.drawImage(
+			wasmCompositor.getCanvas(),
+			0,
+			0,
+			targetCanvas.width,
+			targetCanvas.height,
+		);
 	}
 }
