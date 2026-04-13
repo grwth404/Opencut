@@ -1,5 +1,5 @@
 use bytemuck::{Pod, Zeroable};
-use gpu::{FULLSCREEN_SHADER_SOURCE, GPU_TEXTURE_FORMAT, GpuContext};
+use gpu::{FULLSCREEN_SHADER_SOURCE, GpuContext};
 use wgpu::util::DeviceExt;
 
 const JFA_INIT_SHADER_SOURCE: &str = include_str!("shaders/jfa_init.wgsl");
@@ -98,6 +98,7 @@ impl SdfPipeline {
             &pipeline_layout,
             &vertex_shader_module,
             &init_shader_module,
+            context.texture_format(),
         );
         let step_pipeline = create_pipeline(
             device,
@@ -105,6 +106,7 @@ impl SdfPipeline {
             &pipeline_layout,
             &vertex_shader_module,
             &step_shader_module,
+            context.texture_format(),
         );
 
         Self {
@@ -122,15 +124,41 @@ impl SdfPipeline {
         width: u32,
         height: u32,
     ) -> SignedDistanceFieldTextures {
+        let mut encoder =
+            context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("gpu-sdf-command-encoder"),
+                });
+        let textures = self.compute_signed_distance_field_with_encoder(
+            context,
+            &mut encoder,
+            source_texture,
+            width,
+            height,
+        );
+        context.queue().submit([encoder.finish()]);
+        textures
+    }
+
+    pub fn compute_signed_distance_field_with_encoder(
+        &self,
+        context: &GpuContext,
+        encoder: &mut wgpu::CommandEncoder,
+        source_texture: &wgpu::Texture,
+        width: u32,
+        height: u32,
+    ) -> SignedDistanceFieldTextures {
         SignedDistanceFieldTextures {
-            inside_texture: self.run_jfa(context, source_texture, width, height, false),
-            outside_texture: self.run_jfa(context, source_texture, width, height, true),
+            inside_texture: self.run_jfa(context, encoder, source_texture, width, height, false),
+            outside_texture: self.run_jfa(context, encoder, source_texture, width, height, true),
         }
     }
 
     fn run_jfa(
         &self,
         context: &GpuContext,
+        encoder: &mut wgpu::CommandEncoder,
         source_texture: &wgpu::Texture,
         width: u32,
         height: u32,
@@ -141,6 +169,7 @@ impl SdfPipeline {
 
         self.run_pass(
             context,
+            encoder,
             source_texture,
             &ping_texture,
             &self.init_pipeline,
@@ -167,6 +196,7 @@ impl SdfPipeline {
             };
             self.run_pass(
                 context,
+                encoder,
                 input_texture,
                 output_texture,
                 &self.step_pipeline,
@@ -189,6 +219,7 @@ impl SdfPipeline {
     fn run_pass(
         &self,
         context: &GpuContext,
+        encoder: &mut wgpu::CommandEncoder,
         input_texture: &wgpu::Texture,
         output_texture: &wgpu::Texture,
         pipeline: &wgpu::RenderPipeline,
@@ -230,12 +261,6 @@ impl SdfPipeline {
                     resource: uniform_buffer.as_entire_binding(),
                 }],
             });
-        let mut encoder =
-            context
-                .device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("gpu-sdf-command-encoder"),
-                });
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -260,8 +285,6 @@ impl SdfPipeline {
             render_pass.set_bind_group(1, &uniform_bind_group, &[]);
             render_pass.draw(0..6, 0..1);
         }
-
-        context.queue().submit([encoder.finish()]);
     }
 }
 
@@ -271,6 +294,7 @@ fn create_pipeline(
     layout: &wgpu::PipelineLayout,
     vertex_shader_module: &wgpu::ShaderModule,
     fragment_shader_module: &wgpu::ShaderModule,
+    texture_format: wgpu::TextureFormat,
 ) -> wgpu::RenderPipeline {
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: Some(label),
@@ -293,7 +317,7 @@ fn create_pipeline(
             module: fragment_shader_module,
             entry_point: Some("fragment_main"),
             targets: &[Some(wgpu::ColorTargetState {
-                format: GPU_TEXTURE_FORMAT,
+                format: texture_format,
                 blend: None,
                 write_mask: wgpu::ColorWrites::ALL,
             })],

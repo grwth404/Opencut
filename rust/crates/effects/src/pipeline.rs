@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bytemuck::{Pod, Zeroable};
-use gpu::{FULLSCREEN_SHADER_SOURCE, GPU_TEXTURE_FORMAT, GpuContext};
+use gpu::{FULLSCREEN_SHADER_SOURCE, GpuContext};
 use thiserror::Error;
 use wgpu::util::DeviceExt;
 
@@ -119,7 +119,7 @@ impl EffectPipeline {
                         module: &gaussian_blur_shader_module,
                         entry_point: Some("fragment_main"),
                         targets: &[Some(wgpu::ColorTargetState {
-                            format: GPU_TEXTURE_FORMAT,
+                            format: context.texture_format(),
                             blend: None,
                             write_mask: wgpu::ColorWrites::ALL,
                         })],
@@ -143,6 +143,37 @@ impl EffectPipeline {
     pub fn apply(
         &self,
         context: &GpuContext,
+        ApplyEffectsOptions {
+            source,
+            width,
+            height,
+            passes,
+        }: ApplyEffectsOptions<'_>,
+    ) -> Result<wgpu::Texture, EffectsError> {
+        let mut encoder =
+            context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("effects-command-encoder"),
+                });
+        let output = self.apply_with_encoder(
+            context,
+            &mut encoder,
+            ApplyEffectsOptions {
+                source,
+                width,
+                height,
+                passes,
+            },
+        )?;
+        context.queue().submit([encoder.finish()]);
+        Ok(output)
+    }
+
+    pub fn apply_with_encoder(
+        &self,
+        context: &GpuContext,
+        encoder: &mut wgpu::CommandEncoder,
         ApplyEffectsOptions {
             source,
             width,
@@ -199,12 +230,6 @@ impl EffectPipeline {
                     shader: pass.shader.clone(),
                 }
             })?;
-            let mut encoder =
-                context
-                    .device()
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("effects-command-encoder"),
-                    });
 
             {
                 let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -230,7 +255,6 @@ impl EffectPipeline {
                 render_pass.draw(0..6, 0..1);
             }
 
-            context.queue().submit([encoder.finish()]);
             current_texture = Some(output_texture);
         }
 

@@ -53,7 +53,7 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4f {
                 continue;
             }
 
-            let encoded = textureSample(input_texture, input_sampler, sample_uv);
+            let encoded = textureSampleLevel(input_texture, input_sampler, sample_uv, 0.0);
             if (is_no_seed(encoded)) {
                 continue;
             }

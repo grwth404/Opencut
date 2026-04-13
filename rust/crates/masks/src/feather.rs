@@ -1,5 +1,5 @@
 use bytemuck::{Pod, Zeroable};
-use gpu::{FULLSCREEN_SHADER_SOURCE, GPU_TEXTURE_FORMAT, GpuContext};
+use gpu::{FULLSCREEN_SHADER_SOURCE, GpuContext};
 use wgpu::util::DeviceExt;
 
 use crate::SdfPipeline;
@@ -128,7 +128,7 @@ impl MaskFeatherPipeline {
                 module: &fragment_shader_module,
                 entry_point: Some("fragment_main"),
                 targets: &[Some(wgpu::ColorTargetState {
-                    format: GPU_TEXTURE_FORMAT,
+                    format: context.texture_format(),
                     blend: None,
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
@@ -160,9 +160,40 @@ impl MaskFeatherPipeline {
             feather,
         }: ApplyMaskFeatherOptions<'_>,
     ) -> wgpu::Texture {
+        let mut encoder =
+            context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("gpu-mask-distance-command-encoder"),
+                });
+        let output = self.apply_mask_feather_with_encoder(
+            context,
+            &mut encoder,
+            ApplyMaskFeatherOptions {
+                mask,
+                width,
+                height,
+                feather,
+            },
+        );
+        context.queue().submit([encoder.finish()]);
+        output
+    }
+
+    pub fn apply_mask_feather_with_encoder(
+        &self,
+        context: &GpuContext,
+        encoder: &mut wgpu::CommandEncoder,
+        ApplyMaskFeatherOptions {
+            mask,
+            width,
+            height,
+            feather,
+        }: ApplyMaskFeatherOptions<'_>,
+    ) -> wgpu::Texture {
         let sdf = self
             .sdf_pipeline
-            .compute_signed_distance_field(context, mask, width, height);
+            .compute_signed_distance_field_with_encoder(context, encoder, mask, width, height);
         let output_texture = context.create_render_texture(width, height, "masks-feather-output");
         let inside_view = sdf
             .inside_texture
@@ -225,13 +256,6 @@ impl MaskFeatherPipeline {
                     resource: uniform_buffer.as_entire_binding(),
                 }],
             });
-        let mut encoder =
-            context
-                .device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("gpu-mask-distance-command-encoder"),
-                });
-
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("gpu-mask-distance-render-pass"),
@@ -256,8 +280,6 @@ impl MaskFeatherPipeline {
             render_pass.set_bind_group(2, &uniform_bind_group, &[]);
             render_pass.draw(0..6, 0..1);
         }
-
-        context.queue().submit([encoder.finish()]);
         output_texture
     }
 }

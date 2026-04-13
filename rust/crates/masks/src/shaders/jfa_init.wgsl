@@ -24,7 +24,10 @@ fn encode_seed(seed: vec2f) -> vec4f {
 @fragment
 fn fragment_main(input: VertexOutput) -> @location(0) vec4f {
     let mask = textureSample(input_texture, input_sampler, input.tex_coord).r;
-    let is_seed = select(mask > 0.5, mask < 0.5, uniforms.invert > 0.5);
+    let above = mask > 0.5;
+    let below = mask < 0.5;
+    let inverted = uniforms.invert > 0.5;
+    let is_seed = select(above, below, inverted);
 
     if (is_seed) {
         let pixel_coord = floor(input.tex_coord * uniforms.resolution);
