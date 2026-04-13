@@ -1,7 +1,14 @@
 import type { ElementBounds } from "@/lib/preview/element-bounds";
 import type { ParamDefinition, ParamValues } from "@/lib/params";
 
-export type MaskType = "split" | "rectangle" | "ellipse";
+export type MaskType =
+	| "split"
+	| "cinematic-bars"
+	| "rectangle"
+	| "ellipse"
+	| "heart"
+	| "diamond"
+	| "star";
 
 export interface BaseMaskParams extends ParamValues {
 	feather: number;
@@ -32,6 +39,12 @@ export interface SplitMask {
 	params: SplitMaskParams;
 }
 
+export interface CinematicBarsMask {
+	id: string;
+	type: "cinematic-bars";
+	params: RectangleMaskParams;
+}
+
 export interface RectangleMask {
 	id: string;
 	type: "rectangle";
@@ -44,7 +57,32 @@ export interface EllipseMask {
 	params: RectangleMaskParams;
 }
 
-export type Mask = SplitMask | RectangleMask | EllipseMask;
+export interface HeartMask {
+	id: string;
+	type: "heart";
+	params: RectangleMaskParams;
+}
+
+export interface DiamondMask {
+	id: string;
+	type: "diamond";
+	params: RectangleMaskParams;
+}
+
+export interface StarMask {
+	id: string;
+	type: "star";
+	params: RectangleMaskParams;
+}
+
+export type Mask =
+	| SplitMask
+	| CinematicBarsMask
+	| RectangleMask
+	| EllipseMask
+	| HeartMask
+	| DiamondMask
+	| StarMask;
 
 export interface MaskRenderer {
 	buildPath(params: {

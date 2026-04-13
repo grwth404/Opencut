@@ -450,6 +450,44 @@ function MaskParamsFields({
 					</SectionField>
 				)}
 
+			{definition.features.sizeMode === "height-only" &&
+				"height" in mask.params && (
+					<SectionField label="Height">
+						<MaskNumberField
+							icon="H"
+							param={getNumberParamDefinition({
+								definition,
+								key: "height",
+							})}
+							value={getMaskNumber({
+								params: mask.params,
+								key: "height",
+							})}
+							onPreview={previewNumberParam("height")}
+							onCommit={onCommit}
+						/>
+					</SectionField>
+				)}
+
+			{definition.features.sizeMode === "width-only" &&
+				"width" in mask.params && (
+					<SectionField label="Width">
+						<MaskNumberField
+							icon="W"
+							param={getNumberParamDefinition({
+								definition,
+								key: "width",
+							})}
+							value={getMaskNumber({
+								params: mask.params,
+								key: "width",
+							})}
+							onPreview={previewNumberParam("width")}
+							onCommit={onCommit}
+						/>
+					</SectionField>
+				)}
+
 			{definition.features.sizeMode === "uniform" && "scale" in mask.params && (
 				<SectionField label="Scale">
 					<MaskNumberField
