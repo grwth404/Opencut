@@ -173,7 +173,7 @@ function createScalarKey({
 	id: string;
 	time: number;
 	value: number;
-	interpolation: AnimationInterpolation;
+	interpolation?: AnimationInterpolation;
 	previousKey?: ScalarAnimationKey;
 }): ScalarAnimationKey {
 	return {
@@ -183,7 +183,8 @@ function createScalarKey({
 		leftHandle: previousKey?.leftHandle,
 		rightHandle: previousKey?.rightHandle,
 		segmentToNext:
-			previousKey?.segmentToNext ?? getScalarSegmentType({ interpolation }),
+			previousKey?.segmentToNext ??
+			getScalarSegmentType({ interpolation: interpolation ?? "linear" }),
 		tangentMode: previousKey?.tangentMode ?? "flat",
 	};
 }
@@ -332,12 +333,14 @@ function upsertScalarChannelKey({
 	time,
 	value,
 	interpolation,
+	defaultInterpolation,
 	keyframeId,
 }: {
 	channel: ScalarAnimationChannel | undefined;
 	time: number;
 	value: number;
-	interpolation: AnimationInterpolation;
+	interpolation?: AnimationInterpolation;
+	defaultInterpolation?: AnimationInterpolation;
 	keyframeId?: string;
 }): ScalarAnimationChannel {
 	const normalizedChannel = normalizeChannel({
@@ -352,10 +355,13 @@ function upsertScalarChannelKey({
 				time,
 				value,
 				interpolation,
-				previousKey: {
-					...keys[existingIndex],
-					segmentToNext: getScalarSegmentType({ interpolation }),
-				},
+				previousKey:
+					interpolation != null
+						? {
+								...keys[existingIndex],
+								segmentToNext: getScalarSegmentType({ interpolation }),
+							}
+						: keys[existingIndex],
 			});
 			return normalizeChannel({
 				channel: {
@@ -376,10 +382,13 @@ function upsertScalarChannelKey({
 			time: keys[existingAtTimeIndex].time,
 			value,
 			interpolation,
-			previousKey: {
-				...keys[existingAtTimeIndex],
-				segmentToNext: getScalarSegmentType({ interpolation }),
-			},
+			previousKey:
+				interpolation != null
+					? {
+							...keys[existingAtTimeIndex],
+							segmentToNext: getScalarSegmentType({ interpolation }),
+						}
+					: keys[existingAtTimeIndex],
 		});
 		return normalizeChannel({
 			channel: {
@@ -395,7 +404,7 @@ function upsertScalarChannelKey({
 			id: keyframeId ?? generateUUID(),
 			time,
 			value,
-			interpolation,
+			interpolation: interpolation ?? defaultInterpolation,
 		}),
 	);
 	return normalizeChannel({
@@ -472,9 +481,13 @@ export function upsertPathKeyframe({
 		return animations;
 	}
 
-	const nextInterpolation = getInterpolationForBinding({
+	const explicitInterpolation =
+		interpolation != null
+			? getInterpolationForBinding({ kind, interpolation })
+			: undefined;
+	const validatedDefaultInterpolation = getInterpolationForBinding({
 		kind,
-		interpolation: interpolation ?? defaultInterpolation,
+		interpolation: defaultInterpolation,
 	});
 	nextAnimations.bindings[propertyPath] = binding;
 	for (const component of binding.components) {
@@ -503,7 +516,8 @@ export function upsertPathKeyframe({
 						channel: targetChannel,
 						time: targetKey.time,
 						value: nextValue as number,
-						interpolation: nextInterpolation,
+						interpolation: explicitInterpolation,
+						defaultInterpolation: validatedDefaultInterpolation,
 						keyframeId: targetKey.id,
 					});
 	}
@@ -592,7 +606,7 @@ export function upsertKeyframe({
 		channel,
 		time,
 		value,
-		interpolation: interpolation ?? "linear",
+		interpolation,
 		keyframeId,
 	});
 }

@@ -26,7 +26,6 @@ import { DEFAULTS } from "@/lib/timeline/defaults";
 import { useElementPlayhead } from "../hooks/use-element-playhead";
 import { KeyframeToggle } from "../components/keyframe-toggle";
 import { useKeyframedNumberProperty } from "../hooks/use-keyframed-number-property";
-import { useKeyframedVectorProperty } from "../hooks/use-keyframed-vector-property";
 import { usePropertiesStore } from "../stores/properties-store";
 
 export function parseNumericInput({ input }: { input: string }): number | null {
@@ -79,20 +78,41 @@ export function TransformTab({
 		localTime,
 	});
 
-	const position = useKeyframedVectorProperty({
+	const positionX = useKeyframedNumberProperty({
 		trackId,
 		elementId: element.id,
 		animations: element.animations,
-		propertyPath: "transform.position",
+		propertyPath: "transform.positionX",
 		localTime,
 		isPlayheadWithinElementRange,
-		resolvedValue: resolvedTransform.position,
-		displayX: Math.round(resolvedTransform.position.x).toString(),
-		displayY: Math.round(resolvedTransform.position.y).toString(),
-		parseComponent: (input) => parseNumericInput({ input }),
+		displayValue: Math.round(resolvedTransform.position.x).toString(),
+		parse: (input) => parseNumericInput({ input }),
+		valueAtPlayhead: resolvedTransform.position.x,
 		step: 1,
 		buildBaseUpdates: ({ value }) => ({
-			transform: { ...element.transform, position: value },
+			transform: {
+				...element.transform,
+				position: { ...element.transform.position, x: value },
+			},
+		}),
+	});
+
+	const positionY = useKeyframedNumberProperty({
+		trackId,
+		elementId: element.id,
+		animations: element.animations,
+		propertyPath: "transform.positionY",
+		localTime,
+		isPlayheadWithinElementRange,
+		displayValue: Math.round(resolvedTransform.position.y).toString(),
+		parse: (input) => parseNumericInput({ input }),
+		valueAtPlayhead: resolvedTransform.position.y,
+		step: 1,
+		buildBaseUpdates: ({ value }) => ({
+			transform: {
+				...element.transform,
+				position: { ...element.transform.position, y: value },
+			},
 		}),
 	});
 
@@ -327,64 +347,76 @@ export function TransformTab({
 							</>
 						)}
 					</div>
+				<div className="flex items-end gap-2">
 					<SectionField
-						label="Position"
+						label="X"
+						className="min-w-0 flex-1"
 						beforeLabel={
 							<KeyframeToggle
-								isActive={position.isKeyframedAtTime}
+								isActive={positionX.isKeyframedAtTime}
 								isDisabled={!isPlayheadWithinElementRange}
-								title="Toggle position keyframe"
-								onToggle={position.toggleKeyframe}
+								title="Toggle X position keyframe"
+								onToggle={positionX.toggleKeyframe}
 							/>
 						}
 					>
-						<div className="flex items-center gap-2">
-							<NumberField
-								icon="X"
-								className="flex-1"
-								value={position.x.displayValue}
-								onFocus={position.x.onFocus}
-								onChange={position.x.onChange}
-								onBlur={position.x.onBlur}
-								onScrub={position.x.scrubTo}
-								onScrubEnd={position.x.commitScrub}
-								onReset={() =>
-									position.commitX({
-										value: DEFAULTS.element.transform.position.x,
-									})
-								}
-								isDefault={isPropertyAtDefault({
-									hasAnimatedKeyframes: position.hasAnimatedKeyframes,
-									isPlayheadWithinElementRange,
-									resolvedValue: resolvedTransform.position.x,
-									staticValue: element.transform.position.x,
-									defaultValue: DEFAULTS.element.transform.position.x,
-								})}
-							/>
-							<NumberField
-								icon="Y"
-								className="flex-1"
-								value={position.y.displayValue}
-								onFocus={position.y.onFocus}
-								onChange={position.y.onChange}
-								onBlur={position.y.onBlur}
-								onScrub={position.y.scrubTo}
-								onScrubEnd={position.y.commitScrub}
-								onReset={() =>
-									position.commitY({
-										value: DEFAULTS.element.transform.position.y,
-									})
-								}
-								isDefault={isPropertyAtDefault({
-									hasAnimatedKeyframes: position.hasAnimatedKeyframes,
-									isPlayheadWithinElementRange,
-									resolvedValue: resolvedTransform.position.y,
-									staticValue: element.transform.position.y,
-									defaultValue: DEFAULTS.element.transform.position.y,
-								})}
-							/>
-						</div>
+					<NumberField
+						icon="X"
+						value={positionX.displayValue}
+							onFocus={positionX.onFocus}
+							onChange={positionX.onChange}
+							onBlur={positionX.onBlur}
+							onScrub={positionX.scrubTo}
+							onScrubEnd={positionX.commitScrub}
+							onReset={() =>
+								positionX.commitValue({
+									value: DEFAULTS.element.transform.position.x,
+								})
+							}
+							isDefault={isPropertyAtDefault({
+								hasAnimatedKeyframes: positionX.hasAnimatedKeyframes,
+								isPlayheadWithinElementRange,
+								resolvedValue: resolvedTransform.position.x,
+								staticValue: element.transform.position.x,
+								defaultValue: DEFAULTS.element.transform.position.x,
+							})}
+						/>
 					</SectionField>
+					<SectionField
+						label="Y"
+						className="min-w-0 flex-1"
+						beforeLabel={
+							<KeyframeToggle
+								isActive={positionY.isKeyframedAtTime}
+								isDisabled={!isPlayheadWithinElementRange}
+								title="Toggle Y position keyframe"
+								onToggle={positionY.toggleKeyframe}
+							/>
+						}
+					>
+					<NumberField
+						icon="Y"
+						value={positionY.displayValue}
+							onFocus={positionY.onFocus}
+							onChange={positionY.onChange}
+							onBlur={positionY.onBlur}
+							onScrub={positionY.scrubTo}
+							onScrubEnd={positionY.commitScrub}
+							onReset={() =>
+								positionY.commitValue({
+									value: DEFAULTS.element.transform.position.y,
+								})
+							}
+							isDefault={isPropertyAtDefault({
+								hasAnimatedKeyframes: positionY.hasAnimatedKeyframes,
+								isPlayheadWithinElementRange,
+								resolvedValue: resolvedTransform.position.y,
+								staticValue: element.transform.position.y,
+								defaultValue: DEFAULTS.element.transform.position.y,
+							})}
+						/>
+					</SectionField>
+				</div>
 
 					<SectionField
 						label="Rotation"

@@ -1,7 +1,8 @@
 import type { ParamValues } from "@/lib/params";
 
 export const ANIMATION_PROPERTY_PATHS = [
-	"transform.position",
+	"transform.positionX",
+	"transform.positionY",
 	"transform.scaleX",
 	"transform.scaleY",
 	"transform.rotate",
@@ -34,7 +35,8 @@ export type VectorValue = { x: number; y: number };
 export type DiscreteValue = boolean | string;
 export type AnimationValue = number | string | boolean | VectorValue;
 export interface AnimationPropertyValueMap {
-	"transform.position": VectorValue;
+	"transform.positionX": number;
+	"transform.positionY": number;
 	"transform.scaleX": number;
 	"transform.scaleY": number;
 	"transform.rotate": number;

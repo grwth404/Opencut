@@ -1,10 +1,16 @@
 import type {
+	AnimationBindingInstance,
 	AnimationPath,
 	ElementAnimations,
 	ScalarAnimationChannel,
 	ScalarGraphChannel,
 	ScalarGraphKeyframeContext,
 } from "@/lib/animation/types";
+
+export interface EditableScalarChannels {
+	binding: AnimationBindingInstance;
+	channels: ScalarGraphChannel[];
+}
 
 function isScalarAnimationChannel(
 	channel: ElementAnimations["channels"][string],
@@ -18,13 +24,13 @@ export function getEditableScalarChannels({
 }: {
 	animations: ElementAnimations | undefined;
 	propertyPath: AnimationPath;
-}): ScalarGraphChannel[] {
+}): EditableScalarChannels | null {
 	const binding = animations?.bindings[propertyPath];
 	if (!binding) {
-		return [];
+		return null;
 	}
 
-	return binding.components.flatMap((component) => {
+	const channels = binding.components.flatMap((component) => {
 		const channel = animations?.channels[component.channelId];
 		if (!isScalarAnimationChannel(channel)) {
 			return [];
@@ -36,9 +42,11 @@ export function getEditableScalarChannels({
 				componentKey: component.key,
 				channelId: component.channelId,
 				channel,
-			},
+			} satisfies ScalarGraphChannel,
 		];
 	});
+
+	return { binding, channels };
 }
 
 export function getEditableScalarChannel({
@@ -50,12 +58,8 @@ export function getEditableScalarChannel({
 	propertyPath: AnimationPath;
 	componentKey: string;
 }): ScalarGraphChannel | null {
-	return (
-		getEditableScalarChannels({
-			animations,
-			propertyPath,
-		}).find((channel) => channel.componentKey === componentKey) ?? null
-	);
+	const result = getEditableScalarChannels({ animations, propertyPath });
+	return result?.channels.find((channel) => channel.componentKey === componentKey) ?? null;
 }
 
 export function getScalarKeyframeContext({

@@ -3,9 +3,8 @@ import type {
 	AnimationInterpolation,
 	AnimationPropertyPath,
 	AnimationValue,
-	VectorValue,
 } from "@/lib/animation/types";
-import { isVectorValue, parseColorToLinearRgba } from "./binding-values";
+import { parseColorToLinearRgba } from "./binding-values";
 import type { TimelineElement } from "@/lib/timeline";
 import { MIN_TRANSFORM_SCALE } from "@/constants/animation-constants";
 import {
@@ -116,24 +115,38 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 	AnimationPropertyPath,
 	AnimationPropertyDefinition
 > = {
-	"transform.position": {
-		kind: "vector2",
-		defaultInterpolation: "linear",
+	"transform.positionX": createNumberPropertyDefinition({
+		numericRange: { step: 1 },
 		supportsElement: ({ element }) => isVisualElement(element),
 		getValue: ({ element }) =>
-			isVisualElement(element) ? element.transform.position : null,
-		coerceValue: ({ value }) => (isVectorValue(value) ? value : null),
+			isVisualElement(element) ? element.transform.position.x : null,
 		setValue: ({ element, value }) =>
 			isVisualElement(element)
 				? {
 						...element,
 						transform: {
 							...element.transform,
-							position: value as VectorValue,
+							position: { ...element.transform.position, x: value as number },
 						},
 					}
 				: element,
-	},
+	}),
+	"transform.positionY": createNumberPropertyDefinition({
+		numericRange: { step: 1 },
+		supportsElement: ({ element }) => isVisualElement(element),
+		getValue: ({ element }) =>
+			isVisualElement(element) ? element.transform.position.y : null,
+		setValue: ({ element, value }) =>
+			isVisualElement(element)
+				? {
+						...element,
+						transform: {
+							...element.transform,
+							position: { ...element.transform.position, y: value as number },
+						},
+					}
+				: element,
+	}),
 	"transform.scaleX": createNumberPropertyDefinition({
 		numericRange: { min: MIN_TRANSFORM_SCALE, step: 0.01 },
 		supportsElement: ({ element }) => isVisualElement(element),

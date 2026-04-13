@@ -49,6 +49,7 @@ export {
 } from "./keyframe-query";
 
 export {
+	type EditableScalarChannels,
 	getEditableScalarChannel,
 	getEditableScalarChannels,
 	getScalarKeyframeContext,
@@ -90,5 +91,6 @@ export {
 } from "./property-groups";
 
 export {
-	isVectorValue,
+	type EasingMode,
+	getEasingModeForKind,
 } from "./binding-values";

@@ -47,6 +47,18 @@ export function isVectorValue(value: unknown): value is VectorValue {
 	return isRecord(value) && typeof value.x === "number" && typeof value.y === "number";
 }
 
+export type EasingMode = "independent" | "shared";
+
+/**
+ * Declares how easing curves apply to a binding's components.
+ * "shared" means all components always use the same curve (e.g. color — you never
+ * want to ease R independently from G/B/A). "independent" means each component
+ * can have its own curve.
+ */
+export function getEasingModeForKind(kind: AnimationBindingKind): EasingMode {
+	return kind === "color" ? "shared" : "independent";
+}
+
 export function getBindingComponentKeys({
 	kind,
 }: {

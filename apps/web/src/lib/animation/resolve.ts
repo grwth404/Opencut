@@ -48,12 +48,20 @@ export function resolveTransformAtTime({
 }): Transform {
 	const safeLocalTime = Math.max(0, localTime);
 	return {
-		position: resolveAnimationPathValueAtTime({
-			animations,
-			propertyPath: "transform.position",
-			localTime: safeLocalTime,
-			fallbackValue: baseTransform.position,
-		}),
+		position: {
+			x: resolveAnimationPathValueAtTime({
+				animations,
+				propertyPath: "transform.positionX",
+				localTime: safeLocalTime,
+				fallbackValue: baseTransform.position.x,
+			}),
+			y: resolveAnimationPathValueAtTime({
+				animations,
+				propertyPath: "transform.positionY",
+				localTime: safeLocalTime,
+				fallbackValue: baseTransform.position.y,
+			}),
+		},
 		scaleX: resolveAnimationPathValueAtTime({
 			animations,
 			propertyPath: "transform.scaleX",
