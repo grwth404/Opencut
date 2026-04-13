@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { invokeAction } from "@/lib/actions";
+import { useEditor } from "@/hooks/use-editor";
 import { useKeybindingsStore } from "@/stores/keybindings-store";
-import { useTimelineStore } from "@/stores/timeline-store";
 import { isTypableDOMElement } from "@/utils/browser";
 
 /**
@@ -10,6 +10,7 @@ import { isTypableDOMElement } from "@/utils/browser";
  * the appropriate actions based on keybindings
  */
 export function useKeybindingsListener() {
+	const editor = useEditor();
 	const {
 		keybindings,
 		getKeybindingString,
@@ -17,7 +18,6 @@ export function useKeybindingsListener() {
 		isLoadingProject,
 		isRecording,
 	} = useKeybindingsStore();
-	const clipboard = useTimelineStore((state) => state.clipboard);
 
 	useEffect(() => {
 		const eventOptions: AddEventListenerOptions = { capture: true };
@@ -140,7 +140,7 @@ export function useKeybindingsListener() {
 
 			if (isTextInput) return;
 			if (boundAction === "paste-copied") {
-				if (!clipboard?.items.length) return;
+				if (!editor.clipboard.hasEntry()) return;
 				ev.preventDefault();
 				invokeAction("paste-copied", undefined, "keypress");
 				return;
@@ -177,6 +177,6 @@ export function useKeybindingsListener() {
 		overlayDepth,
 		isLoadingProject,
 		isRecording,
-		clipboard,
+		editor,
 	]);
 }

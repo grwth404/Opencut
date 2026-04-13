@@ -7,10 +7,7 @@ import { useEditor } from "../use-editor";
 import { useElementSelection } from "../timeline/element/use-element-selection";
 import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { useKeyframeSelection } from "../timeline/element/use-keyframe-selection";
-import {
-	getElementsAtTime,
-	hasMediaId,
-} from "@/lib/timeline";
+import { getElementsAtTime, hasMediaId } from "@/lib/timeline";
 import { cancelInteraction } from "@/lib/cancel-interaction";
 import { invokeAction } from "@/lib/actions";
 import { canToggleSourceAudio } from "@/lib/timeline/audio-separation";
@@ -24,8 +21,6 @@ export function useEditorActions() {
 	const editor = useEditor();
 	const { selectedElements, setElementSelection } = useElementSelection();
 	const { selectedKeyframes, clearKeyframeSelection } = useKeyframeSelection();
-	const clipboard = useTimelineStore((s) => s.clipboard);
-	const setClipboard = useTimelineStore((s) => s.setClipboard);
 	const toggleSnapping = useTimelineStore((s) => s.toggleSnapping);
 	const rippleEditingEnabled = useTimelineStore((s) => s.rippleEditingEnabled);
 	const toggleRippleEditing = useTimelineStore((s) => s.toggleRippleEditing);
@@ -111,7 +106,9 @@ export function useEditorActions() {
 		"frame-step-forward",
 		() => {
 			const fps = editor.project.getActive().settings.fps;
-			const ticksPerFrame = Math.round(TICKS_PER_SECOND * fps.denominator / fps.numerator);
+			const ticksPerFrame = Math.round(
+				(TICKS_PER_SECOND * fps.denominator) / fps.numerator,
+			);
 			editor.playback.seek({
 				time: Math.min(
 					editor.timeline.getTotalDuration(),
@@ -126,7 +123,9 @@ export function useEditorActions() {
 		"frame-step-backward",
 		() => {
 			const fps = editor.project.getActive().settings.fps;
-			const ticksPerFrame = Math.round(TICKS_PER_SECOND * fps.denominator / fps.numerator);
+			const ticksPerFrame = Math.round(
+				(TICKS_PER_SECOND * fps.denominator) / fps.numerator,
+			);
 			editor.playback.seek({
 				time: Math.max(0, editor.playback.getCurrentTime() - ticksPerFrame),
 			});
@@ -294,8 +293,9 @@ export function useEditorActions() {
 				}
 
 				return (
-					editor.media.getAssets().find((asset) => asset.id === element.mediaId) ??
-					null
+					editor.media
+						.getAssets()
+						.find((asset) => asset.id === element.mediaId) ?? null
 				);
 			})();
 			if (!canToggleSourceAudio(selectedElement.element, mediaAsset)) {
@@ -387,21 +387,7 @@ export function useEditorActions() {
 	useActionHandler(
 		"copy-selected",
 		() => {
-			if (selectedElements.length === 0) return;
-
-			const results = editor.timeline.getElementsWithTracks({
-				elements: selectedElements,
-			});
-			const items = results.map(({ track, element }) => {
-				const { id: _, ...elementWithoutId } = element;
-				return {
-					trackId: track.id,
-					trackType: track.type,
-					element: elementWithoutId,
-				};
-			});
-
-			setClipboard({ items });
+			editor.clipboard.copy();
 		},
 		undefined,
 	);
@@ -409,12 +395,7 @@ export function useEditorActions() {
 	useActionHandler(
 		"paste-copied",
 		() => {
-			if (!clipboard?.items.length) return;
-
-			editor.timeline.pasteAtTime({
-				time: editor.playback.getCurrentTime(),
-				clipboardItems: clipboard.items,
-			});
+			editor.clipboard.paste();
 		},
 		undefined,
 	);

@@ -1,10 +1,7 @@
 import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
-import type {
-	SceneTracks,
-	TimelineElement,
-	ClipboardItem,
-} from "@/lib/timeline";
+import type { SceneTracks, TimelineElement } from "@/lib/timeline";
+import type { ElementClipboardItem } from "@/lib/clipboard";
 import { generateUUID } from "@/utils/id";
 import { applyPlacement, resolveTrackPlacement, enforceMainTrackStart } from "@/lib/timeline/placement";
 import { cloneAnimations } from "@/lib/animation";
@@ -13,14 +10,14 @@ export class PasteCommand extends Command {
 	private savedState: SceneTracks | null = null;
 	private pastedElements: { trackId: string; elementId: string }[] = [];
 	private readonly time: number;
-	private readonly clipboardItems: ClipboardItem[];
+	private readonly clipboardItems: ElementClipboardItem[];
 
 	constructor({
 		time,
 		clipboardItems,
 	}: {
 		time: number;
-		clipboardItems: ClipboardItem[];
+		clipboardItems: ElementClipboardItem[];
 	}) {
 		super();
 		this.time = time;
@@ -145,9 +142,9 @@ export class PasteCommand extends Command {
 function groupClipboardItemsByTrackId({
 	clipboardItems,
 }: {
-	clipboardItems: ClipboardItem[];
-}): Map<string, ClipboardItem[]> {
-	const groupedItems = new Map<string, ClipboardItem[]>();
+	clipboardItems: ElementClipboardItem[];
+}): Map<string, ElementClipboardItem[]> {
+	const groupedItems = new Map<string, ElementClipboardItem[]>();
 
 	for (const item of clipboardItems) {
 		const existingItems = groupedItems.get(item.trackId) ?? [];
@@ -162,7 +159,7 @@ function buildPastedElements({
 	minStart,
 	time,
 }: {
-	items: ClipboardItem[];
+	items: ElementClipboardItem[];
 	minStart: number;
 	time: number;
 }): TimelineElement[] {

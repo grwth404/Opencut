@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { useEditor } from "@/hooks/use-editor";
 import { processMediaAssets } from "@/lib/media/processing";
 import { showMediaUploadToast } from "@/lib/media/upload-toast";
-import { invokeAction } from "@/lib/actions";
 import { buildElementFromMedia } from "@/lib/timeline/element-utils";
 import { AddMediaAssetCommand } from "@/lib/commands/media";
 import { InsertElementCommand } from "@/lib/commands/timeline";
@@ -52,7 +51,7 @@ export function usePasteMedia() {
 			});
 			if (files.length === 0) {
 				event.preventDefault();
-				invokeAction("paste-copied");
+				editor.clipboard.paste();
 				return;
 			}
 
@@ -74,10 +73,10 @@ export function usePasteMedia() {
 								asset,
 							);
 							const assetId = addMediaCmd.getAssetId();
-						const duration =
-							asset.duration != null
-								? Math.round(asset.duration * TICKS_PER_SECOND)
-								: DEFAULT_NEW_ELEMENT_DURATION;
+							const duration =
+								asset.duration != null
+									? Math.round(asset.duration * TICKS_PER_SECOND)
+									: DEFAULT_NEW_ELEMENT_DURATION;
 							const trackType = asset.type === "audio" ? "audio" : "video";
 
 							const element = buildElementFromMedia({

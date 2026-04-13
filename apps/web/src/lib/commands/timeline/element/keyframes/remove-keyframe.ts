@@ -1,9 +1,7 @@
 import { EditorCore } from "@/core";
 import {
 	hasKeyframesForPath,
-	getKeyframeById,
 	removeElementKeyframe,
-	resolveAnimationPathValueAtTime,
 	resolveAnimationTarget,
 } from "@/lib/animation";
 import { Command, type CommandResult } from "@/lib/commands/base-command";
@@ -11,60 +9,21 @@ import { updateElementInSceneTracks } from "@/lib/timeline";
 import type { AnimationPath, AnimationValue } from "@/lib/animation/types";
 import type { SceneTracks, TimelineElement } from "@/lib/timeline";
 
-function sampleValueBeforeRemoval({
-	element,
-	propertyPath,
-	keyframeId,
-}: {
-	element: TimelineElement;
-	propertyPath: AnimationPath;
-	keyframeId: string;
-}): AnimationValue | null {
-	const target = resolveAnimationTarget({ element, path: propertyPath });
-	if (!target) {
-		return null;
-	}
-	const baseValue = target.getBaseValue();
-	if (baseValue === null) {
-		return null;
-	}
-
-	const keyframe = getKeyframeById({
-		animations: element.animations,
-		propertyPath,
-		keyframeId,
-	});
-	if (!keyframe) {
-		return null;
-	}
-
-	return resolveAnimationPathValueAtTime({
-		animations: element.animations,
-		propertyPath,
-		localTime: keyframe.time,
-		fallbackValue: baseValue,
-	});
-}
-
 function removeKeyframeAndPersist({
 	element,
 	propertyPath,
 	keyframeId,
+	valueAtPlayhead,
 }: {
 	element: TimelineElement;
 	propertyPath: AnimationPath;
 	keyframeId: string;
+	valueAtPlayhead: AnimationValue | null;
 }): TimelineElement {
 	const target = resolveAnimationTarget({ element, path: propertyPath });
 	if (!target) {
 		return element;
 	}
-
-	const valueBefore = sampleValueBeforeRemoval({
-		element,
-		propertyPath,
-		keyframeId,
-	});
 
 	const nextAnimations = removeElementKeyframe({
 		animations: element.animations,
@@ -76,10 +35,12 @@ function removeKeyframeAndPersist({
 		animations: nextAnimations,
 		propertyPath,
 	});
-	const shouldPersistToBase = isChannelNowEmpty && valueBefore !== null;
+
+	// When clearing all keyframes, preserve the value at the playhead (what the user was seeing)
+	const shouldPersistToBase = isChannelNowEmpty && valueAtPlayhead !== null;
 
 	const baseElement = shouldPersistToBase
-		? target.setBaseValue({ value: valueBefore })
+		? target.setBaseValue({ value: valueAtPlayhead })
 		: element;
 
 	return { ...baseElement, animations: nextAnimations };
@@ -91,23 +52,27 @@ export class RemoveKeyframeCommand extends Command {
 	private readonly elementId: string;
 	private readonly propertyPath: AnimationPath;
 	private readonly keyframeId: string;
+	private readonly valueAtPlayhead: AnimationValue | null;
 
 	constructor({
 		trackId,
 		elementId,
 		propertyPath,
 		keyframeId,
+		valueAtPlayhead,
 	}: {
 		trackId: string;
 		elementId: string;
 		propertyPath: AnimationPath;
 		keyframeId: string;
+		valueAtPlayhead: AnimationValue | null;
 	}) {
 		super();
 		this.trackId = trackId;
 		this.elementId = elementId;
 		this.propertyPath = propertyPath;
 		this.keyframeId = keyframeId;
+		this.valueAtPlayhead = valueAtPlayhead;
 	}
 
 	execute(): CommandResult | undefined {
@@ -123,6 +88,7 @@ export class RemoveKeyframeCommand extends Command {
 					element,
 					propertyPath: this.propertyPath,
 					keyframeId: this.keyframeId,
+					valueAtPlayhead: this.valueAtPlayhead,
 				}),
 		});
 

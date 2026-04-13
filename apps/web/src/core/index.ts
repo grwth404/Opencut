@@ -8,6 +8,7 @@ import { CommandManager } from "./managers/commands";
 import { SaveManager } from "./managers/save-manager";
 import { AudioManager } from "./managers/audio-manager";
 import { SelectionManager } from "./managers/selection-manager";
+import { ClipboardManager } from "./managers/clipboard-manager";
 import { registerDefaultEffects } from "@/lib/effects";
 import { registerDefaultMasks } from "@/lib/masks";
 
@@ -23,6 +24,7 @@ export class EditorCore {
 	public readonly save: SaveManager;
 	public readonly audio: AudioManager;
 	public readonly selection: SelectionManager;
+	public readonly clipboard: ClipboardManager;
 
 	private constructor() {
 		registerDefaultEffects();
@@ -37,6 +39,8 @@ export class EditorCore {
 		this.save = new SaveManager(this);
 		this.audio = new AudioManager(this);
 		this.selection = new SelectionManager(this);
+		this.clipboard = new ClipboardManager(this);
+		this.playback.bindTimelineScope();
 		this.command.registerReactor(() => {
 			const activeScene = this.scenes.getActiveSceneOrNull();
 			if (!activeScene) {

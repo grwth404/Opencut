@@ -272,6 +272,8 @@ export type CreateTimelineElement =
 export interface ElementDragState {
 	isDragging: boolean;
 	elementId: string | null;
+	dragElementIds: string[];
+	dragTimeOffsets: Record<string, number>;
 	trackId: string | null;
 	startMouseX: number;
 	startMouseY: number;

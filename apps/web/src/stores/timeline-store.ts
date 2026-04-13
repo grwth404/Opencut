@@ -5,21 +5,14 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { ClipboardItem } from "@/lib/timeline";
 
 interface TimelineStore {
 	snappingEnabled: boolean;
 	toggleSnapping: () => void;
 	rippleEditingEnabled: boolean;
 	toggleRippleEditing: () => void;
-	clipboard: {
-		items: ClipboardItem[];
-	} | null;
-	setClipboard: (
-		clipboard: {
-			items: ClipboardItem[];
-		} | null,
-	) => void;
+	expandedElementIds: Set<string>;
+	toggleElementExpanded: (elementId: string) => void;
 }
 
 export const useTimelineStore = create<TimelineStore>()(
@@ -39,10 +32,18 @@ export const useTimelineStore = create<TimelineStore>()(
 				}));
 			},
 
-			clipboard: null,
+			expandedElementIds: new Set<string>(),
 
-			setClipboard: (clipboard) => {
-				set({ clipboard });
+			toggleElementExpanded: (elementId) => {
+				set((state) => {
+					const next = new Set(state.expandedElementIds);
+					if (next.has(elementId)) {
+						next.delete(elementId);
+					} else {
+						next.add(elementId);
+					}
+					return { expandedElementIds: next };
+				});
 			},
 		}),
 		{
