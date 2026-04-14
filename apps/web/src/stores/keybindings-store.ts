@@ -30,8 +30,8 @@ interface KeybindingsState {
 	resetToDefaults: () => void;
 	importKeybindings: (config: KeybindingConfig) => void;
 	exportKeybindings: () => KeybindingConfig;
-	openOverlay: (overlayId: string, source: string) => void;
-	closeOverlay: (overlayId: string, source: string) => void;
+	openOverlay: (overlayId: string) => void;
+	closeOverlay: (overlayId: string) => void;
 	setLoadingProject: (loading: boolean) => void;
 	setIsRecording: (isRecording: boolean) => void;
 	validateKeybinding: (
@@ -56,104 +56,29 @@ export const useKeybindingsStore = create<KeybindingsState>()(
 			isLoadingProject: false,
 			isRecording: false,
 
-			openOverlay: (overlayId, source) =>
+			openOverlay: (overlayId) =>
 				set((s) => {
 					const openOverlayIds = s.openOverlayIds.includes(overlayId)
 						? s.openOverlayIds
 						: [...s.openOverlayIds, overlayId];
 					const nextOverlayDepth = openOverlayIds.length;
-					// #region agent log
-					fetch(
-						"http://127.0.0.1:7245/ingest/669b22f8-172b-4e65-aa3f-1c702ede83f7",
-						{
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-								"X-Debug-Session-Id": "3997d9",
-							},
-							body: JSON.stringify({
-								sessionId: "3997d9",
-								runId: "initial",
-								hypothesisId: "H2",
-								location: "keybindings-store.ts:openOverlay",
-								message: "Overlay depth incremented",
-								data: {
-									source,
-									overlayId,
-									overlayDepth: s.overlayDepth,
-									nextOverlayDepth,
-									openOverlayIds,
-								},
-								timestamp: Date.now(),
-							}),
-						},
-					).catch(() => {});
-					// #endregion
 					return {
 						openOverlayIds,
 						overlayDepth: nextOverlayDepth,
 					};
 				}),
-			closeOverlay: (overlayId, source) =>
+			closeOverlay: (overlayId) =>
 				set((s) => {
 					const openOverlayIds = s.openOverlayIds.filter(
 						(id) => id !== overlayId,
 					);
 					const nextOverlayDepth = openOverlayIds.length;
-					// #region agent log
-					fetch(
-						"http://127.0.0.1:7245/ingest/669b22f8-172b-4e65-aa3f-1c702ede83f7",
-						{
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-								"X-Debug-Session-Id": "3997d9",
-							},
-							body: JSON.stringify({
-								sessionId: "3997d9",
-								runId: "initial",
-								hypothesisId: "H2",
-								location: "keybindings-store.ts:closeOverlay",
-								message: "Overlay depth decremented",
-								data: {
-									source,
-									overlayId,
-									overlayDepth: s.overlayDepth,
-									nextOverlayDepth,
-									openOverlayIds,
-								},
-								timestamp: Date.now(),
-							}),
-						},
-					).catch(() => {});
-					// #endregion
 					return {
 						openOverlayIds,
 						overlayDepth: nextOverlayDepth,
 					};
 				}),
 			setLoadingProject: (loading) => {
-				// #region agent log
-				fetch(
-					"http://127.0.0.1:7245/ingest/669b22f8-172b-4e65-aa3f-1c702ede83f7",
-					{
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							"X-Debug-Session-Id": "3997d9",
-						},
-						body: JSON.stringify({
-							sessionId: "3997d9",
-							runId: "initial",
-							hypothesisId: "H2",
-							location: "keybindings-store.ts:setLoadingProject",
-							message: "Loading gate updated",
-							data: { loading },
-							timestamp: Date.now(),
-						}),
-					},
-				).catch(() => {});
-				// #endregion
 				set({ isLoadingProject: loading });
 			},
 
@@ -222,27 +147,6 @@ export const useKeybindingsStore = create<KeybindingsState>()(
 				return null;
 			},
 			setIsRecording: (isRecording: boolean) => {
-				// #region agent log
-				fetch(
-					"http://127.0.0.1:7245/ingest/669b22f8-172b-4e65-aa3f-1c702ede83f7",
-					{
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							"X-Debug-Session-Id": "3997d9",
-						},
-						body: JSON.stringify({
-							sessionId: "3997d9",
-							runId: "initial",
-							hypothesisId: "H2",
-							location: "keybindings-store.ts:setIsRecording",
-							message: "Recording gate updated",
-							data: { isRecording },
-							timestamp: Date.now(),
-						}),
-					},
-				).catch(() => {});
-				// #endregion
 				set({ isRecording });
 			},
 

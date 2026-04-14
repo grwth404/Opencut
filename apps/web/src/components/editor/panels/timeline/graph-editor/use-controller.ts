@@ -14,8 +14,9 @@ import {
 
 export function useGraphEditorController() {
 	const editor = useEditor();
-	const renderTracks = useEditor((currentEditor) =>
-		currentEditor.timeline.getPreviewTracks() ??
+	const renderTracks = useEditor(
+		(currentEditor) =>
+			currentEditor.timeline.getPreviewTracks() ??
 			currentEditor.scenes.getActiveScene().tracks,
 	);
 	const { selectedKeyframes } = useKeyframeSelection();
@@ -37,7 +38,12 @@ export function useGraphEditorController() {
 
 	const stateKey =
 		state.status === "ready"
-			? `${state.trackId}:${state.elementId}:${state.propertyPath}:${state.keyframeId}:${state.activeComponentKey}`
+			? `${state.trackId}:${state.elementId}:${state.activeComponentKey}:${state.segments
+					.map(
+						(segment) =>
+							`${segment.propertyPath}:${segment.keyframeId}:${segment.context.componentKey}`,
+					)
+					.join("|")}`
 			: `${state.status}:${state.reason}:${state.activeComponentKey ?? "none"}`;
 	const previousStateKeyRef = useRef(stateKey);
 
@@ -96,16 +102,20 @@ export function useGraphEditorController() {
 				return;
 			}
 
-		const nextAnimations = state.allContexts.reduce(
-			(animations, context) =>
-				applyGraphEditorCurvePreview({
-					animations,
-					context,
-					cubicBezier: nextValue,
-					referenceSpanValue: state.referenceSpanValue,
-				}),
-			state.element.animations,
-		);
+			const nextAnimations = state.segments.reduce(
+				(animations, segment) =>
+					segment.allContexts.reduce(
+						(nextAnimationsForSegment, context) =>
+							applyGraphEditorCurvePreview({
+								animations: nextAnimationsForSegment,
+								context,
+								cubicBezier: nextValue,
+								referenceSpanValue: segment.referenceSpanValue,
+							}),
+						animations,
+					),
+				state.element.animations,
+			);
 			editor.timeline.previewElements({
 				updates: [
 					{
@@ -126,28 +136,28 @@ export function useGraphEditorController() {
 				return;
 			}
 
-			// Build patches from the primary context (all shared-easing channels have
-			// the same keyframe IDs, so the same patches apply to each).
-		const patches = buildGraphEditorCurvePatches({
-			context: state.context,
-			cubicBezier: nextValue,
-			referenceSpanValue: state.referenceSpanValue,
-		});
-			if (!patches) {
-				return;
-			}
-
 			editor.timeline.updateKeyframeCurves({
-				keyframes: state.allContexts.flatMap((context) =>
-					patches.map(({ keyframeId, patch }) => ({
-						trackId: state.trackId,
-						elementId: state.elementId,
-						propertyPath: state.propertyPath,
-						componentKey: context.componentKey,
-						keyframeId,
-						patch,
-					})),
-				),
+				keyframes: state.segments.flatMap((segment) => {
+					const patches = buildGraphEditorCurvePatches({
+						context: segment.context,
+						cubicBezier: nextValue,
+						referenceSpanValue: segment.referenceSpanValue,
+					});
+					if (!patches) {
+						return [];
+					}
+
+					return segment.allContexts.flatMap((context) =>
+						patches.map(({ keyframeId, patch }) => ({
+							trackId: state.trackId,
+							elementId: state.elementId,
+							propertyPath: segment.propertyPath,
+							componentKey: context.componentKey,
+							keyframeId,
+							patch,
+						})),
+					);
+				}),
 			});
 			hasPreviewRef.current = false;
 		},
