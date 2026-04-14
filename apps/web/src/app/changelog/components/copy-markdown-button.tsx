@@ -29,14 +29,12 @@ function buildMarkdown({
 	for (const type of orderedTypes) {
 		if (isSectionCollapsible({ type })) {
 			lines.push(
-				"<details>",
-				`<summary>${getSectionTitle({ type })}</summary>`,
+				buildCollapsibleMarkdownSection({
+					title: getSectionTitle({ type }),
+					changes: grouped[type],
+				}),
 				"",
 			);
-			for (const change of grouped[type]) {
-				lines.push(`- ${change.text}`);
-			}
-			lines.push("", "</details>", "");
 			continue;
 		}
 
@@ -48,6 +46,18 @@ function buildMarkdown({
 	}
 
 	return lines.join("\n").trimEnd();
+}
+
+function buildCollapsibleMarkdownSection({
+	title,
+	changes,
+}: {
+	title: string;
+	changes: Change[];
+}): string {
+	const bulletLines = changes.map((change) => `- ${change.text}`).join("\n");
+
+	return `<details>\n<summary>${title}</summary>\n\n${bulletLines}\n\n</details>`;
 }
 
 export function CopyMarkdownButton({
