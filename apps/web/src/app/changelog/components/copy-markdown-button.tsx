@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { CheckIcon, ClipboardIcon } from "lucide-react";
-import { getSectionTitle, groupAndOrderChanges } from "../utils";
+import {
+	getSectionTitle,
+	groupAndOrderChanges,
+	isSectionCollapsible,
+} from "../utils";
 import type { Change } from "../utils";
 import { cn } from "@/utils/ui";
 import { Button } from "@/components/ui/button";
@@ -23,6 +27,19 @@ function buildMarkdown({
 	const { grouped, orderedTypes } = groupAndOrderChanges({ changes });
 
 	for (const type of orderedTypes) {
+		if (isSectionCollapsible({ type })) {
+			lines.push(
+				"<details>",
+				`<summary>${getSectionTitle({ type })}</summary>`,
+				"",
+			);
+			for (const change of grouped[type]) {
+				lines.push(`- ${change.text}`);
+			}
+			lines.push("", "</details>", "");
+			continue;
+		}
+
 		lines.push(`## ${getSectionTitle({ type })}`);
 		for (const change of grouped[type]) {
 			lines.push(`- ${change.text}`);
@@ -54,7 +71,10 @@ export function CopyMarkdownButton({
 			size="sm"
 			variant="text"
 			onClick={handleCopy}
-			className={cn("flex items-center gap-1.5", copied && "pointer-events-none")}
+			className={cn(
+				"flex items-center gap-1.5",
+				copied && "pointer-events-none",
+			)}
 			title="Copy as markdown"
 		>
 			{copied ? (

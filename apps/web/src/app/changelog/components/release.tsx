@@ -1,8 +1,15 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/utils/ui";
-import { getSectionTitle, groupAndOrderChanges } from "../utils";
-import type { Release } from "../utils";
+import {
+	getSectionTitle,
+	groupAndOrderChanges,
+	isSectionCollapsible,
+	type Change,
+	type Release,
+} from "../utils";
+import { ArrowRightIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 
 export function ReleaseArticle({
 	variant,
@@ -85,22 +92,61 @@ export function ReleaseChanges({ release }: { release: Release }) {
 	return (
 		<div className="flex flex-col gap-4">
 			{orderedTypes.map((type) => (
-				<div key={type} className="flex flex-col gap-1.5">
-					<h3 className="text-base font-semibold text-foreground">
-						{getSectionTitle({ type })}:
-					</h3>
-					<ul className="list-disc pl-5 space-y-1.5">
-						{grouped[type].map((change) => (
-							<li
-								key={change.text}
-								className="text-base text-foreground leading-relaxed"
-							>
-								{change.text}
-							</li>
-						))}
-					</ul>
-				</div>
+				<ReleaseChangeSection key={type} type={type} changes={grouped[type]} />
 			))}
 		</div>
+	);
+}
+
+function ReleaseChangeSection({
+	type,
+	changes,
+}: {
+	type: string;
+	changes: Change[];
+}) {
+	const title = getSectionTitle({ type });
+
+	if (isSectionCollapsible({ type })) {
+		return (
+			<details className="group flex flex-col gap-1.5">
+				<summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 text-base font-semibold text-foreground [&::-webkit-details-marker]:hidden">
+					<span>{title}:</span>
+					<HugeiconsIcon
+						icon={ArrowRightIcon}
+						className="size-3 shrink-0 text-muted-foreground group-open:rotate-90"
+					/>
+				</summary>
+				<ReleaseChangeList changes={changes} />
+			</details>
+		);
+	}
+
+	return (
+		<div className="flex flex-col gap-1.5">
+			<h3 className="text-base font-semibold text-foreground">{title}:</h3>
+			<ReleaseChangeList changes={changes} />
+		</div>
+	);
+}
+
+function ReleaseChangeList({
+	changes,
+	className,
+}: {
+	changes: Change[];
+	className?: string;
+}) {
+	return (
+		<ul className={cn("list-disc space-y-1.5 pl-5", className)}>
+			{changes.map((change) => (
+				<li
+					key={change.text}
+					className="text-base leading-relaxed text-foreground"
+				>
+					{change.text}
+				</li>
+			))}
+		</ul>
 	);
 }
