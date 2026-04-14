@@ -12,8 +12,8 @@ import { extractTimelineAudio } from "@/lib/media/mediabunny";
 import { useEditor } from "@/hooks/use-editor";
 import {
 	DEFAULT_TRANSCRIPTION_SAMPLE_RATE,
-	TRANSCRIPTION_LANGUAGES,
-} from "@/constants/transcription-constants";
+} from "@/lib/transcription/audio";
+import { TRANSCRIPTION_LANGUAGES } from "@/lib/transcription/supported-languages";
 import type {
 	CaptionChunk,
 	TranscriptionLanguage,

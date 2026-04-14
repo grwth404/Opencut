@@ -33,7 +33,7 @@ import {
 	SectionTitle,
 } from "@/components/section";
 import { useEditor } from "@/hooks/use-editor";
-import { DEFAULT_EXPORT_OPTIONS } from "@/constants/export-constants";
+import { DEFAULT_EXPORT_OPTIONS } from "@/lib/export/defaults";
 
 function isExportFormat(value: string): value is ExportFormat {
 	return EXPORT_FORMAT_VALUES.some((formatValue) => formatValue === value);

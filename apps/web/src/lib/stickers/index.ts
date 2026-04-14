@@ -1,7 +1,7 @@
 import {
 	STICKER_CATEGORIES,
-	STICKER_INTRINSIC_SIZE_FALLBACK,
-} from "@/constants/sticker-constants";
+} from "@/lib/stickers/categories";
+import { STICKER_INTRINSIC_SIZE_FALLBACK } from "@/lib/stickers/intrinsic-size";
 import type { StickerCategory } from "@/lib/stickers/types";
 import { stickersRegistry } from "./registry";
 import { resolveStickerId } from "./resolver";

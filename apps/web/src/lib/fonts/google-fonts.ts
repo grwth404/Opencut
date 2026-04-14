@@ -1,5 +1,5 @@
 import type { FontAtlas } from "@/lib/fonts/types";
-import { SYSTEM_FONTS } from "@/constants/font-constants";
+import { SYSTEM_FONTS } from "@/lib/fonts/system-fonts";
 
 const GOOGLE_FONTS_CSS = "https://fonts.googleapis.com/css2";
 const FONT_ATLAS_PATH = "/fonts/font-atlas.json";

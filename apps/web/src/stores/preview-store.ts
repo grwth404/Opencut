@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { isGuideId, type GuideId } from "@/lib/guides";
-import { DEFAULT_GRID_CONFIG } from "@/constants/guide-constants";
+import { DEFAULT_GRID_CONFIG } from "@/lib/guides/grid";
 import type { GridConfig } from "@/lib/guides/types";
 
 interface PreviewOverlaysState {

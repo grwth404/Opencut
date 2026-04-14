@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { loadFullFont } from "@/lib/fonts/google-fonts";
-import { SYSTEM_FONTS } from "@/constants/font-constants";
+import { SYSTEM_FONTS } from "@/lib/fonts/system-fonts";
 import type { FontAtlas, FontAtlasEntry } from "@/lib/fonts/types";
 import { useFontAtlas } from "@/hooks/use-font-atlas";
 import { cn } from "@/utils/ui";

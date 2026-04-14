@@ -1,4 +1,4 @@
-import type { LanguageCode } from "@/constants/language-constants";
+import type { LanguageCode } from "./languages";
 
 export type TranscriptionLanguage = LanguageCode | "auto";
 

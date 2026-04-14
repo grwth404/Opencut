@@ -1,7 +1,8 @@
-import { DEFAULT_BLUR_INTENSITY } from "@/constants/project-constants";
 import { INTENSITY_TO_SIGMA_DIVISOR } from "@/lib/effects/definitions/blur";
 import type { MigrationResult, ProjectRecord } from "./types";
 import { getProjectId, isRecord } from "./utils";
+
+const LEGACY_DEFAULT_BACKGROUND_BLUR_INTENSITY = 50;
 
 export function transformProjectV20ToV21({
 	project,
@@ -51,7 +52,7 @@ function migrateBackgroundBlurScale({
 	const blurIntensity =
 		typeof raw === "number" && Number.isFinite(raw)
 			? raw * INTENSITY_TO_SIGMA_DIVISOR
-			: DEFAULT_BLUR_INTENSITY;
+			: LEGACY_DEFAULT_BACKGROUND_BLUR_INTENSITY;
 
 	return {
 		...project,

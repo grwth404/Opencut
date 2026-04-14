@@ -5,7 +5,7 @@ import type { Transform } from "@/lib/rendering";
 import {
 	CORNER_RADIUS_MAX,
 	CORNER_RADIUS_MIN,
-} from "@/constants/text-constants";
+} from "@/lib/text/background";
 import {
 	drawTextDecoration,
 	getTextBackgroundRect,

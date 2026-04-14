@@ -3,7 +3,7 @@ import Link from "next/link";
 import { GitHubContributeSection } from "@/components/gitHub-contribute-section";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { EXTERNAL_TOOLS } from "@/constants/site-constants";
+import { EXTERNAL_TOOLS } from "@/lib/site/external-tools";
 import { BasePage } from "../base-page";
 
 export const metadata: Metadata = {

@@ -1,6 +1,6 @@
 import type { SceneTracks, TimelineElement } from "@/lib/timeline";
 import type { MediaAsset } from "@/lib/media/types";
-import { STICKER_INTRINSIC_SIZE_FALLBACK } from "@/constants/sticker-constants";
+import { STICKER_INTRINSIC_SIZE_FALLBACK } from "@/lib/stickers/intrinsic-size";
 import { DEFAULT_GRAPHIC_SOURCE_SIZE } from "@/lib/graphics";
 import { measureTextElement } from "@/lib/text/measure-element";
 import {

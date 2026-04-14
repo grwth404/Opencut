@@ -9,7 +9,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { FPS_PRESETS } from "@/lib/fps/constants";
+import { FPS_PRESETS } from "@/lib/fps/presets";
 import { floatToFrameRate, frameRateToFloat } from "@/lib/fps/utils";
 import { useEditor } from "@/hooks/use-editor";
 import {

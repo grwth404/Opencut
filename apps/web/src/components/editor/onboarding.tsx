@@ -3,7 +3,7 @@
 import { ArrowRightIcon } from "lucide-react";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { SOCIAL_LINKS } from "@/constants/site-constants";
+import { SOCIAL_LINKS } from "@/lib/site/social";
 import { useLocalStorage } from "@/hooks/storage/use-local-storage";
 import { Button } from "../ui/button";
 import { Dialog, DialogBody, DialogContent, DialogTitle } from "../ui/dialog";

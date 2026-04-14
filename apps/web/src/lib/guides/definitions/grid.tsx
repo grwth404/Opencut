@@ -9,7 +9,7 @@ import {
 	GRID_MIN,
 	GRID_MAX,
 	DEFAULT_GRID_CONFIG,
-} from "@/constants/guide-constants";
+} from "@/lib/guides/grid";
 import { usePreviewStore } from "@/stores/preview-store";
 import { clampRound } from "@/utils/math";
 import { cn } from "@/utils/ui";

@@ -20,7 +20,6 @@ import { canTrackHaveAudio } from "@/lib/timeline";
 import { mediaSupportsAudio } from "@/lib/media/media-utils";
 import { getSourceTimeAtClipTime, renderRetimedBuffer } from "@/lib/retime";
 import { Input, ALL_FORMATS, BlobSource, AudioBufferSink } from "mediabunny";
-
 import { TICKS_PER_SECOND } from "@/lib/wasm";
 
 const MAX_AUDIO_CHANNELS = 2;

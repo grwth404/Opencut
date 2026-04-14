@@ -1,4 +1,4 @@
-import type { STICKER_CATEGORIES } from "@/constants/sticker-constants";
+import type { STICKER_CATEGORIES } from "@/lib/stickers/categories";
 
 export type StickerCategory = keyof typeof STICKER_CATEGORIES;
 

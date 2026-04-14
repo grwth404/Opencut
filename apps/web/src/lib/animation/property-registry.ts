@@ -6,11 +6,11 @@ import type {
 } from "@/lib/animation/types";
 import { parseColorToLinearRgba } from "./binding-values";
 import type { TimelineElement } from "@/lib/timeline";
-import { MIN_TRANSFORM_SCALE } from "@/constants/animation-constants";
+import { MIN_TRANSFORM_SCALE } from "@/lib/animation/transform";
 import {
 	CORNER_RADIUS_MAX,
 	CORNER_RADIUS_MIN,
-} from "@/constants/text-constants";
+} from "@/lib/text/background";
 import {
 	canElementHaveAudio,
 	isVisualElement,

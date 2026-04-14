@@ -1,7 +1,5 @@
-import {
-	CORNER_RADIUS_MIN,
-	FONT_SIZE_SCALE_REFERENCE,
-} from "@/constants/text-constants";
+import { CORNER_RADIUS_MIN } from "@/lib/text/background";
+import { FONT_SIZE_SCALE_REFERENCE } from "@/lib/text/typography";
 import { resolveNumberAtTime } from "@/lib/animation";
 import { DEFAULTS } from "@/lib/timeline/defaults";
 import type { TextBackground, TextElement } from "@/lib/timeline";

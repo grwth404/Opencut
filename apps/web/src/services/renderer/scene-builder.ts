@@ -11,7 +11,7 @@ import { BlurBackgroundNode } from "./nodes/blur-background-node";
 import { EffectLayerNode } from "./nodes/effect-layer-node";
 import type { AnyBaseNode } from "./nodes/base-node";
 import type { TBackground, TCanvasSize } from "@/lib/project/types";
-import { DEFAULT_BACKGROUND_BLUR_INTENSITY } from "@/lib/background/constants";
+import { DEFAULT_BACKGROUND_BLUR_INTENSITY } from "@/lib/background/blur";
 
 const PREVIEW_MAX_IMAGE_SIZE = 2048;
 

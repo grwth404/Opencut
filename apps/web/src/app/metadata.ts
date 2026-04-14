@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SITE_INFO, SITE_URL } from "@/constants/site-constants";
+import { SITE_INFO, SITE_URL } from "@/lib/site/brand";
 
 export const baseMetaData: Metadata = {
 	metadataBase: new URL(SITE_URL),

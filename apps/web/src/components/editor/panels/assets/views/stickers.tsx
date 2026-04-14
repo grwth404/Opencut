@@ -15,7 +15,7 @@ import {
 	buildGraphicElement,
 	buildStickerElement,
 } from "@/lib/timeline/element-utils";
-import { STICKER_CATEGORIES } from "@/constants/sticker-constants";
+import { STICKER_CATEGORIES } from "@/lib/stickers/categories";
 import { getRegionLabel, resolveQueryToRegions } from "@/lib/stickers";
 import { parseShapeStickerId } from "@/lib/stickers/providers/shapes";
 import type { TimelineDragData } from "@/lib/timeline/drag";

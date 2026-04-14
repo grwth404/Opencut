@@ -8,7 +8,7 @@ import {
 	DEFAULT_TIMELINE_BOOKMARK_COLOR,
 } from "./theme";
 import { TIMELINE_BOOKMARK_ROW_HEIGHT_PX } from "./layout";
-import { DEFAULT_FPS } from "@/lib/fps/constants";
+import { DEFAULT_FPS } from "@/lib/fps/defaults";
 import { snappedSeekTime } from "opencut-wasm";
 import {
 	ArrowTurnBackwardIcon,

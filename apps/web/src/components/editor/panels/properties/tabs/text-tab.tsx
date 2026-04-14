@@ -20,11 +20,13 @@ import { clamp, formatNumberForDisplay } from "@/utils/math";
 import { useEditor } from "@/hooks/use-editor";
 import {
 	CORNER_RADIUS_MAX,
-	DEFAULT_TEXT_COLOR,
 	CORNER_RADIUS_MIN,
+} from "@/lib/text/background";
+import {
+	DEFAULT_TEXT_COLOR,
 	MAX_FONT_SIZE,
 	MIN_FONT_SIZE,
-} from "@/lib/text/constants";
+} from "@/lib/text/typography";
 import { usePropertyDraft } from "../hooks/use-property-draft";
 import { useKeyframedColorProperty } from "../hooks/use-keyframed-color-property";
 import { useKeyframedNumberProperty } from "../hooks/use-keyframed-number-property";

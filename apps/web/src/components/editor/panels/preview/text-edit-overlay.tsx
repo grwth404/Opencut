@@ -6,7 +6,7 @@ import { useEditor } from "@/hooks/use-editor";
 import type { TextElement } from "@/lib/timeline";
 import {
 	FONT_SIZE_SCALE_REFERENCE,
-} from "@/constants/text-constants";
+} from "@/lib/text/typography";
 import { DEFAULTS } from "@/lib/timeline/defaults";
 import {
 	getElementLocalTime,

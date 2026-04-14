@@ -1,6 +1,6 @@
 import type { ElementBounds } from "@/lib/preview/element-bounds";
 import type { SnapLine } from "@/lib/preview/preview-snap";
-import { MIN_MASK_DIMENSION } from "@/constants/mask-constants";
+import { MIN_MASK_DIMENSION } from "@/lib/masks/dimensions";
 import type { ParamValues } from "@/lib/params";
 import type { RectangleMaskParams } from "@/lib/masks/types";
 

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SelectionBox } from "@/lib/selection/selection-box";
 import { SelectionContext } from "@/lib/selection/context";
-import { SELECTABLE_ITEM_ATTRIBUTE } from "@/lib/selection/constants";
+import { SELECTABLE_ITEM_ATTRIBUTE } from "@/lib/selection/attributes";
 import { resolveElementIntersections } from "@/lib/selection/hit-testing";
 import {
 	applyBoxSelection,

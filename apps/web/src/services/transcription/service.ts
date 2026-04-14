@@ -7,7 +7,7 @@ import type {
 import {
 	DEFAULT_TRANSCRIPTION_MODEL,
 	TRANSCRIPTION_MODELS,
-} from "@/constants/transcription-constants";
+} from "@/lib/transcription/models";
 import type { WorkerMessage, WorkerResponse } from "./worker";
 
 type ProgressCallback = (progress: TranscriptionProgress) => void;

@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
 	DEFAULT_BACKGROUND_BLUR_INTENSITY,
-	DEFAULT_BACKGROUND_COLOR,
-} from "@/lib/background/constants";
-import { DEFAULT_CANVAS_SIZE } from "@/lib/canvas/constants";
+} from "@/lib/background/blur";
+import { DEFAULT_BACKGROUND_COLOR } from "@/lib/background/color";
+import { DEFAULT_CANVAS_SIZE } from "@/lib/canvas/sizes";
 const DEFAULT_FPS = 30;
 import type { MediaAssetData } from "@/services/storage/types";
 import { getProjectId, transformProjectV1ToV2 } from "../transformers/v1-to-v2";

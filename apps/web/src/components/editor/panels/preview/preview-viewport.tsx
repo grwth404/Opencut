@@ -17,7 +17,7 @@ import {
 	screenToCanvas,
 } from "@/lib/preview/preview-coords";
 import { clamp, isNearlyEqual } from "@/utils/math";
-import { PREVIEW_ZOOM } from "@/lib/preview/constants";
+import { PREVIEW_ZOOM } from "@/lib/preview/zoom";
 
 const MIDDLE_MOUSE_BUTTON = 1;
 const IS_AT_FIT_EPSILON = 0.001;

@@ -7,7 +7,7 @@ import {
 	searchStickers as searchStickersFromProviders,
 } from "@/lib/stickers";
 import type { StickerBrowseResult, StickerSearchResult } from "@/lib/stickers";
-import { STICKER_CATEGORIES } from "@/constants/sticker-constants";
+import { STICKER_CATEGORIES } from "@/lib/stickers/categories";
 import type { StickerCategory } from "@/lib/stickers/types";
 import { registerDefaultStickerProviders } from "@/lib/stickers/providers";
 import { stickersRegistry } from "@/lib/stickers/registry";

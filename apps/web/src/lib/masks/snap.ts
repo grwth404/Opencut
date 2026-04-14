@@ -1,5 +1,5 @@
 import type { ElementBounds } from "@/lib/preview/element-bounds";
-import { MIN_MASK_DIMENSION } from "@/constants/mask-constants";
+import { MIN_MASK_DIMENSION } from "@/lib/masks/dimensions";
 import {
 	snapPosition,
 	snapRotation,

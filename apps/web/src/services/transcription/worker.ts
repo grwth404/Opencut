@@ -7,7 +7,7 @@ import type { TranscriptionSegment } from "@/lib/transcription/types";
 import {
 	DEFAULT_CHUNK_LENGTH_SECONDS,
 	DEFAULT_STRIDE_SECONDS,
-} from "@/constants/transcription-constants";
+} from "@/lib/transcription/audio";
 
 export type WorkerMessage =
 	| { type: "init"; modelId: string }

@@ -16,7 +16,8 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { cn } from "@/utils/ui";
-import { DEFAULT_LOGO_URL, SOCIAL_LINKS } from "@/constants/site-constants";
+import { DEFAULT_LOGO_URL, SITE_URL } from "@/lib/site/brand";
+import { SOCIAL_LINKS } from "@/lib/site/social";
 import {
 	ContextMenu,
 	ContextMenuContent,

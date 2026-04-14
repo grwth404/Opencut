@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { BasePage } from "@/app/base-page";
 import { Card, CardContent } from "@/components/ui/card";
-import { SPONSORS, type Sponsor } from "@/constants/site-constants";
+import { SPONSORS, type Sponsor } from "@/lib/site/sponsors";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { LinkSquare02Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/utils/ui";

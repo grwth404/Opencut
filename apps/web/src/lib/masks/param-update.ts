@@ -1,4 +1,4 @@
-import { FEATHER_HANDLE_SCALE, MAX_FEATHER } from "@/constants/mask-constants";
+import { FEATHER_HANDLE_SCALE, MAX_FEATHER } from "@/lib/masks/feather";
 import { masksRegistry } from "@/lib/masks";
 import type { ParamValues } from "@/lib/params";
 import type {

@@ -1,4 +1,4 @@
-import { FONT_SIZE_SCALE_REFERENCE } from "@/constants/text-constants";
+import { FONT_SIZE_SCALE_REFERENCE } from "@/lib/text/typography";
 import {
 	getTextVisualRect,
 	measureTextBlock,

@@ -5,7 +5,7 @@ import {
 import { mediaTimeToSeconds } from "opencut-wasm";
 import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { TIMELINE_RULER_HEIGHT_PX } from "./layout";
-import { DEFAULT_FPS } from "@/lib/fps/constants";
+import { DEFAULT_FPS } from "@/lib/fps/defaults";
 import { useEditor } from "@/hooks/use-editor";
 import { getRulerConfig, shouldShowLabel } from "@/lib/timeline/ruler-utils";
 import { useScrollPosition } from "@/hooks/timeline/use-scroll-position";

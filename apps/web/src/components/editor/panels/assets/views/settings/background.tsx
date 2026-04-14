@@ -10,8 +10,8 @@ import {
 import {
 	BACKGROUND_BLUR_INTENSITY_PRESETS,
 	DEFAULT_BACKGROUND_BLUR_INTENSITY,
-	DEFAULT_BACKGROUND_COLOR,
-} from "@/lib/background/constants";
+} from "@/lib/background/blur";
+import { DEFAULT_BACKGROUND_COLOR } from "@/lib/background/color";
 import { patternCraftGradients } from "@/data/colors/pattern-craft";
 import { colors } from "@/data/colors/solid";
 import { syntaxUIGradients } from "@/data/colors/syntax-ui";

@@ -2,7 +2,7 @@
 
 import { forwardRef, useCallback } from "react";
 import { useSelectionContext } from "@/lib/selection/context";
-import { SELECTABLE_ITEM_ATTRIBUTE } from "@/lib/selection/constants";
+import { SELECTABLE_ITEM_ATTRIBUTE } from "@/lib/selection/attributes";
 import type { SelectableItemProps } from "@/lib/selection/types";
 import { cn } from "@/utils/ui";
 

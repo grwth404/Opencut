@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { PANEL_CONFIG } from "@/lib/panels/constants";
+import { PANEL_CONFIG } from "@/lib/panels/layout";
 
 export interface PanelSizes {
 	tools: number;

@@ -1,4 +1,4 @@
-import { SITE_URL } from "@/constants/site-constants";
+import { SITE_URL } from "@/lib/site/brand";
 import { getPosts } from "@/lib/blog/query";
 import type { MetadataRoute } from "next";
 

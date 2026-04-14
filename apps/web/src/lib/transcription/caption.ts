@@ -2,7 +2,7 @@ import type { TranscriptionSegment, CaptionChunk } from "@/lib/transcription/typ
 import {
 	DEFAULT_WORDS_PER_CAPTION,
 	MIN_CAPTION_DURATION_SECONDS,
-} from "@/constants/transcription-constants";
+} from "@/lib/transcription/caption-defaults";
 
 export function buildCaptionChunks({
 	segments,

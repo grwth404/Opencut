@@ -5,7 +5,7 @@ import {
 	clearFontAtlasCache,
 } from "@/lib/fonts/google-fonts";
 import type { FontAtlas } from "@/lib/fonts/types";
-import { SYSTEM_FONTS } from "@/constants/font-constants";
+import { SYSTEM_FONTS } from "@/lib/fonts/system-fonts";
 
 type Status = "idle" | "loading" | "error";
 

@@ -1,4 +1,4 @@
-import { FEATHER_HANDLE_SCALE } from "@/constants/mask-constants";
+import { FEATHER_HANDLE_SCALE } from "@/lib/masks/feather";
 import type { ElementBounds } from "@/lib/preview/element-bounds";
 import type {
 	MaskFeatures,

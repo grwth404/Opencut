@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { DEFAULT_CANVAS_PRESETS } from "@/lib/canvas/constants";
+import { DEFAULT_CANVAS_PRESETS } from "@/lib/canvas/sizes";
 import type { TCanvasSize } from "@/lib/project/types";
 
 interface EditorState {

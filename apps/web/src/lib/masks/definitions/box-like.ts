@@ -1,7 +1,7 @@
 import {
 	DEFAULT_SHAPE_MASK_SHORT_SIDE_RATIO,
 	MIN_MASK_DIMENSION,
-} from "@/constants/mask-constants";
+} from "@/lib/masks/dimensions";
 import { computeFeatherUpdate } from "../param-update";
 import type {
 	BaseMaskParams,

@@ -1,5 +1,5 @@
 import type { FrameRate } from "opencut-wasm";
-import { EXPORT_MIME_TYPES } from "@/constants/export-constants";
+import { EXPORT_MIME_TYPES } from "./mime-types";
 
 export const EXPORT_QUALITY_VALUES = [
 	"low",
