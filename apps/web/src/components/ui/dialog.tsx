@@ -12,12 +12,15 @@ function Dialog({
 	...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
 	const handleOpenChange = useOverlayOpenChange({
-		source: "dialog",
 		open,
 		onOpenChange,
 	});
 	return (
-		<DialogPrimitive.Root open={open} onOpenChange={handleOpenChange} {...props} />
+		<DialogPrimitive.Root
+			open={open}
+			onOpenChange={handleOpenChange}
+			{...props}
+		/>
 	);
 }
 

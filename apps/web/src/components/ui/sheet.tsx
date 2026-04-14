@@ -13,12 +13,15 @@ function Sheet({
 	...props
 }: React.ComponentProps<typeof SheetPrimitive.Root>) {
 	const handleOpenChange = useOverlayOpenChange({
-		source: "sheet",
 		open,
 		onOpenChange,
 	});
 	return (
-		<SheetPrimitive.Root open={open} onOpenChange={handleOpenChange} {...props} />
+		<SheetPrimitive.Root
+			open={open}
+			onOpenChange={handleOpenChange}
+			{...props}
+		/>
 	);
 }
 

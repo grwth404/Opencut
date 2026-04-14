@@ -57,29 +57,6 @@ export const invokeAction: InvokeActionFunc = <A extends TAction>(
 	args?: TArgOfAction<A>,
 	trigger?: TInvocationTrigger,
 ) => {
-	if (trigger === "keypress") {
-		// #region agent log
-		fetch("http://127.0.0.1:7245/ingest/669b22f8-172b-4e65-aa3f-1c702ede83f7", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"X-Debug-Session-Id": "3997d9",
-			},
-			body: JSON.stringify({
-				sessionId: "3997d9",
-				runId: "initial",
-				hypothesisId: "H4",
-				location: "actions/registry.ts:invokeAction",
-				message: "Action invoked from keypress",
-				data: {
-					action,
-					handlerCount: boundActions[action]?.length ?? 0,
-				},
-				timestamp: Date.now(),
-			}),
-		}).catch(() => {});
-		// #endregion
-	}
 	boundActions[action]?.forEach((handler) => {
 		handler(args, trigger);
 	});

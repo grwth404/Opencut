@@ -13,18 +13,11 @@ export function initializeGpuRenderer(): Promise<void> {
 		initPromise = initializeGpu()
 			.then(() => {
 				gpuAvailable = true;
-				// #region agent log
-				fetch('http://127.0.0.1:7408/ingest/669b22f8-172b-4e65-aa3f-1c702ede83f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b140a6'},body:JSON.stringify({sessionId:'b140a6',location:'gpu-renderer.ts',message:'GPU init SUCCESS',data:{userAgent:navigator.userAgent},timestamp:Date.now()})}).catch(()=>{});
-				// #endregion
 			})
 			.catch((error: unknown) => {
 				gpuAvailable = false;
-				const message =
-					error instanceof Error ? error.message : String(error);
+				const message = error instanceof Error ? error.message : String(error);
 				console.warn(`GPU renderer unavailable: ${message}`);
-				// #region agent log
-				fetch('http://127.0.0.1:7408/ingest/669b22f8-172b-4e65-aa3f-1c702ede83f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b140a6'},body:JSON.stringify({sessionId:'b140a6',location:'gpu-renderer.ts',message:'GPU init FAILED',data:{error:message,userAgent:navigator.userAgent,hasGpu:!!navigator.gpu},timestamp:Date.now()})}).catch(()=>{});
-				// #endregion
 			});
 	}
 	return initPromise;

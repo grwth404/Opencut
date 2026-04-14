@@ -528,12 +528,10 @@ export class ProjectManager {
 	}
 
 	async prepareExit(): Promise<void> {
-		console.log("prepareExit", this.active);
 		if (!this.active) return;
 
 		try {
 			const didUpdateThumbnail = await this.updateThumbnailFromTimeline();
-			console.log("didUpdateThumbnail", didUpdateThumbnail);
 			if (didUpdateThumbnail) {
 				await this.editor.save.flush();
 			}

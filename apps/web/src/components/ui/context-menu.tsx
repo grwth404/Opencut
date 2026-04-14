@@ -17,7 +17,6 @@ function ContextMenu({
 	...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.Root>) {
 	const handleOpenChange = useOverlayOpenChange({
-		source: "context-menu",
 		onOpenChange,
 	});
 	return (

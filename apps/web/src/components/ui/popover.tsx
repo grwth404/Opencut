@@ -11,7 +11,6 @@ function Popover({
 	...props
 }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
 	const handleOpenChange = useOverlayOpenChange({
-		source: "popover",
 		open,
 		onOpenChange,
 	});

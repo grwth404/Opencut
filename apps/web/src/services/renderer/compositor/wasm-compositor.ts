@@ -52,7 +52,6 @@ class WasmCompositor {
 		string,
 		{ source: CanvasImageSource; width: number; height: number }
 	>();
-	private _debugLogged = false;
 
 	ensureInitialized({ width, height }: { width: number; height: number }) {
 		if (!this.canvas) {
@@ -121,20 +120,6 @@ class WasmCompositor {
 	}
 
 	render(frame: FrameDescriptor) {
-		if (!this._debugLogged) {
-			this._debugLogged = true;
-			const firstLayer = frame.items.find((item) => item.type === "layer");
-			console.log(
-				"[compositor] first frame — canvas size:",
-				JSON.stringify({ width: frame.width, height: frame.height }),
-				"| first layer transform:",
-				firstLayer && firstLayer.type === "layer"
-					? JSON.stringify(firstLayer.transform)
-					: "none",
-				"| webgpu available:",
-				typeof navigator !== "undefined" && "gpu" in navigator,
-			);
-		}
 		renderFrame(frame);
 	}
 }

@@ -13,7 +13,6 @@ function DropdownMenu({
 	...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
 	const handleOpenChange = useOverlayOpenChange({
-		source: "dropdown-menu",
 		open,
 		onOpenChange,
 	});
@@ -105,12 +104,12 @@ const DropdownMenuContent = React.forwardRef<
 				e.preventDefault();
 			}}
 			className={cn(
-			"group/menu bg-popover text-popover-foreground z-50 min-w-32 overflow-hidden rounded-md border p-1 shadow-lg",
-			className,
-		)}
-		{...props}
-	/>
-</DropdownMenuPrimitive.Portal>
+				"group/menu bg-popover text-popover-foreground z-50 min-w-32 overflow-hidden rounded-md border p-1 shadow-lg",
+				className,
+			)}
+			{...props}
+		/>
+	</DropdownMenuPrimitive.Portal>
 ));
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;
 
