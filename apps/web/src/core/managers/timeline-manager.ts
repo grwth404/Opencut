@@ -19,6 +19,7 @@ import type {
 	AnimationPath,
 	AnimationInterpolation,
 	AnimationValue,
+	AnimationValueForPath,
 	ScalarCurveKeyframePatch,
 } from "@/lib/animation/types";
 import {
@@ -506,7 +507,9 @@ export class TimelineManager {
 			});
 
 			const target = resolveAnimationTarget({ element, path: propertyPath });
-			const baseValue = target?.getBaseValue() ?? null;
+			const baseValue =
+				(target?.getBaseValue() as AnimationValueForPath<AnimationPath> | null) ??
+				null;
 			if (baseValue === null) {
 				valueAtPlayheadMap.set(key, null);
 				continue;
