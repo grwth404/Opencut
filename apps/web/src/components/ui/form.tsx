@@ -6,16 +6,101 @@ import { type Label as LabelPrimitive, Slot as SlotPrimitive } from "radix-ui";
 import {
 	Controller,
 	type ControllerProps,
+	type DefaultValues,
 	type FieldPath,
 	type FieldValues,
 	FormProvider,
 	useFormContext,
+	type UseFormReturn,
 } from "react-hook-form";
 
 import { cn } from "@/utils/ui";
 import { Label } from "./label";
 
-const Form = FormProvider;
+const DRAFT_DEBOUNCE_MS = 500;
+
+export interface DraftStorage {
+	getItem(key: string): string | null;
+	setItem(key: string, value: string): void;
+	removeItem(key: string): void;
+}
+
+type FormProps<
+	TFieldValues extends FieldValues = FieldValues,
+	TContext = unknown,
+> = UseFormReturn<TFieldValues, TContext> & {
+	children: React.ReactNode;
+	persistKey?: string;
+	storage?: DraftStorage;
+};
+
+function Form<
+	TFieldValues extends FieldValues = FieldValues,
+	TContext = unknown,
+>({
+	persistKey,
+	storage,
+	children,
+	...methods
+}: FormProps<TFieldValues, TContext>) {
+	const { watch, reset } = methods;
+	// To change keys after mount, re-mount the component with key={persistKey}
+	const persistKeyOnMount = React.useRef(persistKey);
+	const storageOnMount = React.useRef(storage);
+	const resetRef = React.useRef(reset);
+
+	React.useEffect(() => {
+		if (!persistKeyOnMount.current) return;
+		const store = storageOnMount.current ?? window.localStorage;
+		try {
+			const stored = store.getItem(persistKeyOnMount.current);
+			if (stored) {
+				resetRef.current(
+					JSON.parse(stored) as DefaultValues<TFieldValues>,
+				);
+			}
+		} catch {
+			// Storage may be unavailable (private browsing, storage blocked)
+		}
+	}, []);
+
+	React.useEffect(() => {
+		if (!persistKey) return;
+		const store = storageOnMount.current ?? window.localStorage;
+		let timer: ReturnType<typeof setTimeout>;
+		const subscription = watch((values) => {
+			clearTimeout(timer);
+			timer = setTimeout(() => {
+				try {
+					store.setItem(persistKey, JSON.stringify(values));
+				} catch {
+					// Storage may be full or blocked
+				}
+			}, DRAFT_DEBOUNCE_MS);
+		});
+		return () => {
+			clearTimeout(timer);
+			subscription.unsubscribe();
+		};
+	}, [persistKey, watch]);
+
+	return <FormProvider {...methods}>{children}</FormProvider>;
+}
+
+export function clearFormDraft({
+	key,
+	storage,
+}: {
+	key: string;
+	storage?: DraftStorage;
+}): void {
+	const store = storage ?? window.localStorage;
+	try {
+		store.removeItem(key);
+	} catch {
+		// Storage may be unavailable
+	}
+}
 
 type FormFieldContextValue<
 	TFieldValues extends FieldValues = FieldValues,
