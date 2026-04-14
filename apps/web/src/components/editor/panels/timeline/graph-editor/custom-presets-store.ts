@@ -5,7 +5,7 @@ import { generateUUID } from "@/utils/id";
 import type { NormalizedCubicBezier } from "@/lib/animation/types";
 import type { EasingPreset } from "./easing-presets";
 
-const STORAGE_KEY = "opencut:graph-editor-presets";
+const STORAGE_KEY = "graph-editor-presets";
 
 let cachedPresets: EasingPreset[] | null = null;
 const listeners = new Set<() => void>();
