@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/utils/ui";
+import { ReactMarkdownWrapper } from "@/components/ui/react-markdown-wrapper";
 import {
 	getSectionTitle,
 	groupAndOrderChanges,
@@ -144,7 +145,7 @@ function ReleaseChangeList({
 					key={change.text}
 					className="text-base leading-relaxed text-foreground"
 				>
-					{change.text}
+					<ReactMarkdownWrapper inline>{change.text}</ReactMarkdownWrapper>
 				</li>
 			))}
 		</ul>
