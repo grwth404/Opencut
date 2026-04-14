@@ -28,15 +28,6 @@ Thanks to [Vercel](https://vercel.com?utm_source=github-opencut&utm_campaign=oss
 - **Free features**: Most basic CapCut features are now paywalled 
 - **Simple**: People want editors that are easy to use - CapCut proved that
 
-## Features
-
-- Timeline-based editing
-- Multi-track support
-- Real-time preview
-- No watermarks or subscriptions
-- Analytics provided by [Databuddy](https://www.databuddy.cc?utm_source=opencut), 100% Anonymized & Non-invasive.
-- Blog powered by [Marble](https://marblecms.com?utm_source=opencut), Headless CMS.
-
 ## Project Structure
 
 - `apps/web/` – Main Next.js web application
