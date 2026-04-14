@@ -49,7 +49,9 @@ export function canToggleSourceAudio(
 	element: TimelineElement,
 	mediaAsset: MediaAudioState | null | undefined,
 ): element is VideoElement {
-	return canRecoverSourceAudio(element) || canExtractSourceAudio(element, mediaAsset);
+	return (
+		canRecoverSourceAudio(element) || canExtractSourceAudio(element, mediaAsset)
+	);
 }
 
 export function doesElementHaveEnabledAudio({
@@ -63,7 +65,11 @@ export function doesElementHaveEnabledAudio({
 		return true;
 	}
 
-	return !!mediaAsset && mediaAsset.hasAudio !== false && isSourceAudioEnabled({ element });
+	return (
+		!!mediaAsset &&
+		mediaAsset.hasAudio !== false &&
+		isSourceAudioEnabled({ element })
+	);
 }
 
 export function buildSeparatedAudioElement({
@@ -100,7 +106,9 @@ export function getSourceAudioActionLabel({
 }: {
 	element: VideoElement;
 }): "Extract audio" | "Recover audio" {
-	return isSourceAudioSeparated({ element }) ? "Recover audio" : "Extract audio";
+	return isSourceAudioSeparated({ element })
+		? "Recover audio"
+		: "Extract audio";
 }
 
 function cloneVolumeAnimations({

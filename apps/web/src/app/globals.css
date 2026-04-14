@@ -28,6 +28,8 @@
   --destructive-foreground: hsl(0, 0%, 100%);
   --constructive: hsl(141, 71%, 48%);
   --constructive-foreground: hsl(0, 0%, 100%);
+  --caution: hsl(38, 92%, 50%);
+  --caution-foreground: hsl(0, 0%, 10%);
   --border: hsl(0 0% 91%);
   --input: hsl(0, 0%, 100%);
   --ring: hsl(0, 0%, 55%);
@@ -84,6 +86,8 @@
   --border: hsl(0 0% 16%);
   --input: hsl(0 0% 5%);
   --ring: hsl(0, 0%, 50%);
+  --caution: hsl(38, 92%, 60%);
+  --caution-foreground: hsl(0, 0%, 10%);
   --sidebar-background: hsl(0 0% 8%);
   --sidebar-foreground: hsl(0 0% 95%);
   --sidebar-primary: hsl(0 0% 95%);
@@ -188,6 +192,9 @@
 
   --color-constructive: var(--constructive);
   --color-constructive-foreground: var(--constructive-foreground);
+
+  --color-caution: var(--caution);
+  --color-caution-foreground: var(--caution-foreground);
 
   --color-border: var(--border);
   --color-input: var(--input);

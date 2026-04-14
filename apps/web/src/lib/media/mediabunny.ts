@@ -2,6 +2,7 @@ import { Input, ALL_FORMATS, BlobSource } from "mediabunny";
 import { createTimelineAudioBuffer } from "@/lib/media/audio";
 import type { SceneTracks } from "@/lib/timeline";
 import type { MediaAsset } from "@/lib/media/types";
+import { TICKS_PER_SECOND } from "@/lib/wasm";
 
 export async function getVideoInfo({
 	videoFile,
@@ -41,6 +42,8 @@ export async function getVideoInfo({
 
 const SAMPLE_RATE = 44100;
 const NUM_CHANNELS = 2;
+const EMPTY_TIMELINE_SILENT_DURATION_SECONDS = 0.1;
+const MIN_SILENT_DURATION_SECONDS = 0.001;
 
 export const extractTimelineAudio = async ({
 	tracks,
@@ -54,7 +57,11 @@ export const extractTimelineAudio = async ({
 	onProgress?: (progress: number) => void;
 }): Promise<Blob> => {
 	if (totalDuration === 0) {
-		return createWavBlob({ samples: new Float32Array(SAMPLE_RATE * 0.1) });
+		return createWavBlob({
+			samples: new Float32Array(
+				SAMPLE_RATE * EMPTY_TIMELINE_SILENT_DURATION_SECONDS,
+			),
+		});
 	}
 
 	onProgress?.(10);
@@ -67,9 +74,12 @@ export const extractTimelineAudio = async ({
 	});
 
 	if (!audioBuffer) {
-		const silentDuration = Math.max(1, totalDuration);
+		const silentDurationSeconds = Math.max(
+			MIN_SILENT_DURATION_SECONDS,
+			totalDuration / TICKS_PER_SECOND,
+		);
 		const silentSamples = new Float32Array(
-			Math.ceil(silentDuration * SAMPLE_RATE) * NUM_CHANNELS,
+			Math.ceil(silentDurationSeconds * SAMPLE_RATE) * NUM_CHANNELS,
 		);
 		return createWavBlob({ samples: silentSamples });
 	}

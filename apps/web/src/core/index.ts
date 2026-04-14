@@ -9,8 +9,10 @@ import { SaveManager } from "./managers/save-manager";
 import { AudioManager } from "./managers/audio-manager";
 import { SelectionManager } from "./managers/selection-manager";
 import { ClipboardManager } from "./managers/clipboard-manager";
+import { DiagnosticsManager } from "./managers/diagnostics-manager";
 import { registerDefaultEffects } from "@/lib/effects";
 import { registerDefaultMasks } from "@/lib/masks";
+import { registerTranscriptionDiagnostics } from "@/lib/transcription/diagnostics";
 
 export class EditorCore {
 	private static instance: EditorCore | null = null;
@@ -25,6 +27,7 @@ export class EditorCore {
 	public readonly audio: AudioManager;
 	public readonly selection: SelectionManager;
 	public readonly clipboard: ClipboardManager;
+	public readonly diagnostics: DiagnosticsManager;
 
 	private constructor() {
 		registerDefaultEffects();
@@ -40,6 +43,8 @@ export class EditorCore {
 		this.audio = new AudioManager(this);
 		this.selection = new SelectionManager(this);
 		this.clipboard = new ClipboardManager(this);
+		this.diagnostics = new DiagnosticsManager(this);
+		registerTranscriptionDiagnostics({ diagnostics: this.diagnostics });
 		this.playback.bindTimelineScope();
 		this.command.registerReactor(() => {
 			const activeScene = this.scenes.getActiveSceneOrNull();

@@ -10,9 +10,8 @@ import {
 import { useReducer, useRef, useState } from "react";
 import { extractTimelineAudio } from "@/lib/media/mediabunny";
 import { useEditor } from "@/hooks/use-editor";
-import {
-	DEFAULT_TRANSCRIPTION_SAMPLE_RATE,
-} from "@/lib/transcription/audio";
+import { TRANSCRIPTION_DIAGNOSTICS_SCOPE } from "@/lib/transcription/diagnostics";
+import { DEFAULT_TRANSCRIPTION_SAMPLE_RATE } from "@/lib/transcription/audio";
 import { TRANSCRIPTION_LANGUAGES } from "@/lib/transcription/supported-languages";
 import type {
 	CaptionChunk,
@@ -31,8 +30,23 @@ import {
 	SectionField,
 	SectionFields,
 } from "@/components/section";
-import { CloudUploadIcon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, CloudUploadIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
+import type { DiagnosticSeverity } from "@/lib/diagnostics/types";
+
+const DIAGNOSTIC_BUTTON_VARIANT: Record<
+	DiagnosticSeverity,
+	"caution" | "destructive-foreground"
+> = {
+	caution: "caution",
+	error: "destructive-foreground",
+};
 
 type ProcessingState =
 	| { status: "idle"; error: string | null; warnings: string[] }
@@ -44,7 +58,11 @@ type ProcessingAction =
 	| { type: "succeed"; warnings: string[] }
 	| { type: "fail"; error: string };
 
-const IDLE_STATE: ProcessingState = { status: "idle", error: null, warnings: [] };
+const IDLE_STATE: ProcessingState = {
+	status: "idle",
+	error: null,
+	warnings: [],
+};
 
 function processingReducer(
 	state: ProcessingState,
@@ -73,6 +91,10 @@ export function Captions() {
 
 	const isProcessing = processing.status === "processing";
 
+	const activeDiagnostics = useEditor((e) =>
+		e.diagnostics.getActive({ scope: TRANSCRIPTION_DIAGNOSTICS_SCOPE }),
+	);
+
 	const handleProgress = (progress: TranscriptionProgress) => {
 		if (progress.status === "loading-model") {
 			dispatch({
@@ -84,7 +106,11 @@ export function Captions() {
 		}
 	};
 
-	const insertCaptions = ({ captions }: { captions: CaptionChunk[] }): boolean => {
+	const insertCaptions = ({
+		captions,
+	}: {
+		captions: CaptionChunk[];
+	}): boolean => {
 		const trackId = insertCaptionChunksAsTextTrack({ editor, captions });
 		return trackId !== null;
 	};
@@ -123,7 +149,10 @@ export function Captions() {
 			console.error("Transcription failed:", error);
 			dispatch({
 				type: "fail",
-				error: error instanceof Error ? error.message : "An unexpected error occurred",
+				error:
+					error instanceof Error
+						? error.message
+						: "An unexpected error occurred",
 			});
 		}
 	};
@@ -168,7 +197,10 @@ export function Captions() {
 			console.error("Subtitle import failed:", error);
 			dispatch({
 				type: "fail",
-				error: error instanceof Error ? error.message : "An unexpected error occurred",
+				error:
+					error instanceof Error
+						? error.message
+						: "An unexpected error occurred",
 			});
 		}
 	};
@@ -208,17 +240,38 @@ export function Captions() {
 			title="Captions"
 			contentClassName="px-0 flex flex-col h-full"
 			actions={
-				<Button
-					type="button"
-					variant="outline"
-					size="sm"
-					onClick={handleImportClick}
-					disabled={isProcessing}
-					className="items-center justify-center gap-1.5"
-				>
-					<HugeiconsIcon icon={CloudUploadIcon} />
-					Import
-				</Button>
+				<TooltipProvider>
+					<div className="flex items-center gap-1.5">
+						{!isProcessing &&
+							activeDiagnostics.map((diagnostic) => (
+								<Tooltip key={diagnostic.id}>
+									<TooltipTrigger asChild>
+										<Button
+											variant={DIAGNOSTIC_BUTTON_VARIANT[diagnostic.severity]}
+											size="icon"
+											aria-label={diagnostic.message}
+										>
+											<HugeiconsIcon icon={AlertCircleIcon} size={16} />
+										</Button>
+									</TooltipTrigger>
+									<TooltipContent>
+										{diagnostic.message}
+									</TooltipContent>
+								</Tooltip>
+							))}
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={handleImportClick}
+							disabled={isProcessing}
+							className="items-center justify-center gap-1.5"
+						>
+							<HugeiconsIcon icon={CloudUploadIcon} />
+							Import
+						</Button>
+					</div>
+				</TooltipProvider>
 			}
 			ref={containerRef}
 		>
@@ -229,7 +282,11 @@ export function Captions() {
 				className="hidden"
 				onChange={(event) => void handleFileChange({ event })}
 			/>
-			<Section showTopBorder={false} showBottomBorder={false} className="flex-1">
+			<Section
+				showTopBorder={false}
+				showBottomBorder={false}
+				className="flex-1"
+			>
 				<SectionContent className="flex flex-col gap-4 h-full pt-1">
 					<SectionFields>
 						<SectionField label="Language">
@@ -256,7 +313,7 @@ export function Captions() {
 						type="button"
 						className="mt-auto w-full"
 						onClick={handleGenerateTranscript}
-						disabled={isProcessing}
+						disabled={isProcessing || activeDiagnostics.length > 0}
 					>
 						{isProcessing && <Spinner className="mr-1" />}
 						{isProcessing ? processing.step : "Generate transcript"}

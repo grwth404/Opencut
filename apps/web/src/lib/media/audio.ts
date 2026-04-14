@@ -1,5 +1,6 @@
 import type {
 	AudioElement,
+	VideoElement,
 	LibraryAudioElement,
 	RetimeConfig,
 	SceneTracks,
@@ -12,9 +13,7 @@ import {
 	hasAnimatedVolume,
 	resolveEffectiveAudioGain,
 } from "@/lib/timeline/audio-state";
-import {
-	doesElementHaveEnabledAudio,
-} from "@/lib/timeline/audio-separation";
+import { doesElementHaveEnabledAudio } from "@/lib/timeline/audio-separation";
 import { canElementHaveAudio, hasMediaId } from "@/lib/timeline/element-utils";
 import { canTrackHaveAudio } from "@/lib/timeline";
 import { mediaSupportsAudio } from "@/lib/media/media-utils";
@@ -83,22 +82,23 @@ export async function decodeAudioToFloat32({
 	return { samples, sampleRate: audioBuffer.sampleRate };
 }
 
-export async function collectAudioElements({
+export interface AudibleElementCandidate {
+	element: AudioElement | VideoElement;
+	mediaAsset: MediaAsset | null;
+}
+
+export function collectAudibleCandidates({
 	tracks,
 	mediaAssets,
-	audioContext,
 }: {
 	tracks: SceneTracks;
 	mediaAssets: MediaAsset[];
-	audioContext: AudioContext;
-}): Promise<CollectedAudioElement[]> {
-	const orderedTracks = [...tracks.overlay, tracks.main, ...tracks.audio];
-	const mediaMap = new Map<string, MediaAsset>(
-		mediaAssets.map((media) => [media.id, media]),
-	);
-	const pendingElements: Array<Promise<CollectedAudioElement | null>> = [];
+}): AudibleElementCandidate[] {
+	const allTracks = [...tracks.overlay, tracks.main, ...tracks.audio];
+	const mediaMap = new Map(mediaAssets.map((a) => [a.id, a]));
+	const candidates: AudibleElementCandidate[] = [];
 
-	for (const track of orderedTracks) {
+	for (const track of allTracks) {
 		if (canTrackHaveAudio(track) && track.muted) continue;
 
 		for (const element of track.elements) {
@@ -110,65 +110,95 @@ export async function collectAudioElements({
 				: null;
 			if (!doesElementHaveEnabledAudio({ element, mediaAsset })) continue;
 
-			const isTrackMuted = canTrackHaveAudio(track) && track.muted;
+			candidates.push({ element, mediaAsset });
+		}
+	}
 
-			if (element.type === "audio") {
-				pendingElements.push(
-					resolveAudioBufferForElement({
-						element,
-						mediaMap,
-						audioContext,
-					}).then((audioBuffer) => {
-						if (!audioBuffer) return null;
-						const muted = element.muted === true || isTrackMuted;
-						return {
-							timelineElement: element,
-							buffer: audioBuffer,
-							startTime: element.startTime / TICKS_PER_SECOND,
-							duration: element.duration / TICKS_PER_SECOND,
-							trimStart: element.trimStart / TICKS_PER_SECOND,
-							trimEnd: element.trimEnd / TICKS_PER_SECOND,
-							volume: resolveEffectiveAudioGain({
-								element,
-								trackMuted: isTrackMuted,
-								localTime: 0,
-							}),
-							muted,
-							retime: element.retime,
-						};
-					}),
-				);
-				continue;
-			}
+	return candidates;
+}
 
-			if (element.type === "video") {
-				if (!mediaAsset || !mediaSupportsAudio({ media: mediaAsset })) continue;
+export function timelineHasAudio({
+	tracks,
+	mediaAssets,
+}: {
+	tracks: SceneTracks;
+	mediaAssets: MediaAsset[];
+}): boolean {
+	return collectAudibleCandidates({ tracks, mediaAssets }).some(
+		({ element }) => element.muted !== true,
+	);
+}
 
-				pendingElements.push(
-					resolveAudioBufferForVideoElement({
-						mediaAsset,
-						audioContext,
-					}).then((audioBuffer) => {
-						if (!audioBuffer) return null;
-						const muted = (element.muted ?? false) || isTrackMuted;
-						return {
-							timelineElement: element,
-							buffer: audioBuffer,
-							startTime: element.startTime / TICKS_PER_SECOND,
-							duration: element.duration / TICKS_PER_SECOND,
-							trimStart: element.trimStart / TICKS_PER_SECOND,
-							trimEnd: element.trimEnd / TICKS_PER_SECOND,
-							volume: resolveEffectiveAudioGain({
-								element,
-								trackMuted: isTrackMuted,
-								localTime: 0,
-							}),
-							muted,
-							retime: element.retime,
-						};
-					}),
-				);
-			}
+export async function collectAudioElements({
+	tracks,
+	mediaAssets,
+	audioContext,
+}: {
+	tracks: SceneTracks;
+	mediaAssets: MediaAsset[];
+	audioContext: AudioContext;
+}): Promise<CollectedAudioElement[]> {
+	const candidates = collectAudibleCandidates({ tracks, mediaAssets });
+	const mediaMap = new Map<string, MediaAsset>(
+		mediaAssets.map((media) => [media.id, media]),
+	);
+	const pendingElements: Array<Promise<CollectedAudioElement | null>> = [];
+
+	for (const { element, mediaAsset } of candidates) {
+		if (element.type === "audio") {
+			pendingElements.push(
+				resolveAudioBufferForElement({
+					element,
+					mediaMap,
+					audioContext,
+				}).then((audioBuffer) => {
+					if (!audioBuffer) return null;
+					return {
+						timelineElement: element,
+						buffer: audioBuffer,
+						startTime: element.startTime / TICKS_PER_SECOND,
+						duration: element.duration / TICKS_PER_SECOND,
+						trimStart: element.trimStart / TICKS_PER_SECOND,
+						trimEnd: element.trimEnd / TICKS_PER_SECOND,
+						volume: resolveEffectiveAudioGain({
+							element,
+							trackMuted: false,
+							localTime: 0,
+						}),
+						muted: element.muted === true,
+						retime: element.retime,
+					};
+				}),
+			);
+			continue;
+		}
+
+		if (element.type === "video") {
+			if (!mediaAsset || !mediaSupportsAudio({ media: mediaAsset })) continue;
+
+			pendingElements.push(
+				resolveAudioBufferForVideoElement({
+					mediaAsset,
+					audioContext,
+				}).then((audioBuffer) => {
+					if (!audioBuffer) return null;
+					return {
+						timelineElement: element,
+						buffer: audioBuffer,
+						startTime: element.startTime / TICKS_PER_SECOND,
+						duration: element.duration / TICKS_PER_SECOND,
+						trimStart: element.trimStart / TICKS_PER_SECOND,
+						trimEnd: element.trimEnd / TICKS_PER_SECOND,
+						volume: resolveEffectiveAudioGain({
+							element,
+							trackMuted: false,
+							localTime: 0,
+						}),
+						muted: element.muted ?? false,
+						retime: element.retime,
+					};
+				}),
+			);
 		}
 	}
 
@@ -339,16 +369,16 @@ async function fetchLibraryAudioSource({
 			type: "audio/mpeg",
 		});
 
-	return {
-		timelineElement: element,
-		file,
-		startTime: element.startTime / TICKS_PER_SECOND,
-		duration: element.duration / TICKS_PER_SECOND,
-		trimStart: element.trimStart / TICKS_PER_SECOND,
-		trimEnd: element.trimEnd / TICKS_PER_SECOND,
-		volume,
-		retime: element.retime,
-	};
+		return {
+			timelineElement: element,
+			file,
+			startTime: element.startTime / TICKS_PER_SECOND,
+			duration: element.duration / TICKS_PER_SECOND,
+			trimStart: element.trimStart / TICKS_PER_SECOND,
+			trimEnd: element.trimEnd / TICKS_PER_SECOND,
+			volume,
+			retime: element.retime,
+		};
 	} catch (error) {
 		console.warn("Failed to fetch library audio:", error);
 		return null;
