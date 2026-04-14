@@ -48,6 +48,14 @@ export const accounts = pgTable("accounts", {
 	updatedAt: timestamp("updated_at").notNull(),
 }).enableRLS();
 
+export const feedback = pgTable("feedback", {
+	id: text("id").primaryKey(),
+	message: text("message").notNull(),
+	createdAt: timestamp("created_at")
+		.$defaultFn(() => new Date())
+		.notNull(),
+});
+
 export const verifications = pgTable("verifications", {
 	id: text("id").primaryKey(),
 	identifier: text("identifier").notNull(),
