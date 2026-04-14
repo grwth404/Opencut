@@ -30,13 +30,10 @@ Thanks to [Vercel](https://vercel.com?utm_source=github-opencut&utm_campaign=oss
 
 ## Project Structure
 
-- `apps/web/` – Main Next.js web application
-- `apps/desktop/` – Native desktop app (in progress)
-- `src/components/` – UI and editor components
-- `src/hooks/` – Custom React hooks
-- `src/lib/` – Utility and API logic
-- `src/stores/` – State management (Zustand, etc.)
-- `src/types/` – TypeScript types
+- `apps/web/` – Next.js web application
+- `apps/desktop/` – Native desktop app built with GPUI (in progress)
+- `rust/` – Platform-agnostic core: GPU compositor, effects, masks, and WASM bindings. We're actively migrating business logic here from TypeScript.
+- `docs/` – Architecture and subsystem documentation
 
 ## Getting Started
 
