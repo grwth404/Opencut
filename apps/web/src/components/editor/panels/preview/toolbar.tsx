@@ -42,7 +42,7 @@ export function PreviewToolbar({
 			<div className="justify-self-end flex items-center gap-2.5">
 				<ZoomSelect />
 				<Separator orientation="vertical" className="h-4" />
-				{/* feature for v0.4.0 */}
+				{/* v0.4.0 */}
 				{/* <GridPopover>
 					<Button
 						variant={activeGuideDefinition ? "secondary" : "text"}
