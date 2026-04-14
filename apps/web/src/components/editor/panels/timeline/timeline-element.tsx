@@ -10,6 +10,7 @@ import {
 } from "@/hooks/timeline/element/use-keyframe-drag";
 import { useKeyframeSelection } from "@/hooks/timeline/element/use-keyframe-selection";
 import { useKeyframeBoxSelect } from "@/hooks/timeline/element/use-keyframe-box-select";
+import { useTimelineElementResize } from "@/hooks/timeline/element/use-element-resize";
 import { SelectionBox } from "@/lib/selection/selection-box";
 import { getElementKeyframes } from "@/lib/animation";
 import {
@@ -85,6 +86,7 @@ import {
 	getExpansionHeight,
 	type ExpandedRow,
 } from "./expanded-layout";
+import type { SnapPoint } from "@/lib/timeline/snap-utils";
 
 const KEYFRAME_INDICATOR_MIN_WIDTH_PX = 40;
 const ELEMENT_RING_WIDTH_PX = 1.5;
@@ -195,12 +197,8 @@ interface TimelineElementProps {
 	track: TimelineTrack;
 	zoomLevel: number;
 	isSelected: boolean;
-	onResizeStart: (params: {
-		event: React.MouseEvent;
-		element: TimelineElementType;
-		track: TimelineTrack;
-		side: "left" | "right";
-	}) => void;
+	onSnapPointChange?: (snapPoint: SnapPoint | null) => void;
+	onResizeStateChange?: (params: { isResizing: boolean }) => void;
 	onElementMouseDown: (
 		event: React.MouseEvent,
 		element: TimelineElementType,
@@ -218,7 +216,8 @@ export function TimelineElement({
 	track,
 	zoomLevel,
 	isSelected,
-	onResizeStart,
+	onSnapPointChange,
+	onResizeStateChange,
 	onElementMouseDown,
 	onElementClick,
 	dragState,
@@ -231,6 +230,18 @@ export function TimelineElement({
 		trackId: track.id,
 		elementId: element.id,
 		fallback: element,
+	});
+	const {
+		currentDuration,
+		currentStartTime,
+		handleResizeStart,
+		isResizing,
+	} = useTimelineElementResize({
+		element,
+		track,
+		zoomLevel,
+		onSnapPointChange,
+		onResizeStateChange,
 	});
 
 	let mediaAsset: MediaAsset | null = null;
@@ -256,9 +267,13 @@ export function TimelineElement({
 	const elementStartTime =
 		isBeingDragged && dragState.isDragging
 			? dragState.currentTime + dragTimeOffset
-			: renderElement.startTime;
+			: isResizing
+				? currentStartTime
+				: renderElement.startTime;
 	const displayedStartTime = elementStartTime;
-	const displayedDuration = renderElement.duration;
+	const displayedDuration = isResizing
+		? currentDuration
+		: renderElement.duration;
 	const elementWidth = timelineTimeToPixels({
 		time: displayedDuration,
 		zoomLevel,
@@ -267,6 +282,22 @@ export function TimelineElement({
 		time: displayedStartTime,
 		zoomLevel,
 	});
+	const handleElementResizeStart = ({
+		event,
+		element,
+		side,
+	}: {
+		event: React.MouseEvent;
+		element: TimelineElementType;
+		track: TimelineTrack;
+		side: "left" | "right";
+	}) => {
+		handleResizeStart({
+			event,
+			elementId: element.id,
+			side,
+		});
+	};
 	const keyframeIndicators = isSelected
 		? getKeyframeIndicators({
 				keyframes: getElementKeyframes({ animations: element.animations }),
@@ -391,7 +422,7 @@ export function TimelineElement({
 						expandedContent={expandedContent}
 						onElementClick={onElementClick}
 						onElementMouseDown={onElementMouseDown}
-						onResizeStart={onResizeStart}
+						onResizeStart={handleElementResizeStart}
 						isDropTarget={isDropTarget}
 					/>
 					{isSelected && (
