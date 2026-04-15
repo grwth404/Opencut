@@ -254,9 +254,7 @@ export function Captions() {
 											<HugeiconsIcon icon={AlertCircleIcon} size={16} />
 										</Button>
 									</TooltipTrigger>
-									<TooltipContent>
-										{diagnostic.message}
-									</TooltipContent>
+									<TooltipContent>{diagnostic.message}</TooltipContent>
 								</Tooltip>
 							))}
 						<Button

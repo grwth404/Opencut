@@ -166,18 +166,17 @@ function FeedbackPopoverContent({ onClose }: { onClose: () => void }) {
 			</Form>
 
 			{entries.length > 0 && (
-				<div className="border-t">
-					<div className="px-3 py-2">
-						<span className="text-xs font-medium text-muted-foreground">
-							Previous feedback
-						</span>
-					</div>
-					<div className="max-h-48 overflow-y-auto px-3 pb-3">
-						<div className="flex flex-col gap-2">
-							{entries.map((entry) => (
-								<FeedbackEntryItem key={entry.id} entry={entry} />
-							))}
-						</div>
+				<div className="border-t overflow-hidden">
+					<div
+						className="max-h-52 overflow-y-auto divide-y"
+						style={{
+							maskImage:
+								"linear-gradient(to bottom, black 70%, transparent 100%)",
+						}}
+					>
+						{entries.map((entry) => (
+							<FeedbackEntryItem key={entry.id} entry={entry} />
+						))}
 					</div>
 				</div>
 			)}
@@ -185,17 +184,29 @@ function FeedbackPopoverContent({ onClose }: { onClose: () => void }) {
 	);
 }
 
-function FeedbackEntryItem({ entry }: { entry: FeedbackEntry }) {
-	const formatted = new Date(entry.createdAt).toLocaleDateString(undefined, {
+function relativeDate(iso: string): string {
+	const diff = Date.now() - new Date(iso).getTime();
+	const mins = Math.floor(diff / 60_000);
+	if (mins < 1) return "just now";
+	if (mins < 60) return `${mins}m ago`;
+	const hrs = Math.floor(mins / 60);
+	if (hrs < 24) return `${hrs}h ago`;
+	const days = Math.floor(hrs / 24);
+	if (days < 7) return `${days}d ago`;
+	return new Date(iso).toLocaleDateString(undefined, {
 		month: "short",
 		day: "numeric",
 	});
+}
 
+function FeedbackEntryItem({ entry }: { entry: FeedbackEntry }) {
 	return (
-		<div className="rounded-md border px-2.5 py-2">
-			<p className="text-sm whitespace-pre-wrap break-words">{entry.message}</p>
-			<span className="mt-1 block text-xs text-muted-foreground">
-				{formatted}
+		<div className="px-3 py-2.5">
+			<p className="text-sm text-muted-foreground leading-snug whitespace-pre-wrap break-words">
+				{entry.message}
+			</p>
+			<span className="mt-1 block text-[11px] text-muted-foreground/50">
+				{relativeDate(entry.createdAt)}
 			</span>
 		</div>
 	);

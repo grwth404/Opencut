@@ -1,6 +1,4 @@
-import {
-	DEFAULT_BACKGROUND_BLUR_INTENSITY,
-} from "@/lib/background/blur";
+import { DEFAULT_BACKGROUND_BLUR_INTENSITY } from "@/lib/background/blur";
 import { DEFAULT_BACKGROUND_COLOR } from "@/lib/background/color";
 import { DEFAULT_CANVAS_SIZE } from "@/lib/canvas/sizes";
 const DEFAULT_FPS = 30;

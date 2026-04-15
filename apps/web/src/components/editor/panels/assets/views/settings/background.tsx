@@ -49,7 +49,9 @@ const BlurPreview = memo(
 			};
 
 			renderPreview();
-			return effectPreviewService.onPreviewImageReady({ callback: renderPreview });
+			return effectPreviewService.onPreviewImageReady({
+				callback: renderPreview,
+			});
 		}, [blur.value]);
 
 		return (
@@ -186,7 +188,12 @@ export function BackgroundContent() {
 
 	return (
 		<div className="flex flex-col">
-			<Section collapsible defaultOpen={true} sectionKey="background-blur" showTopBorder={false}>
+			<Section
+				collapsible
+				defaultOpen={true}
+				sectionKey="background-blur"
+				showTopBorder={false}
+			>
 				<SectionHeader>
 					<SectionTitle>Blur</SectionTitle>
 				</SectionHeader>
