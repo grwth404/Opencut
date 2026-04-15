@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { ClockIcon } from "lucide-react";
 import {
 	Popover,
 	PopoverContent,
@@ -106,8 +107,11 @@ export function FeedbackPopover() {
 	);
 }
 
+type View = "compose" | "history";
+
 function FeedbackPopoverContent({ onClose }: { onClose: () => void }) {
 	const { entries, isSubmitting, submit } = useFeedback();
+	const [view, setView] = useState<View>("compose");
 
 	const form = useForm<FeedbackFormValues>({
 		defaultValues: { message: "" },
@@ -122,6 +126,33 @@ function FeedbackPopoverContent({ onClose }: { onClose: () => void }) {
 				onClose();
 			},
 		});
+	}
+
+	if (view === "history") {
+		return (
+			<div className="flex flex-col">
+				<div
+					className="max-h-72 overflow-y-auto divide-y"
+					style={{
+						maskImage:
+							"linear-gradient(to bottom, black 80%, transparent 100%)",
+					}}
+				>
+					{entries.map((entry) => (
+						<FeedbackEntryItem key={entry.id} entry={entry} />
+					))}
+				</div>
+				<div className="border-t px-3 py-2">
+					<button
+						type="button"
+						onClick={() => setView("compose")}
+						className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+					>
+						← Back
+					</button>
+				</div>
+			</div>
+		);
 	}
 
 	return (
@@ -143,43 +174,41 @@ function FeedbackPopoverContent({ onClose }: { onClose: () => void }) {
 							</FormItem>
 						)}
 					/>
-					<div className="flex justify-end border-t px-3 py-2 gap-2">
-						{!form.watch("message").trim() && (
-							<Button
+					<div className="flex items-center justify-between border-t px-3 py-2">
+						{entries.length > 0 ? (
+							<button
 								type="button"
-								variant="outline"
-								size="sm"
-								onClick={onClose}
+								onClick={() => setView("history")}
+								className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
 							>
-								Cancel
-							</Button>
+								<ClockIcon className="size-3" />
+								{entries.length}
+							</button>
+						) : (
+							<span />
 						)}
-						<Button
-							type="submit"
-							size="sm"
-							disabled={isSubmitting || !form.watch("message").trim()}
-						>
-							{isSubmitting ? <Spinner /> : "Send"}
-						</Button>
+						<div className="flex gap-2">
+							{!form.watch("message").trim() && (
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									onClick={onClose}
+								>
+									Cancel
+								</Button>
+							)}
+							<Button
+								type="submit"
+								size="sm"
+								disabled={isSubmitting || !form.watch("message").trim()}
+							>
+								{isSubmitting ? <Spinner /> : "Send"}
+							</Button>
+						</div>
 					</div>
 				</form>
 			</Form>
-
-			{entries.length > 0 && (
-				<div className="border-t overflow-hidden">
-					<div
-						className="max-h-52 overflow-y-auto divide-y"
-						style={{
-							maskImage:
-								"linear-gradient(to bottom, black 70%, transparent 100%)",
-						}}
-					>
-						{entries.map((entry) => (
-							<FeedbackEntryItem key={entry.id} entry={entry} />
-						))}
-					</div>
-				</div>
-			)}
 		</div>
 	);
 }
