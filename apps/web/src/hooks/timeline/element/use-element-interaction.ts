@@ -191,6 +191,7 @@ export function useElementInteraction({
 	const [isPendingDrag, setIsPendingDrag] = useState(false);
 	const pendingDragRef = useRef<PendingDragState | null>(null);
 	const moveGroupRef = useRef<MoveGroup | null>(null);
+	const newTrackIdsRef = useRef<string[]>([]);
 	const groupMoveResultRef = useRef<GroupMoveResult | null>(null);
 	const lastMouseXRef = useRef(0);
 	const mouseDownLocationRef = useRef<{ x: number; y: number } | null>(null);
@@ -227,6 +228,7 @@ export function useElementInteraction({
 
 	const endDrag = useCallback(() => {
 		moveGroupRef.current = null;
+		newTrackIdsRef.current = [];
 		groupMoveResultRef.current = null;
 		setDragState(initialDragState);
 		setDragDropTarget(null);
@@ -262,7 +264,7 @@ export function useElementInteraction({
 					target: {
 						kind: "newTracks",
 						anchorInsertIndex: dropTarget.trackIndex,
-						newTrackIds: group.members.map(() => generateUUID()),
+						newTrackIds: newTrackIdsRef.current,
 					},
 				});
 			}
@@ -297,7 +299,7 @@ export function useElementInteraction({
 				target: {
 					kind: "newTracks",
 					anchorInsertIndex: dropTarget.trackIndex,
-					newTrackIds: group.members.map(() => generateUUID()),
+					newTrackIds: newTrackIdsRef.current,
 				},
 			});
 		},
@@ -386,18 +388,61 @@ export function useElementInteraction({
 					}
 
 					moveGroupRef.current = moveGroup;
-					groupMoveResultRef.current = null;
+					newTrackIdsRef.current = moveGroup.members.map(() => generateUUID());
 					const dragTimeOffsets: Record<string, number> = {};
 					for (const member of moveGroup.members) {
 						dragTimeOffsets[member.elementId] = member.timeOffset;
 					}
+					const {
+						snappedTime: initialSnappedTime,
+						snapPoint: initialSnapPoint,
+					} = getDragSnapResult({
+						frameSnappedTime: snappedTime,
+						group: moveGroup,
+					});
+					const verticalDragDirection = getVerticalDragDirection({
+						startMouseY: pendingDragRef.current.startMouseY,
+						currentMouseY: clientY,
+					});
+					const anchorDropTarget = getDragDropTarget({
+						clientX,
+						clientY,
+						elementId: pendingDragRef.current.elementId,
+						trackId: pendingDragRef.current.trackId,
+						tracks: sceneTracks,
+						tracksContainerRef,
+						tracksScrollRef,
+						headerRef,
+						zoomLevel,
+						snappedTime: initialSnappedTime,
+						verticalDragDirection,
+					});
+					const nextGroupMoveResult =
+						anchorDropTarget != null
+							? resolveGroupDragMove({
+									group: moveGroup,
+									snappedTime: initialSnappedTime,
+									dropTarget: anchorDropTarget,
+								})
+							: null;
+					groupMoveResultRef.current = nextGroupMoveResult;
+					setDragDropTarget(
+						anchorDropTarget &&
+							(anchorDropTarget.isNewTrack || !nextGroupMoveResult)
+							? {
+									...anchorDropTarget,
+									isNewTrack: true,
+								}
+							: null,
+					);
 					startDrag({
 						...pendingDragRef.current,
 						dragElementIds: moveGroup.members.map((member) => member.elementId),
 						dragTimeOffsets,
-						initialCurrentTime: snappedTime,
+						initialCurrentTime: initialSnappedTime,
 						initialCurrentMouseY: clientY,
 					});
+					onSnapPointChange?.(initialSnapPoint);
 					startedDragThisEvent = true;
 					pendingDragRef.current = null;
 					setIsPendingDrag(false);
@@ -533,28 +578,6 @@ export function useElementInteraction({
 				}
 			}
 
-			const dropTarget = getDragDropTarget({
-				clientX,
-				clientY,
-				elementId: dragState.elementId,
-				trackId: dragState.trackId,
-				tracks: sceneTracks,
-				tracksContainerRef,
-				tracksScrollRef,
-				headerRef,
-				zoomLevel,
-				snappedTime: dragState.currentTime,
-				verticalDragDirection: getVerticalDragDirection({
-					startMouseY: dragState.startMouseY,
-					currentMouseY: clientY,
-				}),
-			});
-			if (!dropTarget) {
-				endDrag();
-				onSnapPointChange?.(null);
-				return;
-			}
-			const snappedTime = dragState.currentTime;
 			const moveGroup = moveGroupRef.current;
 			if (!moveGroup) {
 				endDrag();
@@ -562,11 +585,7 @@ export function useElementInteraction({
 				return;
 			}
 
-			const groupMoveResult = resolveGroupDragMove({
-				group: moveGroup,
-				snappedTime,
-				dropTarget,
-			});
+			const groupMoveResult = groupMoveResultRef.current;
 			if (!groupMoveResult) {
 				endDrag();
 				onSnapPointChange?.(null);
@@ -604,18 +623,10 @@ export function useElementInteraction({
 		dragState.isDragging,
 		dragState.elementId,
 		dragState.startElementTime,
-		dragState.startMouseY,
 		dragState.trackId,
-		dragState.currentTime,
-		zoomLevel,
 		endDrag,
 		onSnapPointChange,
 		editor.timeline,
-		tracksContainerRef,
-		tracksScrollRef,
-		headerRef,
-		resolveGroupDragMove,
-		sceneTracks,
 	]);
 
 	useEffect(() => {

@@ -11,6 +11,7 @@ import type {
 import type { Transform } from "@/lib/rendering";
 import { buildMoveGroup } from "@/lib/timeline/group-move/build-group";
 import { resolveGroupMove } from "@/lib/timeline/group-move/resolve-move";
+import { snapGroupEdges } from "@/lib/timeline/group-move/snap";
 
 function buildTransform(): Transform {
 	return {
@@ -283,5 +284,108 @@ describe("group move", () => {
 				newStartTime: 6,
 			},
 		]);
+	});
+
+	test("snapGroupEdges snaps the closest group edge and preserves offsets", () => {
+		const tracks = buildTracks({
+			overlay: [
+				buildVideoTrack({
+					id: "overlay-video",
+					elements: [
+						buildVideoElement({ id: "video-1", startTime: 5, duration: 2 }),
+					],
+				}),
+				buildTextTrack({
+					id: "overlay-text",
+					elements: [
+						buildTextElement({ id: "text-1", startTime: 8, duration: 3 }),
+					],
+				}),
+			],
+			main: buildVideoTrack({
+				id: "main",
+				elements: [
+					buildVideoElement({ id: "video-snap", startTime: 10, duration: 4 }),
+				],
+			}),
+		});
+		const group = buildMoveGroup({
+			anchorRef: { trackId: "overlay-video", elementId: "video-1" },
+			selectedElements: [
+				{ trackId: "overlay-video", elementId: "video-1" },
+				{ trackId: "overlay-text", elementId: "text-1" },
+			],
+			tracks,
+		});
+		if (!group) {
+			throw new Error("Expected group");
+		}
+
+		const result = snapGroupEdges({
+			group,
+			anchorStartTime: 6,
+			tracks,
+			playheadTime: 100,
+			zoomLevel: 1,
+		});
+
+		expect(result).toEqual({
+			snappedAnchorStartTime: 7,
+			snapPoint: {
+				time: 10,
+				type: "element-start",
+				elementId: "video-snap",
+				trackId: "main",
+			},
+		});
+	});
+
+	test("snapGroupEdges returns the raw anchor time when nothing is within threshold", () => {
+		const tracks = buildTracks({
+			overlay: [
+				buildVideoTrack({
+					id: "overlay-video",
+					elements: [
+						buildVideoElement({ id: "video-1", startTime: 5, duration: 2 }),
+					],
+				}),
+				buildTextTrack({
+					id: "overlay-text",
+					elements: [
+						buildTextElement({ id: "text-1", startTime: 8, duration: 3 }),
+					],
+				}),
+			],
+			main: buildVideoTrack({
+				id: "main",
+				elements: [
+					buildVideoElement({ id: "video-snap", startTime: 100, duration: 4 }),
+				],
+			}),
+		});
+		const group = buildMoveGroup({
+			anchorRef: { trackId: "overlay-video", elementId: "video-1" },
+			selectedElements: [
+				{ trackId: "overlay-video", elementId: "video-1" },
+				{ trackId: "overlay-text", elementId: "text-1" },
+			],
+			tracks,
+		});
+		if (!group) {
+			throw new Error("Expected group");
+		}
+
+		const result = snapGroupEdges({
+			group,
+			anchorStartTime: 6,
+			tracks,
+			playheadTime: 200,
+			zoomLevel: 1000,
+		});
+
+		expect(result).toEqual({
+			snappedAnchorStartTime: 6,
+			snapPoint: null,
+		});
 	});
 });
