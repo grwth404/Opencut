@@ -66,7 +66,7 @@ import { DeleteProjectDialog } from "@/components/editor/dialogs/delete-project-
 import { ProjectInfoDialog } from "@/components/editor/dialogs/project-info-dialog";
 import { RenameProjectDialog } from "@/components/editor/dialogs/rename-project-dialog";
 import { cn } from "@/utils/ui";
-
+import { ChangelogNotification } from "@/lib/changelog/components/changelog-notification";
 const formatProjectDuration = ({
 	duration,
 }: {
@@ -107,6 +107,7 @@ export default function ProjectsPage() {
 		<div className="bg-background min-h-screen">
 			<MigrationDialog />
 			<StoragePersistenceDialog />
+			<ChangelogNotification />
 			<ProjectsHeader />
 			<ProjectsToolbar projectIds={projectsToDisplay.map((p) => p.id)} />
 			<main className="mx-auto px-4 pt-2 pb-6 flex flex-col gap-4">

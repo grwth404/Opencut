@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import { BasePage } from "@/app/base-page";
 import { Separator } from "@/components/ui/separator";
-import { type Release as ReleaseType, getSortedReleases } from "./utils";
+import {
+	type Release as ReleaseType,
+	getSortedReleases,
+} from "@/lib/changelog/utils";
 import {
 	ReleaseArticle,
 	ReleaseMeta,
 	ReleaseTitle,
 	ReleaseDescription,
 	ReleaseChanges,
-} from "./components/release";
+} from "@/lib/changelog/components/release";
 
 export const metadata: Metadata = {
 	title: "Changelog - OpenCut",

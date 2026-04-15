@@ -3,7 +3,7 @@ import { z } from "zod";
 
 const changelog = defineCollection({
 	name: "changelog",
-	directory: "content/changelog",
+	directory: "src/lib/changelog/entries",
 	include: "*.md",
 	schema: z.object({
 		content: z.string(),
@@ -12,6 +12,7 @@ const changelog = defineCollection({
 		published: z.boolean().default(true),
 		title: z.string(),
 		description: z.string().optional(),
+		summary: z.string().optional(),
 		changes: z.array(
 			z.object({
 				type: z.string(),
@@ -25,7 +26,8 @@ const changelog = defineCollection({
 		const sorted = [...publishedDocs].sort((a, b) =>
 			b.version.localeCompare(a.version, undefined, { numeric: true }),
 		);
-		const isLatest = doc.published !== false && sorted[0]?.version === doc.version;
+		const isLatest =
+			doc.published !== false && sorted[0]?.version === doc.version;
 		return { ...doc, isLatest };
 	},
 });
