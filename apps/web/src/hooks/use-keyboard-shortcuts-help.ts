@@ -57,6 +57,9 @@ export function useKeyboardShortcutsHelp() {
 			[TActionWithOptionalArgs, string[]]
 		>) {
 			const actionDef = ACTIONS[action];
+			if (!actionDef) {
+				continue;
+			}
 			result.push({
 				id: action,
 				keys,
