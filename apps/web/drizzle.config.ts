@@ -1,11 +1,15 @@
 import type { Config } from "drizzle-kit";
 import * as dotenv from "dotenv";
-import { webEnv } from "@/lib/env/web";
 
-if (webEnv.NODE_ENV === "production") {
+if (process.env.NODE_ENV === "production") {
 	dotenv.config({ path: ".env.production" });
 } else {
 	dotenv.config({ path: ".env.local" });
+}
+
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+	throw new Error("DATABASE_URL is not set");
 }
 
 export default {
@@ -15,8 +19,8 @@ export default {
 		table: "drizzle_migrations",
 	},
 	dbCredentials: {
-		url: webEnv.DATABASE_URL,
+		url: databaseUrl,
 	},
 	out: "./migrations",
-	strict: webEnv.NODE_ENV === "production",
+	strict: process.env.NODE_ENV === "production",
 } satisfies Config;
