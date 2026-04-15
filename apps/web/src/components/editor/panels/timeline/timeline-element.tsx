@@ -575,7 +575,7 @@ function ElementInner({
 							)}
 							style={{ height: `${baseTrackHeight}px` }}
 						>
-							<div className="flex flex-1 min-h-0 items-center overflow-hidden">
+							<div className="flex flex-1 min-h-0 h-full items-center overflow-hidden">
 								<ElementContent element={element} track={track} />
 							</div>
 						</div>

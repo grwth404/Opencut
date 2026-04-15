@@ -112,7 +112,7 @@ export function AudioWaveform({
 		async function load() {
 			let buffer = audioBuffer ?? null;
 
-			if (!buffer && audioUrl) {
+				if (!buffer && audioUrl) {
 				try {
 					const resp = await fetch(audioUrl);
 					const arrayBuffer = await resp.arrayBuffer();
