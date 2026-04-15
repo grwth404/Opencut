@@ -51,9 +51,7 @@ function migrateScene({ scene }: { scene: unknown }): unknown {
 	}
 
 	const mainTrack = findMainTrack({ tracks: scene.tracks });
-	if (!mainTrack) {
-		return scene;
-	}
+	const finalMainTrack = mainTrack ?? buildEmptyMainTrack();
 
 	return {
 		...scene,
@@ -65,7 +63,7 @@ function migrateScene({ scene }: { scene: unknown }): unknown {
 					(track): track is ProjectRecord =>
 						isRecord(track) && track.type !== "audio",
 				),
-			main: migrateTrack({ track: mainTrack }),
+			main: migrateTrack({ track: finalMainTrack }),
 			audio: scene.tracks
 				.map((track) => migrateTrack({ track }))
 				.filter(
@@ -73,6 +71,17 @@ function migrateScene({ scene }: { scene: unknown }): unknown {
 						isRecord(track) && track.type === "audio",
 				),
 		},
+	};
+}
+
+function buildEmptyMainTrack(): ProjectRecord {
+	return {
+		id: crypto.randomUUID(),
+		name: "Main",
+		type: "video",
+		elements: [],
+		muted: false,
+		hidden: false,
 	};
 }
 
