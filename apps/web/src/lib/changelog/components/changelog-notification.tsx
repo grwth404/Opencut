@@ -25,20 +25,17 @@ export function ChangelogNotification() {
 			// localStorage unavailable
 		}
 
-		// First-time visitor: record the version silently, nothing to announce.
-		if (storedVersion === null) {
-			try {
-				localStorage.setItem(STORAGE_KEY, latest.version);
-			} catch {
-				// ignore
-			}
-			return;
-		}
+		const isOutdated =
+			storedVersion === null ||
+			storedVersion.localeCompare(latest.version, undefined, {
+				numeric: true,
+			}) < 0;
 
-		// Already seen this version.
-		if (storedVersion === latest.version) return;
+		// TODO(v0.4): revert to the standard "null = first-time visitor, record silently"
+		// path. The null case intentionally shows the card for this release so existing
+		// users who never had the key get the 0.3.0 announcement.
+		if (!isOutdated) return;
 
-		// New version since last visit: record it and show the notification.
 		try {
 			localStorage.setItem(STORAGE_KEY, latest.version);
 		} catch {
