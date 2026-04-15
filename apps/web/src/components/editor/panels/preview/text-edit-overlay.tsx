@@ -4,14 +4,12 @@ import { useCallback, useEffect, useRef } from "react";
 import { usePreviewViewport } from "@/components/editor/panels/preview/preview-viewport";
 import { useEditor } from "@/hooks/use-editor";
 import type { TextElement } from "@/lib/timeline";
-import {
-	FONT_SIZE_SCALE_REFERENCE,
-} from "@/lib/text/typography";
 import { DEFAULTS } from "@/lib/timeline/defaults";
 import {
 	getElementLocalTime,
 	resolveTransformAtTime,
 } from "@/lib/animation";
+import { resolveTextLayout } from "@/lib/text/primitives";
 
 export function TextEditOverlay({
 	trackId,
@@ -82,20 +80,29 @@ export function TextEditOverlay({
 	});
 
 	const { x: displayScaleX } = viewport.getDisplayScale();
-
-	const scaledFontSize =
-		element.fontSize * (canvasSize.height / FONT_SIZE_SCALE_REFERENCE);
+	const resolvedTextLayout = resolveTextLayout({
+		text: {
+			content: element.content,
+			fontSize: element.fontSize,
+			fontFamily: element.fontFamily,
+			fontWeight: element.fontWeight,
+			fontStyle: element.fontStyle,
+			textAlign: element.textAlign,
+			textDecoration: element.textDecoration,
+			letterSpacing: element.letterSpacing,
+			lineHeight: element.lineHeight,
+		},
+		canvasHeight: canvasSize.height,
+	});
 
 	const lineHeight = element.lineHeight ?? DEFAULTS.text.lineHeight;
-	const fontWeight = element.fontWeight === "bold" ? "bold" : "normal";
-	const fontStyle = element.fontStyle === "italic" ? "italic" : "normal";
 	const canvasLetterSpacing = element.letterSpacing ?? 0;
-	const lineHeightPx = scaledFontSize * lineHeight;
+	const lineHeightPx = resolvedTextLayout.lineHeightPx;
 
 	const bg = element.background;
 	const shouldShowBackground =
 		bg.enabled && bg.color && bg.color !== "transparent";
-	const fontSizeRatio = element.fontSize / DEFAULTS.text.element.fontSize;
+	const fontSizeRatio = resolvedTextLayout.fontSizeRatio;
 	const canvasPaddingX = shouldShowBackground
 		? (bg.paddingX ?? DEFAULTS.text.background.paddingX) * fontSizeRatio
 		: 0;
@@ -123,10 +130,10 @@ export function TextEditOverlay({
 				aria-label="Edit text"
 				className="cursor-text select-text outline-none whitespace-pre"
 				style={{
-					fontSize: scaledFontSize,
+					fontSize: resolvedTextLayout.scaledFontSize,
 					fontFamily: element.fontFamily,
-					fontWeight,
-					fontStyle,
+					fontWeight: element.fontWeight === "bold" ? "bold" : "normal",
+					fontStyle: element.fontStyle === "italic" ? "italic" : "normal",
 					textAlign: element.textAlign,
 					letterSpacing: `${canvasLetterSpacing}px`,
 					lineHeight,

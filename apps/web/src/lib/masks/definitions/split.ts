@@ -1,11 +1,15 @@
 import { computeFeatherUpdate } from "../param-update";
-import type { ParamValues } from "@/lib/params";
 import type {
 	MaskDefinition,
 	MaskParamUpdateArgs,
 	SplitMaskParams,
 } from "@/lib/masks/types";
 import { halfPlaneSign, lineEdgeIntersection } from "../utils";
+import {
+	getLineMaskHandlePositions,
+	getLineMaskOverlay,
+} from "@/lib/masks/handle-positions";
+import { snapMaskInteraction } from "@/lib/masks/snap";
 
 // cos(π/2) returns ~6e-17 in JS, not 0. Values below this threshold are snapped
 // to exactly 0 to prevent opposite-sign float noise on canvas corners that lie
@@ -120,7 +124,7 @@ function computeSplitMaskParamUpdate({
 	startCanvasY,
 	bounds,
 	canvasSize,
-}: MaskParamUpdateArgs<SplitMaskParams>): ParamValues {
+}: MaskParamUpdateArgs<SplitMaskParams>): Partial<SplitMaskParams> {
 	if (handleId === "position") {
 		const rawX = startParams.centerX + deltaX / bounds.width;
 		const rawY = startParams.centerY + deltaY / bounds.height;
@@ -176,11 +180,41 @@ function computeSplitMaskParamUpdate({
 export const splitMaskDefinition: MaskDefinition<SplitMaskParams> = {
 	type: "split",
 	name: "Split",
-	overlayShape: "line",
 	features: {
 		hasPosition: true,
 		hasRotation: true,
 		sizeMode: "none",
+	},
+	interaction: {
+		getInteraction({
+			params,
+			bounds,
+			displayScale,
+			scaleX: _scaleX,
+			scaleY: _scaleY,
+		}) {
+			return {
+				handles: getLineMaskHandlePositions({
+					centerX: params.centerX,
+					centerY: params.centerY,
+					rotation: params.rotation,
+					feather: params.feather,
+					bounds,
+					displayScale,
+				}),
+				overlays: [
+					getLineMaskOverlay({
+						centerX: params.centerX,
+						centerY: params.centerY,
+						rotation: params.rotation,
+						bounds,
+					}),
+				],
+			};
+		},
+		snap(args) {
+			return snapMaskInteraction(args);
+		},
 	},
 	buildDefault() {
 		return {
@@ -230,6 +264,7 @@ export const splitMaskDefinition: MaskDefinition<SplitMaskParams> = {
 		},
 	],
 	renderer: {
+		renderMaskHandlesFeather: true,
 		renderMask({ resolvedParams, ctx, width, height, feather }) {
 			const { centerX, centerY, rotation } = resolvedParams as SplitMaskParams;
 			const { normalX, normalY, lineX, lineY } = splitLineGeometry({

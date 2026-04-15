@@ -7,6 +7,8 @@ import {
 	SectionHeader,
 	SectionTitle,
 } from "@/components/section";
+import { ColorPickerContent } from "@/components/ui/color-picker";
+import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import {
 	BACKGROUND_BLUR_INTENSITY_PRESETS,
 	DEFAULT_BACKGROUND_BLUR_INTENSITY,
@@ -23,6 +25,9 @@ const BLUR_PREVIEW_UNIFORM_DIMENSIONS = {
 	width: 1920,
 	height: 1080,
 } as const;
+
+const CUSTOM_COLOR_SWATCH_BACKGROUND =
+	"conic-gradient(from 180deg at 50% 50%, #ff5e5e 0deg, #ffb35e 55deg, #fff26b 110deg, #6bff8f 165deg, #5ee7ff 220deg, #6f7cff 275deg, #d76bff 330deg, #ff5e9b 360deg)";
 
 const BlurPreview = memo(
 	({
@@ -88,7 +93,7 @@ const BackgroundPreviews = memo(
 		onSelect,
 		useBackgroundColor = false,
 	}: {
-		backgrounds: string[];
+		backgrounds: readonly string[];
 		currentBackgroundColor: string;
 		isColorBackground: boolean;
 		onSelect: (bg: string) => void;
@@ -102,7 +107,7 @@ const BackgroundPreviews = memo(
 						className={cn(
 							"border-foreground/15 hover:border-primary aspect-square size-20 cursor-pointer rounded-sm border",
 							isColorBackground &&
-								bg === currentBackgroundColor &&
+								bg.toLowerCase() === currentBackgroundColor.toLowerCase() &&
 								"border-primary border-2",
 						)}
 						style={
@@ -133,10 +138,51 @@ const BackgroundPreviews = memo(
 
 BackgroundPreviews.displayName = "BackgroundPreviews";
 
+function CustomColorPreview({
+	currentBackgroundColor,
+	isSelected,
+	onPreview,
+	onCommit,
+}: {
+	currentBackgroundColor: string;
+	isSelected: boolean;
+	onPreview: (color: string) => void;
+	onCommit: (color: string) => void;
+}) {
+	return (
+		<Popover>
+			<PopoverTrigger asChild>
+				<button
+					className={cn(
+						"border-foreground/15 hover:border-primary relative aspect-square size-20 cursor-pointer overflow-hidden rounded-sm border",
+						isSelected && "border-primary border-2",
+					)}
+					type="button"
+					aria-label="Pick a custom background color"
+				>
+					<span
+						className="absolute inset-0"
+						style={{ background: CUSTOM_COLOR_SWATCH_BACKGROUND }}
+					/>
+					<span
+						className="absolute right-1 bottom-1 size-5 rounded-sm border border-white/70 shadow-sm"
+						style={{ backgroundColor: currentBackgroundColor }}
+					/>
+				</button>
+			</PopoverTrigger>
+			<ColorPickerContent
+				value={currentBackgroundColor.replace(/^#/, "").toUpperCase()}
+				onChange={(color) => onPreview(`#${color}`)}
+				onChangeEnd={(color) => onCommit(`#${color}`)}
+			/>
+		</Popover>
+	);
+}
+
 const COLOR_SECTIONS = [
-	{ title: "Colors", backgrounds: colors, useBackgroundColor: true },
-	{ title: "Pattern craft", backgrounds: patternCraftGradients },
-	{ title: "Syntax UI", backgrounds: syntaxUIGradients },
+	{ id: "colors", title: "Colors", backgrounds: colors, useBackgroundColor: true, showCustomPicker: true },
+	{ id: "pattern-craft", title: "Pattern craft", backgrounds: patternCraftGradients, showCustomPicker: false },
+	{ id: "syntax-ui", title: "Syntax UI", backgrounds: syntaxUIGradients, showCustomPicker: false },
 ] as const;
 
 export function BackgroundContent() {
@@ -152,10 +198,21 @@ export function BackgroundContent() {
 		[editor.project],
 	);
 
-	const handleColorSelect = useCallback(
+	const previewBackgroundColor = useCallback(
 		async (color: string) => {
 			await editor.project.updateSettings({
 				settings: { background: { type: "color", color } },
+				pushHistory: false,
+			});
+		},
+		[editor.project],
+	);
+
+	const commitBackgroundColor = useCallback(
+		async (color: string) => {
+			await editor.project.updateSettings({
+				settings: { background: { type: "color", color } },
+				pushHistory: true,
 			});
 		},
 		[editor.project],
@@ -172,6 +229,17 @@ export function BackgroundContent() {
 	const currentBackgroundColor = isColorBackground
 		? (activeProject.settings.background as { color: string }).color
 		: DEFAULT_BACKGROUND_COLOR;
+
+	const hasPresetColorMatch = colors.some(
+		(color) => color.toLowerCase() === currentBackgroundColor.toLowerCase(),
+	);
+
+	const handlePresetColorSelect = useCallback(
+		(color: string) => {
+			void commitBackgroundColor(color);
+		},
+		[commitBackgroundColor],
+	);
 
 	const blurPreviews = useMemo(
 		() =>
@@ -203,21 +271,29 @@ export function BackgroundContent() {
 			</Section>
 			{COLOR_SECTIONS.map((section) => (
 				<Section
-					key={section.title}
+					key={section.id}
 					collapsible
 					defaultOpen={false}
-					sectionKey={`settings:background-${section.title.toLowerCase().replace(/\s+/g, "-")}`}
+					sectionKey={`settings:background-${section.id}`}
 				>
 					<SectionHeader>
 						<SectionTitle>{section.title}</SectionTitle>
 					</SectionHeader>
 					<SectionContent>
 						<div className="flex flex-wrap gap-2">
+							{section.showCustomPicker ? (
+								<CustomColorPreview
+									currentBackgroundColor={currentBackgroundColor}
+									isSelected={isColorBackground && !hasPresetColorMatch}
+									onPreview={previewBackgroundColor}
+									onCommit={commitBackgroundColor}
+								/>
+							) : null}
 							<BackgroundPreviews
-								backgrounds={section.backgrounds as string[]}
+								backgrounds={section.backgrounds}
 								currentBackgroundColor={currentBackgroundColor}
 								isColorBackground={isColorBackground}
-								onSelect={handleColorSelect}
+								onSelect={handlePresetColorSelect}
 								useBackgroundColor={
 									"useBackgroundColor" in section
 										? section.useBackgroundColor

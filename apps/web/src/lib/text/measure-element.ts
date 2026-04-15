@@ -1,14 +1,14 @@
 import { CORNER_RADIUS_MIN } from "@/lib/text/background";
-import { FONT_SIZE_SCALE_REFERENCE } from "@/lib/text/typography";
 import { resolveNumberAtTime } from "@/lib/animation";
 import { DEFAULTS } from "@/lib/timeline/defaults";
 import type { TextBackground, TextElement } from "@/lib/timeline";
 import {
-	measureTextBlock,
-	setCanvasLetterSpacing,
 	getTextVisualRect,
-	type TextBlockMeasurement,
 } from "./layout";
+import {
+	measureTextLayout,
+	type MeasuredTextLayout,
+} from "./primitives";
 
 export interface ResolvedTextBackground extends TextBackground {
 	paddingX: number;
@@ -18,15 +18,7 @@ export interface ResolvedTextBackground extends TextBackground {
 	cornerRadius: number;
 }
 
-export interface MeasuredTextElement {
-	scaledFontSize: number;
-	fontString: string;
-	letterSpacing: number;
-	lineHeightPx: number;
-	lines: string[];
-	lineMetrics: TextMetrics[];
-	block: TextBlockMeasurement;
-	fontSizeRatio: number;
+export interface MeasuredTextElement extends MeasuredTextLayout {
 	resolvedBackground: ResolvedTextBackground;
 	visualRect: { left: number; top: number; width: number; height: number };
 }
@@ -75,28 +67,20 @@ export function measureTextElement({
 	localTime: number;
 	ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 }): MeasuredTextElement {
-	const scaledFontSize =
-		element.fontSize * (canvasHeight / FONT_SIZE_SCALE_REFERENCE);
-	const fontWeight = element.fontWeight === "bold" ? "bold" : "normal";
-	const fontStyle = element.fontStyle === "italic" ? "italic" : "normal";
-	const fontFamily = `"${element.fontFamily.replace(/"/g, '\\"')}"`;
-	const fontString = `${fontStyle} ${fontWeight} ${scaledFontSize}px ${fontFamily}, sans-serif`;
-	const letterSpacing = element.letterSpacing ?? 0;
-	const lineHeightPx =
-		scaledFontSize * (element.lineHeight ?? DEFAULTS.text.lineHeight);
-	const fontSizeRatio = element.fontSize / DEFAULTS.text.element.fontSize;
-	const lines = element.content.split("\n");
-
-	ctx.save();
-	ctx.font = fontString;
-	ctx.textBaseline = "middle";
-	setCanvasLetterSpacing({ ctx, letterSpacingPx: letterSpacing });
-	const lineMetrics = lines.map((line) => ctx.measureText(line));
-	ctx.restore();
-
-	const block = measureTextBlock({
-		lineMetrics,
-		lineHeightPx,
+	const measuredLayout = measureTextLayout({
+		text: {
+			content: element.content,
+			fontSize: element.fontSize,
+			fontFamily: element.fontFamily,
+			fontWeight: element.fontWeight,
+			fontStyle: element.fontStyle,
+			textAlign: element.textAlign,
+			textDecoration: element.textDecoration,
+			letterSpacing: element.letterSpacing,
+			lineHeight: element.lineHeight,
+		},
+		canvasHeight,
+		ctx,
 	});
 
 	const bg = element.background;
@@ -136,20 +120,13 @@ export function measureTextElement({
 
 	const visualRect = getTextVisualRect({
 		textAlign: element.textAlign,
-		block,
+		block: measuredLayout.block,
 		background: resolvedBackground,
-		fontSizeRatio,
+		fontSizeRatio: measuredLayout.fontSizeRatio,
 	});
 
 	return {
-		scaledFontSize,
-		fontString,
-		letterSpacing,
-		lineHeightPx,
-		lines,
-		lineMetrics,
-		block,
-		fontSizeRatio,
+		...measuredLayout,
 		resolvedBackground,
 		visualRect,
 	};

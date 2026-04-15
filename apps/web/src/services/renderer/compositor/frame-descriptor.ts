@@ -401,6 +401,11 @@ function buildMaskArtifacts({
 	}
 
 	const definition = masksRegistry.get(mask.type);
+
+	if (definition.isActive?.(mask.params) === false) {
+		return { mask: null, strokeLayer: null };
+	}
+
 	const elementMaskCanvas = createOffscreenCanvas({
 		width: Math.round(transform.width),
 		height: Math.round(transform.height),
@@ -416,7 +421,12 @@ function buildMaskArtifacts({
 
 	let strokePath: Path2D | null = null;
 	let feather = mask.params.feather;
-	if (mask.params.feather > 0 && definition.renderer.renderMask) {
+	const canRenderMaskDirectly = Boolean(definition.renderer.renderMask);
+	const shouldRenderMaskDirectly =
+		canRenderMaskDirectly &&
+		(!definition.renderer.buildPath ||
+			(mask.params.feather > 0 && definition.renderer.renderMaskHandlesFeather));
+	if (shouldRenderMaskDirectly && definition.renderer.renderMask) {
 		definition.renderer.renderMask({
 			resolvedParams: mask.params,
 			ctx: elementMaskCtx,
@@ -424,13 +434,18 @@ function buildMaskArtifacts({
 			height: Math.round(transform.height),
 			feather: mask.params.feather,
 		});
-		feather = 0;
+		if (definition.renderer.renderMaskHandlesFeather) {
+			feather = 0;
+		}
 		strokePath = definition.renderer.buildStrokePath?.({
 			resolvedParams: mask.params,
 			width: transform.width,
 			height: transform.height,
 		}) ?? null;
 	} else {
+		if (!definition.renderer.buildPath) {
+			return { mask: null, strokeLayer: null };
+		}
 		const path2d = definition.renderer.buildPath({
 			resolvedParams: mask.params,
 			width: transform.width,
@@ -472,7 +487,7 @@ function buildMaskArtifacts({
 	});
 
 	let strokeLayer: FrameItemDescriptor | null = null;
-	if (mask.params.strokeWidth > 0 && strokePath) {
+	if (mask.params.strokeWidth > 0 && (strokePath || definition.renderer.renderStroke)) {
 		const strokeCanvas = createOffscreenCanvas({
 			width: Math.round(transform.width),
 			height: Math.round(transform.height),
@@ -482,9 +497,18 @@ function buildMaskArtifacts({
 			| OffscreenCanvasRenderingContext2D
 			| null;
 		if (strokeCtx) {
-			strokeCtx.strokeStyle = mask.params.strokeColor;
-			strokeCtx.lineWidth = mask.params.strokeWidth;
-			strokeCtx.stroke(strokePath);
+			if (definition.renderer.renderStroke) {
+				definition.renderer.renderStroke({
+					resolvedParams: mask.params,
+					ctx: strokeCtx,
+					width: transform.width,
+					height: transform.height,
+				});
+			} else if (strokePath) {
+				strokeCtx.strokeStyle = mask.params.strokeColor;
+				strokeCtx.lineWidth = mask.params.strokeWidth;
+				strokeCtx.stroke(strokePath);
+			}
 
 			const fullStrokeCanvas = createOffscreenCanvas({
 				width: renderer.width,

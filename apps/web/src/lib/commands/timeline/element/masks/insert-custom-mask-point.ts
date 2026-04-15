@@ -1,0 +1,169 @@
+import { EditorCore } from "@/core";
+import { Command, type CommandResult } from "@/lib/commands/base-command";
+import { insertPointOnCustomMaskSegment } from "@/lib/masks/definitions/custom";
+import type { ElementBounds } from "@/lib/preview/element-bounds";
+import type { CustomMask } from "@/lib/masks/types";
+import { isMaskableElement, updateElementInSceneTracks } from "@/lib/timeline";
+import type { MaskableElement, SceneTracks } from "@/lib/timeline";
+
+function insertPointIntoCustomMask({
+	mask,
+	segmentIndex,
+	canvasPoint,
+	bounds,
+}: {
+	mask: CustomMask;
+	segmentIndex: number;
+	canvasPoint: { x: number; y: number };
+	bounds: ElementBounds;
+}): { mask: CustomMask; insertedPointId: string | null } {
+	const result = insertPointOnCustomMaskSegment({
+		params: mask.params,
+		segmentIndex,
+		canvasPoint,
+		bounds,
+	});
+	if (!result) {
+		return {
+			mask,
+			insertedPointId: null,
+		};
+	}
+
+	return {
+		mask: {
+			...mask,
+			params: result.params,
+		},
+		insertedPointId: result.pointId,
+	};
+}
+
+function insertPointIntoElementMask({
+	element,
+	maskId,
+	segmentIndex,
+	canvasPoint,
+	bounds,
+}: {
+	element: MaskableElement;
+	maskId: string;
+	segmentIndex: number;
+	canvasPoint: { x: number; y: number };
+	bounds: ElementBounds;
+}): {
+	element: MaskableElement;
+	didInsertPoint: boolean;
+	insertedPointId: string | null;
+} {
+	const currentMasks = element.masks ?? [];
+	let insertedPointId: string | null = null;
+	let didInsertPoint = false;
+
+	const nextMasks = currentMasks.map((mask) => {
+		if (mask.id !== maskId || mask.type !== "custom") {
+			return mask;
+		}
+
+		const result = insertPointIntoCustomMask({
+			mask,
+			segmentIndex,
+			canvasPoint,
+			bounds,
+		});
+		if (result.insertedPointId) {
+			insertedPointId = result.insertedPointId;
+			didInsertPoint = true;
+		}
+		return result.mask;
+	});
+
+	return {
+		element: didInsertPoint ? { ...element, masks: nextMasks } : element,
+		didInsertPoint,
+		insertedPointId,
+	};
+}
+
+export class InsertCustomMaskPointCommand extends Command {
+	private savedState: SceneTracks | null = null;
+	private readonly trackId: string;
+	private readonly elementId: string;
+	private readonly maskId: string;
+	private readonly segmentIndex: number;
+	private readonly canvasPoint: { x: number; y: number };
+	private readonly bounds: ElementBounds;
+
+	constructor({
+		trackId,
+		elementId,
+		maskId,
+		segmentIndex,
+		canvasPoint,
+		bounds,
+	}: {
+		trackId: string;
+		elementId: string;
+		maskId: string;
+		segmentIndex: number;
+		canvasPoint: { x: number; y: number };
+		bounds: ElementBounds;
+	}) {
+		super();
+		this.trackId = trackId;
+		this.elementId = elementId;
+		this.maskId = maskId;
+		this.segmentIndex = segmentIndex;
+		this.canvasPoint = canvasPoint;
+		this.bounds = bounds;
+	}
+
+	execute(): CommandResult | undefined {
+		const editor = EditorCore.getInstance();
+		this.savedState = editor.scenes.getActiveScene().tracks;
+
+		let didInsertPoint = false;
+		let insertedPointId: string | null = null;
+		const updatedTracks = updateElementInSceneTracks({
+			tracks: this.savedState,
+			trackId: this.trackId,
+			elementId: this.elementId,
+			elementPredicate: isMaskableElement,
+			update: (element) => {
+				const result = insertPointIntoElementMask({
+					element: element as MaskableElement,
+					maskId: this.maskId,
+					segmentIndex: this.segmentIndex,
+					canvasPoint: this.canvasPoint,
+					bounds: this.bounds,
+				});
+				didInsertPoint ||= result.didInsertPoint;
+				insertedPointId ??= result.insertedPointId;
+				return result.element;
+			},
+		});
+
+		if (!didInsertPoint || !insertedPointId) {
+			return undefined;
+		}
+
+		editor.timeline.updateTracks(updatedTracks);
+		return {
+			selection: {
+				selectedMaskPoints: {
+					trackId: this.trackId,
+					elementId: this.elementId,
+					maskId: this.maskId,
+					pointIds: [insertedPointId],
+				},
+			},
+		};
+	}
+
+	undo(): void {
+		if (this.savedState) {
+			const editor = EditorCore.getInstance();
+			editor.timeline.updateTracks(this.savedState);
+		}
+	}
+}

@@ -1,6 +1,7 @@
 import type { MaskDefinition, RectangleMaskParams } from "@/lib/masks/types";
 import {
 	BOX_LIKE_MASK_PARAMS,
+	buildBoxMaskInteraction,
 	computeBoxMaskParamUpdate,
 	getBoxLikeGeometry,
 	getDefaultSquareMaskParams,
@@ -87,16 +88,18 @@ function buildOverlayStarPath({
 export const starMaskDefinition: MaskDefinition<RectangleMaskParams> = {
 	type: "star",
 	name: "Star",
-	overlayShape: "box",
-	buildOverlayPath({ width, height }) {
-		return buildOverlayStarPath({ width, height });
-	},
 	features: {
 		hasPosition: true,
 		hasRotation: true,
 		sizeMode: "width-height",
 	},
 	params: BOX_LIKE_MASK_PARAMS,
+	interaction: buildBoxMaskInteraction({
+		sizeMode: "width-height",
+		buildOverlayPath({ width, height }) {
+			return buildOverlayStarPath({ width, height });
+		},
+	}),
 	buildDefault(context) {
 		return {
 			type: "star",

@@ -9,9 +9,34 @@ import { cn } from "@/utils/ui";
 const BAR_WIDTH = 2;
 const BAR_GAP = 1;
 const BAR_STEP = BAR_WIDTH + BAR_GAP;
+export const WAVEFORM_GAIN_SAMPLE_COUNT = 200;
+
+function sampleGain({
+	samples,
+	startFraction,
+	endFraction,
+	barIndex,
+	barCount,
+}: {
+	samples: number[];
+	startFraction: number;
+	endFraction: number;
+	barIndex: number;
+	barCount: number;
+}): number {
+	if (samples.length === 0) return 1;
+	const progress =
+		startFraction +
+		((barIndex + 0.5) / barCount) * (endFraction - startFraction);
+	const rawIndex = Math.max(0, Math.min(1, progress)) * (samples.length - 1);
+	const lo = Math.floor(rawIndex);
+	const hi = Math.min(samples.length - 1, lo + 1);
+	return samples[lo] + (samples[hi] - samples[lo]) * (rawIndex - lo);
+}
 interface AudioWaveformProps {
 	audioUrl?: string;
 	audioBuffer?: AudioBuffer;
+	gainSamples?: number[];
 	color?: string;
 	className?: string;
 }
@@ -19,6 +44,7 @@ interface AudioWaveformProps {
 export function AudioWaveform({
 	audioUrl,
 	audioBuffer,
+	gainSamples,
 	color = "rgba(255, 255, 255, 0.7)",
 	className = "",
 }: AudioWaveformProps) {
@@ -26,6 +52,7 @@ export function AudioWaveform({
 	const containerRef = useRef<HTMLDivElement>(null);
 	const bufferRef = useRef<AudioBuffer | null>(null);
 	const globalMaxRef = useRef<number>(1);
+	const gainSamplesRef = useRef<number[] | undefined>(gainSamples);
 	const scrollParentRef = useRef<HTMLElement | null>(null);
 	const heightRef = useRef<number>(0);
 
@@ -99,12 +126,29 @@ export function AudioWaveform({
 
 		const maxBarHeight = height * 0.7;
 
+		const samples = gainSamplesRef.current;
 		for (let i = 0; i < barCount; i++) {
-			const scaled = Math.log1p(peaks[i]) / Math.log1p(1);
+			const gain =
+				samples != null
+					? sampleGain({
+							samples,
+							startFraction,
+							endFraction,
+							barIndex: i,
+							barCount,
+						})
+					: 1;
+			const scaledPeak = Math.min(1, Math.max(0, peaks[i] * gain));
+			const scaled = Math.log1p(scaledPeak) / Math.log1p(1);
 			const barH = Math.max(1, scaled * maxBarHeight);
 			ctx.fillRect(i * BAR_STEP, height - barH, BAR_WIDTH, barH);
 		}
 	}, [color]);
+
+	useEffect(() => {
+		gainSamplesRef.current = gainSamples;
+		drawVisible();
+	}, [gainSamples, drawVisible]);
 
 	useEffect(() => {
 		let isCancelled = false;
@@ -112,7 +156,7 @@ export function AudioWaveform({
 		async function load() {
 			let buffer = audioBuffer ?? null;
 
-				if (!buffer && audioUrl) {
+			if (!buffer && audioUrl) {
 				try {
 					const resp = await fetch(audioUrl);
 					const arrayBuffer = await resp.arrayBuffer();

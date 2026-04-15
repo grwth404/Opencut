@@ -1,31 +1,23 @@
 "use client";
 
+import { PEN_CURSOR } from "@/components/editor/panels/preview/cursors";
 import { usePreviewViewport } from "@/components/editor/panels/preview/preview-viewport";
 import { useMaskHandles } from "@/hooks/use-mask-handles";
-import { masksRegistry } from "@/lib/masks";
 import type { SnapLine } from "@/lib/preview/preview-snap";
-import type { ParamValues } from "@/lib/params";
-import type { RectangleMaskParams } from "@/lib/masks/types";
 import {
 	CornerHandle,
+	CircleHandle,
+	CanvasPathOutline,
 	EdgeHandle,
 	IconHandle,
 	LineOverlay,
 	BoundingBoxOutline,
 	ShapeOutline,
 } from "./handle-primitives";
-import { Rotate01Icon, FeatherIcon } from "@hugeicons/core-free-icons";
 
-function hasRectangleOutlineParams(
-	params: ParamValues,
-): params is RectangleMaskParams {
-	return (
-		typeof params.centerX === "number" &&
-		typeof params.centerY === "number" &&
-		typeof params.width === "number" &&
-		typeof params.height === "number"
-	);
-}
+const CUSTOM_MASK_ANCHOR_SIZE = 7;
+const CUSTOM_MASK_TANGENT_SIZE = 6;
+import { Rotate01Icon, FeatherIcon } from "@hugeicons/core-free-icons";
 
 export function MaskHandles({
 	onSnapLinesChange,
@@ -36,7 +28,9 @@ export function MaskHandles({
 	const {
 		selectedWithMask,
 		handlePositions,
-		linePoints,
+		overlays,
+		isCreatingCustomMask,
+		handleCanvasPointerDown,
 		handlePointerDown,
 		handlePointerMove,
 		handlePointerUp,
@@ -56,96 +50,158 @@ export function MaskHandles({
 			canvasY,
 		});
 
-	const def = masksRegistry.get(selectedWithMask.mask.type);
-	const { bounds } = selectedWithMask;
-	const maskRotation = selectedWithMask.mask.params.rotation;
-
 	const { x: scaleX, y: scaleY } = viewport.getDisplayScale();
+	const canvasOrigin = toOverlay({ canvasX: 0, canvasY: 0 });
 
-	const rectangleOutlineProps = hasRectangleOutlineParams(
-		selectedWithMask.mask.params,
-	)
-		? {
-				center: toOverlay({
-					canvasX:
-						bounds.cx + selectedWithMask.mask.params.centerX * bounds.width,
-					canvasY:
-						bounds.cy + selectedWithMask.mask.params.centerY * bounds.height,
-				}),
-				outlineWidth:
-					selectedWithMask.mask.params.width * bounds.width * scaleX,
-				outlineHeight:
-					selectedWithMask.mask.params.height * bounds.height * scaleY,
-				rotation: maskRotation,
-			}
-		: null;
+	const onPointerMove = (event: React.PointerEvent) => {
+		if (viewport.handlePanPointerMove({ event })) {
+			return;
+		}
 
-	const onPointerMove = (event: React.PointerEvent) =>
 		handlePointerMove({ event });
-	const onPointerUp = () => handlePointerUp();
+	};
+	const onPointerUp = (event: React.PointerEvent) => {
+		if (viewport.handlePanPointerUp({ event })) {
+			return;
+		}
+
+		handlePointerUp();
+	};
+	const handleMaskPointerDown = ({
+		event,
+		handleId,
+	}: {
+		event: React.PointerEvent;
+		handleId: string;
+	}) => {
+		if (viewport.handlePanPointerDown({ event })) {
+			return;
+		}
+
+		handlePointerDown({ event, handleId });
+	};
+	const handleCanvasOverlayPointerDown = (event: React.PointerEvent) => {
+		if (viewport.handlePanPointerDown({ event })) {
+			return;
+		}
+
+		handleCanvasPointerDown({ event });
+	};
 
 	return (
 		<div
 			className="pointer-events-none absolute inset-0 overflow-hidden"
 			aria-hidden
 		>
-			{def.overlayShape === "line" && linePoints && (
-				<LineOverlay
-					start={toOverlay({
-						canvasX: linePoints.start.x,
-						canvasY: linePoints.start.y,
-					})}
-					end={toOverlay({
-						canvasX: linePoints.end.x,
-						canvasY: linePoints.end.y,
-					})}
-					onPointerDown={(event) =>
-						handlePointerDown({ event, handleId: "position" })
-					}
+			{isCreatingCustomMask ? (
+				<div
+					className="absolute inset-0 pointer-events-auto"
+					style={{ cursor: PEN_CURSOR }}
+					onPointerDown={handleCanvasOverlayPointerDown}
 					onPointerMove={onPointerMove}
 					onPointerUp={onPointerUp}
+					onPointerCancel={onPointerUp}
 				/>
-			)}
-			{def.overlayShape === "box" && rectangleOutlineProps && (
-				def.buildOverlayPath ? (
-						<>
-							<BoundingBoxOutline {...rectangleOutlineProps} dashed />
-							<ShapeOutline
-								{...rectangleOutlineProps}
-								pathData={def.buildOverlayPath({
-									width: rectangleOutlineProps.outlineWidth,
-									height: rectangleOutlineProps.outlineHeight,
-								})}
-								onPointerDown={(event) =>
-									handlePointerDown({ event, handleId: "position" })
-								}
-								onPointerMove={onPointerMove}
-								onPointerUp={onPointerUp}
-							/>
-						</>
-					) : (
-						<BoundingBoxOutline
-							{...rectangleOutlineProps}
-							cursor="cursor-move"
-							onPointerDown={(event) =>
-								handlePointerDown({ event, handleId: "position" })
-							}
-							onPointerMove={onPointerMove}
-							onPointerUp={onPointerUp}
+			) : null}
+			{overlays.map((overlay) => {
+				const overlayHandleId = overlay.handleId;
+				const pointerHandlers = overlayHandleId
+					? {
+							onPointerDown: (event: React.PointerEvent) =>
+								handleMaskPointerDown({ event, handleId: overlayHandleId }),
+							onPointerMove,
+							onPointerUp,
+						}
+					: {};
+
+				if (overlay.type === "line") {
+					return (
+						<LineOverlay
+							key={overlay.id}
+							cursor={overlay.cursor}
+							start={toOverlay({
+								canvasX: overlay.start.x,
+								canvasY: overlay.start.y,
+							})}
+							end={toOverlay({
+								canvasX: overlay.end.x,
+								canvasY: overlay.end.y,
+							})}
+							{...pointerHandlers}
 						/>
-					)
-			)}
+					);
+				}
+
+				if (overlay.type === "rect") {
+					return (
+						<BoundingBoxOutline
+							key={overlay.id}
+							center={toOverlay({
+								canvasX: overlay.center.x,
+								canvasY: overlay.center.y,
+							})}
+							outlineWidth={overlay.width * scaleX}
+							outlineHeight={overlay.height * scaleY}
+							rotation={overlay.rotation}
+							cursor={overlay.cursor}
+							dashed={overlay.dashed}
+							{...pointerHandlers}
+						/>
+					);
+				}
+
+				if (overlay.type === "shape") {
+					return (
+						<ShapeOutline
+							key={overlay.id}
+							center={toOverlay({
+								canvasX: overlay.center.x,
+								canvasY: overlay.center.y,
+							})}
+							outlineWidth={overlay.width * scaleX}
+							outlineHeight={overlay.height * scaleY}
+							rotation={overlay.rotation}
+							pathData={overlay.pathData}
+							cursor={overlay.cursor}
+							{...pointerHandlers}
+						/>
+					);
+				}
+
+				if (overlay.type === "canvas-path") {
+					return (
+						<CanvasPathOutline
+							key={overlay.id}
+							pathData={overlay.pathData}
+							translateX={
+								overlay.coordinateSpace === "canvas" ? canvasOrigin.x : 0
+							}
+							translateY={
+								overlay.coordinateSpace === "canvas" ? canvasOrigin.y : 0
+							}
+							scaleX={overlay.coordinateSpace === "canvas" ? scaleX : 1}
+							scaleY={overlay.coordinateSpace === "canvas" ? scaleY : 1}
+							cursor={overlay.cursor}
+							strokeWidth={overlay.strokeWidth}
+							strokeOpacity={overlay.strokeOpacity}
+							{...pointerHandlers}
+						/>
+					);
+				}
+
+				return null;
+			})}
 			{handlePositions.map((handle) => {
 				const screen = toOverlay({ canvasX: handle.x, canvasY: handle.y });
 
-				if (handle.id === "rotation") {
+				if (handle.kind === "icon" && handle.icon === "rotate") {
 					return (
 						<IconHandle
 							key={handle.id}
 							icon={Rotate01Icon}
 							screen={screen}
 							onPointerDown={(event) =>
-								handlePointerDown({ event, handleId: handle.id })
+								handleMaskPointerDown({ event, handleId: handle.id })
 							}
 							onPointerMove={onPointerMove}
 							onPointerUp={onPointerUp}
@@ -153,14 +209,14 @@ export function MaskHandles({
 					);
 				}
 
-				if (handle.id === "feather") {
+				if (handle.kind === "icon" && handle.icon === "feather") {
 					return (
 						<IconHandle
 							key={handle.id}
 							icon={FeatherIcon}
 							screen={screen}
 							onPointerDown={(event) =>
-								handlePointerDown({ event, handleId: handle.id })
+								handleMaskPointerDown({ event, handleId: handle.id })
 							}
 							onPointerMove={onPointerMove}
 							onPointerUp={onPointerUp}
@@ -168,15 +224,15 @@ export function MaskHandles({
 					);
 				}
 
-				if (handle.id === "right" || handle.id === "left") {
+				if (handle.kind === "edge" && handle.edgeAxis === "horizontal") {
 					return (
 						<EdgeHandle
 							key={handle.id}
 							edge="right"
 							screen={screen}
-							rotation={maskRotation}
+							rotation={handle.rotation ?? 0}
 							onPointerDown={(event) =>
-								handlePointerDown({ event, handleId: handle.id })
+								handleMaskPointerDown({ event, handleId: handle.id })
 							}
 							onPointerMove={onPointerMove}
 							onPointerUp={onPointerUp}
@@ -184,15 +240,15 @@ export function MaskHandles({
 					);
 				}
 
-				if (handle.id === "bottom" || handle.id === "top") {
+				if (handle.kind === "edge" && handle.edgeAxis === "vertical") {
 					return (
 						<EdgeHandle
 							key={handle.id}
 							edge="bottom"
 							screen={screen}
-							rotation={maskRotation}
+							rotation={handle.rotation ?? 0}
 							onPointerDown={(event) =>
-								handlePointerDown({ event, handleId: handle.id })
+								handleMaskPointerDown({ event, handleId: handle.id })
 							}
 							onPointerMove={onPointerMove}
 							onPointerUp={onPointerUp}
@@ -200,19 +256,33 @@ export function MaskHandles({
 					);
 				}
 
-				if (
-					handle.id === "top-left" ||
-					handle.id === "top-right" ||
-					handle.id === "bottom-left" ||
-					handle.id === "bottom-right" ||
-					handle.id === "scale"
-				) {
+				if (handle.kind === "point" || handle.kind === "tangent") {
+					return (
+						<CircleHandle
+							key={handle.id}
+							screen={screen}
+							size={
+								handle.kind === "tangent"
+									? CUSTOM_MASK_TANGENT_SIZE
+									: CUSTOM_MASK_ANCHOR_SIZE
+							}
+							isSelected={handle.isSelected}
+							onPointerDown={(event) =>
+								handleMaskPointerDown({ event, handleId: handle.id })
+							}
+							onPointerMove={onPointerMove}
+							onPointerUp={onPointerUp}
+						/>
+					);
+				}
+
+				if (handle.kind === "corner") {
 					return (
 						<CornerHandle
 							key={handle.id}
 							screen={screen}
 							onPointerDown={(event) =>
-								handlePointerDown({ event, handleId: handle.id })
+								handleMaskPointerDown({ event, handleId: handle.id })
 							}
 							onPointerMove={onPointerMove}
 							onPointerUp={onPointerUp}
@@ -226,7 +296,7 @@ export function MaskHandles({
 						cursor={handle.cursor}
 						screen={screen}
 						onPointerDown={(event) =>
-							handlePointerDown({ event, handleId: handle.id })
+							handleMaskPointerDown({ event, handleId: handle.id })
 						}
 						onPointerMove={onPointerMove}
 						onPointerUp={onPointerUp}

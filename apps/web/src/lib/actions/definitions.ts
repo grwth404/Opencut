@@ -82,7 +82,7 @@ export const ACTIONS = {
 		category: "editing",
 	},
 	"delete-selected": {
-		description: "Delete selected elements",
+		description: "Delete current selection",
 		category: "editing",
 	},
 	"copy-selected": {

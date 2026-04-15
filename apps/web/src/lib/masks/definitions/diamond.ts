@@ -1,6 +1,7 @@
 import type { MaskDefinition, RectangleMaskParams } from "@/lib/masks/types";
 import {
 	BOX_LIKE_MASK_PARAMS,
+	buildBoxMaskInteraction,
 	computeBoxMaskParamUpdate,
 	getBoxLikeGeometry,
 	getDefaultSquareMaskParams,
@@ -47,16 +48,18 @@ function buildDiamondPath({
 export const diamondMaskDefinition: MaskDefinition<RectangleMaskParams> = {
 	type: "diamond",
 	name: "Diamond",
-	overlayShape: "box",
-	buildOverlayPath({ width, height }) {
-		return `M ${width / 2},0 L ${width},${height / 2} L ${width / 2},${height} L 0,${height / 2} Z`;
-	},
 	features: {
 		hasPosition: true,
 		hasRotation: true,
 		sizeMode: "width-height",
 	},
 	params: BOX_LIKE_MASK_PARAMS,
+	interaction: buildBoxMaskInteraction({
+		sizeMode: "width-height",
+		buildOverlayPath({ width, height }) {
+			return `M ${width / 2},0 L ${width},${height / 2} L ${width / 2},${height} L 0,${height / 2} Z`;
+		},
+	}),
 	buildDefault(context) {
 		return {
 			type: "diamond",

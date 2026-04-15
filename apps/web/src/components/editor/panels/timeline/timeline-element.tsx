@@ -2,7 +2,7 @@
 
 import { useEditor } from "@/hooks/use-editor";
 import { useAssetsPanelStore } from "@/stores/assets-panel-store";
-import { AudioWaveform } from "./audio-waveform";
+import { AudioWaveform, WAVEFORM_GAIN_SAMPLE_COUNT } from "./audio-waveform";
 import { useElementPreview } from "@/hooks/use-element-preview";
 import {
 	useKeyframeDrag,
@@ -44,6 +44,7 @@ import {
 	getSourceAudioActionLabel,
 	isSourceAudioSeparated,
 } from "@/lib/timeline/audio-separation";
+import { buildWaveformGainSamples } from "@/lib/timeline/audio-state";
 import {
 	getActionDefinition,
 	type TAction,
@@ -382,6 +383,7 @@ export function TimelineElement({
 				>
 					<ElementInner
 						element={element}
+						displayElement={renderElement}
 						track={track}
 						isSelected={isSelected}
 						isExpanded={expandedRows.length > 0}
@@ -498,6 +500,7 @@ export function TimelineElement({
 
 function ElementInner({
 	element,
+	displayElement,
 	track,
 	isSelected,
 	isExpanded,
@@ -509,6 +512,7 @@ function ElementInner({
 	isDropTarget = false,
 }: {
 	element: TimelineElementType;
+	displayElement?: TimelineElementType;
 	track: TimelineTrack;
 	isSelected: boolean;
 	isExpanded: boolean;
@@ -530,8 +534,10 @@ function ElementInner({
 	}) => void;
 	isDropTarget?: boolean;
 }) {
+	const visibleElement = displayElement ?? element;
 	const isReducedOpacity =
-		(canElementBeHidden(element) && element.hidden) || isDropTarget;
+		(canElementBeHidden(visibleElement) && visibleElement.hidden) ||
+		isDropTarget;
 	return (
 		<div
 			className="absolute top-0 bottom-0"
@@ -576,7 +582,7 @@ function ElementInner({
 							style={{ height: `${baseTrackHeight}px` }}
 						>
 							<div className="flex flex-1 min-h-0 h-full items-center overflow-hidden">
-								<ElementContent element={element} track={track} />
+								<ElementContent element={visibleElement} track={track} />
 							</div>
 						</div>
 						{expandedContent}
@@ -979,6 +985,11 @@ function AudioElementContent({ element }: { element: AudioElement }) {
 	const audioUrl =
 		element.sourceType === "library" ? element.sourceUrl : mediaAsset?.url;
 	const mediaLabel = mediaAsset?.name ?? element.name;
+	const gainSamples = useMemo(
+		() =>
+			buildWaveformGainSamples({ element, count: WAVEFORM_GAIN_SAMPLE_COUNT }),
+		[element],
+	);
 
 	if (audioBuffer || audioUrl) {
 		return (
@@ -986,6 +997,7 @@ function AudioElementContent({ element }: { element: AudioElement }) {
 				<AudioWaveform
 					audioBuffer={audioBuffer}
 					audioUrl={audioUrl}
+					gainSamples={gainSamples}
 					color={TIMELINE_TRACK_THEME.audio.waveformColor}
 				/>
 				<MediaElementHeader name={mediaLabel} hasFade={false} />

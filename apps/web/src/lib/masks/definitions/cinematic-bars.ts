@@ -5,6 +5,7 @@ import type {
 } from "@/lib/masks/types";
 import {
 	BOX_LIKE_MASK_PARAMS,
+	buildBoxMaskInteraction,
 	computeBoxMaskParamUpdate,
 	getDefaultBaseMaskParams,
 	getStrokeOffset,
@@ -73,16 +74,18 @@ function buildBandPath({
 export const cinematicBarsMaskDefinition: MaskDefinition<RectangleMaskParams> = {
 	type: "cinematic-bars",
 	name: "Cinematic Bars",
-	overlayShape: "box",
-	buildOverlayPath({ width, height }) {
-		return `M 0,0 H ${width} V ${height} H 0 Z`;
-	},
 	features: {
 		hasPosition: true,
 		hasRotation: true,
 		sizeMode: "height-only",
 	},
 	params: BOX_LIKE_MASK_PARAMS,
+	interaction: buildBoxMaskInteraction({
+		sizeMode: "height-only",
+		buildOverlayPath({ width, height }) {
+			return `M 0,0 H ${width} V ${height} H 0 Z`;
+		},
+	}),
 	buildDefault(context) {
 		return {
 			type: "cinematic-bars",

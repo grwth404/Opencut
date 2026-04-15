@@ -1,20 +1,30 @@
 import type { ElementBounds } from "@/lib/preview/element-bounds";
 import type { SnapLine } from "@/lib/preview/preview-snap";
 import { MIN_MASK_DIMENSION } from "@/lib/masks/dimensions";
-import type { ParamValues } from "@/lib/params";
 import type { RectangleMaskParams } from "@/lib/masks/types";
 
-export function hasCenterParams(params: ParamValues): params is ParamValues & {
+type CenterMaskParams = {
 	centerX: number;
 	centerY: number;
-} {
+};
+
+type SnapGeometryParams = CenterMaskParams & {
+	rotation?: number;
+	width?: number;
+	height?: number;
+	scale?: number;
+};
+
+export function hasCenterParams(
+	params: Partial<CenterMaskParams>,
+): params is CenterMaskParams {
 	return (
 		typeof params.centerX === "number" && typeof params.centerY === "number"
 	);
 }
 
 export function isRectangleMaskParams(
-	params: ParamValues,
+	params: SnapGeometryParams,
 ): params is RectangleMaskParams {
 	return (
 		hasCenterParams(params) &&
@@ -29,7 +39,7 @@ export function getMaskLocalCenter({
 	params,
 	bounds,
 }: {
-	params: ParamValues;
+	params: CenterMaskParams;
 	bounds: ElementBounds;
 }): { x: number; y: number } | null {
 	if (!hasCenterParams(params)) return null;
@@ -46,7 +56,7 @@ export function setMaskLocalCenter({
 }: {
 	center: { x: number; y: number };
 	bounds: ElementBounds;
-}): Pick<ParamValues, "centerX" | "centerY"> {
+}): { centerX: number; centerY: number } {
 	return {
 		centerX: bounds.width === 0 ? 0 : center.x / bounds.width,
 		centerY: bounds.height === 0 ? 0 : center.y / bounds.height,
@@ -57,7 +67,7 @@ export function getMaskSnapGeometry({
 	params,
 	bounds,
 }: {
-	params: ParamValues;
+	params: SnapGeometryParams;
 	bounds: ElementBounds;
 }): {
 	position: { x: number; y: number };
@@ -109,4 +119,3 @@ export function toGlobalMaskSnapLines({
 				},
 	);
 }
-

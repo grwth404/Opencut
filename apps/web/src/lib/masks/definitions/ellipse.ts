@@ -1,6 +1,7 @@
 import type { MaskDefinition, RectangleMaskParams } from "@/lib/masks/types";
 import {
 	BOX_LIKE_MASK_PARAMS,
+	buildBoxMaskInteraction,
 	computeBoxMaskParamUpdate,
 	getBoxLikeGeometry,
 	getDefaultSquareMaskParams,
@@ -10,20 +11,22 @@ import {
 export const ellipseMaskDefinition: MaskDefinition<RectangleMaskParams> = {
 	type: "ellipse",
 	name: "Ellipse",
-	overlayShape: "box",
-	buildOverlayPath({ width, height }) {
-		const rx = Math.max((width - 1) / 2, 0);
-		const ry = Math.max((height - 1) / 2, 0);
-		const cx = width / 2;
-		const cy = height / 2;
-		return `M ${cx},${cy - ry} A ${rx},${ry} 0 1,1 ${cx},${cy + ry} A ${rx},${ry} 0 1,1 ${cx},${cy - ry} Z`;
-	},
 	features: {
 		hasPosition: true,
 		hasRotation: true,
 		sizeMode: "width-height",
 	},
 	params: BOX_LIKE_MASK_PARAMS,
+	interaction: buildBoxMaskInteraction({
+		sizeMode: "width-height",
+		buildOverlayPath({ width, height }) {
+			const rx = Math.max((width - 1) / 2, 0);
+			const ry = Math.max((height - 1) / 2, 0);
+			const cx = width / 2;
+			const cy = height / 2;
+			return `M ${cx},${cy - ry} A ${rx},${ry} 0 1,1 ${cx},${cy + ry} A ${rx},${ry} 0 1,1 ${cx},${cy - ry} Z`;
+		},
+	}),
 	buildDefault(context) {
 		return {
 			type: "ellipse",

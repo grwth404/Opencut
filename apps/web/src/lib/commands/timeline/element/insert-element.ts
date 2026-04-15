@@ -102,18 +102,25 @@ export class InsertElementCommand extends Command {
 				});
 			}
 
-		if (asset?.type === "video" && asset?.fps) {
-			editor.project.updateSettings({
-				settings: { fps: floatToFrameRate(asset.fps) },
-				pushHistory: false,
-			});
-		}
+			if (asset?.type === "video" && asset?.fps) {
+				editor.project.updateSettings({
+					settings: { fps: floatToFrameRate(asset.fps) },
+					pushHistory: false,
+				});
+			}
 		}
 
 		editor.timeline.updateTracks(updatedTracks);
 
 		return {
-			select: [{ trackId: targetTrackId, elementId: this.elementId }],
+			selection: {
+				selectedElements: [
+					{ trackId: targetTrackId, elementId: this.elementId },
+				],
+				selectedKeyframes: [],
+				keyframeSelectionAnchor: null,
+				selectedMaskPoints: null,
+			},
 		};
 	}
 
@@ -173,7 +180,10 @@ export class InsertElementCommand extends Command {
 
 		if (element.type === "graphic") {
 			registerDefaultGraphics();
-			if (!element.definitionId || !graphicsRegistry.has(element.definitionId)) {
+			if (
+				!element.definitionId ||
+				!graphicsRegistry.has(element.definitionId)
+			) {
 				console.error("Graphic element must have a valid definitionId");
 				return false;
 			}
@@ -236,8 +246,8 @@ export class InsertElementCommand extends Command {
 				const targetTrack =
 					tracks.main.id === placement.trackId
 						? tracks.main
-						: tracks.overlay.find((track) => track.id === placement.trackId) ??
-							tracks.audio.find((track) => track.id === placement.trackId);
+						: (tracks.overlay.find((track) => track.id === placement.trackId) ??
+							tracks.audio.find((track) => track.id === placement.trackId));
 				if (!targetTrack) {
 					console.error("Track not found:", placement.trackId);
 					return null;
@@ -257,8 +267,7 @@ export class InsertElementCommand extends Command {
 			placementResult.kind === "existingTrack"
 				? {
 						...element,
-						startTime:
-							placementResult.adjustedStartTime ?? element.startTime,
+						startTime: placementResult.adjustedStartTime ?? element.startTime,
 					}
 				: element;
 

@@ -13,10 +13,10 @@ export const LINE_HIT_AREA_SIZE = 48;
 
 export function getResizeCursor({ angleDeg }: { angleDeg: number }): string {
 	const normalized = ((angleDeg % 180) + 180) % 180;
-	if (normalized < 22.5 || normalized >= 157.5) return "cursor-ew-resize";
-	if (normalized < 67.5) return "cursor-nwse-resize";
-	if (normalized < 112.5) return "cursor-ns-resize";
-	return "cursor-nesw-resize";
+	if (normalized < 22.5 || normalized >= 157.5) return "ew-resize";
+	if (normalized < 67.5) return "nwse-resize";
+	if (normalized < 112.5) return "ns-resize";
+	return "nesw-resize";
 }
 
 export function HandleButton({
@@ -43,7 +43,6 @@ export function HandleButton({
 			type="button"
 			className={cn(
 				"absolute flex items-center justify-center outline-none",
-				cursor,
 				className,
 			)}
 			style={{
@@ -52,6 +51,7 @@ export function HandleButton({
 				width: hitAreaSize,
 				height: hitAreaSize,
 				pointerEvents: "auto",
+				cursor,
 			}}
 			onPointerDown={onPointerDown}
 			onPointerMove={onPointerMove}
@@ -90,6 +90,40 @@ export function CornerHandle({
 			<div
 				className="rounded-sm bg-white"
 				style={{ width: HANDLE_SIZE, height: HANDLE_SIZE }}
+			/>
+		</HandleButton>
+	);
+}
+
+export function CircleHandle({
+	cursor,
+	screen,
+	size = HANDLE_SIZE,
+	isSelected = false,
+	onPointerDown,
+	onPointerMove,
+	onPointerUp,
+}: {
+	cursor?: string;
+	screen: { x: number; y: number };
+	size?: number;
+	isSelected?: boolean;
+	onPointerDown: (event: React.PointerEvent) => void;
+	onPointerMove: (event: React.PointerEvent) => void;
+	onPointerUp: (event: React.PointerEvent) => void;
+}) {
+	return (
+		<HandleButton
+			screen={screen}
+			cursor={cursor}
+			hitAreaSize={HANDLE_HIT_AREA_SIZE}
+			onPointerDown={onPointerDown}
+			onPointerMove={onPointerMove}
+			onPointerUp={onPointerUp}
+		>
+			<div
+				className={cn("rounded-full", isSelected ? "bg-primary" : "bg-white")}
+				style={{ width: size, height: size }}
 			/>
 		</HandleButton>
 	);
@@ -188,7 +222,7 @@ export function BoundingBoxOutline({
 }) {
 	return (
 		<svg
-			className={cn("absolute overflow-visible", cursor)}
+			className="absolute overflow-visible"
 			aria-hidden="true"
 			focusable="false"
 			style={{
@@ -199,6 +233,7 @@ export function BoundingBoxOutline({
 				transform: `rotate(${rotation}deg)`,
 				transformOrigin: "center center",
 				pointerEvents: onPointerDown ? "auto" : "none",
+				cursor,
 			}}
 			onPointerDown={onPointerDown}
 			onPointerMove={onPointerMove}
@@ -244,7 +279,7 @@ export function ShapeOutline({
 }) {
 	return (
 		<svg
-			className={cn("absolute overflow-visible", cursor)}
+			className="absolute overflow-visible"
 			aria-hidden="true"
 			focusable="false"
 			style={{
@@ -255,6 +290,7 @@ export function ShapeOutline({
 				transform: `rotate(${rotation}deg)`,
 				transformOrigin: "center center",
 				pointerEvents: onPointerDown ? "auto" : "none",
+				cursor,
 			}}
 			onPointerDown={onPointerDown}
 			onPointerMove={onPointerMove}
@@ -273,15 +309,73 @@ export function ShapeOutline({
 	);
 }
 
+export function CanvasPathOutline({
+	pathData,
+	translateX = 0,
+	translateY = 0,
+	scaleX = 1,
+	scaleY = 1,
+	cursor,
+	strokeWidth = 1,
+	strokeOpacity = 0.75,
+	onPointerDown,
+	onPointerMove,
+	onPointerUp,
+}: {
+	pathData: string;
+	translateX?: number;
+	translateY?: number;
+	scaleX?: number;
+	scaleY?: number;
+	cursor?: string;
+	strokeWidth?: number;
+	strokeOpacity?: number;
+	onPointerDown?: (event: React.PointerEvent) => void;
+	onPointerMove?: (event: React.PointerEvent) => void;
+	onPointerUp?: (event: React.PointerEvent) => void;
+}) {
+	return (
+		<svg
+			className="absolute inset-0 overflow-visible"
+			aria-hidden="true"
+			focusable="false"
+			style={{
+				pointerEvents: onPointerDown ? "auto" : "none",
+				cursor,
+			}}
+			onPointerDown={onPointerDown}
+			onPointerMove={onPointerMove}
+			onPointerUp={onPointerUp}
+			onPointerLeave={onPointerUp}
+		>
+			<g
+				transform={`translate(${translateX} ${translateY}) scale(${scaleX} ${scaleY})`}
+			>
+				<path
+					d={pathData}
+					fill="transparent"
+					stroke="white"
+					strokeWidth={strokeWidth}
+					strokeOpacity={strokeOpacity}
+					vectorEffect="non-scaling-stroke"
+					style={{ pointerEvents: onPointerDown ? "stroke" : "none" }}
+				/>
+			</g>
+		</svg>
+	);
+}
+
 export function LineOverlay({
 	start,
 	end,
+	cursor,
 	onPointerDown,
 	onPointerMove,
 	onPointerUp,
 }: {
 	start: { x: number; y: number };
 	end: { x: number; y: number };
+	cursor?: string;
 	onPointerDown?: (event: React.PointerEvent) => void;
 	onPointerMove?: (event: React.PointerEvent) => void;
 	onPointerUp?: (event: React.PointerEvent) => void;
@@ -310,6 +404,7 @@ export function LineOverlay({
 						top: cy - LINE_HIT_AREA_SIZE / 2,
 						height: LINE_HIT_AREA_SIZE,
 						pointerEvents: "auto",
+						cursor,
 					}}
 					onPointerDown={onPointerDown}
 					onPointerMove={onPointerMove}

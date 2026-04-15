@@ -21,19 +21,27 @@ export function useEditorActions() {
 	const editor = useEditor();
 	const { selectedElements, setElementSelection } = useElementSelection();
 	const { selectedKeyframes, clearKeyframeSelection } = useKeyframeSelection();
+	const selectedMaskPointSelection = useEditor((e) =>
+		e.selection.getSelectedMaskPointSelection(),
+	);
 	const toggleSnapping = useTimelineStore((s) => s.toggleSnapping);
 	const rippleEditingEnabled = useTimelineStore((s) => s.rippleEditingEnabled);
 	const toggleRippleEditing = useTimelineStore((s) => s.toggleRippleEditing);
 	const hasTimelineSelectionRef = useRef(false);
 	const clearTimelineSelectionRef = useRef(() => {});
+	const clearTimelineActiveSelectionRef = useRef(() => {});
 	const timelineScopeRef = useRef<ScopeEntry | null>(null);
 	const hasTimelineSelection =
-		selectedElements.length > 0 || selectedKeyframes.length > 0;
+		selectedElements.length > 0 ||
+		selectedKeyframes.length > 0 ||
+		selectedMaskPointSelection !== null;
 
 	hasTimelineSelectionRef.current = hasTimelineSelection;
 	clearTimelineSelectionRef.current = () => {
-		setElementSelection({ elements: [] });
-		clearKeyframeSelection();
+		editor.selection.clearSelection();
+	};
+	clearTimelineActiveSelectionRef.current = () => {
+		editor.selection.clearMostSpecificSelection();
 	};
 
 	if (!timelineScopeRef.current) {
@@ -41,6 +49,9 @@ export function useEditorActions() {
 			hasSelection: () => hasTimelineSelectionRef.current,
 			clear: () => {
 				clearTimelineSelectionRef.current();
+			},
+			clearActive: () => {
+				clearTimelineActiveSelectionRef.current();
 			},
 		};
 	}
@@ -257,17 +268,36 @@ export function useEditorActions() {
 	useActionHandler(
 		"delete-selected",
 		() => {
-			if (selectedKeyframes.length > 0) {
-				editor.timeline.removeKeyframes({ keyframes: selectedKeyframes });
-				clearKeyframeSelection();
-				return;
+			switch (editor.selection.getActiveSelectionKind()) {
+				case "mask-points":
+					if (!selectedMaskPointSelection) {
+						return;
+					}
+					editor.timeline.deleteCustomMaskPoints({
+						trackId: selectedMaskPointSelection.trackId,
+						elementId: selectedMaskPointSelection.elementId,
+						maskId: selectedMaskPointSelection.maskId,
+						pointIds: selectedMaskPointSelection.pointIds,
+					});
+					return;
+				case "keyframes":
+					if (selectedKeyframes.length === 0) {
+						return;
+					}
+					editor.timeline.removeKeyframes({ keyframes: selectedKeyframes });
+					clearKeyframeSelection();
+					return;
+				case "elements":
+					if (selectedElements.length === 0) {
+						return;
+					}
+					editor.timeline.deleteElements({
+						elements: selectedElements,
+					});
+					return;
+				default:
+					return;
 			}
-			if (selectedElements.length === 0) {
-				return;
-			}
-			editor.timeline.deleteElements({
-				elements: selectedElements,
-			});
 		},
 		undefined,
 	);
@@ -343,8 +373,7 @@ export function useEditorActions() {
 		"deselect-all",
 		() => {
 			if (!clearActiveScope()) {
-				setElementSelection({ elements: [] });
-				clearKeyframeSelection();
+				editor.selection.clearMostSpecificSelection();
 			}
 		},
 		undefined,

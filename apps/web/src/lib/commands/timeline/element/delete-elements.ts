@@ -54,7 +54,12 @@ export class DeleteElementsCommand extends Command {
 		editor.timeline.updateTracks(updatedTracks);
 
 		return {
-			select: [],
+			selection: {
+				selectedElements: [],
+				selectedKeyframes: [],
+				keyframeSelectionAnchor: null,
+				selectedMaskPoints: null,
+			},
 		};
 	}
 

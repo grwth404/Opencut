@@ -1,7 +1,7 @@
-import type { ElementRef } from "@/lib/timeline/types";
+import type { EditorSelectionPatch } from "@/lib/selection/editor-selection";
 
 export interface CommandResult {
-	select?: ElementRef[];
+	selection?: EditorSelectionPatch;
 }
 
 export abstract class Command {

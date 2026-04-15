@@ -1,6 +1,7 @@
 import type { MaskDefinition, RectangleMaskParams } from "@/lib/masks/types";
 import {
 	BOX_LIKE_MASK_PARAMS,
+	buildBoxMaskInteraction,
 	computeBoxMaskParamUpdate,
 	getBoxLikeGeometry,
 	getDefaultSquareMaskParams,
@@ -36,23 +37,23 @@ function buildHeartPath({
 			rotationRad,
 		});
 
-	const start = toPoint({ localX: 0, localY: -halfHeight * 0.2 });
+	const start = toPoint({ localX: 0, localY: -halfHeight * 0.475 });
 	const rightControl1 = toPoint({
 		localX: halfWidth,
-		localY: -halfHeight * 0.95,
+		localY: -halfHeight * 1.225,
 	});
 	const rightControl2 = toPoint({
 		localX: halfWidth,
-		localY: halfHeight * 0.15,
+		localY: -halfHeight * 0.125,
 	});
-	const bottom = toPoint({ localX: 0, localY: halfHeight });
+	const bottom = toPoint({ localX: 0, localY: halfHeight * 0.725 });
 	const leftControl1 = toPoint({
 		localX: -halfWidth,
-		localY: halfHeight * 0.15,
+		localY: -halfHeight * 0.125,
 	});
 	const leftControl2 = toPoint({
 		localX: -halfWidth,
-		localY: -halfHeight * 0.95,
+		localY: -halfHeight * 1.225,
 	});
 
 	const path = new Path2D();
@@ -80,25 +81,27 @@ function buildHeartPath({
 export const heartMaskDefinition: MaskDefinition<RectangleMaskParams> = {
 	type: "heart",
 	name: "Heart",
-	overlayShape: "box",
-	buildOverlayPath({ width, height }) {
-		const cx = width / 2;
-		const cy = height / 2;
-		const halfWidth = width / 2;
-		const halfHeight = height / 2;
-		return [
-			`M ${cx},${cy - halfHeight * 0.2}`,
-			`C ${cx + halfWidth},${cy - halfHeight * 0.95} ${cx + halfWidth},${cy + halfHeight * 0.15} ${cx},${cy + halfHeight}`,
-			`C ${cx - halfWidth},${cy + halfHeight * 0.15} ${cx - halfWidth},${cy - halfHeight * 0.95} ${cx},${cy - halfHeight * 0.2}`,
-			"Z",
-		].join(" ");
-	},
 	features: {
 		hasPosition: true,
 		hasRotation: true,
 		sizeMode: "width-height",
 	},
 	params: BOX_LIKE_MASK_PARAMS,
+	interaction: buildBoxMaskInteraction({
+		sizeMode: "width-height",
+		buildOverlayPath({ width, height }) {
+			const cx = width / 2;
+			const cy = height / 2;
+			const halfWidth = width / 2;
+			const halfHeight = height / 2;
+			return [
+				`M ${cx},${cy - halfHeight * 0.475}`,
+				`C ${cx + halfWidth},${cy - halfHeight * 1.225} ${cx + halfWidth},${cy - halfHeight * 0.125} ${cx},${cy + halfHeight * 0.725}`,
+				`C ${cx - halfWidth},${cy - halfHeight * 0.125} ${cx - halfWidth},${cy - halfHeight * 1.225} ${cx},${cy - halfHeight * 0.475}`,
+				"Z",
+			].join(" ");
+		},
+	}),
 	buildDefault(context) {
 		return {
 			type: "heart",

@@ -1,6 +1,14 @@
 import { MAX_FEATHER } from "@/lib/masks/feather";
 import type { ParamDefinition } from "@/lib/params";
-import type { BaseMaskParams, MaskDefinition, MaskType } from "@/lib/masks/types";
+import type {
+	BaseMaskParams,
+	MaskDefaultContext,
+	MaskDefinition,
+	MaskInteractionResult,
+	MaskSnapArgs,
+	MaskSnapResult,
+	MaskType,
+} from "@/lib/masks/types";
 import type { HugeiconsIconProps } from "@hugeicons/react";
 import { DefinitionRegistry } from "@/lib/registry";
 
@@ -39,9 +47,33 @@ const BASE_MASK_PARAM_DEFINITIONS: ParamDefinition<
 	},
 ];
 
-export type RegisteredMaskDefinition = MaskDefinition<BaseMaskParams> & {
+export interface RegisteredMaskDefinition {
+	type: MaskType;
+	name: string;
+	features: MaskDefinition<BaseMaskParams>["features"];
+	params: ParamDefinition<string>[];
+	renderer: MaskDefinition<BaseMaskParams>["renderer"];
+	interaction: {
+		getInteraction(args: {
+			params: BaseMaskParams;
+			bounds: Parameters<
+				MaskDefinition<BaseMaskParams>["interaction"]["getInteraction"]
+			>[0]["bounds"];
+			displayScale: number;
+			scaleX: number;
+			scaleY: number;
+		}): MaskInteractionResult;
+		snap?(args: MaskSnapArgs<BaseMaskParams>): MaskSnapResult<BaseMaskParams>;
+	};
+	isActive?: (params: BaseMaskParams) => boolean;
+	buildDefault(
+		context: MaskDefaultContext,
+	): ReturnType<MaskDefinition<BaseMaskParams>["buildDefault"]>;
+	computeParamUpdate(
+		args: Parameters<MaskDefinition<BaseMaskParams>["computeParamUpdate"]>[0],
+	): ReturnType<MaskDefinition<BaseMaskParams>["computeParamUpdate"]>;
 	icon: MaskIconProps;
-};
+}
 
 export class MasksRegistry extends DefinitionRegistry<
 	MaskType,
@@ -59,8 +91,28 @@ export class MasksRegistry extends DefinitionRegistry<
 		icon: MaskIconProps;
 	}): void {
 		const withBaseParams: RegisteredMaskDefinition = {
-			...definition,
+			type: definition.type,
+			name: definition.name,
+			features: definition.features,
 			params: [...definition.params, ...BASE_MASK_PARAM_DEFINITIONS],
+			renderer: definition.renderer,
+			interaction: {
+				getInteraction(args) {
+					return definition.interaction.getInteraction(args as never);
+				},
+				snap: definition.interaction.snap
+					? (args) => definition.interaction.snap?.(args as never) as never
+					: undefined,
+			},
+			isActive: definition.isActive
+				? (params) => definition.isActive?.(params as TParams) ?? true
+				: undefined,
+			buildDefault(context) {
+				return definition.buildDefault(context);
+			},
+			computeParamUpdate(args) {
+				return definition.computeParamUpdate(args as never);
+			},
 			icon,
 		};
 		this.register(definition.type, withBaseParams);

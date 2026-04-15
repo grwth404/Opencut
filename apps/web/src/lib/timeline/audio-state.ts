@@ -57,6 +57,20 @@ export function resolveEffectiveAudioGain({
 	return dBToLinear(resolvedDb);
 }
 
+export function buildWaveformGainSamples({
+	element,
+	count,
+}: {
+	element: AudioCapableElement;
+	count: number;
+}): number[] {
+	const durationSeconds = element.duration / TICKS_PER_SECOND;
+	return Array.from({ length: count }, (_, i) => {
+		const localTime = ((i + 0.5) / count) * durationSeconds;
+		return resolveEffectiveAudioGain({ element, localTime });
+	});
+}
+
 export function buildAudioGainAutomation({
 	element,
 	trackMuted = false,

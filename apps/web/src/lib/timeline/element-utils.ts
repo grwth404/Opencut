@@ -15,7 +15,6 @@ import {
 	type TextElement,
 	type SceneTracks,
 	type TimelineElement,
-	type TimelineTrack,
 	type AudioElement,
 	type VideoElement,
 	type ImageElement,
@@ -413,6 +412,13 @@ export function getElementFontFamilies({
 		for (const element of track.elements) {
 			if (element.type === "text" && element.fontFamily) {
 				families.add(element.fontFamily);
+			}
+			if ("masks" in element) {
+				for (const mask of element.masks ?? []) {
+					if (mask.type === "text" && mask.params.fontFamily) {
+						families.add(mask.params.fontFamily);
+					}
+				}
 			}
 		}
 	}

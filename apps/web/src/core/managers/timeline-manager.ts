@@ -1,4 +1,5 @@
 import type { EditorCore } from "@/core";
+import type { ElementBounds } from "@/lib/preview/element-bounds";
 import type { ParamValues } from "@/lib/params";
 import type {
 	SceneTracks,
@@ -44,6 +45,8 @@ import {
 	RetimeKeyframeCommand,
 	UpdateScalarKeyframeCurveCommand,
 	AddClipEffectCommand,
+	DeleteCustomMaskPointsCommand,
+	InsertCustomMaskPointCommand,
 	RemoveClipEffectCommand,
 	UpdateClipEffectParamsCommand,
 	ToggleClipEffectCommand,
@@ -340,6 +343,55 @@ export class TimelineManager {
 			trackId,
 			elementId,
 			maskId,
+		});
+		this.editor.command.execute({ command });
+	}
+
+	deleteCustomMaskPoints({
+		trackId,
+		elementId,
+		maskId,
+		pointIds,
+	}: {
+		trackId: string;
+		elementId: string;
+		maskId: string;
+		pointIds: string[];
+	}): void {
+		if (pointIds.length === 0) {
+			return;
+		}
+		const command = new DeleteCustomMaskPointsCommand({
+			trackId,
+			elementId,
+			maskId,
+			pointIds,
+		});
+		this.editor.command.execute({ command });
+	}
+
+	insertCustomMaskPoint({
+		trackId,
+		elementId,
+		maskId,
+		segmentIndex,
+		canvasPoint,
+		bounds,
+	}: {
+		trackId: string;
+		elementId: string;
+		maskId: string;
+		segmentIndex: number;
+		canvasPoint: { x: number; y: number };
+		bounds: ElementBounds;
+	}): void {
+		const command = new InsertCustomMaskPointCommand({
+			trackId,
+			elementId,
+			maskId,
+			segmentIndex,
+			canvasPoint,
+			bounds,
 		});
 		this.editor.command.execute({ command });
 	}

@@ -6,14 +6,17 @@ import { computeFeatherUpdate } from "../param-update";
 import type {
 	BaseMaskParams,
 	MaskDefaultContext,
+	MaskFeatures,
+	MaskInteractionDefinition,
 	MaskParamUpdateArgs,
 	RectangleMaskParams,
 } from "@/lib/masks/types";
-import type {
-	NumberParamDefinition,
-	ParamDefinition,
-	ParamValues,
-} from "@/lib/params";
+import type { NumberParamDefinition, ParamDefinition } from "@/lib/params";
+import {
+	getBoxMaskHandlePositions,
+	getBoxMaskOverlays,
+} from "@/lib/masks/handle-positions";
+import { snapMaskInteraction } from "@/lib/masks/snap";
 
 const PERCENTAGE_DISPLAY: Pick<
 	NumberParamDefinition,
@@ -160,13 +163,53 @@ export function getBoxLikeGeometry({
 	};
 }
 
+export function buildBoxMaskInteraction({
+	sizeMode,
+	buildOverlayPath,
+	showBoundingBox = true,
+}: {
+	sizeMode: MaskFeatures["sizeMode"];
+	buildOverlayPath?: (args: { width: number; height: number }) => string;
+	showBoundingBox?: boolean;
+}): MaskInteractionDefinition<RectangleMaskParams> {
+	return {
+		getInteraction({ params, bounds, displayScale, scaleX, scaleY }) {
+			return {
+				handles: getBoxMaskHandlePositions({
+					centerX: params.centerX,
+					centerY: params.centerY,
+					width: params.width,
+					height: params.height,
+					rotation: params.rotation,
+					feather: params.feather,
+					sizeMode,
+					bounds,
+					displayScale,
+				}),
+				overlays: getBoxMaskOverlays({
+					params,
+					bounds,
+					pathData: buildOverlayPath?.({
+						width: params.width * bounds.width * scaleX,
+						height: params.height * bounds.height * scaleY,
+					}),
+					showBoundingBox,
+				}),
+			};
+		},
+		snap(args) {
+			return snapMaskInteraction(args);
+		},
+	};
+}
+
 export function computeBoxMaskParamUpdate({
 	handleId,
 	startParams,
 	deltaX,
 	deltaY,
 	bounds,
-}: MaskParamUpdateArgs<RectangleMaskParams>): ParamValues {
+}: MaskParamUpdateArgs<RectangleMaskParams>): Partial<RectangleMaskParams> {
 	if (handleId === "position") {
 		return {
 			centerX: startParams.centerX + deltaX / bounds.width,

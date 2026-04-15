@@ -3,34 +3,23 @@ import type { ElementBounds } from "@/lib/preview/element-bounds";
 import type {
 	MaskFeatures,
 	MaskHandlePosition,
-	MaskLinePoints,
-	MaskOverlayShape,
+	MaskLineOverlay,
+	MaskOverlay,
+	MaskRectOverlay,
+	RectangleMaskParams,
+	MaskShapeOverlay,
 } from "@/lib/masks/types";
-import type { ParamValues } from "@/lib/params";
 
 const LINE_HANDLE_OFFSET_SCREEN_PX = 20;
 const BOX_HANDLE_OFFSET_SCREEN_PX = 20;
 const LINE_EXTENT_MULTIPLIER = 50;
 
 const CURSOR = {
-	rotate: "cursor-crosshair",
-	resizeDiagonal: "cursor-nwse-resize",
-	resizeHorizontal: "cursor-ew-resize",
-	resizeVertical: "cursor-ns-resize",
+	rotate: "crosshair",
+	resizeDiagonal: "nwse-resize",
+	resizeHorizontal: "ew-resize",
+	resizeVertical: "ns-resize",
 } as const;
-
-function getNumParam({
-	params,
-	key,
-	fallback,
-}: {
-	params: ParamValues;
-	key: string;
-	fallback: number;
-}): number {
-	const value = params[key];
-	return typeof value === "number" && !Number.isNaN(value) ? value : fallback;
-}
 
 /**
  * The renderer defines the split line as:
@@ -50,7 +39,7 @@ export function getLineMaskLinePoints({
 	centerY: number;
 	rotation: number;
 	bounds: ElementBounds;
-}): MaskLinePoints {
+}): { start: { x: number; y: number }; end: { x: number; y: number } } {
 	const angleRad = (rotation * Math.PI) / 180;
 	const normalX = Math.cos(angleRad);
 	const normalY = Math.sin(angleRad);
@@ -71,6 +60,38 @@ export function getLineMaskLinePoints({
 			x: cx + lineDirX * extent,
 			y: cy + lineDirY * extent,
 		},
+	};
+}
+
+export function getLineMaskOverlay({
+	centerX,
+	centerY,
+	rotation,
+	bounds,
+	handleId = "position",
+	cursor = "move",
+}: {
+	centerX: number;
+	centerY: number;
+	rotation: number;
+	bounds: ElementBounds;
+	handleId?: string;
+	cursor?: string;
+}): MaskLineOverlay {
+	const { start, end } = getLineMaskLinePoints({
+		centerX,
+		centerY,
+		rotation,
+		bounds,
+	});
+
+	return {
+		id: "line",
+		type: "line",
+		start,
+		end,
+		handleId,
+		cursor,
 	};
 }
 
@@ -105,12 +126,16 @@ export function getLineMaskHandlePositions({
 			x: cx + normalX * iconOffsetCanvas,
 			y: cy + normalY * iconOffsetCanvas,
 			cursor: CURSOR.rotate,
+			kind: "icon",
+			icon: "rotate",
 		},
 		{
 			id: "feather",
 			x: cx - normalX * featherOffset,
 			y: cy - normalY * featherOffset,
 			cursor: CURSOR.resizeHorizontal,
+			kind: "icon",
+			icon: "feather",
 		},
 	];
 }
@@ -144,6 +169,7 @@ export function getBoxMaskHandlePositions({
 	rotation,
 	feather,
 	sizeMode,
+	showScaleHandle = true,
 	bounds,
 	displayScale,
 }: {
@@ -154,6 +180,7 @@ export function getBoxMaskHandlePositions({
 	rotation: number;
 	feather: number;
 	sizeMode: MaskFeatures["sizeMode"];
+	showScaleHandle?: boolean;
 	bounds: ElementBounds;
 	displayScale: number;
 }): MaskHandlePosition[] {
@@ -178,6 +205,8 @@ export function getBoxMaskHandlePositions({
 		x: rotHandle.x,
 		y: rotHandle.y,
 		cursor: CURSOR.rotate,
+		kind: "icon",
+		icon: "rotate",
 	});
 
 	const featherHandle = rotatePoint({
@@ -192,6 +221,8 @@ export function getBoxMaskHandlePositions({
 		x: featherHandle.x,
 		y: featherHandle.y,
 		cursor: CURSOR.resizeVertical,
+		kind: "icon",
+		icon: "feather",
 	});
 
 	if (sizeMode === "width-height") {
@@ -208,6 +239,7 @@ export function getBoxMaskHandlePositions({
 				x: point.x,
 				y: point.y,
 				cursor: CURSOR.resizeDiagonal,
+				kind: "corner",
 			});
 		}
 		const right = rotatePoint({
@@ -236,18 +268,27 @@ export function getBoxMaskHandlePositions({
 			x: left.x,
 			y: left.y,
 			cursor: CURSOR.resizeHorizontal,
+			kind: "edge",
+			edgeAxis: "horizontal",
+			rotation,
 		});
 		handles.push({
 			id: "right",
 			x: right.x,
 			y: right.y,
 			cursor: CURSOR.resizeHorizontal,
+			kind: "edge",
+			edgeAxis: "horizontal",
+			rotation,
 		});
 		handles.push({
 			id: "bottom",
 			x: bottom.x,
 			y: bottom.y,
 			cursor: CURSOR.resizeVertical,
+			kind: "edge",
+			edgeAxis: "vertical",
+			rotation,
 		});
 	} else if (sizeMode === "height-only") {
 		const top = rotatePoint({
@@ -269,12 +310,18 @@ export function getBoxMaskHandlePositions({
 			x: top.x,
 			y: top.y,
 			cursor: CURSOR.resizeVertical,
+			kind: "edge",
+			edgeAxis: "vertical",
+			rotation,
 		});
 		handles.push({
 			id: "bottom",
 			x: bottom.x,
 			y: bottom.y,
 			cursor: CURSOR.resizeVertical,
+			kind: "edge",
+			edgeAxis: "vertical",
+			rotation,
 		});
 	} else if (sizeMode === "width-only") {
 		const left = rotatePoint({
@@ -296,14 +343,20 @@ export function getBoxMaskHandlePositions({
 			x: left.x,
 			y: left.y,
 			cursor: CURSOR.resizeHorizontal,
+			kind: "edge",
+			edgeAxis: "horizontal",
+			rotation,
 		});
 		handles.push({
 			id: "right",
 			x: right.x,
 			y: right.y,
 			cursor: CURSOR.resizeHorizontal,
+			kind: "edge",
+			edgeAxis: "horizontal",
+			rotation,
 		});
-	} else if (sizeMode === "uniform") {
+	} else if (sizeMode === "uniform" && showScaleHandle) {
 		const point = rotatePoint({
 			localX: halfWidth,
 			localY: halfHeight,
@@ -316,67 +369,129 @@ export function getBoxMaskHandlePositions({
 			x: point.x,
 			y: point.y,
 			cursor: CURSOR.resizeDiagonal,
+			kind: "corner",
 		});
 	}
 
 	return handles;
 }
 
-type MaskHandleResolver = (args: {
-	features: MaskFeatures;
-	params: ParamValues;
-	bounds: ElementBounds;
-	displayScale: number;
-}) => MaskHandlePosition[];
-
-const rectangleHandles: MaskHandleResolver = ({
-	features,
-	params,
+export function getBoxMaskRectOverlay({
+	centerX,
+	centerY,
+	width,
+	height,
+	rotation,
 	bounds,
-	displayScale,
-}) =>
-	getBoxMaskHandlePositions({
-		centerX: getNumParam({ params, key: "centerX", fallback: 0 }),
-		centerY: getNumParam({ params, key: "centerY", fallback: 0 }),
-		width: getNumParam({ params, key: "width", fallback: 1 }),
-		height: getNumParam({ params, key: "height", fallback: 1 }),
-		rotation: getNumParam({ params, key: "rotation", fallback: 0 }),
-		feather: getNumParam({ params, key: "feather", fallback: 0 }),
-		sizeMode: features.sizeMode,
-		bounds,
-		displayScale,
-	});
-
-const HANDLE_RESOLVERS: Record<MaskOverlayShape, MaskHandleResolver> = {
-	line: ({ params, bounds, displayScale }) =>
-		getLineMaskHandlePositions({
-			centerX: getNumParam({ params, key: "centerX", fallback: 0 }),
-			centerY: getNumParam({ params, key: "centerY", fallback: 0 }),
-			rotation: getNumParam({ params, key: "rotation", fallback: 0 }),
-			feather: getNumParam({ params, key: "feather", fallback: 0 }),
-			bounds,
-			displayScale,
-		}),
-	box: rectangleHandles,
-};
-
-export function getMaskHandlePositions({
-	overlayShape,
-	features,
-	params,
-	bounds,
-	displayScale,
+	handleId = "position",
+	cursor = "move",
+	dashed = false,
 }: {
-	overlayShape: MaskOverlayShape;
-	features: MaskFeatures;
-	params: ParamValues;
+	centerX: number;
+	centerY: number;
+	width: number;
+	height: number;
+	rotation: number;
 	bounds: ElementBounds;
-	displayScale: number;
-}): MaskHandlePosition[] {
-	return HANDLE_RESOLVERS[overlayShape]({
-		features,
-		params,
-		bounds,
-		displayScale,
-	});
+	handleId?: string;
+	cursor?: string;
+	dashed?: boolean;
+}): MaskRectOverlay {
+	return {
+		id: "bounding-box",
+		type: "rect",
+		center: {
+			x: bounds.cx + centerX * bounds.width,
+			y: bounds.cy + centerY * bounds.height,
+		},
+		width: width * bounds.width,
+		height: height * bounds.height,
+		rotation,
+		handleId,
+		cursor,
+		dashed,
+	};
+}
+
+export function getBoxMaskShapeOverlay({
+	centerX,
+	centerY,
+	width,
+	height,
+	rotation,
+	bounds,
+	pathData,
+	handleId = "position",
+	cursor = "move",
+}: {
+	centerX: number;
+	centerY: number;
+	width: number;
+	height: number;
+	rotation: number;
+	bounds: ElementBounds;
+	pathData: string;
+	handleId?: string;
+	cursor?: string;
+}): MaskShapeOverlay {
+	return {
+		id: "shape-outline",
+		type: "shape",
+		center: {
+			x: bounds.cx + centerX * bounds.width,
+			y: bounds.cy + centerY * bounds.height,
+		},
+		width: width * bounds.width,
+		height: height * bounds.height,
+		rotation,
+		pathData,
+		handleId,
+		cursor,
+	};
+}
+
+export function getBoxMaskOverlays({
+	params,
+	bounds,
+	pathData,
+	showBoundingBox = true,
+}: {
+	params: Pick<
+		RectangleMaskParams,
+		"centerX" | "centerY" | "width" | "height" | "rotation"
+	>;
+	bounds: ElementBounds;
+	pathData?: string;
+	showBoundingBox?: boolean;
+}): MaskOverlay[] {
+	const overlays: MaskOverlay[] = [];
+	if (showBoundingBox) {
+		overlays.push(
+			getBoxMaskRectOverlay({
+				centerX: params.centerX,
+				centerY: params.centerY,
+				width: params.width,
+				height: params.height,
+				rotation: params.rotation,
+				bounds,
+				dashed: Boolean(pathData),
+			}),
+		);
+	}
+
+	if (pathData) {
+		overlays.push(
+			getBoxMaskShapeOverlay({
+				centerX: params.centerX,
+				centerY: params.centerY,
+				width: params.width,
+				height: params.height,
+				rotation: params.rotation,
+				bounds,
+				pathData,
+			}),
+		);
+	}
+
+	return overlays;
 }

@@ -1,12 +1,14 @@
 import type { BaseMaskParams, MaskDefinition } from "@/lib/masks/types";
 import { masksRegistry, type MaskIconProps } from "../registry";
 import { cinematicBarsMaskDefinition } from "./cinematic-bars";
+import { customMaskDefinition } from "./custom";
 import { diamondMaskDefinition } from "./diamond";
 import { ellipseMaskDefinition } from "./ellipse";
 import { heartMaskDefinition } from "./heart";
 import { rectangleMaskDefinition } from "./rectangle";
 import { splitMaskDefinition } from "./split";
 import { starMaskDefinition } from "./star";
+import { textMaskDefinition } from "./text";
 import {
 	MinusSignIcon,
 	PanelRightDashedIcon,
@@ -15,6 +17,7 @@ import {
 	FavouriteIcon,
 	DiamondIcon,
 	StarsIcon,
+	TextFontIcon,
 } from "@hugeicons/core-free-icons";
 
 function registerDefaultMask<TParams extends BaseMaskParams>({
@@ -59,5 +62,13 @@ export function registerDefaultMasks(): void {
 	registerDefaultMask({
 		definition: starMaskDefinition,
 		icon: { icon: StarsIcon },
+	});
+	registerDefaultMask({
+		definition: textMaskDefinition,
+		icon: { icon: TextFontIcon },
+	});
+	registerDefaultMask({
+		definition: customMaskDefinition,
+		icon: { icon: SquareIcon },
 	});
 }

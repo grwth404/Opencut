@@ -1,8 +1,11 @@
 "use client";
 
 import type { MaskableElement } from "@/lib/timeline";
-import type { Mask, MaskType } from "@/lib/masks/types";
-import type { NumberParamDefinition, SelectParamDefinition } from "@/lib/params";
+import type { Mask, MaskType, TextMask } from "@/lib/masks/types";
+import type {
+	NumberParamDefinition,
+	SelectParamDefinition,
+} from "@/lib/params";
 import { masksRegistry, buildDefaultMaskInstance } from "@/lib/masks";
 import { useEditor } from "@/hooks/use-editor";
 import { useElementPreview } from "@/hooks/use-element-preview";
@@ -10,14 +13,17 @@ import { useMenuPreview } from "@/hooks/use-menu-preview";
 import { getVisibleElementsWithBounds } from "@/lib/preview/element-bounds";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+	ArrowExpandIcon,
 	Delete02Icon,
 	FeatherIcon,
 	PlusSignIcon,
 	RotateClockwiseIcon,
+	TextFontIcon,
 } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "@/components/ui/color-picker";
+import { FontPicker } from "@/components/ui/font-picker";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -32,6 +38,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import {
 	Tooltip,
 	TooltipContent,
@@ -52,7 +59,12 @@ import {
 	SectionTitle,
 } from "@/components/section";
 import { usePropertyDraft } from "../hooks/use-property-draft";
-import { OcMirrorIcon, OcShapesIcon } from "@/components/icons";
+import {
+	OcMirrorIcon,
+	OcShapesIcon,
+	OcTextHeightIcon,
+	OcTextWidthIcon,
+} from "@/components/icons";
 import { cn } from "@/utils/ui";
 
 type MasksTabProps = {
@@ -77,6 +89,10 @@ type PreviewParamHandler = (
 ) => (value: number | string | boolean) => void;
 
 type RegisteredMaskDefinition = ReturnType<(typeof masksRegistry)["get"]>;
+
+function isTextMask(mask: Mask): mask is TextMask {
+	return mask.type === "text";
+}
 
 export function MasksTab({ element, trackId }: MasksTabProps) {
 	const editor = useEditor();
@@ -370,12 +386,23 @@ function MaskParamsFields({
 		previewParam(key)(value);
 	const previewStrokeColor = previewParam("strokeColor");
 	const strokeAlignParam = definition.params.find(
-		(param): param is SelectParamDefinition =>
+		(param): param is SelectParamDefinition<string> =>
 			param.key === "strokeAlign" && param.type === "select",
 	);
 
 	return (
 		<SectionFields>
+			{isTextMask(mask) ? (
+				<TextMaskFields
+					mask={mask}
+					previewParam={previewParam}
+					onCommit={onCommit}
+					fontSizeParam={getNumberParamDefinition({
+						definition,
+						key: "fontSize",
+					})}
+				/>
+			) : null}
 			{definition.features.hasPosition &&
 				"centerX" in mask.params &&
 				"centerY" in mask.params && (
@@ -491,7 +518,9 @@ function MaskParamsFields({
 			{definition.features.sizeMode === "uniform" && "scale" in mask.params && (
 				<SectionField label="Scale">
 					<MaskNumberField
-						icon="S"
+						icon={
+							isTextMask(mask) ? <HugeiconsIcon icon={ArrowExpandIcon} /> : "S"
+						}
 						param={getNumberParamDefinition({
 							definition,
 							key: "scale",
@@ -587,6 +616,100 @@ function MaskParamsFields({
 	);
 }
 
+const LETTER_SPACING_PARAM: NumberParamDefinition = {
+	key: "letterSpacing",
+	label: "Letter spacing",
+	type: "number",
+	default: 0,
+	min: -100,
+	max: 500,
+	step: 1,
+};
+
+const LINE_HEIGHT_PARAM: NumberParamDefinition = {
+	key: "lineHeight",
+	label: "Line height",
+	type: "number",
+	default: 1.2,
+	min: 0.1,
+	max: 10,
+	step: 0.1,
+};
+
+function TextMaskFields({
+	mask,
+	previewParam,
+	onCommit,
+	fontSizeParam,
+}: {
+	mask: TextMask;
+	previewParam: PreviewParamHandler;
+	onCommit: () => void;
+	fontSizeParam: NumberParamDefinition;
+}) {
+	const content = usePropertyDraft({
+		displayValue: mask.params.content,
+		parse: (input) => input,
+		onPreview: (value) => previewParam("content")(value),
+		onCommit,
+	});
+
+	const previewNumberParam = (key: string) => (value: number) =>
+		previewParam(key)(value);
+
+	return (
+		<>
+			<SectionField label="Content">
+				<Textarea
+					value={content.displayValue}
+					className="min-h-20"
+					onFocus={content.onFocus}
+					onChange={content.onChange}
+					onBlur={content.onBlur}
+				/>
+			</SectionField>
+			<SectionField label="Font">
+				<FontPicker
+					defaultValue={mask.params.fontFamily}
+					onValueChange={(value) => {
+						previewParam("fontFamily")(value);
+						onCommit();
+					}}
+				/>
+			</SectionField>
+			<SectionField label="Size">
+				<MaskNumberField
+					icon={<HugeiconsIcon icon={TextFontIcon} />}
+					param={fontSizeParam}
+					value={mask.params.fontSize}
+					onPreview={previewNumberParam("fontSize")}
+					onCommit={onCommit}
+				/>
+			</SectionField>
+			<SectionField label="Spacing">
+				<div className="flex items-start gap-2">
+					<MaskNumberField
+						className="w-1/2"
+						icon={<OcTextWidthIcon size={14} />}
+						param={LETTER_SPACING_PARAM}
+						value={mask.params.letterSpacing ?? 0}
+						onPreview={previewNumberParam("letterSpacing")}
+						onCommit={onCommit}
+					/>
+					<MaskNumberField
+						className="w-1/2"
+						icon={<OcTextHeightIcon size={14} />}
+						param={LINE_HEIGHT_PARAM}
+						value={mask.params.lineHeight ?? 1.2}
+						onPreview={previewNumberParam("lineHeight")}
+						onCommit={onCommit}
+					/>
+				</div>
+			</SectionField>
+		</>
+	);
+}
+
 function getNumberParamDefinition({
 	definition,
 	key,
@@ -603,13 +726,10 @@ function getNumberParamDefinition({
 	return param;
 }
 
-function getMaskNumber({
-	params,
-	key,
-}: {
-	params: Mask["params"];
-	key: string;
-}): number {
+function getMaskNumber<
+	TParams extends Mask["params"],
+	TKey extends keyof TParams & string,
+>({ params, key }: { params: TParams; key: TKey }): number {
 	const value = params[key];
 
 	if (typeof value !== "number") {
@@ -665,7 +785,9 @@ function MaskNumberField({
 		parse: (input) => {
 			const parsed = parseFloat(input);
 			if (Number.isNaN(parsed)) return null;
-			return clampDisplay(snapToStep({ value: parsed, step })) / displayMultiplier;
+			return (
+				clampDisplay(snapToStep({ value: parsed, step })) / displayMultiplier
+			);
 		},
 		onPreview,
 		onCommit,

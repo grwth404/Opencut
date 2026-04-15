@@ -1,6 +1,7 @@
 export type ScopeEntry = {
 	hasSelection: () => boolean;
 	clear: () => void;
+	clearActive?: () => void;
 };
 
 let activeScope: ScopeEntry | null = null;
@@ -24,6 +25,6 @@ export function clearActiveScope(): boolean {
 		return false;
 	}
 
-	activeScope.clear();
+	(activeScope.clearActive ?? activeScope.clear)();
 	return true;
 }

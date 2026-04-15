@@ -1,12 +1,13 @@
 import type { EditorCore } from "@/core";
 import type { Command, CommandResult } from "@/lib/commands";
+import type { EditorSelectionSnapshot } from "@/lib/selection/editor-selection";
 import { applyRippleAdjustments, computeRippleAdjustments } from "@/lib/ripple";
-import type { ElementRef, SceneTracks } from "@/lib/timeline/types";
+import type { SceneTracks } from "@/lib/timeline/types";
 
 interface CommandHistoryEntry {
 	command: Command;
-	previousSelection: ElementRef[];
-	selectionOverride?: ElementRef[];
+	previousSelection: EditorSelectionSnapshot;
+	selectionOverride?: EditorSelectionSnapshot;
 }
 
 export class CommandManager {
@@ -19,7 +20,7 @@ export class CommandManager {
 
 	execute({ command }: { command: Command }): Command {
 		const beforeTracks = this.isRippleEnabled
-			? this.editor.scenes.getActiveSceneOrNull()?.tracks ?? null
+			? (this.editor.scenes.getActiveSceneOrNull()?.tracks ?? null)
 			: null;
 		const previousSelection = this.getSelectionSnapshot();
 		const result = command.execute();
@@ -55,11 +56,11 @@ export class CommandManager {
 			// Only restore selection for commands that explicitly changed it.
 			// Commands without selection intent leave selection untouched,
 			// preserving any UI-driven selection changes (clicks, box select)
-			// that happened between commands. Commands that remove elements
-			// must declare { select: [] } to clear stale refs.
+			// that happened between commands. Commands that remove editor-owned
+			// selection targets must declare a selection override to clear stale refs.
 			if (entry.selectionOverride !== undefined) {
-				this.editor.selection.setSelectedElements({
-					elements: [...entry.previousSelection],
+				this.editor.selection.restoreSnapshot({
+					snapshot: entry.previousSelection,
 				});
 			}
 			this.redoStack.push(entry);
@@ -74,7 +75,7 @@ export class CommandManager {
 		}
 
 		const beforeTracks = this.isRippleEnabled
-			? this.editor.scenes.getActiveSceneOrNull()?.tracks ?? null
+			? (this.editor.scenes.getActiveSceneOrNull()?.tracks ?? null)
 			: null;
 		const previousSelection = this.getSelectionSnapshot();
 		const result = entry.command.redo();
@@ -102,20 +103,19 @@ export class CommandManager {
 		this.redoStack = [];
 	}
 
-	private getSelectionSnapshot(): ElementRef[] {
-		return [...this.editor.selection.getSelectedElements()];
+	private getSelectionSnapshot(): EditorSelectionSnapshot {
+		return this.editor.selection.getSnapshot();
 	}
 
 	private applySelectionOverride(
 		result: CommandResult | undefined,
-	): ElementRef[] | undefined {
-		if (result?.select === undefined) {
+	): EditorSelectionSnapshot | undefined {
+		if (!result?.selection) {
 			return undefined;
 		}
-
-		const selectionOverride = [...result.select];
-		this.editor.selection.setSelectedElements({ elements: selectionOverride });
-		return selectionOverride;
+		return this.editor.selection.applySelectionPatch({
+			patch: result.selection,
+		});
 	}
 
 	private runReactors(): void {
