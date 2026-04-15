@@ -10,7 +10,6 @@ import {
 } from "@/hooks/timeline/element/use-keyframe-drag";
 import { useKeyframeSelection } from "@/hooks/timeline/element/use-keyframe-selection";
 import { useKeyframeBoxSelect } from "@/hooks/timeline/element/use-keyframe-box-select";
-import { useTimelineElementResize } from "@/hooks/timeline/element/use-element-resize";
 import { SelectionBox } from "@/lib/selection/selection-box";
 import { getElementKeyframes } from "@/lib/animation";
 import {
@@ -86,7 +85,6 @@ import {
 	getExpansionHeight,
 	type ExpandedRow,
 } from "./expanded-layout";
-import type { SnapPoint } from "@/lib/timeline/snap-utils";
 
 const KEYFRAME_INDICATOR_MIN_WIDTH_PX = 40;
 const ELEMENT_RING_WIDTH_PX = 1.5;
@@ -197,8 +195,12 @@ interface TimelineElementProps {
 	track: TimelineTrack;
 	zoomLevel: number;
 	isSelected: boolean;
-	onSnapPointChange?: (snapPoint: SnapPoint | null) => void;
-	onResizeStateChange?: (params: { isResizing: boolean }) => void;
+	onResizeStart: (params: {
+		event: React.MouseEvent;
+		element: TimelineElementType;
+		track: TimelineTrack;
+		side: "left" | "right";
+	}) => void;
 	onElementMouseDown: (
 		event: React.MouseEvent,
 		element: TimelineElementType,
@@ -216,8 +218,7 @@ export function TimelineElement({
 	track,
 	zoomLevel,
 	isSelected,
-	onSnapPointChange,
-	onResizeStateChange,
+	onResizeStart,
 	onElementMouseDown,
 	onElementClick,
 	dragState,
@@ -230,18 +231,6 @@ export function TimelineElement({
 		trackId: track.id,
 		elementId: element.id,
 		fallback: element,
-	});
-	const {
-		currentDuration,
-		currentStartTime,
-		handleResizeStart,
-		isResizing,
-	} = useTimelineElementResize({
-		element,
-		track,
-		zoomLevel,
-		onSnapPointChange,
-		onResizeStateChange,
 	});
 
 	let mediaAsset: MediaAsset | null = null;
@@ -267,13 +256,9 @@ export function TimelineElement({
 	const elementStartTime =
 		isBeingDragged && dragState.isDragging
 			? dragState.currentTime + dragTimeOffset
-			: isResizing
-				? currentStartTime
-				: renderElement.startTime;
+			: renderElement.startTime;
 	const displayedStartTime = elementStartTime;
-	const displayedDuration = isResizing
-		? currentDuration
-		: renderElement.duration;
+	const displayedDuration = renderElement.duration;
 	const elementWidth = timelineTimeToPixels({
 		time: displayedDuration,
 		zoomLevel,
@@ -282,22 +267,6 @@ export function TimelineElement({
 		time: displayedStartTime,
 		zoomLevel,
 	});
-	const handleElementResizeStart = ({
-		event,
-		element,
-		side,
-	}: {
-		event: React.MouseEvent;
-		element: TimelineElementType;
-		track: TimelineTrack;
-		side: "left" | "right";
-	}) => {
-		handleResizeStart({
-			event,
-			elementId: element.id,
-			side,
-		});
-	};
 	const keyframeIndicators = isSelected
 		? getKeyframeIndicators({
 				keyframes: getElementKeyframes({ animations: element.animations }),
@@ -329,9 +298,7 @@ export function TimelineElement({
 	);
 	const expandedRows = useMemo(
 		() =>
-			isExpanded
-				? getExpandedRows({ animations: element.animations })
-				: [],
+			isExpanded ? getExpandedRows({ animations: element.animations }) : [],
 		[isExpanded, element.animations],
 	);
 
@@ -422,7 +389,7 @@ export function TimelineElement({
 						expandedContent={expandedContent}
 						onElementClick={onElementClick}
 						onElementMouseDown={onElementMouseDown}
-						onResizeStart={handleElementResizeStart}
+						onResizeStart={onResizeStart}
 						isDropTarget={isDropTarget}
 					/>
 					{isSelected && (
@@ -811,8 +778,7 @@ function ExpandedKeyframeLanes({
 			[...keyframes]
 				.sort(
 					(a, b) =>
-						a.time - b.time ||
-						a.propertyPath.localeCompare(b.propertyPath),
+						a.time - b.time || a.propertyPath.localeCompare(b.propertyPath),
 				)
 				.map((kf) => ({
 					trackId,
@@ -824,6 +790,8 @@ function ExpandedKeyframeLanes({
 	);
 
 	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: expanded keyframe lanes are a pointer-only editing surface
+		// biome-ignore lint/a11y/useKeyWithClickEvents: expanded keyframe lanes are a pointer-only editing surface
 		<div
 			ref={containerRef}
 			className="relative flex flex-col"
@@ -837,9 +805,7 @@ function ExpandedKeyframeLanes({
 				return (
 					<div
 						key={row.propertyPath}
-						className={cn(
-							"relative flex items-center bg-muted/50",
-						)}
+						className={cn("relative flex items-center bg-muted/50")}
 						style={{ height: `${KEYFRAME_LANE_HEIGHT_PX}px` }}
 					>
 						{laneKeyframes.map((kf) => {
@@ -849,8 +815,9 @@ function ExpandedKeyframeLanes({
 								propertyPath: row.propertyPath,
 								keyframeId: kf.id,
 							};
-							const isBeingDragged =
-								keyframeDragState.draggingKeyframeIds.has(kf.id);
+							const isBeingDragged = keyframeDragState.draggingKeyframeIds.has(
+								kf.id,
+							);
 							const kfLeft = timelineTimeToSnappedPixels({
 								time: displayedStartTime + kf.time,
 								zoomLevel,
@@ -898,9 +865,7 @@ function ExpandedKeyframeLanes({
 										icon={KeyframeIcon}
 										className={cn(
 											"size-3.5 text-black mr-1",
-											isSelected
-												? "fill-primary"
-												: "fill-white",
+											isSelected ? "fill-primary" : "fill-white",
 										)}
 										strokeWidth={1.5}
 									/>

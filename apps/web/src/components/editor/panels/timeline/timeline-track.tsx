@@ -4,7 +4,6 @@ import { useElementSelection } from "@/hooks/timeline/element/use-element-select
 import { TimelineElement } from "./timeline-element";
 import type { TimelineTrack } from "@/lib/timeline";
 import type { TimelineElement as TimelineElementType } from "@/lib/timeline";
-import type { SnapPoint } from "@/lib/timeline/snap-utils";
 import { TIMELINE_LAYERS } from "./layers";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/lib/timeline/scale";
 import { useEdgeAutoScroll } from "@/hooks/timeline/use-edge-auto-scroll";
@@ -18,8 +17,12 @@ interface TimelineTrackContentProps {
 	rulerScrollRef: React.RefObject<HTMLDivElement | null>;
 	tracksScrollRef: React.RefObject<HTMLDivElement | null>;
 	lastMouseXRef: React.RefObject<number>;
-	onSnapPointChange?: (snapPoint: SnapPoint | null) => void;
-	onResizeStateChange?: (params: { isResizing: boolean }) => void;
+	onResizeStart: (params: {
+		event: React.MouseEvent;
+		element: TimelineElementType;
+		track: TimelineTrack;
+		side: "left" | "right";
+	}) => void;
 	onElementMouseDown: (params: {
 		event: React.MouseEvent;
 		element: TimelineElementType;
@@ -43,8 +46,7 @@ export function TimelineTrackContent({
 	rulerScrollRef,
 	tracksScrollRef,
 	lastMouseXRef,
-	onSnapPointChange,
-	onResizeStateChange,
+	onResizeStart,
 	onElementMouseDown,
 	onElementClick,
 	onTrackMouseDown,
@@ -69,9 +71,9 @@ export function TimelineTrackContent({
 				type="button"
 				className="absolute inset-0 m-0 size-full appearance-none border-0 bg-transparent p-0"
 				aria-label={`Select ${track.name} track`}
-			onMouseUp={(event) => {
+				onMouseUp={(event) => {
 					if (shouldIgnoreClick?.()) return;
-				onTrackMouseUp?.(event);
+					onTrackMouseUp?.(event);
 				}}
 				onMouseDown={(event) => {
 					event.preventDefault();
@@ -109,8 +111,9 @@ export function TimelineTrackContent({
 								track={track}
 								zoomLevel={zoomLevel}
 								isSelected={isSelected}
-								onSnapPointChange={onSnapPointChange}
-								onResizeStateChange={onResizeStateChange}
+								onResizeStart={({ event, element, side }) =>
+									onResizeStart({ event, element, track, side })
+								}
 								onElementMouseDown={(event, element) =>
 									onElementMouseDown({ event, element, track })
 								}

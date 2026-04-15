@@ -329,7 +329,12 @@ describe("resolveTrackPlacement", () => {
 					id: "graphic-1",
 					type: "graphic",
 					elements: [
-						buildElement({ id: "a", type: "graphic", startTime: 0, duration: 5 }),
+						buildElement({
+							id: "a",
+							type: "graphic",
+							startTime: 0,
+							duration: 5,
+						}),
 					],
 				}),
 			],

@@ -8,9 +8,7 @@ import type {
 	RetimeConfig,
 } from "@/lib/timeline";
 import { calculateTotalDuration } from "@/lib/timeline";
-import {
-	findTrackInSceneTracks,
-} from "@/lib/timeline/track-element-update";
+import { findTrackInSceneTracks } from "@/lib/timeline/track-element-update";
 import {
 	canElementBeHidden,
 	canElementHaveAudio,
@@ -57,6 +55,10 @@ import {
 	ToggleSourceAudioSeparationCommand,
 } from "@/lib/commands/timeline";
 import type { InsertElementParams } from "@/lib/commands/timeline/element/insert-element";
+import type {
+	PlannedElementMove,
+	PlannedTrackCreation,
+} from "@/lib/timeline/group-move";
 
 export class TimelineManager {
 	private listeners = new Set<() => void>();
@@ -149,25 +151,20 @@ export class TimelineManager {
 		});
 	}
 
-	moveElement({
-		sourceTrackId,
-		targetTrackId,
-		elementId,
-		newStartTime,
-		createTrack,
+	moveElements({
+		moves,
+		createTracks,
 	}: {
-		sourceTrackId: string;
-		targetTrackId: string;
-		elementId: string;
-		newStartTime: number;
-		createTrack?: { type: TrackType; index: number };
+		moves: PlannedElementMove[];
+		createTracks?: PlannedTrackCreation[];
 	}): void {
+		if (moves.length === 0) {
+			return;
+		}
+
 		const command = new MoveElementCommand({
-			sourceTrackId,
-			targetTrackId,
-			elementId,
-			newStartTime,
-			createTrack,
+			moves,
+			createTracks,
 		});
 		this.editor.command.execute({ command });
 	}
@@ -580,14 +577,7 @@ export class TimelineManager {
 		}
 
 		const commands = keyframes.map(
-			({
-				trackId,
-				elementId,
-				propertyPath,
-				componentKey,
-				keyframeId,
-				patch,
-			}) =>
+			({ trackId, elementId, propertyPath, componentKey, keyframeId, patch }) =>
 				new UpdateScalarKeyframeCurveCommand({
 					trackId,
 					elementId,
@@ -711,7 +701,9 @@ export class TimelineManager {
 	private applyPreviewOverlay(tracks: SceneTracks): SceneTracks {
 		if (this.previewOverlay.size === 0) return tracks;
 
-		const applyTrackOverlay = <TTrack extends TimelineTrack>(track: TTrack): TTrack => {
+		const applyTrackOverlay = <TTrack extends TimelineTrack>(
+			track: TTrack,
+		): TTrack => {
 			const hasOverlay = track.elements.some((element) =>
 				this.previewOverlay.has(element.id),
 			);
@@ -803,7 +795,11 @@ export class TimelineManager {
 	}
 
 	getPreviewTracks(): SceneTracks | null {
-		return this.previewTracks ?? this.editor.scenes.getActiveSceneOrNull()?.tracks ?? null;
+		return (
+			this.previewTracks ??
+			this.editor.scenes.getActiveSceneOrNull()?.tracks ??
+			null
+		);
 	}
 
 	subscribe(listener: () => void): () => void {

@@ -1,5 +1,9 @@
-import type { TimelineElement, TimelineTrack } from "@/lib/timeline";
+import type { TimelineElement } from "@/lib/timeline";
 import type { PlacementTimeSpan } from "./types";
+
+interface TrackWithElements {
+	elements: TimelineElement[];
+}
 
 function wouldElementOverlap({
 	elements,
@@ -26,7 +30,7 @@ export function canPlaceTimeSpansOnTrack({
 	track,
 	timeSpans,
 }: {
-	track: TimelineTrack;
+	track: TrackWithElements;
 	timeSpans: PlacementTimeSpan[];
 }): boolean {
 	return timeSpans.every(({ startTime, duration, excludeElementId }) => {

@@ -61,7 +61,6 @@ import { SELECTED_TRACK_ROW_CLASS } from "./theme";
 import {
 	computeTrackExpansionHeight,
 	getTrackExpandedRows,
-	getExpansionHeight,
 	getPropertyLabel,
 	type ExpandedRow,
 } from "./expanded-layout";
@@ -75,6 +74,7 @@ import { TimelineBookmarksRow } from "./bookmarks";
 import { useBookmarkDrag } from "@/hooks/timeline/use-bookmark-drag";
 import { useEdgeAutoScroll } from "@/hooks/timeline/use-edge-auto-scroll";
 import { useInitialScrollBottom } from "@/hooks/timeline/use-initial-scroll-bottom";
+import { useTimelineResize } from "@/hooks/timeline/use-timeline-resize";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useEditor } from "@/hooks/use-editor";
 import { useTimelinePlayhead } from "@/hooks/timeline/use-timeline-playhead";
@@ -119,7 +119,9 @@ export function Timeline() {
 	} = useElementSelection();
 	const editor = useEditor();
 	const timeline = editor.timeline;
-	const scene = useEditor((currentEditor) => currentEditor.scenes.getActiveSceneOrNull());
+	const scene = useEditor((currentEditor) =>
+		currentEditor.scenes.getActiveSceneOrNull(),
+	);
 	const tracks = useMemo<TimelineTrack[]>(
 		() =>
 			scene
@@ -140,7 +142,6 @@ export function Timeline() {
 	const playheadRef = useRef<HTMLDivElement>(null);
 	const trackLabelsScrollRef = useRef<HTMLDivElement>(null);
 
-	const [isResizing, setIsResizing] = useState(false);
 	const [currentSnapPoint, setCurrentSnapPoint] = useState<SnapPoint | null>(
 		null,
 	);
@@ -148,15 +149,6 @@ export function Timeline() {
 	const handleSnapPointChange = useCallback((snapPoint: SnapPoint | null) => {
 		setCurrentSnapPoint(snapPoint);
 	}, []);
-	const handleResizeStateChange = useCallback(
-		({ isResizing: nextIsResizing }: { isResizing: boolean }) => {
-			setIsResizing(nextIsResizing);
-			if (!nextIsResizing) {
-				setCurrentSnapPoint(null);
-			}
-		},
-		[],
-	);
 
 	const timelineDuration = timeline.getTotalDuration() || 0;
 	const minZoomLevel = getTimelineZoomMin({
@@ -176,6 +168,10 @@ export function Timeline() {
 			tracksScrollRef,
 			rulerScrollRef,
 		});
+	const { isResizing, handleResizeStart } = useTimelineResize({
+		zoomLevel,
+		onSnapPointChange: handleSnapPointChange,
+	});
 
 	const expandedElementIds = useTimelineStore((s) => s.expandedElementIds);
 
@@ -366,7 +362,10 @@ export function Timeline() {
 
 	const containerWidth =
 		tracksContainerRef.current?.clientWidth || FALLBACK_CONTAINER_WIDTH;
-	const contentWidth = timelineTimeToPixels({ time: timelineDuration, zoomLevel });
+	const contentWidth = timelineTimeToPixels({
+		time: timelineDuration,
+		zoomLevel,
+	});
 	const paddingPx = getTimelinePaddingPx({
 		containerWidth,
 		zoomLevel,
@@ -513,7 +512,10 @@ export function Timeline() {
 											TRACKS_CONTAINER_HEIGHT.min,
 											Math.min(
 												TRACKS_CONTAINER_HEIGHT.max,
-												getTotalTracksHeight({ tracks, getExtraHeight: getTrackExpansionHeight }),
+												getTotalTracksHeight({
+													tracks,
+													getExtraHeight: getTrackExpansionHeight,
+												}),
 											),
 										) + TIMELINE_CONTENT_TOP_PADDING_PX
 									}px`,
@@ -533,14 +535,13 @@ export function Timeline() {
 								}}
 							>
 								{tracks.length > 0 && (
-		<TimelineTrackRows
-					mainTrackId={mainTrackId}
+									<TimelineTrackRows
+										mainTrackId={mainTrackId}
 										zoomLevel={zoomLevel}
 										dragState={dragState}
 										tracksScrollRef={tracksScrollRef}
 										lastMouseXRef={lastMouseXRef}
-										onSnapPointChange={handleSnapPointChange}
-										onResizeStateChange={handleResizeStateChange}
+										onResizeStart={handleResizeStart}
 										onElementMouseDown={handleElementMouseDown}
 										onElementClick={handleElementClick}
 										onTrackMouseDown={(event) => {
@@ -718,8 +719,7 @@ function TimelineTrackRows({
 	dragState,
 	tracksScrollRef,
 	lastMouseXRef,
-	onSnapPointChange,
-	onResizeStateChange,
+	onResizeStart,
 	onElementMouseDown,
 	onElementClick,
 	onTrackMouseDown,
@@ -733,8 +733,9 @@ function TimelineTrackRows({
 	dragState: ElementDragState;
 	tracksScrollRef: React.RefObject<HTMLDivElement | null>;
 	lastMouseXRef: React.RefObject<number>;
-	onSnapPointChange: (snapPoint: SnapPoint | null) => void;
-	onResizeStateChange: (params: { isResizing: boolean }) => void;
+	onResizeStart: React.ComponentProps<
+		typeof TimelineTrackContent
+	>["onResizeStart"];
 	onElementMouseDown: React.ComponentProps<
 		typeof TimelineTrackContent
 	>["onElementMouseDown"];
@@ -798,8 +799,7 @@ function TimelineTrackRows({
 						<div
 							className={cn(
 								"absolute right-0 left-0 transition-colors",
-								tracksWithSelection.has(track.id) &&
-									SELECTED_TRACK_ROW_CLASS,
+								tracksWithSelection.has(track.id) && SELECTED_TRACK_ROW_CLASS,
 							)}
 							style={{
 								top: `${TIMELINE_CONTENT_TOP_PADDING_PX + getCumulativeHeightBefore({ tracks, trackIndex: index, getExtraHeight: getTrackExpansionHeight })}px`,
@@ -813,8 +813,7 @@ function TimelineTrackRows({
 								rulerScrollRef={tracksScrollRef}
 								tracksScrollRef={tracksScrollRef}
 								lastMouseXRef={lastMouseXRef}
-								onSnapPointChange={onSnapPointChange}
-								onResizeStateChange={onResizeStateChange}
+								onResizeStart={onResizeStart}
 								onElementMouseDown={onElementMouseDown}
 								onElementClick={onElementClick}
 								onTrackMouseDown={onTrackMouseDown}
@@ -929,12 +928,10 @@ function TrackToggleIcon({
 function PropertyTree({ rows }: { rows: ExpandedRow[] }) {
 	return (
 		<div className="flex flex-col overflow-hidden">
-			{rows.map((row, index) => (
+			{rows.map((row) => (
 				<div
 					key={row.propertyPath}
-					className={cn(
-						"flex shrink-0 items-center px-3 bg-muted/50",
-					)}
+					className={cn("flex shrink-0 items-center px-3 bg-muted/50")}
 					style={{ height: `${KEYFRAME_LANE_HEIGHT_PX}px` }}
 				>
 					<span className="text-muted-foreground truncate text-xs leading-none">

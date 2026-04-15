@@ -22,6 +22,7 @@ export function findSnapPoints({
 	tracks,
 	playheadTime,
 	excludeElementId,
+	excludeElementIds,
 	bookmarks = [],
 	excludeBookmarkTime,
 	enableElementSnapping = true,
@@ -32,6 +33,7 @@ export function findSnapPoints({
 	tracks: SceneTracks;
 	playheadTime: number;
 	excludeElementId?: string;
+	excludeElementIds?: Set<string>;
 	bookmarks?: Array<Bookmark>;
 	excludeBookmarkTime?: number;
 	enableElementSnapping?: boolean;
@@ -41,10 +43,14 @@ export function findSnapPoints({
 }): SnapPoint[] {
 	const snapPoints: SnapPoint[] = [];
 	const orderedTracks = [...tracks.overlay, tracks.main, ...tracks.audio];
+	const blockedElementIds = new Set(excludeElementIds);
+	if (excludeElementId) {
+		blockedElementIds.add(excludeElementId);
+	}
 
 	for (const track of orderedTracks) {
 		for (const element of track.elements) {
-			if (element.id === excludeElementId) continue;
+			if (blockedElementIds.has(element.id)) continue;
 
 			if (enableElementSnapping) {
 				snapPoints.push(
@@ -136,6 +142,7 @@ export function snapElementEdge({
 	playheadTime,
 	zoomLevel,
 	excludeElementId,
+	excludeElementIds,
 	snapToStart = true,
 	bookmarks = [],
 }: {
@@ -145,6 +152,7 @@ export function snapElementEdge({
 	playheadTime: number;
 	zoomLevel: number;
 	excludeElementId?: string;
+	excludeElementIds?: Set<string>;
 	snapToStart?: boolean;
 	bookmarks?: Array<Bookmark>;
 }): SnapResult {
@@ -152,6 +160,7 @@ export function snapElementEdge({
 		tracks,
 		playheadTime,
 		excludeElementId,
+		excludeElementIds,
 		bookmarks,
 	});
 

@@ -3,140 +3,123 @@ import { EditorCore } from "@/core";
 import type {
 	SceneTracks,
 	TimelineElement,
-	TrackType,
 	TimelineTrack,
 } from "@/lib/timeline";
 import {
 	buildEmptyTrack,
 	validateElementTrackCompatibility,
-	enforceMainTrackStart,
 } from "@/lib/timeline/placement";
-import {
-	findTrackInSceneTracks,
-	updateTrackInSceneTracks,
-} from "@/lib/timeline/track-element-update";
+import type {
+	PlannedElementMove,
+	PlannedTrackCreation,
+} from "@/lib/timeline/group-move";
+import { findTrackInSceneTracks } from "@/lib/timeline/track-element-update";
 
 export class MoveElementCommand extends Command {
 	private savedState: SceneTracks | null = null;
-	private readonly sourceTrackId: string;
-	private readonly targetTrackId: string;
-	private readonly elementId: string;
-	private readonly newStartTime: number;
-	private readonly createTrack: { type: TrackType; index: number } | undefined;
 
 	constructor({
-		sourceTrackId,
-		targetTrackId,
-		elementId,
-		newStartTime,
-		createTrack,
+		moves,
+		createTracks = [],
 	}: {
-		sourceTrackId: string;
-		targetTrackId: string;
-		elementId: string;
-		newStartTime: number;
-		createTrack?: { type: TrackType; index: number };
+		moves: PlannedElementMove[];
+		createTracks?: PlannedTrackCreation[];
 	}) {
 		super();
-		this.sourceTrackId = sourceTrackId;
-		this.targetTrackId = targetTrackId;
-		this.elementId = elementId;
-		this.newStartTime = newStartTime;
-		this.createTrack = createTrack;
+		this.moves = moves;
+		this.createTracks = createTracks;
 	}
+
+	private readonly moves: PlannedElementMove[];
+	private readonly createTracks: PlannedTrackCreation[];
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
 		this.savedState = editor.scenes.getActiveScene().tracks;
 
-		const sourceTrack = findTrackInSceneTracks({
-			tracks: this.savedState,
-			trackId: this.sourceTrackId,
-		});
-		const element = sourceTrack?.elements.find(
-			(trackElement) => trackElement.id === this.elementId,
-		);
-
-		if (!sourceTrack || !element) {
-			throw new Error("Source track or element not found");
-		}
-
-		let targetTrack = findTrackInSceneTracks({
-			tracks: this.savedState,
-			trackId: this.targetTrackId,
-		});
 		let tracksToUpdate = this.savedState;
-		if (!targetTrack && this.createTrack) {
-			const newTrack = buildEmptyTrack({
-				id: this.targetTrackId,
-				type: this.createTrack.type,
-			});
+		for (const createTrack of [...this.createTracks].sort(
+			(firstTrack, secondTrack) => firstTrack.index - secondTrack.index,
+		)) {
 			tracksToUpdate = insertTrackAtDisplayIndex({
-				tracks: this.savedState,
-				track: newTrack,
-				insertIndex: this.createTrack.index,
+				tracks: tracksToUpdate,
+				track: buildEmptyTrack({
+					id: createTrack.id,
+					type: createTrack.type,
+				}),
+				insertIndex: createTrack.index,
 			});
-			targetTrack = newTrack;
-		}
-		if (!targetTrack) {
-			throw new Error("Target track not found");
 		}
 
-		const validation = validateElementTrackCompatibility({
-			element,
-			track: targetTrack,
-		});
+		const movedElementsById = new Map<string, TimelineElement>();
+		for (const move of this.moves) {
+			const sourceTrack = findTrackInSceneTracks({
+				tracks: this.savedState,
+				trackId: move.sourceTrackId,
+			});
+			const sourceElement = sourceTrack?.elements.find(
+				(trackElement) => trackElement.id === move.elementId,
+			);
+			if (!sourceTrack || !sourceElement) {
+				throw new Error("Source track or element not found");
+			}
 
-		if (!validation.isValid) {
-			throw new Error(validation.errorMessage);
+			const targetTrack = findTrackInSceneTracks({
+				tracks: tracksToUpdate,
+				trackId: move.targetTrackId,
+			});
+			if (!targetTrack) {
+				throw new Error("Target track not found");
+			}
+
+			const validation = validateElementTrackCompatibility({
+				element: sourceElement,
+				track: targetTrack,
+			});
+			if (!validation.isValid) {
+				throw new Error(validation.errorMessage);
+			}
+
+			movedElementsById.set(move.elementId, {
+				...sourceElement,
+				startTime: move.newStartTime,
+			});
 		}
 
-		const adjustedStartTime = enforceMainTrackStart({
+		const movedElementIds = new Set(this.moves.map((move) => move.elementId));
+		const movedElementsByTargetTrackId = new Map<string, TimelineElement[]>();
+		for (const move of this.moves) {
+			const movedElement = movedElementsById.get(move.elementId);
+			if (!movedElement) {
+				continue;
+			}
+
+			const nextTargetElements =
+				movedElementsByTargetTrackId.get(move.targetTrackId) ?? [];
+			nextTargetElements.push(movedElement);
+			movedElementsByTargetTrackId.set(move.targetTrackId, nextTargetElements);
+		}
+
+		const updatedTracks = mapSceneTracks({
 			tracks: tracksToUpdate,
-			targetTrackId: this.targetTrackId,
-			requestedStartTime: this.newStartTime,
-			excludeElementId: this.elementId,
+			update: (track) => ({
+				...track,
+				elements: [
+					...track.elements.filter(
+						(element) => !movedElementIds.has(element.id),
+					),
+					...(movedElementsByTargetTrackId.get(track.id) ?? []),
+				],
+			}),
 		});
-
-		// keyframe times remain clip-local, so moving only changes element startTime.
-		const movedElement: TimelineElement = {
-			...element,
-			startTime: adjustedStartTime,
-		};
-
-		const isSameTrack = this.sourceTrackId === this.targetTrackId;
-
-		const updatedTracks = isSameTrack
-			? updateTrackInSceneTracks({
-					tracks: tracksToUpdate,
-					trackId: this.sourceTrackId,
-					update: (track) => ({
-						...track,
-						elements: track.elements.map((trackElement) =>
-							trackElement.id === this.elementId ? movedElement : trackElement,
-						),
-					}),
-				})
-			: updateTrackInSceneTracks({
-					tracks: updateTrackInSceneTracks({
-						tracks: tracksToUpdate,
-						trackId: this.sourceTrackId,
-						update: (track) => ({
-							...track,
-							elements: track.elements.filter(
-								(trackElement) => trackElement.id !== this.elementId,
-							),
-						}),
-					}),
-					trackId: this.targetTrackId,
-					update: (track) => ({
-						...track,
-						elements: [...track.elements, movedElement],
-					}),
-				});
 
 		editor.timeline.updateTracks(updatedTracks);
-		return undefined;
+		return {
+			select: this.moves.map(({ elementId, targetTrackId }) => ({
+				trackId: targetTrackId,
+				elementId,
+			})),
+		};
 	}
 
 	undo(): void {
@@ -145,6 +128,20 @@ export class MoveElementCommand extends Command {
 			editor.timeline.updateTracks(this.savedState);
 		}
 	}
+}
+
+function mapSceneTracks({
+	tracks,
+	update,
+}: {
+	tracks: SceneTracks;
+	update: <TTrack extends TimelineTrack>(track: TTrack) => TTrack;
+}): SceneTracks {
+	return {
+		overlay: tracks.overlay.map((track) => update(track)),
+		main: update(tracks.main),
+		audio: tracks.audio.map((track) => update(track)),
+	};
 }
 
 function insertTrackAtDisplayIndex({
