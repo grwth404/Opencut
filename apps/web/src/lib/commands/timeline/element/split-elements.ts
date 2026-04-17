@@ -37,7 +37,9 @@ export class SplitElementsCommand extends Command {
 		this.savedState = editor.scenes.getActiveScene().tracks;
 		this.rightSideElements = [];
 
-		const splitTrack = <TTrack extends { id: string; elements: TimelineElement[] }>(
+		const splitTrack = <
+			TTrack extends { id: string; elements: TimelineElement[] },
+		>(
 			track: TTrack,
 		): TTrack => {
 			const elementsToSplit = this.elements.filter(
@@ -48,7 +50,7 @@ export class SplitElementsCommand extends Command {
 				return track;
 			}
 
-			let elements = track.elements.flatMap((element) => {
+			const elements = track.elements.flatMap((element) => {
 				const shouldSplit = elementsToSplit.some(
 					(target) => target.elementId === element.id,
 				);
@@ -87,67 +89,67 @@ export class SplitElementsCommand extends Command {
 					splitTime: relativeTime,
 					shouldIncludeSplitBoundary: true,
 				});
+				let splitResult: TimelineElement[];
 
 				if (this.retainSide === "left") {
-					return [
-					{
-						...element,
-						duration: leftVisibleDuration,
-						trimEnd: element.trimEnd + rightSourceSpan,
-						name: `${element.name} (left)`,
-						animations: leftAnimations,
-						...(retimeRef !== undefined ? { retime: retimeRef } : {}),
-					},
-				];
-			}
+					splitResult = [
+						{
+							...element,
+							duration: leftVisibleDuration,
+							trimEnd: element.trimEnd + rightSourceSpan,
+							name: `${element.name} (left)`,
+							animations: leftAnimations,
+							...(retimeRef !== undefined ? { retime: retimeRef } : {}),
+						},
+					];
+				} else if (this.retainSide === "right") {
+					const newId = generateUUID();
+					this.rightSideElements.push({
+						trackId: track.id,
+						elementId: newId,
+					});
+					splitResult = [
+						{
+							...element,
+							id: newId,
+							startTime: this.splitTime,
+							duration: rightVisibleDuration,
+							trimStart: element.trimStart + leftSourceSpan,
+							name: `${element.name} (right)`,
+							animations: rightAnimations,
+							...(retimeRef !== undefined ? { retime: retimeRef } : {}),
+						},
+					];
+				} else {
+					// "both" - split into two pieces
+					const secondElementId = generateUUID();
+					this.rightSideElements.push({
+						trackId: track.id,
+						elementId: secondElementId,
+					});
+					splitResult = [
+						{
+							...element,
+							duration: leftVisibleDuration,
+							trimEnd: element.trimEnd + rightSourceSpan,
+							name: `${element.name} (left)`,
+							animations: leftAnimations,
+							...(retimeRef !== undefined ? { retime: retimeRef } : {}),
+						},
+						{
+							...element,
+							id: secondElementId,
+							startTime: this.splitTime,
+							duration: rightVisibleDuration,
+							trimStart: element.trimStart + leftSourceSpan,
+							name: `${element.name} (right)`,
+							animations: rightAnimations,
+							...(retimeRef !== undefined ? { retime: retimeRef } : {}),
+						},
+					];
+				}
 
-			if (this.retainSide === "right") {
-				const newId = generateUUID();
-				this.rightSideElements.push({
-					trackId: track.id,
-					elementId: newId,
-				});
-				return [
-					{
-						...element,
-						id: newId,
-						startTime: this.splitTime,
-						duration: rightVisibleDuration,
-						trimStart: element.trimStart + leftSourceSpan,
-						name: `${element.name} (right)`,
-						animations: rightAnimations,
-						...(retimeRef !== undefined ? { retime: retimeRef } : {}),
-					},
-				];
-			}
-
-			// "both" - split into two pieces
-			const secondElementId = generateUUID();
-			this.rightSideElements.push({
-				trackId: track.id,
-				elementId: secondElementId,
-			});
-
-			return [
-				{
-					...element,
-					duration: leftVisibleDuration,
-					trimEnd: element.trimEnd + rightSourceSpan,
-					name: `${element.name} (left)`,
-					animations: leftAnimations,
-					...(retimeRef !== undefined ? { retime: retimeRef } : {}),
-				},
-				{
-					...element,
-					id: secondElementId,
-					startTime: this.splitTime,
-					duration: rightVisibleDuration,
-					trimStart: element.trimStart + leftSourceSpan,
-					name: `${element.name} (right)`,
-					animations: rightAnimations,
-					...(retimeRef !== undefined ? { retime: retimeRef } : {}),
-				},
-			];
+				return splitResult;
 			});
 
 			return { ...track, elements } as TTrack;

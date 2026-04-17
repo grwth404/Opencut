@@ -3,7 +3,6 @@ import { EditorCore } from "@/core";
 import type {
 	CreateTimelineElement,
 	SceneTracks,
-	TimelineTrack,
 	TimelineElement,
 	TrackType,
 } from "@/lib/timeline";

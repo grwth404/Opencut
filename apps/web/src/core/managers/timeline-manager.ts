@@ -712,16 +712,29 @@ export class TimelineManager {
 			updates: Partial<TimelineElement>;
 		}>;
 	}): void {
+		let changedOverlayCount = 0;
 		for (const { elementId, updates: elementUpdates } of updates) {
 			const existingOverlay = this.previewOverlay.get(elementId);
-			const mergedOverlay = {
-				...existingOverlay,
-				...elementUpdates,
-			} as Partial<TimelineElement>;
-			this.previewOverlay.set(elementId, mergedOverlay);
+			const changed = Object.entries(elementUpdates).some(([key, value]) => {
+				return !Object.is(
+					existingOverlay?.[key as keyof TimelineElement],
+					value,
+				);
+			});
+			if (changed) {
+				changedOverlayCount += 1;
+				const mergedOverlay = {
+					...existingOverlay,
+					...elementUpdates,
+				} as Partial<TimelineElement>;
+				this.previewOverlay.set(elementId, mergedOverlay);
+			}
 		}
 		const committedTracks = this.editor.scenes.getActiveSceneOrNull()?.tracks;
 		if (!committedTracks) {
+			return;
+		}
+		if (changedOverlayCount === 0) {
 			return;
 		}
 		this.previewTracks = this.applyPreviewOverlay(committedTracks);

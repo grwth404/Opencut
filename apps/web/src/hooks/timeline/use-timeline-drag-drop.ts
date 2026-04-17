@@ -89,8 +89,8 @@ export function useTimelineDragDrop({
 				const mediaAssets = editor.media.getAssets();
 				const media = mediaAssets.find((m) => m.id === mediaId);
 				return media?.duration != null
-				? Math.round(media.duration * TICKS_PER_SECOND)
-				: DEFAULT_NEW_ELEMENT_DURATION;
+					? Math.round(media.duration * TICKS_PER_SECOND)
+					: DEFAULT_NEW_ELEMENT_DURATION;
 			}
 			return DEFAULT_NEW_ELEMENT_DURATION;
 		},
@@ -468,10 +468,10 @@ export function useTimelineDragDrop({
 						});
 						if (!createdAsset) continue;
 
-					const duration =
-						createdAsset.duration != null
-							? Math.round(createdAsset.duration * TICKS_PER_SECOND)
-							: DEFAULT_NEW_ELEMENT_DURATION;
+						const duration =
+							createdAsset.duration != null
+								? Math.round(createdAsset.duration * TICKS_PER_SECOND)
+								: DEFAULT_NEW_ELEMENT_DURATION;
 						const sceneTracks = editor.scenes.getActiveScene().tracks;
 						const currentTime = editor.playback.getCurrentTime();
 						const reuseMainTrackId =
@@ -498,9 +498,22 @@ export function useTimelineDragDrop({
 						const trackType: TrackType =
 							createdAsset.type === "audio" ? "audio" : "video";
 
-						let trackId: string | undefined;
+						const startTime = dropTarget?.xPosition ?? currentTime;
+						const element = buildElementFromMedia({
+							mediaId: createdAsset.id,
+							mediaType: createdAsset.type,
+							name: createdAsset.name,
+							duration,
+							startTime,
+						});
+
 						if (reuseMainTrackId) {
-							trackId = reuseMainTrackId;
+							editor.command.execute({
+								command: new InsertElementCommand({
+									element,
+									placement: { mode: "explicit", trackId: reuseMainTrackId },
+								}),
+							});
 						} else {
 							if (!dropTarget) continue;
 							if (dropTarget.isNewTrack) {
@@ -508,36 +521,33 @@ export function useTimelineDragDrop({
 									trackType,
 									dropTarget.trackIndex,
 								);
-								trackId = addTrackCmd.getTrackId();
-								editor.command.execute({ command: addTrackCmd });
+								editor.command.execute({
+									command: new BatchCommand([
+										addTrackCmd,
+										new InsertElementCommand({
+											element,
+											placement: {
+												mode: "explicit",
+												trackId: addTrackCmd.getTrackId(),
+											},
+										}),
+									]),
+								});
 							} else {
-								trackId = [
+								const trackId = [
 									...sceneTracks.overlay,
 									sceneTracks.main,
 									...sceneTracks.audio,
 								][dropTarget.trackIndex]?.id;
+								if (!trackId) continue;
+								editor.command.execute({
+									command: new InsertElementCommand({
+										element,
+										placement: { mode: "explicit", trackId },
+									}),
+								});
 							}
 						}
-
-						if (!trackId) continue;
-
-						const element = buildElementFromMedia({
-							mediaId: createdAsset.id,
-							mediaType: createdAsset.type,
-							name: createdAsset.name,
-							duration,
-							startTime: dropTarget?.xPosition ?? currentTime,
-							buffer:
-								createdAsset.type === "audio"
-									? new AudioBuffer({ length: 1, sampleRate: 44100 })
-									: undefined,
-						});
-
-						const insertCmd = new InsertElementCommand({
-							element,
-							placement: { mode: "explicit", trackId },
-						});
-						editor.command.execute({ command: insertCmd });
 					}
 
 					return {

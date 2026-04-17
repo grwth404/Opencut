@@ -44,14 +44,34 @@ export function computeGroupResize({
 			? minimumDeltaTime
 			: Math.min(maximumDeltaTime, Math.max(minimumDeltaTime, deltaTime));
 
+	// Snap the drag delta to a frame exactly once, then derive every patch
+	// field from that single snapped value. This keeps the invariant
+	// `trimStart + duration*rate + trimEnd == sourceDuration` exact: the same
+	// delta is added on one side of the element and removed from the other,
+	// so the rounding cancels by construction. Per-field rounding (the old
+	// approach) couldn't preserve this because the individual rounds don't
+	// compose when `sourceDuration` isn't frame-aligned.
+	const snappedDeltaTime =
+		roundToFrame({ time: clampedDeltaTime, rate: fps }) ?? clampedDeltaTime;
+	// Re-clamp after rounding. Bounds derived from other elements are
+	// frame-aligned, so this is normally a no-op; at the source-extent limit
+	// the bound may not be frame-aligned, and honouring the bound takes
+	// precedence over frame alignment (you can't extend past real content).
+	const finalDeltaTime =
+		minimumDeltaTime > maximumDeltaTime
+			? minimumDeltaTime
+			: Math.min(
+					maximumDeltaTime,
+					Math.max(minimumDeltaTime, snappedDeltaTime),
+				);
+
 	return {
-		deltaTime: Object.is(clampedDeltaTime, -0) ? 0 : clampedDeltaTime,
+		deltaTime: Object.is(finalDeltaTime, -0) ? 0 : finalDeltaTime,
 		updates: members.map((member) =>
 			buildResizeUpdate({
 				member,
 				side,
-				deltaTime: clampedDeltaTime,
-				fps,
+				deltaTime: finalDeltaTime,
 			}),
 		),
 	};
@@ -61,98 +81,37 @@ function buildResizeUpdate({
 	member,
 	side,
 	deltaTime,
-	fps,
 }: {
 	member: GroupResizeMember;
 	side: ResizeSide;
 	deltaTime: number;
-	fps: ComputeGroupResizeArgs["fps"];
 }): GroupResizeUpdate {
-	const totalSourceDuration = getSourceDuration({ member });
 	const sourceDelta = getSourceDeltaForClipDelta({
 		member,
 		clipDelta: deltaTime,
 	});
-	const visibleSourceSpan = getVisibleSourceSpanForDuration({
-		member,
-		duration: member.duration,
-	});
 
 	if (side === "left") {
-		if (deltaTime < 0 && member.sourceDuration == null) {
-			const rawStartTime = member.startTime + deltaTime;
-			const rawDuration = member.duration - deltaTime;
-			return {
-				trackId: member.trackId,
-				elementId: member.elementId,
-				patch: {
-					trimStart: Math.max(0, member.trimStart + sourceDelta),
-					trimEnd: member.trimEnd,
-					startTime:
-						roundToFrame({ time: rawStartTime, rate: fps }) ?? rawStartTime,
-					duration:
-						roundToFrame({ time: rawDuration, rate: fps }) ?? rawDuration,
-				},
-			};
-		}
-
-		const nextTrimStart = Math.max(0, member.trimStart + sourceDelta);
-		const nextVisibleSourceSpan = Math.max(
-			0,
-			totalSourceDuration - nextTrimStart - member.trimEnd,
-		);
-		const rawDuration = getDurationForVisibleSourceSpan({
-			member,
-			sourceSpan: nextVisibleSourceSpan,
-		});
-		const nextDuration =
-			roundToFrame({ time: rawDuration, rate: fps }) ?? rawDuration;
-		const rawStartTime = member.startTime + (member.duration - nextDuration);
 		return {
 			trackId: member.trackId,
 			elementId: member.elementId,
 			patch: {
-				trimStart:
-					roundToFrame({ time: nextTrimStart, rate: fps }) ?? nextTrimStart,
+				trimStart: Math.max(0, member.trimStart + sourceDelta),
 				trimEnd: member.trimEnd,
-				startTime:
-					roundToFrame({ time: rawStartTime, rate: fps }) ?? rawStartTime,
-				duration: nextDuration,
+				startTime: member.startTime + deltaTime,
+				duration: member.duration - deltaTime,
 			},
 		};
 	}
 
-	const nextVisibleSourceSpan = Math.max(0, visibleSourceSpan + sourceDelta);
-	if (deltaTime > 0 && member.sourceDuration == null) {
-		const rawDuration = member.duration + deltaTime;
-		return {
-			trackId: member.trackId,
-			elementId: member.elementId,
-			patch: {
-				trimStart: member.trimStart,
-				trimEnd: Math.max(0, member.trimEnd - sourceDelta),
-				startTime: member.startTime,
-				duration: roundToFrame({ time: rawDuration, rate: fps }) ?? rawDuration,
-			},
-		};
-	}
-
-	const nextTrimEnd = Math.max(
-		0,
-		totalSourceDuration - member.trimStart - nextVisibleSourceSpan,
-	);
-	const rawDuration = getDurationForVisibleSourceSpan({
-		member,
-		sourceSpan: nextVisibleSourceSpan,
-	});
 	return {
 		trackId: member.trackId,
 		elementId: member.elementId,
 		patch: {
 			trimStart: member.trimStart,
-			trimEnd: roundToFrame({ time: nextTrimEnd, rate: fps }) ?? nextTrimEnd,
+			trimEnd: Math.max(0, member.trimEnd - sourceDelta),
 			startTime: member.startTime,
-			duration: roundToFrame({ time: rawDuration, rate: fps }) ?? rawDuration,
+			duration: member.duration + deltaTime,
 		},
 	};
 }

@@ -1,8 +1,10 @@
 "use client";
 
+import { createContext, useContext } from "react";
 import { useEditor } from "@/hooks/use-editor";
 import { useAssetsPanelStore } from "@/stores/assets-panel-store";
 import { AudioWaveform, WAVEFORM_GAIN_SAMPLE_COUNT } from "./audio-waveform";
+import { AudioVolumeLine } from "./audio-volume-line";
 import { useElementPreview } from "@/hooks/use-element-preview";
 import {
 	useKeyframeDrag,
@@ -45,6 +47,9 @@ import {
 	isSourceAudioSeparated,
 } from "@/lib/timeline/audio-separation";
 import { buildWaveformGainSamples } from "@/lib/timeline/audio-state";
+import { getTimelinePixelsPerSecond } from "@/lib/timeline";
+import { buildWaveformSourceKey } from "@/lib/media/waveform-summary";
+import { TICKS_PER_SECOND } from "@/lib/wasm/ticks";
 import {
 	getActionDefinition,
 	type TAction,
@@ -89,6 +94,8 @@ import {
 
 const KEYFRAME_INDICATOR_MIN_WIDTH_PX = 40;
 const ELEMENT_RING_WIDTH_PX = 1.5;
+
+const PixelsPerSecondContext = createContext<number | null>(null);
 const THUMBNAIL_ASPECT_RATIO = 16 / 9;
 
 interface KeyframeIndicator {
@@ -264,6 +271,7 @@ export function TimelineElement({
 		time: displayedDuration,
 		zoomLevel,
 	});
+	const timelinePixelsPerSecond = getTimelinePixelsPerSecond({ zoomLevel });
 	const elementLeft = timelineTimeToSnappedPixels({
 		time: displayedStartTime,
 		zoomLevel,
@@ -364,137 +372,141 @@ export function TimelineElement({
 		) : null;
 
 	return (
-		<ContextMenu>
-			<ContextMenuTrigger asChild>
-				<div
-					className="absolute top-0 select-none"
-					style={{
-						left: `${elementLeft}px`,
-						width: `${elementWidth}px`,
-						height:
-							expandedRows.length > 0
-								? `${baseTrackHeight + expansionHeight}px`
-								: "100%",
-						transform:
-							isBeingDragged && dragState.isDragging
-								? `translate3d(0, ${dragOffsetY}px, 0)`
-								: undefined,
-					}}
-				>
-					<ElementInner
-						element={element}
-						displayElement={renderElement}
-						track={track}
-						isSelected={isSelected}
-						isExpanded={expandedRows.length > 0}
-						baseTrackHeight={baseTrackHeight}
-						expandedContent={expandedContent}
-						onElementClick={onElementClick}
-						onElementMouseDown={onElementMouseDown}
-						onResizeStart={onResizeStart}
-						isDropTarget={isDropTarget}
-					/>
-					{isSelected && (
-						<div
-							className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
-							style={{ height: `${baseTrackHeight}px` }}
-						>
-							<KeyframeIndicators
-								indicators={keyframeIndicators}
-								dragState={keyframeDragState}
-								displayedStartTime={displayedStartTime}
-								elementLeft={elementLeft}
-								onKeyframeMouseDown={handleKeyframeMouseDown}
-								onKeyframeClick={handleKeyframeClick}
-								getVisualOffsetPx={getVisualOffsetPx}
-							/>
-						</div>
-					)}
-				</div>
-			</ContextMenuTrigger>
-			<ContextMenuContent className="w-64">
-				<ActionMenuItem
-					action="split"
-					icon={<HugeiconsIcon icon={ScissorIcon} />}
-				>
-					Split
-				</ActionMenuItem>
-				<CopyMenuItem />
-				{selectedElements.length === 1 && (
+		<PixelsPerSecondContext.Provider value={timelinePixelsPerSecond}>
+			<ContextMenu>
+				<ContextMenuTrigger asChild>
+					<div
+						className="absolute top-0 select-none"
+						style={{
+							left: `${elementLeft}px`,
+							width: `${elementWidth}px`,
+							height:
+								expandedRows.length > 0
+									? `${baseTrackHeight + expansionHeight}px`
+									: "100%",
+							transform:
+								isBeingDragged && dragState.isDragging
+									? `translate3d(0, ${dragOffsetY}px, 0)`
+									: undefined,
+						}}
+					>
+						<ElementInner
+							element={element}
+							displayElement={renderElement}
+							track={track}
+							isSelected={isSelected}
+							isExpanded={expandedRows.length > 0}
+							baseTrackHeight={baseTrackHeight}
+							expandedContent={expandedContent}
+							onElementClick={onElementClick}
+							onElementMouseDown={onElementMouseDown}
+							onResizeStart={onResizeStart}
+							isDropTarget={isDropTarget}
+						/>
+						{isSelected && (
+							<div
+								className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
+								style={{ height: `${baseTrackHeight}px` }}
+							>
+								<KeyframeIndicators
+									indicators={keyframeIndicators}
+									dragState={keyframeDragState}
+									displayedStartTime={displayedStartTime}
+									elementLeft={elementLeft}
+									onKeyframeMouseDown={handleKeyframeMouseDown}
+									onKeyframeClick={handleKeyframeClick}
+									getVisualOffsetPx={getVisualOffsetPx}
+								/>
+							</div>
+						)}
+					</div>
+				</ContextMenuTrigger>
+				<ContextMenuContent className="w-64">
 					<ActionMenuItem
-						action="duplicate-selected"
-						icon={<HugeiconsIcon icon={Copy01Icon} />}
+						action="split"
+						icon={<HugeiconsIcon icon={ScissorIcon} />}
 					>
-						Duplicate
+						Split
 					</ActionMenuItem>
-				)}
-				{canElementHaveAudio(element) && hasAudio && (
-					<MuteMenuItem
-						isMultipleSelected={selectedElements.length > 1}
-						isCurrentElementSelected={isCurrentElementSelected}
-						isMuted={isMuted}
-					/>
-				)}
-				{canToggleCurrentSourceAudio && (
-					<ContextMenuItem
-						icon={
-							<HugeiconsIcon
-								icon={isElementSourceAudioSeparated ? ScissorIcon : ScissorIcon}
-							/>
-						}
-						onClick={(event: React.MouseEvent) => {
-							event.stopPropagation();
-							invokeAction("toggle-source-audio");
-						}}
-					>
-						{sourceAudioLabel}
-					</ContextMenuItem>
-				)}
-				{canElementBeHidden(element) && (
-					<VisibilityMenuItem
-						element={element}
-						isMultipleSelected={selectedElements.length > 1}
-						isCurrentElementSelected={isCurrentElementSelected}
-					/>
-				)}
-				{hasKeyframes && (
-					<ContextMenuItem
-						icon={<HugeiconsIcon icon={KeyframeIcon} />}
-						onClick={(event: React.MouseEvent) => {
-							event.stopPropagation();
-							toggleElementExpanded(element.id);
-						}}
-					>
-						{isExpanded ? "Collapse keyframes" : "Expand keyframes"}
-					</ContextMenuItem>
-				)}
-				{selectedElements.length === 1 && hasMediaId(element) && (
-					<>
+					<CopyMenuItem />
+					{selectedElements.length === 1 && (
+						<ActionMenuItem
+							action="duplicate-selected"
+							icon={<HugeiconsIcon icon={Copy01Icon} />}
+						>
+							Duplicate
+						</ActionMenuItem>
+					)}
+					{canElementHaveAudio(element) && hasAudio && (
+						<MuteMenuItem
+							isMultipleSelected={selectedElements.length > 1}
+							isCurrentElementSelected={isCurrentElementSelected}
+							isMuted={isMuted}
+						/>
+					)}
+					{canToggleCurrentSourceAudio && (
 						<ContextMenuItem
-							icon={<HugeiconsIcon icon={Search01Icon} />}
-							onClick={(event: React.MouseEvent) =>
-								handleRevealInMedia({ event })
+							icon={
+								<HugeiconsIcon
+									icon={
+										isElementSourceAudioSeparated ? ScissorIcon : ScissorIcon
+									}
+								/>
 							}
+							onClick={(event: React.MouseEvent) => {
+								event.stopPropagation();
+								invokeAction("toggle-source-audio");
+							}}
 						>
-							Reveal media
+							{sourceAudioLabel}
 						</ContextMenuItem>
+					)}
+					{canElementBeHidden(element) && (
+						<VisibilityMenuItem
+							element={element}
+							isMultipleSelected={selectedElements.length > 1}
+							isCurrentElementSelected={isCurrentElementSelected}
+						/>
+					)}
+					{hasKeyframes && (
 						<ContextMenuItem
-							icon={<HugeiconsIcon icon={Exchange01Icon} />}
-							disabled
+							icon={<HugeiconsIcon icon={KeyframeIcon} />}
+							onClick={(event: React.MouseEvent) => {
+								event.stopPropagation();
+								toggleElementExpanded(element.id);
+							}}
 						>
-							Replace media
+							{isExpanded ? "Collapse keyframes" : "Expand keyframes"}
 						</ContextMenuItem>
-					</>
-				)}
-				<ContextMenuSeparator />
-				<DeleteMenuItem
-					isMultipleSelected={selectedElements.length > 1}
-					isCurrentElementSelected={isCurrentElementSelected}
-					elementType={element.type}
-					selectedCount={selectedElements.length}
-				/>
-			</ContextMenuContent>
-		</ContextMenu>
+					)}
+					{selectedElements.length === 1 && hasMediaId(element) && (
+						<>
+							<ContextMenuItem
+								icon={<HugeiconsIcon icon={Search01Icon} />}
+								onClick={(event: React.MouseEvent) =>
+									handleRevealInMedia({ event })
+								}
+							>
+								Reveal media
+							</ContextMenuItem>
+							<ContextMenuItem
+								icon={<HugeiconsIcon icon={Exchange01Icon} />}
+								disabled
+							>
+								Replace media
+							</ContextMenuItem>
+						</>
+					)}
+					<ContextMenuSeparator />
+					<DeleteMenuItem
+						isMultipleSelected={selectedElements.length > 1}
+						isCurrentElementSelected={isCurrentElementSelected}
+						elementType={element.type}
+						selectedCount={selectedElements.length}
+					/>
+				</ContextMenuContent>
+			</ContextMenu>
+		</PixelsPerSecondContext.Provider>
 	);
 }
 
@@ -973,7 +985,19 @@ function GraphicElementContent({
 	);
 }
 
-function AudioElementContent({ element }: { element: AudioElement }) {
+function AudioElementContent({
+	element,
+	trackId,
+}: {
+	element: AudioElement;
+	trackId: string;
+}) {
+	const pixelsPerSecond = useContext(PixelsPerSecondContext);
+	if (pixelsPerSecond === null) {
+		throw new Error(
+			"AudioElementContent must be rendered inside PixelsPerSecondContext.Provider",
+		);
+	}
 	const mediaAssets = useEditor((e) => e.media.getAssets());
 	const mediaAsset =
 		element.sourceType === "upload"
@@ -984,29 +1008,53 @@ function AudioElementContent({ element }: { element: AudioElement }) {
 		element.sourceType === "library" ? element.buffer : undefined;
 	const audioUrl =
 		element.sourceType === "library" ? element.sourceUrl : mediaAsset?.url;
+	const sourceFile =
+		element.sourceType === "upload" ? mediaAsset?.file : undefined;
+	const sourceKey =
+		element.sourceType === "upload"
+			? buildWaveformSourceKey({ kind: "media", id: element.mediaId })
+			: buildWaveformSourceKey({ kind: "library", id: element.sourceUrl });
 	const mediaLabel = mediaAsset?.name ?? element.name;
 	const gainSamples = useMemo(
 		() =>
-			buildWaveformGainSamples({ element, count: WAVEFORM_GAIN_SAMPLE_COUNT }),
+			buildWaveformGainSamples({
+				element,
+				count: WAVEFORM_GAIN_SAMPLE_COUNT,
+			}),
 		[element],
 	);
-
-	if (audioBuffer || audioUrl) {
+	if (audioBuffer || audioUrl || sourceFile) {
 		return (
-			<div className="relative size-full">
-				<AudioWaveform
-					audioBuffer={audioBuffer}
-					audioUrl={audioUrl}
-					gainSamples={gainSamples}
-					color={TIMELINE_TRACK_THEME.audio.waveformColor}
-				/>
+			<div className="group/audio relative size-full">
 				<MediaElementHeader name={mediaLabel} hasFade={false} />
+				<div className="absolute inset-x-0 top-5 bottom-0 overflow-hidden">
+					<AudioWaveform
+						sourceKey={sourceKey}
+						sourceFile={sourceFile}
+						audioBuffer={audioBuffer}
+						audioUrl={audioUrl}
+						gainSamples={gainSamples}
+						pixelsPerSecond={pixelsPerSecond}
+						clipDurationSec={element.duration / TICKS_PER_SECOND}
+						retime={element.retime}
+						sourceStartSec={element.trimStart / TICKS_PER_SECOND}
+						color={TIMELINE_TRACK_THEME.audio.waveformColor}
+					/>
+					<AudioVolumeLine element={element} trackId={trackId} />
+				</div>
 			</div>
 		);
 	}
 
 	return (
-		<span className="text-foreground/80 truncate text-xs">{element.name}</span>
+		<div className="group/audio relative size-full">
+			<div className="flex size-full items-center pl-2">
+				<span className="text-foreground/80 truncate text-xs">
+					{element.name}
+				</span>
+			</div>
+			<AudioVolumeLine element={element} trackId={trackId} />
+		</div>
 	);
 }
 
@@ -1108,7 +1156,7 @@ function MediaElementHeader({
 	return (
 		<div
 			className={cn(
-				"absolute top-0 left-0 flex h-7 w-full bg-linear-to-b pt-1",
+				"absolute top-0 left-0 flex h-5 w-full bg-linear-to-b pt-1",
 				hasFade && "from-black/30 to-transparent",
 			)}
 		>
@@ -1133,7 +1181,7 @@ function ElementContent({ element, track }: ElementContentProps) {
 		case "graphic":
 			return <GraphicElementContent element={element} />;
 		case "audio":
-			return <AudioElementContent element={element} />;
+			return <AudioElementContent element={element} trackId={track.id} />;
 		case "video":
 		case "image":
 			return <TiledMediaContent element={element} track={track} />;

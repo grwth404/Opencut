@@ -69,10 +69,7 @@ function buildAudioTrackState({
 	insertIndex: number;
 	trackId: string;
 }): SceneTracks {
-	const audioInsertIndex = Math.max(
-		0,
-		insertIndex - tracks.overlay.length - 1,
-	);
+	const audioInsertIndex = Math.max(0, insertIndex - tracks.overlay.length - 1);
 	const newTrack = buildEmptyTrack({
 		id: trackId,
 		type: "audio",

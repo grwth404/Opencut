@@ -1,8 +1,10 @@
 import { Command, type CommandResult } from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import type { MediaAsset } from "@/lib/media/types";
+import { buildWaveformSourceKey } from "@/lib/media/waveform-summary";
 import { storageService } from "@/services/storage/service";
 import { videoCache } from "@/services/video-cache/service";
+import { waveformCache } from "@/services/waveform-cache/service";
 import { hasMediaId } from "@/lib/timeline/element-utils";
 import type { SceneTracks } from "@/lib/timeline";
 
@@ -41,6 +43,12 @@ export class RemoveMediaAssetCommand extends Command {
 		}
 
 		videoCache.clearVideo({ mediaId: this.assetId });
+		waveformCache.clearSource({
+			sourceKey: buildWaveformSourceKey({
+				kind: "media",
+				id: this.assetId,
+			}),
+		});
 
 		editor.media.setAssets({
 			assets: assets.filter((media) => media.id !== this.assetId),

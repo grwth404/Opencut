@@ -5,10 +5,12 @@ import {
 	canExtractSourceAudio,
 	isSourceAudioSeparated,
 } from "@/lib/timeline/audio-separation";
-import { buildEmptyTrack } from "@/lib/timeline/placement";
+import {
+	applyPlacement,
+	resolveTrackPlacement,
+} from "@/lib/timeline/placement";
 import { updateElementInSceneTracks } from "@/lib/timeline/track-element-update";
 import type {
-	AudioTrack,
 	SceneTracks,
 	TimelineElement,
 	VideoElement,
@@ -35,9 +37,7 @@ export class ToggleSourceAudioSeparationCommand extends Command {
 			...this.savedState.overlay,
 			this.savedState.main,
 			...this.savedState.audio,
-		].find(
-			(track) => track.id === this.params.trackId,
-		);
+		].find((track) => track.id === this.params.trackId);
 		if (!sourceTrack) {
 			return;
 		}
@@ -61,8 +61,7 @@ export class ToggleSourceAudioSeparationCommand extends Command {
 			return;
 		}
 
-		const mediaAsset = editor
-			.media
+		const mediaAsset = editor.media
 			.getAssets()
 			.find((asset) => asset.id === videoElement.mediaId);
 		if (!canExtractSourceAudio(videoElement, mediaAsset)) {
@@ -78,20 +77,32 @@ export class ToggleSourceAudioSeparationCommand extends Command {
 			}),
 			id: generateUUID(),
 		};
-		const newAudioTrack = {
-			...buildEmptyTrack({
-				id: generateUUID(),
-				type: "audio",
-			}),
+		const placementResult = resolveTrackPlacement({
+			tracks: this.savedState,
+			trackType: "audio",
+			timeSpans: [
+				{
+					startTime: separatedAudioElement.startTime,
+					duration: separatedAudioElement.duration,
+				},
+			],
+			strategy: { type: "firstAvailable" },
+		});
+		if (!placementResult) {
+			return;
+		}
+		const appliedPlacement = applyPlacement({
+			tracks: this.savedState,
+			placementResult,
 			elements: [separatedAudioElement],
-		} as AudioTrack;
+		});
+		if (!appliedPlacement) {
+			return;
+		}
 
 		editor.timeline.updateTracks(
 			updateSourceAudioEnabled({
-				tracks: {
-					...this.savedState,
-					audio: [...this.savedState.audio, newAudioTrack],
-				},
+				tracks: appliedPlacement.updatedTracks,
 				trackId: this.params.trackId,
 				elementId: this.params.elementId,
 				isSourceAudioEnabled: false,
@@ -124,7 +135,8 @@ function updateSourceAudioEnabled({
 		tracks,
 		trackId,
 		elementId,
-		elementPredicate: (element): element is VideoElement => element.type === "video",
+		elementPredicate: (element): element is VideoElement =>
+			element.type === "video",
 		update: (element) => ({
 			...element,
 			isSourceAudioEnabled,

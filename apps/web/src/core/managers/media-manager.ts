@@ -4,6 +4,7 @@ import type { MediaAsset } from "@/lib/media/types";
 import { storageService } from "@/services/storage/service";
 import { generateUUID } from "@/utils/id";
 import { videoCache } from "@/services/video-cache/service";
+import { waveformCache } from "@/services/waveform-cache/service";
 import { BatchCommand, RemoveMediaAssetCommand } from "@/lib/commands";
 
 export class MediaManager {
@@ -94,6 +95,8 @@ export class MediaManager {
 	}
 
 	async clearProjectMedia({ projectId }: { projectId: string }): Promise<void> {
+		waveformCache.clearAll();
+
 		this.assets.forEach((asset) => {
 			if (asset.url) {
 				URL.revokeObjectURL(asset.url);
@@ -120,6 +123,7 @@ export class MediaManager {
 
 	clearAllAssets(): void {
 		videoCache.clearAll();
+		waveformCache.clearAll();
 
 		this.assets.forEach((asset) => {
 			if (asset.url) {

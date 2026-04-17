@@ -11,7 +11,7 @@ export const TIMELINE_TRACK_THEME: Record<
 	text: { elementClassName: "bg-[#5DBAA0]" },
 	audio: {
 		elementClassName: "bg-[#8F5DBA]",
-		waveformColor: "rgba(255, 255, 255, 0.5)",
+		waveformColor: "rgba(255, 255, 255, 0.7)",
 	},
 	graphic: { elementClassName: "bg-[#BA5D7A]" },
 	effect: { elementClassName: "bg-[#5d93ba]" },

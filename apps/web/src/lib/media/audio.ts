@@ -20,10 +20,13 @@ import { mediaSupportsAudio } from "@/lib/media/media-utils";
 import { getSourceTimeAtClipTime, renderRetimedBuffer } from "@/lib/retime";
 import { Input, ALL_FORMATS, BlobSource, AudioBufferSink } from "mediabunny";
 import { TICKS_PER_SECOND } from "@/lib/wasm";
+import {
+	computeRmsBuckets,
+	type SampleBucket,
+} from "@/lib/media/waveform-summary";
 
 const MAX_AUDIO_CHANNELS = 2;
 const EXPORT_SAMPLE_RATE = 44100;
-const COARSE_SAMPLE_COUNT = 2048;
 
 export interface CollectedAudioElement {
 	timelineElement: AudioCapableElement;
@@ -177,8 +180,8 @@ export async function collectAudioElements({
 			if (!mediaAsset || !mediaSupportsAudio({ media: mediaAsset })) continue;
 
 			pendingElements.push(
-				resolveAudioBufferForVideoElement({
-					mediaAsset,
+				resolveAudioBufferForAsset({
+					asset: mediaAsset,
 					audioContext,
 				}).then((audioBuffer) => {
 					if (!audioBuffer) return null;
@@ -222,10 +225,8 @@ async function resolveAudioBufferForElement({
 	try {
 		if (element.sourceType === "upload") {
 			const asset = mediaMap.get(element.mediaId);
-			if (!asset || asset.type !== "audio") return null;
-
-			const arrayBuffer = await asset.file.arrayBuffer();
-			return await audioContext.decodeAudioData(arrayBuffer.slice(0));
+			if (!asset) return null;
+			return await resolveAudioBufferForAsset({ asset, audioContext });
 		}
 
 		if (element.buffer) return element.buffer;
@@ -243,15 +244,25 @@ async function resolveAudioBufferForElement({
 	}
 }
 
-async function resolveAudioBufferForVideoElement({
-	mediaAsset,
+async function resolveAudioBufferForAsset({
+	asset,
 	audioContext,
 }: {
-	mediaAsset: MediaAsset;
+	asset: MediaAsset;
 	audioContext: AudioContext;
 }): Promise<AudioBuffer | null> {
+	if (asset.type === "audio") {
+		try {
+			const arrayBuffer = await asset.file.arrayBuffer();
+			return await audioContext.decodeAudioData(arrayBuffer.slice(0));
+		} catch (error) {
+			console.warn("Failed to decode audio asset:", error);
+			return null;
+		}
+	}
+
 	const input = new Input({
-		source: new BlobSource(mediaAsset.file),
+		source: new BlobSource(asset.file),
 		formats: ALL_FORMATS,
 	});
 
@@ -319,7 +330,7 @@ async function resolveAudioBufferForVideoElement({
 
 		return await offlineContext.startRendering();
 	} catch (error) {
-		console.warn("Failed to decode video audio:", error);
+		console.warn("Failed to decode asset audio:", error);
 		return null;
 	} finally {
 		input.dispose();
@@ -675,51 +686,29 @@ export async function createTimelineAudioBuffer({
 	return await applyAudioMasteringToBuffer({ audioBuffer: outputBuffer });
 }
 
-export function computeGlobalMaxRms({
-	buffer,
-}: {
-	buffer: AudioBuffer;
-}): number {
-	const channels = buffer.numberOfChannels;
-	const step = Math.max(1, Math.floor(buffer.length / COARSE_SAMPLE_COUNT));
-	let globalMax = 0;
-
-	for (let c = 0; c < channels; c++) {
-		const data = buffer.getChannelData(c);
-		for (let i = 0; i + step <= buffer.length; i += step) {
-			for (let j = i; j < i + step; j++) {
-				const abs = Math.abs(data[j]);
-				if (abs > globalMax) globalMax = abs;
-			}
-		}
-	}
-
-	return globalMax || 1;
-}
-
-export function extractRmsRange({
+function collectPeakRange({
 	buffer,
 	count,
 	startSample,
 	endSample,
-	globalMax,
 }: {
 	buffer: AudioBuffer;
 	count: number;
 	startSample: number;
 	endSample: number;
-	globalMax: number;
-}): number[] {
+}): Float32Array {
 	const channels = buffer.numberOfChannels;
-	const rangeLength = endSample - startSample;
-	const step = Math.max(1, Math.floor(rangeLength / count));
 	const peaks = new Float32Array(count);
 
 	for (let c = 0; c < channels; c++) {
 		const data = buffer.getChannelData(c);
 		for (let i = 0; i < count; i++) {
-			const start = startSample + i * step;
-			const end = Math.min(start + step, endSample);
+			const { bucketStart: start, bucketEnd: end } = getSampleBucketRange({
+				startSample,
+				endSample,
+				bucketIndex: i,
+				bucketCount: count,
+			});
 			for (let j = start; j < end; j++) {
 				const abs = Math.abs(data[j]);
 				if (abs > peaks[i]) peaks[i] = abs;
@@ -727,11 +716,100 @@ export function extractRmsRange({
 		}
 	}
 
-	const norm = 1 / globalMax;
-	const result = new Array<number>(count);
-	for (let i = 0; i < count; i++) result[i] = Math.min(1, peaks[i] * norm);
+	return peaks;
+}
 
-	return result;
+export function extractPeakRange({
+	buffer,
+	count,
+	startSample,
+	endSample,
+}: {
+	buffer: AudioBuffer;
+	count: number;
+	startSample: number;
+	endSample: number;
+}): number[] {
+	return Array.from(
+		collectPeakRange({
+			buffer,
+			count,
+			startSample,
+			endSample,
+		}),
+	);
+}
+
+export function getSampleBucketRange({
+	startSample,
+	endSample,
+	bucketIndex,
+	bucketCount,
+}: {
+	startSample: number;
+	endSample: number;
+	bucketIndex: number;
+	bucketCount: number;
+}): {
+	bucketStart: number;
+	bucketEnd: number;
+} {
+	const rangeLength = Math.max(0, endSample - startSample);
+	const bucketStart =
+		startSample + Math.floor((bucketIndex * rangeLength) / bucketCount);
+	const bucketEnd =
+		startSample + Math.floor(((bucketIndex + 1) * rangeLength) / bucketCount);
+	return {
+		bucketStart,
+		bucketEnd: Math.max(bucketStart, bucketEnd),
+	};
+}
+
+export function extractRmsBuckets({
+	buffer,
+	buckets,
+}: {
+	buffer: AudioBuffer;
+	buckets: SampleBucket[];
+}): number[] {
+	return computeRmsBuckets({ buffer, buckets });
+}
+
+/**
+ * Computes per-bucket waveform amplitude using the maximum RMS over a short
+ * analysis window inside each bucket.
+ *
+ * A naive mean-RMS over a whole bucket averages silence together with nearby
+ * sound, which smears transitions (e.g. the onset of speech) across the
+ * bucket and makes the waveform respond late. Taking the max over fixed
+ * short windows (~20 ms) preserves the smooth, non-jittery RMS character
+ * while making transitions land where they actually happen in the audio.
+ *
+ * Channels are combined per-window before taking the max, so the measure
+ * reflects total energy regardless of stereo layout.
+ */
+export function extractRmsRange({
+	buffer,
+	count,
+	startSample,
+	endSample,
+}: {
+	buffer: AudioBuffer;
+	count: number;
+	startSample: number;
+	endSample: number;
+}): number[] {
+	return extractRmsBuckets({
+		buffer,
+		buckets: Array.from({ length: count }, (_, bucketIndex) =>
+			getSampleBucketRange({
+				startSample,
+				endSample,
+				bucketIndex,
+				bucketCount: count,
+			}),
+		),
+	});
 }
 
 function mixAudioChannels({

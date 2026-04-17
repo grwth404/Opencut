@@ -1,73 +1,123 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useResizeObserver } from "@/hooks/use-resize-observer";
-import { computeGlobalMaxRms, extractRmsRange } from "@/lib/media/audio";
+import {
+	buildWaveformSampleBuckets,
+	sampleSourceWaveformSummary,
+	type SourceWaveformSummary,
+} from "@/lib/media/waveform-summary";
+import type { RetimeConfig } from "@/lib/timeline";
+import { getBarFractionFromOutputAmplitude } from "@/lib/timeline/audio-display";
+import { waveformCache } from "@/services/waveform-cache/service";
 import { findScrollParent } from "@/utils/browser";
 import { cn } from "@/utils/ui";
 
-const BAR_WIDTH = 2;
+const BAR_WIDTH = 1;
 const BAR_GAP = 1;
 const BAR_STEP = BAR_WIDTH + BAR_GAP;
+const WAVEFORM_BURN_COLOR = "rgba(255, 110, 20, 0.9)";
 export const WAVEFORM_GAIN_SAMPLE_COUNT = 200;
 
-function sampleGain({
+function sampleGainAtClipTime({
 	samples,
-	startFraction,
-	endFraction,
-	barIndex,
-	barCount,
+	clipTimeSec,
+	clipDurationSec,
 }: {
 	samples: number[];
-	startFraction: number;
-	endFraction: number;
-	barIndex: number;
-	barCount: number;
+	clipTimeSec: number;
+	clipDurationSec: number;
 }): number {
-	if (samples.length === 0) return 1;
-	const progress =
-		startFraction +
-		((barIndex + 0.5) / barCount) * (endFraction - startFraction);
-	const rawIndex = Math.max(0, Math.min(1, progress)) * (samples.length - 1);
+	if (samples.length === 0 || clipDurationSec <= 0) {
+		return 1;
+	}
+
+	const progress = Math.max(0, Math.min(1, clipTimeSec / clipDurationSec));
+	const rawIndex = progress * (samples.length - 1);
 	const lo = Math.floor(rawIndex);
 	const hi = Math.min(samples.length - 1, lo + 1);
 	return samples[lo] + (samples[hi] - samples[lo]) * (rawIndex - lo);
 }
+
 interface AudioWaveformProps {
+	sourceKey: string;
+	sourceFile?: File;
 	audioUrl?: string;
 	audioBuffer?: AudioBuffer;
 	gainSamples?: number[];
+	pixelsPerSecond: number;
+	clipDurationSec: number;
+	retime?: RetimeConfig;
+	sourceStartSec: number;
 	color?: string;
+	burnColor?: string;
 	className?: string;
 }
 
 export function AudioWaveform({
+	sourceKey,
+	sourceFile,
 	audioUrl,
 	audioBuffer,
 	gainSamples,
-	color = "rgba(255, 255, 255, 0.7)",
+	pixelsPerSecond,
+	clipDurationSec,
+	retime,
+	sourceStartSec,
+	color,
+	burnColor = WAVEFORM_BURN_COLOR,
 	className = "",
 }: AudioWaveformProps) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
-	const bufferRef = useRef<AudioBuffer | null>(null);
-	const globalMaxRef = useRef<number>(1);
+	const summaryRef = useRef<SourceWaveformSummary | null>(null);
 	const gainSamplesRef = useRef<number[] | undefined>(gainSamples);
+	const pixelsPerSecondRef = useRef<number>(pixelsPerSecond);
+	const clipDurationSecRef = useRef<number>(clipDurationSec);
+	const retimeRef = useRef<RetimeConfig | undefined>(retime);
+	const sourceStartSecRef = useRef<number>(sourceStartSec);
 	const scrollParentRef = useRef<HTMLElement | null>(null);
 	const heightRef = useRef<number>(0);
+	const lastRenderSignatureRef = useRef<string | null>(null);
+
+	gainSamplesRef.current = gainSamples;
+	pixelsPerSecondRef.current = pixelsPerSecond;
+	clipDurationSecRef.current = clipDurationSec;
+	retimeRef.current = retime;
+	sourceStartSecRef.current = sourceStartSec;
+
+	const clearCanvas = useCallback(() => {
+		const canvas = canvasRef.current;
+		if (!canvas) {
+			return;
+		}
+
+		const ctx = canvas.getContext("2d");
+		if (ctx) {
+			ctx.setTransform(1, 0, 0, 1, 0, 0);
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+		}
+		lastRenderSignatureRef.current = null;
+	}, []);
 
 	const drawVisible = useCallback(() => {
 		const container = containerRef.current;
 		const canvas = canvasRef.current;
-		const buffer = bufferRef.current;
+		const summary = summaryRef.current;
 		const height = heightRef.current;
 
-		if (!container || !canvas || !buffer || height <= 0) return;
-
-		const elementWidth = container.offsetWidth;
-		if (elementWidth <= 0) return;
+		if (!container || !canvas || !summary || height <= 0) {
+			clearCanvas();
+			return;
+		}
 
 		const containerRect = container.getBoundingClientRect();
+		const elementWidth = containerRect.width;
+		if (elementWidth <= 0) {
+			clearCanvas();
+			return;
+		}
+
 		const scrollParent = scrollParentRef.current;
 
 		let clipLeft: number;
@@ -86,13 +136,43 @@ export function AudioWaveform({
 		}
 
 		const visibleWidth = clipRight - clipLeft;
-		if (visibleWidth <= 0) return;
+		if (visibleWidth <= 0) {
+			clearCanvas();
+			return;
+		}
 
 		const dpr = window.devicePixelRatio || 1;
-		const canvasW = Math.round(visibleWidth * dpr);
-		const canvasH = Math.round(height * dpr);
-
-		if (canvasW <= 0 || canvasH <= 0) return;
+		const canvasW = Math.max(1, Math.ceil(visibleWidth * dpr));
+		const canvasH = Math.max(1, Math.round(height * dpr));
+		const barCount = Math.max(1, Math.floor(visibleWidth / BAR_STEP));
+		const pixelsPerSecondValue = pixelsPerSecondRef.current;
+		const clipDurationSecValue = clipDurationSecRef.current;
+		const samples = gainSamplesRef.current;
+		const renderSignature = JSON.stringify({
+			elementWidth,
+			clipLeft,
+			clipRight,
+			visibleWidth,
+			canvasW,
+			canvasH,
+			barCount,
+			dpr,
+			clipDurationSec: clipDurationSecValue,
+			sourceStartSec: sourceStartSecRef.current,
+			pixelsPerSecond: pixelsPerSecondValue,
+			retime: retimeRef.current ?? null,
+			summarySourceKey: summary.sourceKey,
+			summarySampleRate: summary.sampleRate,
+			summaryTotalSamples: summary.totalSamples,
+			summaryBucketSize: summary.bucketSize,
+			gainSamples: samples ?? null,
+			color,
+			burnColor,
+		});
+		if (lastRenderSignatureRef.current === renderSignature) {
+			return;
+		}
+		lastRenderSignatureRef.current = renderSignature;
 
 		canvas.width = canvasW;
 		canvas.height = canvasH;
@@ -100,97 +180,150 @@ export function AudioWaveform({
 		canvas.style.height = `${height}px`;
 		canvas.style.left = `${clipLeft}px`;
 
-		const barCount = Math.max(1, Math.floor(visibleWidth / BAR_STEP));
-		const startFraction = clipLeft / elementWidth;
-		const endFraction = clipRight / elementWidth;
-		const startSample = Math.floor(startFraction * buffer.length);
-		const endSample = Math.min(
-			buffer.length,
-			Math.ceil(endFraction * buffer.length),
-		);
+		const backingScaleX = dpr;
+		const backingScaleY = canvasH / height;
 
-		const peaks = extractRmsRange({
-			buffer,
-			count: barCount,
-			startSample,
-			endSample,
-			globalMax: globalMaxRef.current,
+		const sampleBuckets = buildWaveformSampleBuckets({
+			clipLeftPx: clipLeft,
+			clipRightPx: clipRight,
+			barCount,
+			pixelsPerSecond: pixelsPerSecondValue,
+			clipDurationSec: clipDurationSecValue,
+			sourceStartSec: sourceStartSecRef.current,
+			retime: retimeRef.current,
+			sampleRate: summary.sampleRate,
+			maxSampleExclusive: summary.totalSamples,
+			barStepPx: BAR_STEP,
+		});
+		const amplitudes = sampleSourceWaveformSummary({
+			summary,
+			buckets: sampleBuckets,
 		});
 
 		const ctx = canvas.getContext("2d");
-		if (!ctx) return;
+		if (!ctx) {
+			return;
+		}
 
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
 		ctx.clearRect(0, 0, canvasW, canvasH);
-		ctx.scale(dpr, dpr);
-		ctx.fillStyle = color;
 
-		const maxBarHeight = height * 0.7;
+		const clipBottom = canvasH;
 
-		const samples = gainSamplesRef.current;
 		for (let i = 0; i < barCount; i++) {
+			const barCenterPx = clipLeft + i * BAR_STEP + BAR_WIDTH * 0.5;
+			const clipCenterSec = Math.max(
+				0,
+				Math.min(clipDurationSecValue, barCenterPx / pixelsPerSecondValue),
+			);
 			const gain =
 				samples != null
-					? sampleGain({
+					? sampleGainAtClipTime({
 							samples,
-							startFraction,
-							endFraction,
-							barIndex: i,
-							barCount,
+							clipTimeSec: clipCenterSec,
+							clipDurationSec: clipDurationSecValue,
 						})
 					: 1;
-			const scaledPeak = Math.min(1, Math.max(0, peaks[i] * gain));
-			const scaled = Math.log1p(scaledPeak) / Math.log1p(1);
-			const barH = Math.max(1, scaled * maxBarHeight);
-			ctx.fillRect(i * BAR_STEP, height - barH, BAR_WIDTH, barH);
-		}
-	}, [color]);
+			const amplitude = Math.max(0, amplitudes[i] ?? 0);
+			const outputAmplitude = amplitude * Math.max(0, gain);
+			const fraction = getBarFractionFromOutputAmplitude({ outputAmplitude });
+			const barH = fraction > 0 ? Math.max(1, fraction * height) : 0;
+			if (barH <= 0) {
+				continue;
+			}
 
-	useEffect(() => {
-		gainSamplesRef.current = gainSamples;
-		drawVisible();
-	}, [gainSamples, drawVisible]);
+			const barLeft = i * BAR_STEP;
+			const barRight = barLeft + BAR_WIDTH;
+			const deviceLeft = Math.round(barLeft * backingScaleX);
+			const deviceRight = Math.max(
+				deviceLeft + 1,
+				Math.round(barRight * backingScaleX),
+			);
+			const deviceTop = Math.round((height - barH) * backingScaleY);
+			const deviceHeight = Math.max(1, clipBottom - deviceTop);
+
+			ctx.fillStyle = color;
+			ctx.fillRect(
+				deviceLeft,
+				deviceTop,
+				deviceRight - deviceLeft,
+				deviceHeight,
+			);
+
+			if (outputAmplitude > 1) {
+				const burnHeight = Math.max(1, Math.round(BAR_WIDTH * backingScaleY));
+				ctx.fillStyle = burnColor;
+				ctx.fillRect(
+					deviceLeft,
+					deviceTop,
+					deviceRight - deviceLeft,
+					burnHeight,
+				);
+			}
+		}
+	}, [burnColor, clearCanvas, color]);
 
 	useEffect(() => {
 		let isCancelled = false;
+		summaryRef.current = null;
+		clearCanvas();
 
-		async function load() {
-			let buffer = audioBuffer ?? null;
-
-			if (!buffer && audioUrl) {
-				try {
-					const resp = await fetch(audioUrl);
-					const arrayBuffer = await resp.arrayBuffer();
-					const actx = new AudioContext();
-					buffer = await actx.decodeAudioData(arrayBuffer);
-					actx.close();
-				} catch {
+		void waveformCache
+			.getSourceSummary({
+				sourceKey,
+				audioBuffer,
+				sourceFile,
+				audioUrl,
+			})
+			.then((summary) => {
+				if (isCancelled) {
 					return;
 				}
-			}
+				summaryRef.current = summary;
+				drawVisible();
+			})
+			.catch(() => {
+				// Waveform loading failed (e.g. corrupt file, unsupported format).
+				// Fail silently — a missing waveform is preferable to an error state.
+				if (!isCancelled) {
+					clearCanvas();
+				}
+			});
 
-			if (!buffer || isCancelled) return;
-
-			bufferRef.current = buffer;
-			globalMaxRef.current = computeGlobalMaxRms({ buffer });
-			drawVisible();
-		}
-
-		load();
 		return () => {
 			isCancelled = true;
 		};
-	}, [audioUrl, audioBuffer, drawVisible]);
+	}, [audioBuffer, audioUrl, clearCanvas, drawVisible, sourceFile, sourceKey]);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: these props are mirrored into refs during render, but the effect must still re-run to redraw when they change.
+	useLayoutEffect(() => {
+		drawVisible();
+	}, [
+		drawVisible,
+		gainSamples,
+		pixelsPerSecond,
+		clipDurationSec,
+		retime,
+		sourceStartSec,
+	]);
 
 	useEffect(() => {
 		const container = containerRef.current;
-		if (!container) return;
+		if (!container) {
+			return;
+		}
 
 		scrollParentRef.current = findScrollParent({ element: container });
 		const scrollParent = scrollParentRef.current;
-		if (!scrollParent) return;
+		if (!scrollParent) {
+			return;
+		}
 
-		scrollParent.addEventListener("scroll", drawVisible, { passive: true });
-		return () => scrollParent.removeEventListener("scroll", drawVisible);
+		const handleScroll = () => {
+			drawVisible();
+		};
+		scrollParent.addEventListener("scroll", handleScroll, { passive: true });
+		return () => scrollParent.removeEventListener("scroll", handleScroll);
 	}, [drawVisible]);
 
 	const onResize = useCallback(
