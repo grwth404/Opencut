@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useResizeObserver } from "@/hooks/use-resize-observer";
+import { TIMELINE_AUDIO_WAVEFORM_COLOR } from "./theme";
 import {
 	buildWaveformSampleBuckets,
 	sampleSourceWaveformSummary,
@@ -64,7 +65,7 @@ export function AudioWaveform({
 	clipDurationSec,
 	retime,
 	sourceStartSec,
-	color,
+	color = TIMELINE_AUDIO_WAVEFORM_COLOR,
 	burnColor = WAVEFORM_BURN_COLOR,
 	className = "",
 }: AudioWaveformProps) {
