@@ -1,4 +1,8 @@
-import { Command, type CommandResult } from "@/lib/commands/base-command";
+import {
+	Command,
+	createElementSelectionResult,
+	type CommandResult,
+} from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import type {
 	SceneTracks,
@@ -114,12 +118,12 @@ export class MoveElementCommand extends Command {
 		});
 
 		editor.timeline.updateTracks(updatedTracks);
-		return {
-			select: this.moves.map(({ elementId, targetTrackId }) => ({
+		return createElementSelectionResult(
+			this.moves.map(({ elementId, targetTrackId }) => ({
 				trackId: targetTrackId,
 				elementId,
 			})),
-		};
+		);
 	}
 
 	undo(): void {

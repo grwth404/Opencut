@@ -10,7 +10,7 @@ export class BatchCommand extends Command {
 
 		for (const command of this.commands) {
 			const result = command.execute();
-			if (result?.select !== undefined) {
+			if (result?.selection !== undefined) {
 				latestSelectionResult = result;
 			}
 		}
@@ -29,7 +29,7 @@ export class BatchCommand extends Command {
 
 		for (const command of this.commands) {
 			const result = command.redo();
-			if (result?.select !== undefined) {
+			if (result?.selection !== undefined) {
 				latestSelectionResult = result;
 			}
 		}

@@ -1,9 +1,17 @@
-import { Command, type CommandResult } from "@/lib/commands/base-command";
+import {
+	Command,
+	createElementSelectionResult,
+	type CommandResult,
+} from "@/lib/commands/base-command";
 import { EditorCore } from "@/core";
 import type { SceneTracks, TimelineElement } from "@/lib/timeline";
 import type { ElementClipboardItem } from "@/lib/clipboard";
 import { generateUUID } from "@/utils/id";
-import { applyPlacement, resolveTrackPlacement, enforceMainTrackStart } from "@/lib/timeline/placement";
+import {
+	applyPlacement,
+	resolveTrackPlacement,
+	enforceMainTrackStart,
+} from "@/lib/timeline/placement";
 import { cloneAnimations } from "@/lib/animation";
 
 export class PasteCommand extends Command {
@@ -122,7 +130,7 @@ export class PasteCommand extends Command {
 		editor.timeline.updateTracks(updatedTracks);
 
 		if (this.pastedElements.length > 0) {
-			return { select: this.pastedElements };
+			return createElementSelectionResult(this.pastedElements);
 		}
 		return undefined;
 	}
@@ -183,4 +191,3 @@ function buildPastedElements({
 
 	return elementsToAdd;
 }
-

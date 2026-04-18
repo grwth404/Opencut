@@ -1,7 +1,21 @@
 import type { EditorSelectionPatch } from "@/lib/selection/editor-selection";
+import type { ElementRef } from "@/lib/timeline/types";
 
 export interface CommandResult {
 	selection?: EditorSelectionPatch;
+}
+
+export function createElementSelectionResult(
+	selectedElements: ElementRef[],
+): CommandResult {
+	return {
+		selection: {
+			selectedElements,
+			selectedKeyframes: [],
+			keyframeSelectionAnchor: null,
+			selectedMaskPoints: null,
+		},
+	};
 }
 
 export abstract class Command {

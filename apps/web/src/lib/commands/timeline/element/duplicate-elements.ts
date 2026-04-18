@@ -1,8 +1,15 @@
-import { Command, type CommandResult } from "@/lib/commands/base-command";
+import {
+	Command,
+	createElementSelectionResult,
+	type CommandResult,
+} from "@/lib/commands/base-command";
 import type { SceneTracks, TimelineElement } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { EditorCore } from "@/core";
-import { applyPlacement, resolveTrackPlacement } from "@/lib/timeline/placement";
+import {
+	applyPlacement,
+	resolveTrackPlacement,
+} from "@/lib/timeline/placement";
 import { cloneAnimations } from "@/lib/animation";
 
 interface DuplicateElementsParams {
@@ -91,9 +98,7 @@ export class DuplicateElementsCommand extends Command {
 		editor.timeline.updateTracks(updatedTracks);
 
 		if (this.duplicatedElements.length > 0) {
-			return {
-				select: this.duplicatedElements,
-			};
+			return createElementSelectionResult(this.duplicatedElements);
 		}
 		return undefined;
 	}

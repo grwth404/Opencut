@@ -1,4 +1,8 @@
-import { Command, type CommandResult } from "@/lib/commands/base-command";
+import {
+	Command,
+	createElementSelectionResult,
+	type CommandResult,
+} from "@/lib/commands/base-command";
 import type { SceneTracks, TimelineElement } from "@/lib/timeline";
 import { generateUUID } from "@/utils/id";
 import { EditorCore } from "@/core";
@@ -164,9 +168,7 @@ export class SplitElementsCommand extends Command {
 		editor.timeline.updateTracks(updatedTracks);
 
 		if (this.rightSideElements.length > 0) {
-			return {
-				select: this.rightSideElements,
-			};
+			return createElementSelectionResult(this.rightSideElements);
 		}
 		return undefined;
 	}
