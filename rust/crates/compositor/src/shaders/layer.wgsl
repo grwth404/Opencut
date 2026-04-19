@@ -11,6 +11,7 @@ struct LayerUniforms {
     opacity: f32,
     flip_x: f32,
     flip_y: f32,
+    _padding: vec2f,
 }
 
 @group(0) @binding(0) var source_texture: texture_2d<f32>;

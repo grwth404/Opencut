@@ -10,7 +10,10 @@ import { useKeybindingsStore } from "@/stores/keybindings-store";
 import { useTimelineStore } from "@/stores/timeline-store";
 import { useEditorActions } from "@/hooks/actions/use-editor-actions";
 import { loadFontAtlas } from "@/lib/fonts/google-fonts";
-import { initializeGpuRenderer, isGpuAvailable } from "@/services/renderer/gpu-renderer";
+import {
+	initializeGpuRenderer,
+	isGpuAvailable,
+} from "@/services/renderer/gpu-renderer";
 
 interface EditorProviderProps {
 	projectId: string;
@@ -62,9 +65,16 @@ export function EditorProvider({ projectId, children }: EditorProviderProps) {
 						setIsLoading(false);
 					}
 				} else {
-					setError(
-						err instanceof Error ? err.message : "Failed to load project",
-					);
+					const wasmPanic = (window as Window & { __wasmPanic?: string })
+						.__wasmPanic;
+					if (wasmPanic) {
+						delete (window as Window & { __wasmPanic?: string }).__wasmPanic;
+						setError(wasmPanic);
+					} else {
+						setError(
+							err instanceof Error ? err.message : "Failed to load project",
+						);
+					}
 					setIsLoading(false);
 				}
 			}

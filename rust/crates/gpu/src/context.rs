@@ -40,10 +40,17 @@ pub struct GpuContext {
     texture_sampler_bind_group_layout: wgpu::BindGroupLayout,
     blit_pipeline: wgpu::RenderPipeline,
     supports_external_texture_copies: bool,
+    /// The HTML canvas that the WebGL context is bound to. Only populated on the WebGL
+    /// fallback path. Used by render_texture_via_gl_canvas to output frames on WebGL.
+    #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+    gl_canvas: Option<web_sys::HtmlCanvasElement>,
 }
 
 impl GpuContext {
     pub async fn new() -> Result<Self, GpuError> {
+        #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+        let (instance, adapter, device, queue, gl_canvas) = Self::acquire_device().await?;
+        #[cfg(not(all(feature = "wasm", target_arch = "wasm32")))]
         let (instance, adapter, device, queue) = Self::acquire_device().await?;
         let texture_format = if adapter.get_info().backend == wgpu::Backend::Gl {
             wgpu::TextureFormat::Rgba8Unorm
@@ -161,9 +168,37 @@ impl GpuContext {
             texture_sampler_bind_group_layout,
             blit_pipeline,
             supports_external_texture_copies,
+            #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+            gl_canvas,
         })
     }
 
+    #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+    async fn acquire_device() -> Result<
+        (
+            wgpu::Instance,
+            wgpu::Adapter,
+            wgpu::Device,
+            wgpu::Queue,
+            Option<web_sys::HtmlCanvasElement>,
+        ),
+        GpuError,
+    > {
+        let instance = wgpu::util::new_instance_with_webgpu_detection(
+            wgpu::InstanceDescriptor::new_without_display_handle(),
+        )
+        .await;
+
+        match Self::try_request_device(&instance, None).await {
+            Ok((adapter, device, queue)) => return Ok((instance, adapter, device, queue, None)),
+            Err(_) => {}
+        }
+
+        let (gl_instance, adapter, device, queue, canvas) = Self::try_gl_fallback().await?;
+        Ok((gl_instance, adapter, device, queue, Some(canvas)))
+    }
+
+    #[cfg(not(all(feature = "wasm", target_arch = "wasm32")))]
     async fn acquire_device()
     -> Result<(wgpu::Instance, wgpu::Adapter, wgpu::Device, wgpu::Queue), GpuError> {
         let instance = wgpu::util::new_instance_with_webgpu_detection(
@@ -180,8 +215,16 @@ impl GpuContext {
     }
 
     #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
-    async fn try_gl_fallback()
-    -> Result<(wgpu::Instance, wgpu::Adapter, wgpu::Device, wgpu::Queue), GpuError> {
+    async fn try_gl_fallback() -> Result<
+        (
+            wgpu::Instance,
+            wgpu::Adapter,
+            wgpu::Device,
+            wgpu::Queue,
+            web_sys::HtmlCanvasElement,
+        ),
+        GpuError,
+    > {
         let mut gl_desc = wgpu::InstanceDescriptor::new_without_display_handle();
         gl_desc.backends = wgpu::Backends::GL;
         gl_desc.display = Some(Box::new(WebDisplay));
@@ -196,11 +239,11 @@ impl GpuContext {
             .unchecked_into();
         canvas.set_width(1);
         canvas.set_height(1);
-        let surface = gl_instance.create_surface(wgpu::SurfaceTarget::Canvas(canvas))?;
+        let surface = gl_instance.create_surface(wgpu::SurfaceTarget::Canvas(canvas.clone()))?;
 
         let (adapter, device, queue) =
             Self::try_request_device(&gl_instance, Some(&surface)).await?;
-        Ok((gl_instance, adapter, device, queue))
+        Ok((gl_instance, adapter, device, queue, canvas))
     }
 
     #[cfg(not(all(feature = "wasm", target_arch = "wasm32")))]
@@ -300,6 +343,13 @@ impl GpuContext {
 
     pub fn blit_pipeline(&self) -> &wgpu::RenderPipeline {
         &self.blit_pipeline
+    }
+
+    /// Whether the GPU backend can render to arbitrary canvas surfaces.
+    /// True for WebGPU, false for WebGL which can only surface-render to
+    /// the specific canvas its GL context was originally created on.
+    pub fn supports_surface_rendering(&self) -> bool {
+        self.supports_external_texture_copies
     }
 
     pub fn render_texture_to_surface(
@@ -493,72 +543,18 @@ impl GpuContext {
             return self.render_texture_to_surface(texture, &surface, width, height);
         }
 
-        self.readback_texture_to_offscreen_canvas(texture, canvas, width, height)
+        self.render_texture_to_offscreen_canvas_via_gl_canvas(texture, canvas, width, height)
     }
 
     #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
-    fn readback_texture_to_offscreen_canvas(
+    fn render_texture_to_offscreen_canvas_via_gl_canvas(
         &self,
         texture: &wgpu::Texture,
         canvas: &wgpu::web_sys::OffscreenCanvas,
         width: u32,
         height: u32,
     ) -> Result<(), GpuError> {
-        let buffer_size = (width * height * 4) as u64;
-        let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("gpu-readback-buffer"),
-            size: buffer_size,
-            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-            mapped_at_creation: false,
-        });
-
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("gpu-readback-encoder"),
-            });
-        encoder.copy_texture_to_buffer(
-            wgpu::TexelCopyTextureInfo {
-                texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            wgpu::TexelCopyBufferInfo {
-                buffer: &buffer,
-                layout: wgpu::TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(width * 4),
-                    rows_per_image: Some(height),
-                },
-            },
-            wgpu::Extent3d {
-                width,
-                height,
-                depth_or_array_layers: 1,
-            },
-        );
-        self.queue.submit([encoder.finish()]);
-
-        let slice = buffer.slice(..);
-        slice.map_async(wgpu::MapMode::Read, |_| {});
-        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
-
-        let data = slice.get_mapped_range();
-        let mut rgba_bytes = data.to_vec();
-        drop(data);
-        buffer.unmap();
-
-        if self.texture_format == wgpu::TextureFormat::Bgra8Unorm {
-            for pixel in rgba_bytes.chunks_exact_mut(4) {
-                pixel.swap(0, 2);
-            }
-        }
-
-        let clamped = wasm_bindgen::Clamped(&rgba_bytes[..]);
-        let image_data =
-            web_sys::ImageData::new_with_u8_clamped_array_and_sh(clamped, width, height)
-                .map_err(|_| GpuError::AdapterUnavailable)?;
+        let gl_canvas = self.render_texture_to_gl_canvas_surface(texture, width, height)?;
 
         let ctx: web_sys::OffscreenCanvasRenderingContext2d = canvas
             .get_context("2d")
@@ -566,7 +562,110 @@ impl GpuContext {
             .flatten()
             .ok_or(GpuError::AdapterUnavailable)?
             .unchecked_into();
-        ctx.put_image_data(&image_data, 0.0, 0.0)
+        ctx.clear_rect(0.0, 0.0, width as f64, height as f64);
+        ctx.draw_image_with_html_canvas_element(gl_canvas, 0.0, 0.0)
+            .map_err(|_| GpuError::AdapterUnavailable)?;
+
+        Ok(())
+    }
+
+    #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+    fn render_texture_to_gl_canvas_surface(
+        &self,
+        texture: &wgpu::Texture,
+        width: u32,
+        height: u32,
+    ) -> Result<&web_sys::HtmlCanvasElement, GpuError> {
+        let gl_canvas = self
+            .gl_canvas
+            .as_ref()
+            .ok_or(GpuError::AdapterUnavailable)?;
+
+        gl_canvas.set_width(width);
+        gl_canvas.set_height(height);
+
+        let surface = self
+            .instance
+            .create_surface(wgpu::SurfaceTarget::Canvas(gl_canvas.clone()))?;
+
+        let caps = surface.get_capabilities(&self.adapter);
+        let surface_format = if caps.formats.contains(&self.texture_format) {
+            self.texture_format
+        } else if !caps.formats.is_empty() {
+            caps.formats[0]
+        } else {
+            return Err(GpuError::UnsupportedSurfaceFormat);
+        };
+
+        if surface_format != self.texture_format {
+            return Err(GpuError::UnsupportedSurfaceFormat);
+        }
+
+        let config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: surface_format,
+            width,
+            height,
+            present_mode: wgpu::PresentMode::Fifo,
+            alpha_mode: caps
+                .alpha_modes
+                .first()
+                .copied()
+                .unwrap_or(wgpu::CompositeAlphaMode::Auto),
+            view_formats: vec![],
+            desired_maximum_frame_latency: 2,
+        };
+        surface.configure(&self.device, &config);
+
+        let surface_texture = self.acquire_surface_texture(&surface)?;
+        let surface_view = surface_texture
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("gpu-gl-canvas-blit-encoder"),
+            });
+        self.encode_texture_blit_to_view(
+            &mut encoder,
+            texture,
+            &surface_view,
+            "gpu-gl-canvas-blit",
+        );
+        self.queue.submit([encoder.finish()]);
+        surface_texture.present();
+
+        Ok(gl_canvas)
+    }
+
+    /// Renders a texture to an arbitrary HTML canvas on the WebGL backend.
+    ///
+    /// WebGL can only surface-render to the canvas its GL context was originally created on.
+    /// This method renders the texture to the GL canvas, then uses drawImage to copy the
+    /// result to the target canvas — avoiding the async buffer readback issue entirely.
+    ///
+    /// The HTML canvas default color space is sRGB, so the surface may report
+    /// `Rgba8UnormSrgb` as its preferred format even though our render textures use
+    /// `Rgba8Unorm`. We explicitly select `Rgba8Unorm` from the surface's supported
+    /// format list (WebGL2 supports both) to avoid the format mismatch.
+    #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+    pub fn render_texture_via_gl_canvas(
+        &self,
+        texture: &wgpu::Texture,
+        target_canvas: &web_sys::HtmlCanvasElement,
+        width: u32,
+        height: u32,
+    ) -> Result<(), GpuError> {
+        let gl_canvas = self.render_texture_to_gl_canvas_surface(texture, width, height)?;
+
+        let ctx: web_sys::CanvasRenderingContext2d = target_canvas
+            .get_context("2d")
+            .ok()
+            .flatten()
+            .ok_or(GpuError::AdapterUnavailable)?
+            .unchecked_into();
+        ctx.draw_image_with_html_canvas_element(gl_canvas, 0.0, 0.0)
             .map_err(|_| GpuError::AdapterUnavailable)?;
 
         Ok(())

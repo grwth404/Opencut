@@ -18,11 +18,7 @@ class EffectPreviewService {
 		this.loadPreviewImage();
 	}
 
-	onPreviewImageReady({
-		callback,
-	}: {
-		callback: () => void;
-	}): () => void {
+	onPreviewImageReady({ callback }: { callback: () => void }): () => void {
 		this.onReadyCallbacks.add(callback);
 		return () => this.onReadyCallbacks.delete(callback);
 	}
@@ -39,35 +35,47 @@ class EffectPreviewService {
 		uniformDimensions?: { width: number; height: number };
 	}): void {
 		const size = PREVIEW_SIZE;
-		const source = this.getTestSource({ width: size, height: size });
-		if (!source) return;
-
-		const definition = effectsRegistry.get(effectType);
-		const resolvedParams =
-			Object.keys(params).length > 0
-				? params
-				: buildDefaultParamValues(definition.params);
-
-		const passes = resolveEffectPasses({
-			definition,
-			effectParams: resolvedParams,
-			width: uniformDimensions?.width ?? size,
-			height: uniformDimensions?.height ?? size,
-		});
-		const result = this.applyGpuEffect({
-			source,
-			width: size,
-			height: size,
-			passes,
-		});
-
 		const targetCtx = targetCanvas.getContext(
 			"2d",
 		) as CanvasRenderingContext2D | null;
-		if (targetCtx) {
-			targetCanvas.width = size;
-			targetCanvas.height = size;
+		if (!targetCtx) {
+			return;
+		}
+
+		targetCanvas.width = size;
+		targetCanvas.height = size;
+
+		const source = this.getTestSource({ width: size, height: size });
+		if (!source) {
+			targetCtx.clearRect(0, 0, size, size);
+			return;
+		}
+
+		try {
+			const definition = effectsRegistry.get(effectType);
+			const resolvedParams =
+				Object.keys(params).length > 0
+					? params
+					: buildDefaultParamValues(definition.params);
+
+			const passes = resolveEffectPasses({
+				definition,
+				effectParams: resolvedParams,
+				width: uniformDimensions?.width ?? size,
+				height: uniformDimensions?.height ?? size,
+			});
+			const result = this.applyGpuEffect({
+				source,
+				width: size,
+				height: size,
+				passes,
+			});
+
 			targetCtx.drawImage(result, 0, 0, size, size);
+		} catch (error) {
+			console.warn("Failed to render effect preview", { effectType, error });
+			targetCtx.clearRect(0, 0, size, size);
+			targetCtx.drawImage(source, 0, 0, size, size);
 		}
 	}
 

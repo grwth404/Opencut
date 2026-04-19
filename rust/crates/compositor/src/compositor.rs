@@ -288,6 +288,59 @@ impl Compositor {
         self.textures.remove(id);
     }
 
+    /// Composites all frame items into a texture and returns it.
+    /// Used on backends that cannot surface-render to an arbitrary canvas (e.g. WebGL).
+    pub fn render_frame_to_texture(
+        &mut self,
+        context: &GpuContext,
+        frame: &FrameDescriptor,
+    ) -> Result<wgpu::Texture, CompositorError> {
+        self.texture_pool.recycle_frame();
+        let mut encoder =
+            context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("compositor-frame-encoder"),
+                });
+        let mut scene = self.create_cleared_texture(
+            context,
+            &mut encoder,
+            frame.width,
+            frame.height,
+            frame.clear.color,
+        );
+
+        for item in &frame.items {
+            match item {
+                FrameItemDescriptor::Layer(layer) => {
+                    let layer_texture = self.render_layer(context, &mut encoder, frame, layer)?;
+                    scene = self.blend_texture(
+                        context,
+                        &mut encoder,
+                        &scene,
+                        &layer_texture,
+                        layer.blend_mode,
+                        frame.width,
+                        frame.height,
+                    )?;
+                }
+                FrameItemDescriptor::SceneEffect { effect_pass_groups } => {
+                    scene = self.apply_effect_groups(
+                        context,
+                        &mut encoder,
+                        &scene,
+                        frame.width,
+                        frame.height,
+                        effect_pass_groups,
+                    )?;
+                }
+            }
+        }
+
+        context.queue().submit([encoder.finish()]);
+        Ok(scene)
+    }
+
     pub fn render_frame(
         &mut self,
         context: &GpuContext,

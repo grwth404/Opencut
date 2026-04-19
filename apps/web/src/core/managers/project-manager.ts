@@ -167,9 +167,13 @@ export class ProjectManager {
 			});
 
 			if (!project.metadata.thumbnail) {
-				const didUpdateThumbnail = await this.updateThumbnailFromTimeline();
-				if (didUpdateThumbnail) {
-					await this.saveCurrentProject();
+				try {
+					const didUpdateThumbnail = await this.updateThumbnailFromTimeline();
+					if (didUpdateThumbnail) {
+						await this.saveCurrentProject();
+					}
+				} catch (error) {
+					console.error("Failed to generate project thumbnail:", error);
 				}
 			}
 		} catch (error) {

@@ -19,9 +19,27 @@ thread_local! {
     static GPU_RUNTIME: RefCell<Option<GpuRuntime>> = const { RefCell::new(None) };
 }
 
+fn set_panic_hook() {
+    static SET_HOOK: std::sync::Once = std::sync::Once::new();
+    SET_HOOK.call_once(|| {
+        std::panic::set_hook(Box::new(|info| {
+            // Store the full panic message in window.__wasmPanic so the JS catch block
+            // can surface it instead of the opaque "Unreachable" WASM trap message.
+            if let Some(window) = web_sys::window() {
+                let _ = Reflect::set(
+                    &window,
+                    &JsValue::from_str("__wasmPanic"),
+                    &JsValue::from_str(&info.to_string()),
+                );
+            }
+            console_error_panic_hook::hook(info);
+        }));
+    });
+}
+
 #[wasm_bindgen(js_name = initializeGpu)]
 pub async fn initialize_gpu() -> Result<(), JsValue> {
-    console_error_panic_hook::set_once();
+    set_panic_hook();
 
     if GPU_RUNTIME.with(|runtime| runtime.borrow().is_some()) {
         return Ok(());

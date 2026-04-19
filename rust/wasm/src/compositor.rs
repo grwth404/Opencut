@@ -131,22 +131,41 @@ pub fn render_frame(options: JsValue) -> Result<(), JsValue> {
                 ));
             };
 
-            let surface = gpu_runtime
-                .context
-                .instance()
-                .create_surface(wgpu::SurfaceTarget::Canvas(runtime.canvas.clone()))
-                .map_err(|error| JsValue::from_str(&error.to_string()))?;
+            if gpu_runtime.context.supports_surface_rendering() {
+                let surface = gpu_runtime
+                    .context
+                    .instance()
+                    .create_surface(wgpu::SurfaceTarget::Canvas(runtime.canvas.clone()))
+                    .map_err(|error| JsValue::from_str(&error.to_string()))?;
 
-            runtime
-                .compositor
-                .render_frame(
-                    &gpu_runtime.context,
-                    RenderFrameOptions {
-                        frame: &frame,
-                        surface: &surface,
-                    },
-                )
-                .map_err(|error| JsValue::from_str(&error.to_string()))
+                runtime
+                    .compositor
+                    .render_frame(
+                        &gpu_runtime.context,
+                        RenderFrameOptions {
+                            frame: &frame,
+                            surface: &surface,
+                        },
+                    )
+                    .map_err(|error| JsValue::from_str(&error.to_string()))
+            } else {
+                // WebGL cannot surface-render to an arbitrary canvas element.
+                // Composite to a texture, then blit to the canvas via the 2D context.
+                let texture = runtime
+                    .compositor
+                    .render_frame_to_texture(&gpu_runtime.context, &frame)
+                    .map_err(|error| JsValue::from_str(&error.to_string()))?;
+
+                gpu_runtime
+                    .context
+                    .render_texture_via_gl_canvas(
+                        &texture,
+                        &runtime.canvas,
+                        frame.width,
+                        frame.height,
+                    )
+                    .map_err(|error| JsValue::from_str(&error.to_string()))
+            }
         })
     })
 }
@@ -171,4 +190,3 @@ fn parse_upload_texture_options(value: JsValue) -> Result<UploadTextureOptions, 
         height: read_u32_property(&object, "height")?,
     })
 }
-
