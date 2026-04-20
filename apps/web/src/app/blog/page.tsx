@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BasePage } from "@/app/base-page";
 import { Separator } from "@/components/ui/separator";
-import { getPosts } from "@/lib/blog/query";
-import type { Post } from "@/lib/blog/types";
+import { getPosts } from "@/blog/query";
+import type { Post } from "@/blog/types";
 
 export const metadata: Metadata = {
 	title: "Blog - OpenCut",

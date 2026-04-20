@@ -1,6 +1,6 @@
-import type { TProject, TProjectMetadata } from "@/lib/project/types";
-import { getProjectDurationFromScenes } from "@/lib/scenes";
-import type { MediaAsset } from "@/lib/media/types";
+import type { TProject, TProjectMetadata } from "@/project/types";
+import { getProjectDurationFromScenes } from "@/timeline/scenes";
+import type { MediaAsset } from "@/media/types";
 import { IndexedDBAdapter } from "./indexeddb-adapter";
 import { OPFSAdapter } from "./opfs-adapter";
 import {
@@ -16,12 +16,12 @@ import type {
 	SerializedProject,
 	SerializedScene,
 } from "./types";
-import type { SavedSoundsData, SavedSound, SoundEffect } from "@/lib/sounds/types";
+import type { SavedSoundsData, SavedSound, SoundEffect } from "@/sounds/types";
 import {
 	migrations,
 	runStorageMigrations,
 } from "@/services/storage/migrations";
-import type { Bookmark, SceneTracks, TScene } from "@/lib/timeline";
+import type { Bookmark, SceneTracks, TScene } from "@/timeline";
 
 function normalizeBookmarks({ raw }: { raw: unknown }): Bookmark[] {
 	if (!Array.isArray(raw)) return [];

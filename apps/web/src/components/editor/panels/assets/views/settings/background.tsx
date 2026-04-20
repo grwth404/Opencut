@@ -12,12 +12,12 @@ import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import {
 	BACKGROUND_BLUR_INTENSITY_PRESETS,
 	DEFAULT_BACKGROUND_BLUR_INTENSITY,
-} from "@/lib/background/blur";
-import { DEFAULT_BACKGROUND_COLOR } from "@/lib/background/color";
+} from "@/background/blur";
+import { DEFAULT_BACKGROUND_COLOR } from "@/background/color";
 import { patternCraftGradients } from "@/data/colors/pattern-craft";
 import { colors } from "@/data/colors/solid";
 import { syntaxUIGradients } from "@/data/colors/syntax-ui";
-import { useEditor } from "@/hooks/use-editor";
+import { useEditor } from "@/editor/use-editor";
 import { effectPreviewService } from "@/services/renderer/effect-preview";
 import { cn } from "@/utils/ui";
 

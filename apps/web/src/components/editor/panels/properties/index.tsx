@@ -8,8 +8,8 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useEditor } from "@/hooks/use-editor";
-import { useElementSelection } from "@/hooks/timeline/element/use-element-selection";
+import { useEditor } from "@/editor/use-editor";
+import { useElementSelection } from "@/timeline/hooks/element/use-element-selection";
 import { usePropertiesStore } from "./stores/properties-store";
 import { getPropertiesConfig } from "./registry";
 import { cn } from "@/utils/ui";

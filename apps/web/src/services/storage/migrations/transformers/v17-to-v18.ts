@@ -1,6 +1,6 @@
 import type { MigrationResult, ProjectRecord } from "./types";
-import { VOLUME_DB_MIN } from "@/lib/timeline/audio-constants";
-import { clampDb } from "@/lib/timeline/audio-state";
+import { VOLUME_DB_MIN } from "@/timeline/audio-constants";
+import { clampDb } from "@/timeline/audio-state";
 import { getProjectId, isRecord } from "./utils";
 
 export function transformProjectV17ToV18({

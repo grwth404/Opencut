@@ -1,10 +1,10 @@
-import type { MediaType } from "@/lib/media/types";
+import type { MediaType } from "@/media/types";
 import type {
 	TProject,
 	TProjectMetadata,
 	TTimelineViewState,
-} from "@/lib/project/types";
-import type { TScene } from "@/lib/timeline";
+} from "@/project/types";
+import type { TScene } from "@/timeline";
 
 export interface StorageAdapter<T> {
 	get(key: string): Promise<T | null>;

@@ -1,4 +1,4 @@
-import { parseCustomMaskPath } from "@/lib/masks/custom-path";
+import { parseCustomMaskPath } from "@/masks/custom-path";
 import type { MigrationResult, ProjectRecord } from "./types";
 import { getProjectId, isRecord } from "./utils";
 

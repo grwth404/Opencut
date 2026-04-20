@@ -14,10 +14,10 @@ import {
 } from "mediabunny";
 import type { FrameRate } from "opencut-wasm";
 import { mediaTimeToSeconds } from "opencut-wasm";
-import { TICKS_PER_SECOND } from "@/lib/wasm";
-import { frameRateToFloat } from "@/lib/fps/utils";
+import { TICKS_PER_SECOND } from "@/wasm";
+import { frameRateToFloat } from "@/fps/utils";
 import type { RootNode } from "./nodes/root-node";
-import type { ExportFormat, ExportQuality } from "@/lib/export";
+import type { ExportFormat, ExportQuality } from "@/export";
 import { CanvasRenderer } from "./canvas-renderer";
 
 type ExportParams = {

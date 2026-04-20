@@ -10,9 +10,9 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useEditor } from "@/hooks/use-editor";
-import { clearDragData, setDragData } from "@/lib/drag-data";
-import type { TimelineDragData } from "@/lib/timeline/drag";
+import { useEditor } from "@/editor/use-editor";
+import { clearDragData, setDragData } from "@/timeline/drag-data";
+import type { TimelineDragData } from "@/timeline/drag";
 import { cn } from "@/utils/ui";
 
 export interface DraggableItemProps {

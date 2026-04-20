@@ -1,5 +1,5 @@
-import type { SceneTracks, TimelineTrack } from "@/lib/timeline";
-import type { MediaAsset } from "@/lib/media/types";
+import type { SceneTracks, TimelineTrack } from "@/timeline";
+import type { MediaAsset } from "@/media/types";
 import { RootNode } from "./nodes/root-node";
 import { VideoNode } from "./nodes/video-node";
 import { ImageNode } from "./nodes/image-node";
@@ -10,8 +10,8 @@ import { ColorNode } from "./nodes/color-node";
 import { BlurBackgroundNode } from "./nodes/blur-background-node";
 import { EffectLayerNode } from "./nodes/effect-layer-node";
 import type { AnyBaseNode } from "./nodes/base-node";
-import type { TBackground, TCanvasSize } from "@/lib/project/types";
-import { DEFAULT_BACKGROUND_BLUR_INTENSITY } from "@/lib/background/blur";
+import type { TBackground, TCanvasSize } from "@/project/types";
+import { DEFAULT_BACKGROUND_BLUR_INTENSITY } from "@/background/blur";
 
 const PREVIEW_MAX_IMAGE_SIZE = 2048;
 

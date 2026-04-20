@@ -5,20 +5,20 @@ import {
 	resolveGraphicParamsAtTime,
 	resolveOpacityAtTime,
 	resolveTransformAtTime,
-} from "@/lib/animation";
-import { resolveEffectParamsAtTime } from "@/lib/animation/effect-param-channel";
+} from "@/animation";
+import { resolveEffectParamsAtTime } from "@/animation/effect-param-channel";
 import {
 	buildGaussianBlurPasses,
 	intensityToSigma,
-} from "@/lib/effects/definitions/blur";
-import { effectsRegistry, resolveEffectPasses } from "@/lib/effects";
-import type { Effect, EffectPass } from "@/lib/effects/types";
-import { getSourceTimeAtClipTime } from "@/lib/retime";
-import { DEFAULT_GRAPHIC_SOURCE_SIZE } from "@/lib/graphics";
+} from "@/effects/definitions/blur";
+import { effectsRegistry, resolveEffectPasses } from "@/effects";
+import type { Effect, EffectPass } from "@/effects/types";
+import { getSourceTimeAtClipTime } from "@/retime";
+import { DEFAULT_GRAPHIC_SOURCE_SIZE } from "@/graphics";
 import {
 	getTextMeasurementContext,
 	measureTextElement,
-} from "@/lib/text/measure-element";
+} from "@/text/measure-element";
 import { videoCache } from "@/services/video-cache/service";
 import type { CanvasRenderer } from "./canvas-renderer";
 import type { AnyBaseNode } from "./nodes/base-node";

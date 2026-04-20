@@ -18,22 +18,22 @@ import {
 	getExportMimeType,
 	getExportFileExtension,
 	downloadBuffer,
-} from "@/lib/export";
+} from "@/export";
 import { Check, Copy, Download, RotateCcw } from "lucide-react";
 import {
 	EXPORT_FORMAT_VALUES,
 	EXPORT_QUALITY_VALUES,
 	type ExportFormat,
 	type ExportQuality,
-} from "@/lib/export";
+} from "@/export";
 import {
 	Section,
 	SectionContent,
 	SectionHeader,
 	SectionTitle,
 } from "@/components/section";
-import { useEditor } from "@/hooks/use-editor";
-import { DEFAULT_EXPORT_OPTIONS } from "@/lib/export/defaults";
+import { useEditor } from "@/editor/use-editor";
+import { DEFAULT_EXPORT_OPTIONS } from "@/export/defaults";
 
 function isExportFormat(value: string): value is ExportFormat {
 	return EXPORT_FORMAT_VALUES.some((formatValue) => formatValue === value);

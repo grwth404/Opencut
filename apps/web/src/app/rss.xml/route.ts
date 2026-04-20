@@ -1,6 +1,6 @@
 import { Feed } from "feed";
-import { getPosts } from "@/lib/blog/query";
-import { SITE_INFO, SITE_URL } from "@/lib/site/brand";
+import { getPosts } from "@/blog/query";
+import { SITE_INFO, SITE_URL } from "@/site/brand";
 
 export async function GET() {
 	try {

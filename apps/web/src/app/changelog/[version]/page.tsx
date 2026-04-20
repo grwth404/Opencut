@@ -3,15 +3,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BasePage } from "@/app/base-page";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import { getReleaseByVersion, getSortedReleases } from "@/lib/changelog/utils";
+import { getReleaseByVersion, getSortedReleases } from "@/changelog/utils";
 import {
 	ReleaseArticle,
 	ReleaseMeta,
 	ReleaseTitle,
 	ReleaseDescription,
 	ReleaseChanges,
-} from "@/lib/changelog/components/release";
-import { CopyMarkdownButton } from "@/lib/changelog/components/copy-markdown-button";
+} from "@/changelog/components/release";
+import { CopyMarkdownButton } from "@/changelog/components/copy-markdown-button";
 
 type Props = { params: Promise<{ version: string }> };
 

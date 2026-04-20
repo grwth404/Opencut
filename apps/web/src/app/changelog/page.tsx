@@ -4,14 +4,14 @@ import { Separator } from "@/components/ui/separator";
 import {
 	type Release as ReleaseType,
 	getSortedReleases,
-} from "@/lib/changelog/utils";
+} from "@/changelog/utils";
 import {
 	ReleaseArticle,
 	ReleaseMeta,
 	ReleaseTitle,
 	ReleaseDescription,
 	ReleaseChanges,
-} from "@/lib/changelog/components/release";
+} from "@/changelog/components/release";
 
 export const metadata: Metadata = {
 	title: "Changelog - OpenCut",

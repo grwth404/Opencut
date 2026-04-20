@@ -9,9 +9,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { FPS_PRESETS } from "@/lib/fps/presets";
-import { floatToFrameRate, frameRateToFloat } from "@/lib/fps/utils";
-import { useEditor } from "@/hooks/use-editor";
+import { FPS_PRESETS } from "@/fps/presets";
+import { floatToFrameRate, frameRateToFloat } from "@/fps/utils";
+import { useEditor } from "@/editor/use-editor";
 import {
 	Section,
 	SectionContent,
@@ -22,7 +22,7 @@ import { BackgroundContent } from "./background";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { NumberField } from "@/components/ui/number-field";
-import { useEditorStore } from "@/stores/editor-store";
+import { useEditorStore } from "@/editor/editor-store";
 import { usePropertyDraft } from "@/components/editor/panels/properties/hooks/use-property-draft";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Tick02Icon } from "@hugeicons/core-free-icons";
@@ -30,7 +30,7 @@ import { cn } from "@/utils/ui";
 import { dimensionToAspectRatio } from "@/utils/geometry";
 import { formatNumberForDisplay } from "@/utils/math";
 import { OcSquarePlusIcon } from "@/components/icons";
-import type { TCanvasSize } from "@/lib/project/types";
+import type { TCanvasSize } from "@/project/types";
 
 type SettingsView = "project-info" | "background";
 

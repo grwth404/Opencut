@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useEditor } from "@/hooks/use-editor";
+import { useEditor } from "@/editor/use-editor";
 import { storageService } from "@/services/storage/service";
 
 interface StorageContextType {

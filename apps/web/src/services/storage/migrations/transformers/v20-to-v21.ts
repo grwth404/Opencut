@@ -1,4 +1,4 @@
-import { INTENSITY_TO_SIGMA_DIVISOR } from "@/lib/effects/definitions/blur";
+import { INTENSITY_TO_SIGMA_DIVISOR } from "@/effects/definitions/blur";
 import type { MigrationResult, ProjectRecord } from "./types";
 import { getProjectId, isRecord } from "./utils";
 

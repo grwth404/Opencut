@@ -25,28 +25,28 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
-import { TICKS_PER_SECOND } from "@/lib/wasm";
-import { useEditor } from "@/hooks/use-editor";
-import { useFileUpload } from "@/hooks/use-file-upload";
-import { invokeAction } from "@/lib/actions";
-import { processMediaAssets } from "@/lib/media/processing";
-import { showMediaUploadToast } from "@/lib/media/upload-toast";
+import { DEFAULT_NEW_ELEMENT_DURATION } from "@/timeline/creation";
+import { TICKS_PER_SECOND } from "@/wasm";
+import { useEditor } from "@/editor/use-editor";
+import { useFileUpload } from "@/media/use-file-upload";
+import { invokeAction } from "@/actions";
+import { processMediaAssets } from "@/media/processing";
+import { showMediaUploadToast } from "@/media/upload-toast";
 import {
 	SelectableItem,
 	SelectableSurface,
 	useSelection,
 	useSelectionScope,
-} from "@/lib/selection";
-import { buildElementFromMedia } from "@/lib/timeline/element-utils";
+} from "@/selection";
+import { buildElementFromMedia } from "@/timeline/element-utils";
 import {
 	type MediaSortKey,
 	type MediaSortOrder,
 	type MediaViewMode,
 	useAssetsPanelStore,
-} from "@/stores/assets-panel-store";
-import { MASKABLE_ELEMENT_TYPES } from "@/lib/timeline";
-import type { MediaAsset } from "@/lib/media/types";
+} from "@/components/editor/panels/assets/assets-panel-store";
+import { MASKABLE_ELEMENT_TYPES } from "@/timeline";
+import type { MediaAsset } from "@/media/types";
 import { cn } from "@/utils/ui";
 import {
 	CloudUploadIcon,

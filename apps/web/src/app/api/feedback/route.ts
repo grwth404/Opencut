@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { checkRateLimit } from "@/lib/rate-limit";
-import { submitFeedback, MAX_MESSAGE_LENGTH } from "@/lib/feedback";
+import { checkRateLimit } from "@/auth/rate-limit";
+import { submitFeedback, MAX_MESSAGE_LENGTH } from "@/feedback";
 
 const submitSchema = z.object({
 	message: z

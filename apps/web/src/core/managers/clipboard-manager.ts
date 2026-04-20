@@ -5,7 +5,7 @@ import {
 	type ClipboardEntry,
 	type CopyContext,
 	type PasteContext,
-} from "@/lib/clipboard";
+} from "@/clipboard";
 
 export class ClipboardManager {
 	private entry: ClipboardEntry | null = null;

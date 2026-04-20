@@ -12,7 +12,7 @@ import {
 	TAB_KEYS,
 	tabs,
 	useAssetsPanelStore,
-} from "@/stores/assets-panel-store";
+} from "@/components/editor/panels/assets/assets-panel-store";
 
 export function TabBar() {
 	const { activeTab, setActiveTab } = useAssetsPanelStore();

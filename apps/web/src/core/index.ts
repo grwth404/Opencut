@@ -10,9 +10,9 @@ import { AudioManager } from "./managers/audio-manager";
 import { SelectionManager } from "./managers/selection-manager";
 import { ClipboardManager } from "./managers/clipboard-manager";
 import { DiagnosticsManager } from "./managers/diagnostics-manager";
-import { registerDefaultEffects } from "@/lib/effects";
-import { registerDefaultMasks } from "@/lib/masks";
-import { registerTranscriptionDiagnostics } from "@/lib/transcription/diagnostics";
+import { registerDefaultEffects } from "@/effects";
+import { registerDefaultMasks } from "@/masks";
+import { registerTranscriptionDiagnostics } from "@/transcription/diagnostics";
 
 export class EditorCore {
 	private static instance: EditorCore | null = null;

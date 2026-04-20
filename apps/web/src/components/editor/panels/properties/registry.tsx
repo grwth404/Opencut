@@ -11,8 +11,8 @@ import type {
 	VideoElement,
 	AudioElement,
 	TimelineElement,
-} from "@/lib/timeline";
-import type { MediaAsset } from "@/lib/media/types";
+} from "@/timeline";
+import type { MediaAsset } from "@/media/types";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	TextFontIcon,
@@ -22,14 +22,14 @@ import {
 	MagicWand05Icon,
 	DashboardSpeed02Icon,
 } from "@hugeicons/core-free-icons";
-import { TransformTab } from "./tabs/transform-tab";
-import { BlendingTab } from "./tabs/blending-tab";
-import { AudioTab } from "./tabs/audio-tab";
-import { TextTab } from "./tabs/text-tab";
-import { ClipEffectsTab, StandaloneEffectTab } from "./tabs/effects-tab";
-import { MasksTab } from "./tabs/masks-tab";
-import { SpeedTab } from "./tabs/speed-tab";
-import { GraphicTab } from "./tabs/graphic-tab";
+import { TransformTab } from "@/rendering/components/transform-tab";
+import { BlendingTab } from "@/rendering/components/blending-tab";
+import { AudioTab } from "@/timeline/components/audio-tab";
+import { TextTab } from "@/text/components/text-tab";
+import { ClipEffectsTab, StandaloneEffectTab } from "@/effects/components/effects-tab";
+import { MasksTab } from "@/masks/components/masks-tab";
+import { SpeedTab } from "@/speed/components/speed-tab";
+import { GraphicTab } from "@/graphics/components/graphic-tab";
 import { OcShapesIcon } from "@/components/icons";
 
 export type TabContentProps = {

@@ -1,5 +1,5 @@
 import type { EditorCore } from "@/core";
-import type { DiagnosticDefinition } from "@/lib/diagnostics/types";
+import type { DiagnosticDefinition } from "@/diagnostics/types";
 
 interface DiagnosticRegistration extends DiagnosticDefinition {
 	check: (editor: EditorCore) => boolean;

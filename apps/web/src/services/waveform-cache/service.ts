@@ -1,10 +1,10 @@
 "use client";
 
-import { createAudioContext } from "@/lib/media/audio";
+import { createAudioContext } from "@/media/audio";
 import {
 	buildSourceWaveformSummary,
 	type SourceWaveformSummary,
-} from "@/lib/media/waveform-summary";
+} from "@/media/waveform-summary";
 
 interface GetSourceWaveformSummaryArgs {
 	sourceKey: string;

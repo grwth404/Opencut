@@ -1,12 +1,12 @@
 import type { EditorCore } from "@/core";
 import type { RootNode } from "@/services/renderer/nodes/root-node";
-import type { ExportOptions, ExportResult } from "@/lib/export";
+import type { ExportOptions, ExportResult } from "@/export";
 import { CanvasRenderer } from "@/services/renderer/canvas-renderer";
 import { SceneExporter } from "@/services/renderer/scene-exporter";
 import { buildScene } from "@/services/renderer/scene-builder";
-import { createTimelineAudioBuffer } from "@/lib/media/audio";
+import { createTimelineAudioBuffer } from "@/media/audio";
 import { formatTimecode } from "opencut-wasm";
-import { frameRateToFloat } from "@/lib/fps/utils";
+import { frameRateToFloat } from "@/fps/utils";
 import { downloadBlob } from "@/utils/browser";
 
 type SnapshotResult =

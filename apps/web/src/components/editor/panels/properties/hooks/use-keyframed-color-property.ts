@@ -1,11 +1,11 @@
-import { useEditor } from "@/hooks/use-editor";
+import { useEditor } from "@/editor/use-editor";
 import {
 	getKeyframeAtTime,
 	hasKeyframesForPath,
 	upsertElementKeyframe,
-} from "@/lib/animation";
-import type { AnimationPropertyPath, ElementAnimations } from "@/lib/animation/types";
-import type { TimelineElement } from "@/lib/timeline";
+} from "@/animation";
+import type { AnimationPropertyPath, ElementAnimations } from "@/animation/types";
+import type { TimelineElement } from "@/timeline";
 
 export function useKeyframedColorProperty({
 	trackId,

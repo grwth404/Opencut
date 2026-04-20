@@ -8,21 +8,32 @@ import {
 } from "@/components/ui/resizable";
 import { AssetsPanel } from "@/components/editor/panels/assets";
 import { PropertiesPanel } from "@/components/editor/panels/properties";
-import { Timeline } from "@/components/editor/panels/timeline";
-import { PreviewPanel } from "@/components/editor/panels/preview";
+import { Timeline } from "@/timeline/components";
+import { PreviewPanel } from "@/preview/components";
 import { EditorHeader } from "@/components/editor/editor-header";
 import { EditorProvider } from "@/components/providers/editor-provider";
 import { Onboarding } from "@/components/editor/onboarding";
-import { MigrationDialog } from "@/components/editor/dialogs/migration-dialog";
-import { usePanelStore } from "@/stores/panel-store";
-import { usePasteMedia } from "@/hooks/use-paste-media";
+import { MigrationDialog } from "@/project/components/migration-dialog";
+import { usePanelStore } from "@/editor/panel-store";
+import { usePasteMedia } from "@/media/use-paste-media";
 import { MobileGate } from "@/components/editor/mobile-gate";
-import { useState } from "react";
-import { useEditor } from "@/hooks/use-editor";
+import { useMemo, useState } from "react";
+import { useEditor } from "@/editor/use-editor";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
-import { ChangelogNotification } from "@/lib/changelog/components/changelog-notification";
+import { ChangelogNotification } from "@/changelog/components/changelog-notification";
+import {
+	createPreviewOverlayControl,
+	isPreviewOverlayVisible,
+	mergePreviewOverlaySources,
+} from "@/preview/overlays";
+import { usePreviewStore } from "@/preview/preview-store";
+import { getGuidePreviewOverlaySource } from "@/guides";
+import {
+	bookmarkNotesPreviewOverlay,
+	getBookmarkPreviewOverlaySource,
+} from "@/timeline/bookmarks/index";
 
 export default function Editor() {
 	const params = useParams();
@@ -70,6 +81,49 @@ function DegradedRendererBanner() {
 function EditorLayout() {
 	usePasteMedia();
 	const { panels, setPanel } = usePanelStore();
+	const activeScene = useEditor((editor) =>
+		editor.scenes.getActiveSceneOrNull(),
+	);
+	const currentTime = useEditor((editor) => editor.playback.getCurrentTime());
+	const activeGuide = usePreviewStore((state) => state.activeGuide);
+	const overlays = usePreviewStore((state) => state.overlays);
+	const setOverlayVisibility = usePreviewStore(
+		(state) => state.setOverlayVisibility,
+	);
+	const showBookmarkNotes = isPreviewOverlayVisible({
+		overlay: bookmarkNotesPreviewOverlay,
+		overlays,
+	});
+
+	const overlaySource = useMemo(
+		() =>
+			mergePreviewOverlaySources({
+				sources: [
+					getGuidePreviewOverlaySource({
+						guideId: activeGuide,
+					}),
+					activeScene
+						? getBookmarkPreviewOverlaySource({
+								bookmarks: activeScene.bookmarks,
+								time: currentTime,
+								isVisible: showBookmarkNotes,
+							})
+						: {
+								definitions: [bookmarkNotesPreviewOverlay],
+								instances: [],
+							},
+				],
+			}),
+		[activeGuide, activeScene, currentTime, showBookmarkNotes],
+	);
+
+	const overlayControls = useMemo(
+		() =>
+			overlaySource.definitions.map((overlay) =>
+				createPreviewOverlayControl({ overlay, overlays }),
+			),
+		[overlaySource.definitions, overlays],
+	);
 
 	return (
 		<ResizablePanelGroup
@@ -111,7 +165,11 @@ function EditorLayout() {
 						minSize={30}
 						className="min-h-0 min-w-0 flex-1"
 					>
-						<PreviewPanel />
+						<PreviewPanel
+							overlayControls={overlayControls}
+							overlayInstances={overlaySource.instances}
+							onOverlayVisibilityChange={setOverlayVisibility}
+						/>
 					</ResizablePanel>
 
 					<ResizableHandle withHandle />

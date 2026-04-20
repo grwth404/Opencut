@@ -3,7 +3,7 @@ import {
 	applyMaskFeather as applyMaskFeatherWasm,
 	initializeGpu,
 } from "opencut-wasm";
-import type { EffectPass, EffectUniformValue } from "@/lib/effects/types";
+import type { EffectPass, EffectUniformValue } from "@/effects/types";
 
 let gpuAvailable = false;
 let initPromise: Promise<void> | null = null;

@@ -10,20 +10,20 @@ import {
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import Link from "next/link";
-import { RenameProjectDialog } from "./dialogs/rename-project-dialog";
-import { DeleteProjectDialog } from "./dialogs/delete-project-dialog";
+import { RenameProjectDialog } from "@/project/components/rename-project-dialog";
+import { DeleteProjectDialog } from "@/project/components/delete-project-dialog";
 import { useRouter } from "next/navigation";
 import { FaDiscord } from "react-icons/fa6";
 import { ExportButton } from "./export-button";
-import { FeedbackPopover } from "@/lib/feedback/components/feedback-popover";
+import { FeedbackPopover } from "@/feedback/components/feedback-popover";
 import { ThemeToggle } from "../theme-toggle";
-import { DEFAULT_LOGO_URL } from "@/lib/site/brand";
-import { SOCIAL_LINKS } from "@/lib/site/social";
+import { DEFAULT_LOGO_URL } from "@/site/brand";
+import { SOCIAL_LINKS } from "@/site/social";
 import { toast } from "sonner";
-import { useEditor } from "@/hooks/use-editor";
+import { useEditor } from "@/editor/use-editor";
 import { CommandIcon, Logout05Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ShortcutsDialog } from "./dialogs/shortcuts-dialog";
+import { ShortcutsDialog } from "@/actions/components/shortcuts-dialog";
 import Image from "next/image";
 import { cn } from "@/utils/ui";
 

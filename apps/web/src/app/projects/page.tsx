@@ -7,20 +7,20 @@ import type { KeyboardEvent, MouseEvent } from "react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { EditorCore } from "@/core";
-import { MigrationDialog } from "@/components/editor/dialogs/migration-dialog";
-import { StoragePersistenceDialog } from "@/components/editor/dialogs/storage-persistence-dialog";
+import { MigrationDialog } from "@/project/components/migration-dialog";
+import { StoragePersistenceDialog } from "@/services/storage/components/storage-persistence-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useEditor } from "@/hooks/use-editor";
+import { useEditor } from "@/editor/use-editor";
 import { useProjectsStore } from "./store";
 import type {
 	TProjectMetadata,
 	TProjectSortKey,
 	TProjectSortOption,
-} from "@/lib/project/types";
+} from "@/project/types";
 import { formatTimecode, mediaTimeToSeconds } from "opencut-wasm";
 import { formatDate } from "@/utils/date";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -62,11 +62,11 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DeleteProjectDialog } from "@/components/editor/dialogs/delete-project-dialog";
-import { ProjectInfoDialog } from "@/components/editor/dialogs/project-info-dialog";
-import { RenameProjectDialog } from "@/components/editor/dialogs/rename-project-dialog";
+import { DeleteProjectDialog } from "@/project/components/delete-project-dialog";
+import { ProjectInfoDialog } from "@/project/components/project-info-dialog";
+import { RenameProjectDialog } from "@/project/components/rename-project-dialog";
 import { cn } from "@/utils/ui";
-import { ChangelogNotification } from "@/lib/changelog/components/changelog-notification";
+import { ChangelogNotification } from "@/changelog/components/changelog-notification";
 const formatProjectDuration = ({
 	duration,
 }: {

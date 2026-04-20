@@ -1,7 +1,7 @@
 import { createOffscreenCanvas } from "./canvas-utils";
-import { effectsRegistry, resolveEffectPasses } from "@/lib/effects";
-import { buildDefaultParamValues } from "@/lib/registry";
-import type { ParamValues } from "@/lib/params";
+import { effectsRegistry, resolveEffectPasses } from "@/effects";
+import { buildDefaultParamValues } from "@/params/registry";
+import type { ParamValues } from "@/params";
 import { gpuRenderer } from "./gpu-renderer";
 
 const PREVIEW_SIZE = 160;

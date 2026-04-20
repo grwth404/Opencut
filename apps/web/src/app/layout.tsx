@@ -2,11 +2,11 @@ import { ThemeProvider } from "next-themes";
 import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "../components/ui/sonner";
-import { ChangelogNotification } from "@/lib/changelog/components/changelog-notification";
+import { ChangelogNotification } from "@/changelog/components/changelog-notification";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { baseMetaData } from "./metadata";
 import { BotIdClient } from "botid/client";
-import { webEnv } from "@/lib/env/web";
+import { webEnv } from "@/env/web";
 import { Inter } from "next/font/google";
 
 const siteFont = Inter({ subsets: ["latin"] });

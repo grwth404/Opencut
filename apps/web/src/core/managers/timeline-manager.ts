@@ -1,33 +1,33 @@
 import type { EditorCore } from "@/core";
-import type { ElementBounds } from "@/lib/preview/element-bounds";
-import type { ParamValues } from "@/lib/params";
+import type { ElementBounds } from "@/preview/element-bounds";
+import type { ParamValues } from "@/params";
 import type {
 	SceneTracks,
 	TrackType,
 	TimelineTrack,
 	TimelineElement,
 	RetimeConfig,
-} from "@/lib/timeline";
-import { calculateTotalDuration } from "@/lib/timeline";
-import { findTrackInSceneTracks } from "@/lib/timeline/track-element-update";
+} from "@/timeline";
+import { calculateTotalDuration } from "@/timeline";
+import { findTrackInSceneTracks } from "@/timeline/track-element-update";
 import {
 	canElementBeHidden,
 	canElementHaveAudio,
-} from "@/lib/timeline/element-utils";
+} from "@/timeline/element-utils";
 import type {
 	AnimationPath,
 	AnimationInterpolation,
 	AnimationValue,
 	AnimationValueForPath,
 	ScalarCurveKeyframePatch,
-} from "@/lib/animation/types";
+} from "@/animation/types";
 import {
 	getElementLocalTime,
 	resolveAnimationTarget,
 	resolveAnimationPathValueAtTime,
-} from "@/lib/animation";
+} from "@/animation";
 import { lastFrameTime } from "opencut-wasm";
-import { BatchCommand } from "@/lib/commands";
+import { BatchCommand } from "@/commands";
 import {
 	AddTrackCommand,
 	RemoveTrackCommand,
@@ -56,12 +56,12 @@ import {
 	UpsertEffectParamKeyframeCommand,
 	RemoveEffectParamKeyframeCommand,
 	ToggleSourceAudioSeparationCommand,
-} from "@/lib/commands/timeline";
-import type { InsertElementParams } from "@/lib/commands/timeline/element/insert-element";
+} from "@/commands/timeline";
+import type { InsertElementParams } from "@/commands/timeline/element/insert-element";
 import type {
 	PlannedElementMove,
 	PlannedTrackCreation,
-} from "@/lib/timeline/group-move";
+} from "@/timeline/group-move";
 
 export class TimelineManager {
 	private listeners = new Set<() => void>();

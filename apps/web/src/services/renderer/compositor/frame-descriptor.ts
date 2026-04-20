@@ -1,5 +1,5 @@
-import { drawCssBackground } from "@/lib/gradients";
-import { masksRegistry } from "@/lib/masks";
+import { drawCssBackground } from "@/gradients";
+import { masksRegistry } from "@/masks";
 import type { AnyBaseNode } from "../nodes/base-node";
 import type { CanvasRenderer } from "../canvas-renderer";
 import { createOffscreenCanvas } from "../canvas-utils";
@@ -19,7 +19,7 @@ import type {
 	LayerMaskDescriptor,
 	QuadTransformDescriptor,
 } from "./types";
-import { DEFAULT_GRAPHIC_SOURCE_SIZE } from "@/lib/graphics";
+import { DEFAULT_GRAPHIC_SOURCE_SIZE } from "@/graphics";
 
 export type TextureUploadDescriptor = {
 	id: string;

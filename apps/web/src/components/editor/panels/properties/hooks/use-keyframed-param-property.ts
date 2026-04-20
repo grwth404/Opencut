@@ -1,6 +1,6 @@
 "use client";
 
-import { useEditor } from "@/hooks/use-editor";
+import { useEditor } from "@/editor/use-editor";
 import {
 	buildGraphicParamPath,
 	coerceAnimationValueForParam,
@@ -9,12 +9,12 @@ import {
 	getParamValueKind,
 	hasKeyframesForPath,
 	upsertPathKeyframe,
-} from "@/lib/animation";
+} from "@/animation";
 import type {
 	ElementAnimations,
-} from "@/lib/animation/types";
-import type { ParamDefinition } from "@/lib/params";
-import type { TimelineElement } from "@/lib/timeline";
+} from "@/animation/types";
+import type { ParamDefinition } from "@/params";
+import type { TimelineElement } from "@/timeline";
 
 export interface KeyframedParamPropertyResult {
 	hasAnimatedKeyframes: boolean;

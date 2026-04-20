@@ -1,12 +1,12 @@
 import type { EditorCore } from "@/core";
-import type { SelectedKeyframeRef } from "@/lib/animation/types";
+import type { SelectedKeyframeRef } from "@/animation/types";
 import type {
 	EditorSelectionKind,
 	EditorSelectionPatch,
 	EditorSelectionSnapshot,
 	SelectedMaskPointSelection,
-} from "@/lib/selection/editor-selection";
-import type { ElementRef } from "@/lib/timeline/types";
+} from "@/selection/editor-selection";
+import type { ElementRef } from "@/timeline/types";
 
 export class SelectionManager {
 	private selectedElements: ElementRef[] = [];

@@ -1,7 +1,7 @@
 import type { MigrationResult, ProjectRecord } from "./types";
 import { getProjectId, isRecord } from "./utils";
 
-import { TICKS_PER_SECOND } from "@/lib/wasm";
+import { TICKS_PER_SECOND } from "@/wasm";
 const ARBITRARY_FPS_DENOMINATOR = 1_000_000;
 const STANDARD_FRAME_RATES = [
 	{ value: 24_000 / 1_001, numerator: 24_000, denominator: 1_001 },

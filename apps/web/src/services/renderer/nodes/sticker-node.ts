@@ -1,4 +1,4 @@
-import { resolveStickerId } from "@/lib/stickers";
+import { resolveStickerId } from "@/stickers";
 import {
 	VisualNode,
 	type ResolvedVisualSourceNodeState,

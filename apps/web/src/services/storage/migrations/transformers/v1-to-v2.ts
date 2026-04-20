@@ -1,6 +1,6 @@
-import { DEFAULT_BACKGROUND_BLUR_INTENSITY } from "@/lib/background/blur";
-import { DEFAULT_BACKGROUND_COLOR } from "@/lib/background/color";
-import { DEFAULT_CANVAS_SIZE } from "@/lib/canvas/sizes";
+import { DEFAULT_BACKGROUND_BLUR_INTENSITY } from "@/background/blur";
+import { DEFAULT_BACKGROUND_COLOR } from "@/background/color";
+import { DEFAULT_CANVAS_SIZE } from "@/canvas/sizes";
 const DEFAULT_FPS = 30;
 import { IndexedDBAdapter } from "@/services/storage/indexeddb-adapter";
 import type { MediaAssetData } from "@/services/storage/types";

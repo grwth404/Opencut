@@ -3,8 +3,8 @@ import {
 	DEFAULT_GRAPHIC_SOURCE_SIZE,
 	getGraphicDefinition,
 	registerDefaultGraphics,
-} from "@/lib/graphics";
-import type { ParamValues } from "@/lib/params";
+} from "@/graphics";
+import type { ParamValues } from "@/params";
 import {
 	VisualNode,
 	type ResolvedVisualNodeState,

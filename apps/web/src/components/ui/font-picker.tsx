@@ -9,10 +9,10 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { loadFullFont } from "@/lib/fonts/google-fonts";
-import { SYSTEM_FONTS } from "@/lib/fonts/system-fonts";
-import type { FontAtlas, FontAtlasEntry } from "@/lib/fonts/types";
-import { useFontAtlas } from "@/hooks/use-font-atlas";
+import { loadFullFont } from "@/fonts/google-fonts";
+import { SYSTEM_FONTS } from "@/fonts/system-fonts";
+import type { FontAtlas, FontAtlasEntry } from "@/fonts/types";
+import { useFontAtlas } from "@/fonts/use-font-atlas";
 import { cn } from "@/utils/ui";
 import { ChevronDown, Search } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";

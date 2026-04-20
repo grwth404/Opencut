@@ -1,7 +1,7 @@
-import { webEnv } from "@/lib/env/web";
+import { webEnv } from "@/env/web";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/auth/rate-limit";
 
 const searchParamsSchema = z.object({
 	q: z.string().max(500, "Query too long").optional(),

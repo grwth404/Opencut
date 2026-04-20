@@ -1,21 +1,21 @@
 import type { EditorCore } from "@/core";
-import { TICKS_PER_SECOND } from "@/lib/wasm";
+import { TICKS_PER_SECOND } from "@/wasm";
 import {
 	clampRetimeRate,
 	shouldMaintainPitch,
-} from "@/lib/retime/rate";
-import type { AudioClipSource } from "@/lib/media/audio";
-import { createAudioContext, collectAudioClips } from "@/lib/media/audio";
+} from "@/retime/rate";
+import type { AudioClipSource } from "@/media/audio";
+import { createAudioContext, collectAudioClips } from "@/media/audio";
 import {
 	buildAudioGainAutomation,
 	hasAnimatedVolume,
-} from "@/lib/timeline/audio-state";
-import { createAudioMasteringChain } from "@/lib/media/audio-mastering";
+} from "@/timeline/audio-state";
+import { createAudioMasteringChain } from "@/media/audio-mastering";
 import {
 	getClipTimeAtSourceTime,
 	getSourceTimeAtClipTime,
 	renderRetimedBuffer,
-} from "@/lib/retime";
+} from "@/retime";
 import {
 	ALL_FORMATS,
 	AudioBufferSink,

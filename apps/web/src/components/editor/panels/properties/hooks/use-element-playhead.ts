@@ -1,5 +1,5 @@
-import { useEditor } from "@/hooks/use-editor";
-import { getElementLocalTime } from "@/lib/animation";
+import { useEditor } from "@/editor/use-editor";
+import { getElementLocalTime } from "@/animation";
 
 export function useElementPlayhead({
 	startTime,

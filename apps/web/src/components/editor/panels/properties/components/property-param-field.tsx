@@ -1,6 +1,6 @@
 "use client";
 
-import type { ParamDefinition, NumberParamDefinition } from "@/lib/params";
+import type { ParamDefinition, NumberParamDefinition } from "@/params";
 import {
 	formatNumberForDisplay,
 	getFractionDigitsForStep,

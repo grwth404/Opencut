@@ -3,11 +3,11 @@ import type {
 	TranscriptionResult,
 	TranscriptionProgress,
 	TranscriptionModelId,
-} from "@/lib/transcription/types";
+} from "@/transcription/types";
 import {
 	DEFAULT_TRANSCRIPTION_MODEL,
 	TRANSCRIPTION_MODELS,
-} from "@/lib/transcription/models";
+} from "@/transcription/models";
 import type { WorkerMessage, WorkerResponse } from "./worker";
 
 type ProgressCallback = (progress: TranscriptionProgress) => void;

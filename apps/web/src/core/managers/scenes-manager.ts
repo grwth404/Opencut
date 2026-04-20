@@ -1,17 +1,17 @@
 import type { EditorCore } from "@/core";
-import type { SceneTracks, TScene } from "@/lib/timeline";
+import type { SceneTracks, TScene } from "@/timeline";
 import { storageService } from "@/services/storage/service";
 import {
 	getMainScene,
 	ensureMainScene,
 	canDeleteScene,
 	findCurrentScene,
-} from "@/lib/scenes";
+} from "@/timeline/scenes";
 import {
 	getBookmarkAtTime,
 	getFrameTime,
 	isBookmarkAtTime,
-} from "@/lib/timeline/bookmarks";
+} from "@/timeline/bookmarks/index";
 import {
 	CreateSceneCommand,
 	DeleteSceneCommand,
@@ -20,7 +20,7 @@ import {
 	RenameSceneCommand,
 	ToggleBookmarkCommand,
 	UpdateBookmarkCommand,
-} from "@/lib/commands/scene";
+} from "@/commands/scene";
 
 export class ScenesManager {
 	private active: TScene | null = null;

@@ -1,11 +1,11 @@
 import type { EditorCore } from "@/core";
 import { toast } from "sonner";
-import type { MediaAsset } from "@/lib/media/types";
+import type { MediaAsset } from "@/media/types";
 import { storageService } from "@/services/storage/service";
 import { generateUUID } from "@/utils/id";
 import { videoCache } from "@/services/video-cache/service";
 import { waveformCache } from "@/services/waveform-cache/service";
-import { BatchCommand, RemoveMediaAssetCommand } from "@/lib/commands";
+import { BatchCommand, RemoveMediaAssetCommand } from "@/commands";
 
 export class MediaManager {
 	private assets: MediaAsset[] = [];

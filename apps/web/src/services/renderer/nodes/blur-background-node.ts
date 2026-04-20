@@ -1,5 +1,5 @@
-import type { EffectPass } from "@/lib/effects/types";
-import type { RetimeConfig } from "@/lib/timeline";
+import type { EffectPass } from "@/effects/types";
+import type { RetimeConfig } from "@/timeline";
 import { BaseNode } from "./base-node";
 
 export type BlurBackgroundNodeParams = {

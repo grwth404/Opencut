@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { EditorCore } from "@/core";
-import { useEditor } from "@/hooks/use-editor";
-import { useKeybindingsListener } from "@/hooks/use-keybindings";
-import { useKeybindingsStore } from "@/stores/keybindings-store";
-import { useTimelineStore } from "@/stores/timeline-store";
-import { useEditorActions } from "@/hooks/actions/use-editor-actions";
-import { loadFontAtlas } from "@/lib/fonts/google-fonts";
+import { useEditor } from "@/editor/use-editor";
+import { useKeybindingsListener } from "@/actions/use-keybindings";
+import { useKeybindingsStore } from "@/actions/keybindings-store";
+import { useTimelineStore } from "@/timeline/timeline-store";
+import { useEditorActions } from "@/actions/use-editor-actions";
+import { loadFontAtlas } from "@/fonts/google-fonts";
 import {
 	initializeGpuRenderer,
 	isGpuAvailable,

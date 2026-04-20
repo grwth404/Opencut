@@ -1,5 +1,5 @@
 import type { EditorCore } from "@/core";
-import { TICKS_PER_SECOND } from "@/lib/wasm";
+import { TICKS_PER_SECOND } from "@/wasm";
 import { roundToFrame } from "opencut-wasm";
 
 export class PlaybackManager {

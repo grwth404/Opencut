@@ -6,16 +6,16 @@ import type {
 	TProjectSortOption,
 	TProjectSettings,
 	TTimelineViewState,
-} from "@/lib/project/types";
-import type { ExportOptions, ExportResult, ExportState } from "@/lib/export";
+} from "@/project/types";
+import type { ExportOptions, ExportResult, ExportState } from "@/export";
 import { storageService } from "@/services/storage/service";
 import { toast } from "sonner";
 import { generateUUID } from "@/utils/id";
-import { UpdateProjectSettingsCommand } from "@/lib/commands/project";
-import { DEFAULT_BACKGROUND_COLOR } from "@/lib/background/color";
-import { DEFAULT_CANVAS_SIZE } from "@/lib/canvas/sizes";
-import { DEFAULT_FPS } from "@/lib/fps/defaults";
-import { buildDefaultScene, getProjectDurationFromScenes } from "@/lib/scenes";
+import { UpdateProjectSettingsCommand } from "@/commands/project";
+import { DEFAULT_BACKGROUND_COLOR } from "@/background/color";
+import { DEFAULT_CANVAS_SIZE } from "@/canvas/sizes";
+import { DEFAULT_FPS } from "@/fps/defaults";
+import { buildDefaultScene, getProjectDurationFromScenes } from "@/timeline/scenes";
 import { buildScene } from "@/services/renderer/scene-builder";
 import { CanvasRenderer } from "@/services/renderer/canvas-renderer";
 import {
@@ -24,11 +24,11 @@ import {
 	runStorageMigrations,
 	type MigrationProgress,
 } from "@/services/storage/migrations";
-import { loadFonts } from "@/lib/fonts/google-fonts";
-import { DEFAULTS } from "@/lib/timeline/defaults";
-import { getElementFontFamilies } from "@/lib/timeline/element-utils";
-import { getRaisedProjectFpsForImportedMedia } from "@/lib/fps/utils";
-import type { MediaAsset } from "@/lib/media/types";
+import { loadFonts } from "@/fonts/google-fonts";
+import { DEFAULTS } from "@/timeline/defaults";
+import { getElementFontFamilies } from "@/timeline/element-utils";
+import { getRaisedProjectFpsForImportedMedia } from "@/fps/utils";
+import type { MediaAsset } from "@/media/types";
 
 export interface MigrationState {
 	isMigrating: boolean;

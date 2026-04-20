@@ -7,7 +7,7 @@ import {
 	AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
-import { SOCIAL_LINKS } from "@/lib/site/social";
+import { SOCIAL_LINKS } from "@/site/social";
 
 export const metadata: Metadata = {
 	title: "Terms of Service - OpenCut",

@@ -21,9 +21,9 @@ import {
 	DialogFooter,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import { canDeleteScene, getMainScene } from "@/lib/scenes";
+import { canDeleteScene, getMainScene } from "@/timeline/scenes";
 import { toast } from "sonner";
-import { useEditor } from "@/hooks/use-editor";
+import { useEditor } from "@/editor/use-editor";
 
 export function ScenesView({ children }: { children: React.ReactNode }) {
 	const editor = useEditor();
