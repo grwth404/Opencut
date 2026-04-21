@@ -7,14 +7,7 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": [
-			"**",
-			"!**/.next/**",
-			"!**/node_modules/**",
-			"!**/dist/**",
-			"!**/build/**",
-			"!**/apps/web/public/ffmpeg/**"
-		]
+		"includes": ["**", "!**/.next", "!**/node_modules", "!**/dist", "!**/build"]
 	},
 	"formatter": {
 		"enabled": true,
