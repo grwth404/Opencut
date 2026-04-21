@@ -43,6 +43,7 @@ export async function runStorageMigrations({
 		"projects",
 		1,
 	);
+
 	const projects = await projectsAdapter.getAll();
 
 	const orderedMigrations = [...migrations].sort((a, b) => a.from - b.from);

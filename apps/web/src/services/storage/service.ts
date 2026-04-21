@@ -113,11 +113,7 @@ class StorageService {
 		return isStorageQuotaExceededError({ error });
 	}
 
-	private stripAudioBuffers({
-		tracks,
-	}: {
-		tracks: SceneTracks;
-	}): SceneTracks {
+	private stripAudioBuffers({ tracks }: { tracks: SceneTracks }): SceneTracks {
 		return {
 			...tracks,
 			audio: tracks.audio.map((track) => ({
@@ -173,6 +169,19 @@ class StorageService {
 
 		if (!serializedProject) return null;
 
+		if (
+			typeof serializedProject !== "object" ||
+			serializedProject === null ||
+			typeof serializedProject.metadata !== "object" ||
+			serializedProject.metadata === null
+		) {
+			console.warn(
+				"[storage] Skipping malformed project entry (missing metadata):",
+				{ id, entry: serializedProject },
+			);
+			return null;
+		}
+
 		const scenes =
 			serializedProject.scenes?.map((scene) => ({
 				id: scene.id,
@@ -225,18 +234,34 @@ class StorageService {
 		await this.ensureMigrations();
 		const serializedProjects = await this.projectsAdapter.getAll();
 
-		const metadata = serializedProjects.map((serializedProject) => ({
-			id: serializedProject.metadata.id,
-			name: serializedProject.metadata.name,
-			thumbnail: serializedProject.metadata.thumbnail,
-			duration:
-				serializedProject.metadata.duration ??
-				getProjectDurationFromScenes({
-					scenes: (serializedProject.scenes ?? []) as unknown as TScene[],
-				}),
-			createdAt: new Date(serializedProject.metadata.createdAt),
-			updatedAt: new Date(serializedProject.metadata.updatedAt),
-		}));
+		const metadata: TProjectMetadata[] = [];
+		for (const serializedProject of serializedProjects) {
+			if (
+				typeof serializedProject !== "object" ||
+				serializedProject === null ||
+				typeof serializedProject.metadata !== "object" ||
+				serializedProject.metadata === null
+			) {
+				console.warn(
+					"[storage] Skipping malformed project entry (missing metadata):",
+					serializedProject,
+				);
+				continue;
+			}
+
+			metadata.push({
+				id: serializedProject.metadata.id,
+				name: serializedProject.metadata.name,
+				thumbnail: serializedProject.metadata.thumbnail,
+				duration:
+					serializedProject.metadata.duration ??
+					getProjectDurationFromScenes({
+						scenes: (serializedProject.scenes ?? []) as unknown as TScene[],
+					}),
+				createdAt: new Date(serializedProject.metadata.createdAt),
+				updatedAt: new Date(serializedProject.metadata.updatedAt),
+			});
+		}
 
 		return metadata.sort(
 			(a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
