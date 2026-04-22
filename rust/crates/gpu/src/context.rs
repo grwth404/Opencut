@@ -184,16 +184,17 @@ impl GpuContext {
         ),
         GpuError,
     > {
-        let instance = wgpu::util::new_instance_with_webgpu_detection(
-            wgpu::InstanceDescriptor::new_without_display_handle(),
-        )
-        .await;
+        // Temporary fix: force the wasm renderer onto the WebGL backend even when
+        // WebGPU is available while a WebGPU bug is being investigated.
+        // let instance = wgpu::util::new_instance_with_webgpu_detection(
+        //     wgpu::InstanceDescriptor::new_without_display_handle(),
+        // )
+        // .await;
 
-        match Self::try_request_device(&instance, None).await {
-            Ok((adapter, device, queue)) => return Ok((instance, adapter, device, queue, None)),
-            Err(_) => {}
-        }
-
+        // match Self::try_request_device(&instance, None).await {
+        //     Ok((adapter, device, queue)) => return Ok((instance, adapter, device, queue, None)),
+        //     Err(_) => {}
+        // }
         let (gl_instance, adapter, device, queue, canvas) = Self::try_gl_fallback().await?;
         Ok((gl_instance, adapter, device, queue, Some(canvas)))
     }
