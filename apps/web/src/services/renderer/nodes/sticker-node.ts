@@ -42,7 +42,11 @@ export function loadStickerSource({
 			image.src = url;
 		});
 
-		return { source: image, width: image.naturalWidth, height: image.naturalHeight };
+		return {
+			source: image,
+			width: image.naturalWidth,
+			height: image.naturalHeight,
+		};
 	})();
 
 	stickerSourceCache.set(stickerId, promise);

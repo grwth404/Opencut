@@ -25,8 +25,7 @@ export interface ResolvedVisualNodeState {
 	effectPasses: EffectPass[][];
 }
 
-export interface ResolvedVisualSourceNodeState
-	extends ResolvedVisualNodeState {
+export interface ResolvedVisualSourceNodeState extends ResolvedVisualNodeState {
 	source: CanvasImageSource;
 	sourceWidth: number;
 	sourceHeight: number;

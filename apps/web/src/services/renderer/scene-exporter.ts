@@ -86,7 +86,9 @@ export class SceneExporter extends EventEmitter<SceneExporterEvents> {
 	}): Promise<ArrayBuffer | null> {
 		const fps = this.renderer.fps;
 		const fpsFloat = frameRateToFloat(fps);
-		const ticksPerFrame = Math.round(TICKS_PER_SECOND * fps.denominator / fps.numerator);
+		const ticksPerFrame = Math.round(
+			(TICKS_PER_SECOND * fps.denominator) / fps.numerator,
+		);
 		const frameCount = Math.floor(rootNode.duration / ticksPerFrame);
 
 		const outputFormat =
@@ -106,8 +108,7 @@ export class SceneExporter extends EventEmitter<SceneExporterEvents> {
 
 		let audioSource: AudioBufferSource | null = null;
 		if (this.shouldIncludeAudio && this.audioBuffer) {
-			let audioCodec: "aac" | "opus" =
-				this.format === "webm" ? "opus" : "aac";
+			let audioCodec: "aac" | "opus" = this.format === "webm" ? "opus" : "aac";
 
 			if (audioCodec === "aac" && typeof AudioEncoder !== "undefined") {
 				const { supported } = await AudioEncoder.isConfigSupported({

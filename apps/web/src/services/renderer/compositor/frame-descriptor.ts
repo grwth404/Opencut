@@ -6,7 +6,10 @@ import { createOffscreenCanvas } from "../canvas-utils";
 import { BlurBackgroundNode } from "../nodes/blur-background-node";
 import { ColorNode } from "../nodes/color-node";
 import { EffectLayerNode } from "../nodes/effect-layer-node";
-import { GraphicNode, type ResolvedGraphicNodeState } from "../nodes/graphic-node";
+import {
+	GraphicNode,
+	type ResolvedGraphicNodeState,
+} from "../nodes/graphic-node";
 import { ImageNode } from "../nodes/image-node";
 import { RootNode } from "../nodes/root-node";
 import { StickerNode } from "../nodes/sticker-node";
@@ -367,7 +370,9 @@ function computeVisualTransform({
 	};
 }
 
-function fullCanvasTransform(renderer: CanvasRenderer): QuadTransformDescriptor {
+function fullCanvasTransform(
+	renderer: CanvasRenderer,
+): QuadTransformDescriptor {
 	return {
 		centerX: renderer.width / 2,
 		centerY: renderer.height / 2,
@@ -425,7 +430,8 @@ function buildMaskArtifacts({
 	const shouldRenderMaskDirectly =
 		canRenderMaskDirectly &&
 		(!definition.renderer.buildPath ||
-			(mask.params.feather > 0 && definition.renderer.renderMaskHandlesFeather));
+			(mask.params.feather > 0 &&
+				definition.renderer.renderMaskHandlesFeather));
 	if (shouldRenderMaskDirectly && definition.renderer.renderMask) {
 		definition.renderer.renderMask({
 			resolvedParams: mask.params,
@@ -437,11 +443,12 @@ function buildMaskArtifacts({
 		if (definition.renderer.renderMaskHandlesFeather) {
 			feather = 0;
 		}
-		strokePath = definition.renderer.buildStrokePath?.({
-			resolvedParams: mask.params,
-			width: transform.width,
-			height: transform.height,
-		}) ?? null;
+		strokePath =
+			definition.renderer.buildStrokePath?.({
+				resolvedParams: mask.params,
+				width: transform.width,
+				height: transform.height,
+			}) ?? null;
 	} else {
 		if (!definition.renderer.buildPath) {
 			return { mask: null, strokeLayer: null };
@@ -487,7 +494,10 @@ function buildMaskArtifacts({
 	});
 
 	let strokeLayer: FrameItemDescriptor | null = null;
-	if (mask.params.strokeWidth > 0 && (strokePath || definition.renderer.renderStroke)) {
+	if (
+		mask.params.strokeWidth > 0 &&
+		(strokePath || definition.renderer.renderStroke)
+	) {
 		const strokeCanvas = createOffscreenCanvas({
 			width: Math.round(transform.width),
 			height: Math.round(transform.height),
@@ -580,4 +590,3 @@ function drawTransformedCanvas({
 	ctx.drawImage(source, x, y, transform.width, transform.height);
 	ctx.restore();
 }
-
