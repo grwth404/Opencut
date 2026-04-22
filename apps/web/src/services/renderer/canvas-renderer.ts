@@ -3,6 +3,11 @@ import type { AnyBaseNode } from "./nodes/base-node";
 import { buildFrameDescriptor } from "./compositor/frame-descriptor";
 import { wasmCompositor } from "./compositor/wasm-compositor";
 import { resolveRenderTree } from "./resolve";
+import {
+	measureSpanAsync,
+	measureSpanSync,
+	onRenderPerfFrameComplete,
+} from "@/diagnostics/render-perf";
 
 export type CanvasRendererParams = {
 	width: number;
@@ -69,17 +74,26 @@ export class CanvasRenderer {
 	}
 
 	async render({ node, time }: { node: AnyBaseNode; time: number }) {
-		await resolveRenderTree({ node, renderer: this, time });
-		const { frame, textures } = await buildFrameDescriptor({
-			node,
-			renderer: this,
+		await measureSpanAsync({
+			name: "resolve",
+			fn: () => resolveRenderTree({ node, renderer: this, time }),
+		});
+		const { frame, textures } = await measureSpanAsync({
+			name: "buildFrame",
+			fn: () => buildFrameDescriptor({ node, renderer: this }),
 		});
 		wasmCompositor.ensureInitialized({
 			width: this.width,
 			height: this.height,
 		});
-		wasmCompositor.syncTextures(textures);
-		wasmCompositor.render(frame);
+		measureSpanSync({
+			name: "syncTextures",
+			fn: () => wasmCompositor.syncTextures(textures),
+		});
+		measureSpanSync({
+			name: "renderFrame",
+			fn: () => wasmCompositor.render(frame),
+		});
 	}
 
 	async renderToCanvas({
@@ -98,12 +112,17 @@ export class CanvasRenderer {
 			throw new Error("Failed to get target canvas context");
 		}
 
-		ctx.drawImage(
-			wasmCompositor.getCanvas(),
-			0,
-			0,
-			targetCanvas.width,
-			targetCanvas.height,
-		);
+		measureSpanSync({
+			name: "drawImage",
+			fn: () =>
+				ctx.drawImage(
+					wasmCompositor.getCanvas(),
+					0,
+					0,
+					targetCanvas.width,
+					targetCanvas.height,
+				),
+		});
+		onRenderPerfFrameComplete();
 	}
 }

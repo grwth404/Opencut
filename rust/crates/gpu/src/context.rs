@@ -353,6 +353,14 @@ impl GpuContext {
         self.supports_external_texture_copies
     }
 
+    /// The HTML canvas that owns the backing WebGL context, if running on the
+    /// WebGL fallback. Callers on that path can mount this canvas directly
+    /// instead of copying pixels out of it every frame.
+    #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+    pub fn gl_canvas(&self) -> Option<&web_sys::HtmlCanvasElement> {
+        self.gl_canvas.as_ref()
+    }
+
     pub fn render_texture_to_surface(
         &self,
         texture: &wgpu::Texture,
@@ -571,7 +579,7 @@ impl GpuContext {
     }
 
     #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
-    fn render_texture_to_gl_canvas_surface(
+    pub fn render_texture_to_gl_canvas_surface(
         &self,
         texture: &wgpu::Texture,
         width: u32,

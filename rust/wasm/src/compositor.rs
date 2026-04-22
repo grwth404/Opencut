@@ -11,6 +11,7 @@ use crate::gpu::{
     import_canvas_texture, read_offscreen_canvas_property, read_serde_property, read_u32_property,
     with_gpu_runtime,
 };
+use crate::perf;
 
 struct CompositorRuntime {
     canvas: web_sys::HtmlCanvasElement,
@@ -24,13 +25,21 @@ thread_local! {
 #[wasm_bindgen(js_name = initCompositor)]
 pub fn init_compositor(width: u32, height: u32) -> Result<(), JsValue> {
     with_gpu_runtime(|gpu_runtime| {
-        let document = web_sys::window()
-            .and_then(|window| window.document())
-            .ok_or_else(|| JsValue::from_str("Document is not available"))?;
-        let canvas: web_sys::HtmlCanvasElement = document
-            .create_element("canvas")?
-            .dyn_into()
-            .map_err(|_| JsValue::from_str("Failed to create compositor canvas"))?;
+        // On WebGL, wgpu is bound to a specific canvas; reuse it so the UI
+        // can mount the output directly instead of copying pixels through
+        // an intermediate 2D canvas every frame. On WebGPU, surface rendering
+        // works against any canvas so we create a fresh one.
+        let canvas = if let Some(gl_canvas) = gpu_runtime.context.gl_canvas() {
+            gl_canvas.clone()
+        } else {
+            let document = web_sys::window()
+                .and_then(|window| window.document())
+                .ok_or_else(|| JsValue::from_str("Document is not available"))?;
+            document
+                .create_element("canvas")?
+                .dyn_into::<web_sys::HtmlCanvasElement>()
+                .map_err(|_| JsValue::from_str("Failed to create compositor canvas"))?
+        };
         canvas.set_width(width);
         canvas.set_height(height);
 
@@ -119,8 +128,12 @@ pub fn release_texture(id: String) -> Result<(), JsValue> {
 
 #[wasm_bindgen(js_name = renderFrame)]
 pub fn render_frame(options: JsValue) -> Result<(), JsValue> {
+    perf::reset();
+
+    let t_deserialize = perf::now_ms();
     let frame: FrameDescriptor = serde_wasm_bindgen::from_value(options)
         .map_err(|error| JsValue::from_str(&format!("Invalid frame descriptor: {error}")))?;
+    perf::record("wasm.deserialize", perf::now_ms() - t_deserialize);
 
     with_gpu_runtime(|gpu_runtime| {
         COMPOSITOR_RUNTIME.with(|runtime| {
@@ -132,13 +145,16 @@ pub fn render_frame(options: JsValue) -> Result<(), JsValue> {
             };
 
             if gpu_runtime.context.supports_surface_rendering() {
+                let t_surface = perf::now_ms();
                 let surface = gpu_runtime
                     .context
                     .instance()
                     .create_surface(wgpu::SurfaceTarget::Canvas(runtime.canvas.clone()))
                     .map_err(|error| JsValue::from_str(&error.to_string()))?;
+                perf::record("wasm.surfaceCreate", perf::now_ms() - t_surface);
 
-                runtime
+                let t_render = perf::now_ms();
+                let result = runtime
                     .compositor
                     .render_frame(
                         &gpu_runtime.context,
@@ -147,24 +163,29 @@ pub fn render_frame(options: JsValue) -> Result<(), JsValue> {
                             surface: &surface,
                         },
                     )
-                    .map_err(|error| JsValue::from_str(&error.to_string()))
+                    .map_err(|error| JsValue::from_str(&error.to_string()));
+                perf::record("wasm.renderFrameToSurface", perf::now_ms() - t_render);
+                result
             } else {
-                // WebGL cannot surface-render to an arbitrary canvas element.
-                // Composite to a texture, then blit to the canvas via the 2D context.
+                // WebGL surface-renders to the canvas its GL context was created
+                // on; `init_compositor` already pointed `runtime.canvas` at that
+                // same canvas, so presenting writes directly to the canvas the
+                // UI mounts. No intermediate copy.
+                let t_composite = perf::now_ms();
                 let texture = runtime
                     .compositor
                     .render_frame_to_texture(&gpu_runtime.context, &frame)
                     .map_err(|error| JsValue::from_str(&error.to_string()))?;
+                perf::record("wasm.compositeToTexture", perf::now_ms() - t_composite);
 
+                let t_present = perf::now_ms();
                 gpu_runtime
                     .context
-                    .render_texture_via_gl_canvas(
-                        &texture,
-                        &runtime.canvas,
-                        frame.width,
-                        frame.height,
-                    )
-                    .map_err(|error| JsValue::from_str(&error.to_string()))
+                    .render_texture_to_gl_canvas_surface(&texture, frame.width, frame.height)
+                    .map_err(|error| JsValue::from_str(&error.to_string()))?;
+                perf::record("wasm.presentToGlCanvas", perf::now_ms() - t_present);
+
+                Ok(())
             }
         })
     })
