@@ -56,6 +56,11 @@ export async function runStorageMigrations({
 		}
 
 		let projectRecord = project as ProjectRecord;
+		const projectId = getProjectId({ project: projectRecord });
+		if (!projectId) {
+			continue;
+		}
+
 		let currentVersion = getProjectVersion({ project: projectRecord });
 		const targetVersion = orderedMigrations.at(-1)?.to ?? currentVersion;
 
@@ -81,14 +86,12 @@ export async function runStorageMigrations({
 				continue;
 			}
 
-			const result = await migration.transform(projectRecord);
+			const result = await migration.run({
+				projectId,
+				project: projectRecord,
+			});
 
 			if (result.skipped) {
-				break;
-			}
-
-			const projectId = getProjectId({ project: result.project });
-			if (!projectId) {
 				break;
 			}
 

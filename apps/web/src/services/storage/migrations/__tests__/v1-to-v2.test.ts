@@ -1,10 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_BACKGROUND_BLUR_INTENSITY } from "@/background/blur";
-import { DEFAULT_BACKGROUND_COLOR } from "@/background/color";
-import { DEFAULT_CANVAS_SIZE } from "@/canvas/sizes";
-const DEFAULT_FPS = 30;
-import type { MediaAssetData } from "@/services/storage/types";
-import { getProjectId, transformProjectV1ToV2 } from "../transformers/v1-to-v2";
+import {
+	getProjectId,
+	transformProjectV1ToV2,
+	type V1ToV2Context,
+} from "../transformers/v1-to-v2";
 import {
 	projectWithNoId,
 	projectWithNullValues,
@@ -13,10 +12,15 @@ import {
 	v2Project,
 } from "./fixtures";
 
+const DEFAULT_FPS = 30;
+const DEFAULT_BACKGROUND_BLUR_INTENSITY = 10;
+const DEFAULT_BACKGROUND_COLOR = "#000000";
+const DEFAULT_CANVAS_SIZE = { width: 1920, height: 1080 };
+
 describe("V1 to V2 Migration", () => {
 	describe("transformProjectV1ToV2", () => {
-		test("creates metadata object from flat properties", async () => {
-			const result = await transformProjectV1ToV2({ project: v1Project });
+		test("creates metadata object from flat properties", () => {
+			const result = transformProjectV1ToV2({ project: v1Project });
 
 			expect(result.skipped).toBe(false);
 			expect(result.project.version).toBe(2);
@@ -28,8 +32,8 @@ describe("V1 to V2 Migration", () => {
 			expect(typeof metadata.updatedAt).toBe("string");
 		});
 
-		test("creates settings object from flat properties", async () => {
-			const result = await transformProjectV1ToV2({ project: v1Project });
+		test("creates settings object from flat properties", () => {
+			const result = transformProjectV1ToV2({ project: v1Project });
 
 			const settings = result.project.settings as Record<string, unknown>;
 			expect(settings.fps).toBe(v1Project.fps);
@@ -37,8 +41,8 @@ describe("V1 to V2 Migration", () => {
 			expect(settings.originalCanvasSize).toBe(null);
 		});
 
-		test("converts color background correctly", async () => {
-			const result = await transformProjectV1ToV2({ project: v1Project });
+		test("converts color background correctly", () => {
+			const result = transformProjectV1ToV2({ project: v1Project });
 
 			const settings = result.project.settings as Record<string, unknown>;
 			const background = settings.background as Record<string, unknown>;
@@ -46,13 +50,13 @@ describe("V1 to V2 Migration", () => {
 			expect(background.color).toBe(v1Project.backgroundColor);
 		});
 
-		test("converts blur background correctly", async () => {
+		test("converts blur background correctly", () => {
 			const projectWithBlur = {
 				...v1Project,
 				backgroundType: "blur",
 				blurIntensity: 30,
 			};
-			const result = await transformProjectV1ToV2({ project: projectWithBlur });
+			const result = transformProjectV1ToV2({ project: projectWithBlur });
 
 			const settings = result.project.settings as Record<string, unknown>;
 			const background = settings.background as Record<string, unknown>;
@@ -60,16 +64,16 @@ describe("V1 to V2 Migration", () => {
 			expect(background.blurIntensity).toBe(30);
 		});
 
-		test("applies legacy bookmarks to main scene", async () => {
-			const result = await transformProjectV1ToV2({ project: v1Project });
+		test("applies legacy bookmarks to main scene", () => {
+			const result = transformProjectV1ToV2({ project: v1Project });
 
 			const scenes = result.project.scenes as Array<Record<string, unknown>>;
 			const mainScene = scenes.find((s) => s.isMain === true);
 			expect(mainScene?.bookmarks).toEqual(v1Project.bookmarks);
 		});
 
-		test("preserves existing scene bookmarks", async () => {
-			const result = await transformProjectV1ToV2({
+		test("preserves existing scene bookmarks", () => {
+			const result = transformProjectV1ToV2({
 				project: v1ProjectWithMultipleScenes,
 			});
 
@@ -78,22 +82,22 @@ describe("V1 to V2 Migration", () => {
 			expect(introScene?.bookmarks).toEqual([1.0]);
 		});
 
-		test("skips project that already has v2 structure", async () => {
-			const result = await transformProjectV1ToV2({ project: v2Project });
+		test("skips project that already has v2 structure", () => {
+			const result = transformProjectV1ToV2({ project: v2Project });
 
 			expect(result.skipped).toBe(true);
 			expect(result.reason).toBe("already v2");
 		});
 
-		test("skips project with no id", async () => {
-			const result = await transformProjectV1ToV2({ project: projectWithNoId });
+		test("skips project with no id", () => {
+			const result = transformProjectV1ToV2({ project: projectWithNoId });
 
 			expect(result.skipped).toBe(true);
 			expect(result.reason).toBe("no project id");
 		});
 
-		test("handles null values gracefully", async () => {
-			const result = await transformProjectV1ToV2({
+		test("handles null values gracefully", () => {
+			const result = transformProjectV1ToV2({
 				project: projectWithNullValues,
 			});
 
@@ -103,13 +107,13 @@ describe("V1 to V2 Migration", () => {
 			expect(settings.canvasSize).toEqual(DEFAULT_CANVAS_SIZE);
 		});
 
-		test("uses default values for missing properties", async () => {
+		test("uses default values for missing properties", () => {
 			const minimalProject = {
 				id: "minimal",
 				version: 1,
 				scenes: [],
 			};
-			const result = await transformProjectV1ToV2({ project: minimalProject });
+			const result = transformProjectV1ToV2({ project: minimalProject });
 
 			const settings = result.project.settings as Record<string, unknown>;
 			expect(settings.fps).toBe(DEFAULT_FPS);
@@ -120,14 +124,14 @@ describe("V1 to V2 Migration", () => {
 			expect(background.color).toBe(DEFAULT_BACKGROUND_COLOR);
 		});
 
-		test("uses default blur intensity when missing", async () => {
+		test("uses default blur intensity when missing", () => {
 			const projectWithBlurNoIntensity = {
 				id: "blur-no-intensity",
 				version: 1,
 				backgroundType: "blur",
 				scenes: [],
 			};
-			const result = await transformProjectV1ToV2({
+			const result = transformProjectV1ToV2({
 				project: projectWithBlurNoIntensity,
 			});
 
@@ -136,23 +140,23 @@ describe("V1 to V2 Migration", () => {
 			expect(background.blurIntensity).toBe(DEFAULT_BACKGROUND_BLUR_INTENSITY);
 		});
 
-		test("preserves currentSceneId", async () => {
-			const result = await transformProjectV1ToV2({ project: v1Project });
+		test("preserves currentSceneId", () => {
+			const result = transformProjectV1ToV2({ project: v1Project });
 			expect(result.project.currentSceneId).toBe(v1Project.currentSceneId);
 		});
 
-		test("finds main scene id when currentSceneId missing", async () => {
+		test("finds main scene id when currentSceneId missing", () => {
 			const projectWithoutCurrentScene = {
 				...v1Project,
 				currentSceneId: undefined,
 			};
-			const result = await transformProjectV1ToV2({
+			const result = transformProjectV1ToV2({
 				project: projectWithoutCurrentScene,
 			});
 			expect(result.project.currentSceneId).toBe("scene-main");
 		});
 
-		test("skips loading tracks if scene already has tracks", async () => {
+		test("skips loading tracks if scene already has tracks", () => {
 			const projectWithTracks = {
 				...v1Project,
 				scenes: [
@@ -175,7 +179,7 @@ describe("V1 to V2 Migration", () => {
 				],
 			};
 
-			const result = await transformProjectV1ToV2({
+			const result = transformProjectV1ToV2({
 				project: projectWithTracks,
 			});
 
@@ -188,22 +192,32 @@ describe("V1 to V2 Migration", () => {
 	});
 
 	describe("Track Loading and Transformation", () => {
-		test("loads tracks from legacy DB and transforms media track to video track", async () => {
-			const mockLoadMediaAsset = async ({
-				mediaId,
-			}: {
-				mediaId: string;
-			}): Promise<MediaAssetData | null> => {
-				if (mediaId === "media-1") {
-					return {
-						id: "media-1",
-						name: "Test Video",
-						type: "video",
-						size: 1000,
-						lastModified: Date.now(),
-					};
-				}
-				return null;
+		test("loads tracks from legacy DB and transforms media track to video track", () => {
+			const context: V1ToV2Context = {
+				legacyTracksBySceneId: {
+					"scene-main": [
+						{
+							id: "legacy-track-1",
+							type: "media",
+							name: "Legacy media track",
+							elements: [
+								{
+									id: "media-element-1",
+									name: "Test video clip",
+									type: "media",
+									mediaId: "media-1",
+									duration: 120,
+									startTime: 0,
+									trimStart: 0,
+									trimEnd: 0,
+								},
+							],
+						},
+					],
+				},
+				mediaTypesById: {
+					"media-1": "video",
+				},
 			};
 
 			const projectWithLegacyTracks = {
@@ -221,19 +235,50 @@ describe("V1 to V2 Migration", () => {
 				],
 			};
 
-			// mock IndexedDB for this test would require setting up a test environment
-			// for now, we test that the transformer handles empty tracks gracefully
-			const result = await transformProjectV1ToV2({
+			const result = transformProjectV1ToV2({
 				project: projectWithLegacyTracks,
-				options: { loadMediaAsset: mockLoadMediaAsset },
+				context,
 			});
 
 			const scenes = result.project.scenes as Array<Record<string, unknown>>;
 			const mainScene = scenes[0];
-			expect(Array.isArray(mainScene.tracks)).toBe(true);
+			const tracks = mainScene.tracks as Array<Record<string, unknown>>;
+			expect(Array.isArray(tracks)).toBe(true);
+			expect(tracks).toHaveLength(1);
+			expect(tracks[0].type).toBe("video");
+			expect(tracks[0].isMain).toBe(true);
 		});
 
-		test("transforms text element preserving opacity and migrating position", async () => {
+		test("transforms text element preserving opacity and migrating position", () => {
+			const context: V1ToV2Context = {
+				legacyTracksBySceneId: {
+					"scene-1": [
+						{
+							id: "legacy-text-track",
+							type: "text",
+							name: "Text",
+							elements: [
+								{
+									id: "text-element-1",
+									name: "Title",
+									type: "text",
+									content: "Hello",
+									x: 120,
+									y: 240,
+									rotation: 15,
+									opacity: 0.5,
+									duration: 90,
+									startTime: 10,
+									trimStart: 0,
+									trimEnd: 0,
+								},
+							],
+						},
+					],
+				},
+				mediaTypesById: {},
+			};
+
 			const projectWithTextTrack = {
 				id: "project-text",
 				version: 1,
@@ -251,15 +296,22 @@ describe("V1 to V2 Migration", () => {
 				],
 			};
 
-			// since tracks are empty, transformation won't happen
-			// but we verify the structure is correct
-			const result = await transformProjectV1ToV2({
+			const result = transformProjectV1ToV2({
 				project: projectWithTextTrack,
+				context,
 			});
 
 			expect(result.skipped).toBe(false);
 			const scenes = result.project.scenes as Array<Record<string, unknown>>;
-			expect(scenes.length).toBe(1);
+			const tracks = scenes[0].tracks as Array<Record<string, unknown>>;
+			const elements = tracks[0].elements as Array<Record<string, unknown>>;
+			const textElement = elements[0];
+			expect(textElement.opacity).toBe(0.5);
+			expect(textElement.transform).toEqual({
+				scale: 1,
+				position: { x: 120, y: 240 },
+				rotate: 15,
+			});
 		});
 	});
 

@@ -1,7 +1,9 @@
 import type { MigrationResult, ProjectRecord } from "./types";
-import { VOLUME_DB_MIN } from "@/timeline/audio-constants";
-import { clampDb } from "@/timeline/audio-state";
 import { getProjectId, isRecord } from "./utils";
+
+// Frozen snapshots of v18-era volume bounds. See ./README.md.
+const VOLUME_DB_MIN = -60;
+const VOLUME_DB_MAX = 20;
 
 export function transformProjectV17ToV18({
 	project,
@@ -68,9 +70,7 @@ function migrateElementVolumes({
 				return {
 					...element,
 					volume:
-						typeof legacyVolume === "number"
-							? linearGainToDb(legacyVolume)
-							: 0,
+						typeof legacyVolume === "number" ? linearGainToDb(legacyVolume) : 0,
 				};
 			});
 
@@ -102,4 +102,12 @@ function linearGainToDb(gain: number): number {
 	}
 
 	return clampDb(20 * Math.log10(gain));
+}
+
+function clampDb(value: number): number {
+	if (!Number.isFinite(value)) {
+		return 0;
+	}
+
+	return Math.min(VOLUME_DB_MAX, Math.max(VOLUME_DB_MIN, value));
 }

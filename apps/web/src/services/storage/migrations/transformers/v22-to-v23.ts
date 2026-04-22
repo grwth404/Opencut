@@ -1,7 +1,8 @@
 import type { MigrationResult, ProjectRecord } from "./types";
 import { getProjectId, isRecord } from "./utils";
 
-import { TICKS_PER_SECOND } from "@/wasm";
+// Frozen snapshot of the v23-era tick rate. See ./README.md.
+const TICKS_PER_SECOND = 120_000;
 const ARBITRARY_FPS_DENOMINATOR = 1_000_000;
 const STANDARD_FRAME_RATES = [
 	{ value: 24_000 / 1_001, numerator: 24_000, denominator: 1_001 },
@@ -193,7 +194,9 @@ function migrateAnimationChannel({ channel }: { channel: unknown }): unknown {
 
 	return {
 		...channel,
-		keys: channel.keys.map((keyframe) => migrateAnimationKeyframe({ keyframe })),
+		keys: channel.keys.map((keyframe) =>
+			migrateAnimationKeyframe({ keyframe }),
+		),
 	};
 }
 
@@ -290,7 +293,8 @@ function migrateFrameRate({ fps }: { fps: unknown }): unknown {
 	}
 
 	const standardFrameRate = STANDARD_FRAME_RATES.find(
-		(candidate) => Math.abs(fps - candidate.value) <= STANDARD_FRAME_RATE_TOLERANCE,
+		(candidate) =>
+			Math.abs(fps - candidate.value) <= STANDARD_FRAME_RATE_TOLERANCE,
 	);
 	if (standardFrameRate) {
 		return {

@@ -1,6 +1,49 @@
-import { parseCustomMaskPath } from "@/masks/custom-path";
 import type { MigrationResult, ProjectRecord } from "./types";
 import { getProjectId, isRecord } from "./utils";
+
+interface CustomMaskPathPoint {
+	id: string;
+	x: number;
+	y: number;
+	inX: number;
+	inY: number;
+	outX: number;
+	outY: number;
+}
+
+function isCustomMaskPathPoint(value: unknown): value is CustomMaskPathPoint {
+	if (!value || typeof value !== "object") {
+		return false;
+	}
+
+	const candidate = value as Record<string, unknown>;
+	return (
+		typeof candidate.id === "string" &&
+		typeof candidate.x === "number" &&
+		typeof candidate.y === "number" &&
+		typeof candidate.inX === "number" &&
+		typeof candidate.inY === "number" &&
+		typeof candidate.outX === "number" &&
+		typeof candidate.outY === "number"
+	);
+}
+
+function parseCustomMaskPath({
+	path,
+}: {
+	path: string;
+}): CustomMaskPathPoint[] {
+	if (!path) {
+		return [];
+	}
+
+	try {
+		const parsed = JSON.parse(path);
+		return Array.isArray(parsed) ? parsed.filter(isCustomMaskPathPoint) : [];
+	} catch {
+		return [];
+	}
+}
 
 export function transformProjectV26ToV27({
 	project,

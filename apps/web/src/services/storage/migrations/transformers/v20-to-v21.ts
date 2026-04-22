@@ -1,7 +1,8 @@
-import { INTENSITY_TO_SIGMA_DIVISOR } from "@/effects/definitions/blur";
 import type { MigrationResult, ProjectRecord } from "./types";
 import { getProjectId, isRecord } from "./utils";
 
+// Frozen snapshot of the v21-era divisor. See ./README.md.
+const INTENSITY_TO_SIGMA_DIVISOR = 5;
 const LEGACY_DEFAULT_BACKGROUND_BLUR_INTENSITY = 50;
 
 export function transformProjectV20ToV21({
