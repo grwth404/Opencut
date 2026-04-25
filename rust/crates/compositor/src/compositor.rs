@@ -348,7 +348,6 @@ impl Compositor {
     ) -> Result<(), CompositorError> {
         let frame = options.frame;
         self.texture_pool.recycle_frame();
-        context.configure_surface(options.surface, frame.width, frame.height)?;
         let surface_texture = context.acquire_surface_texture(options.surface)?;
         let surface_view = surface_texture
             .texture

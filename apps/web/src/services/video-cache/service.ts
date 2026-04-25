@@ -21,6 +21,7 @@ export class VideoCache {
 	private sinks = new Map<string, VideoSinkData>();
 	private initPromises = new Map<string, Promise<void>>();
 	private frameChain = new Map<string, Promise<unknown>>();
+	private seekGenerations = new Map<string, number>();
 
 	async getFrameAt({
 		mediaId,
@@ -36,11 +37,20 @@ export class VideoCache {
 		const sinkData = this.sinks.get(mediaId);
 		if (!sinkData) return null;
 
+		const generation = (this.seekGenerations.get(mediaId) ?? 0) + 1;
+		this.seekGenerations.set(mediaId, generation);
+
 		const previous = this.frameChain.get(mediaId) ?? Promise.resolve();
-		const current = previous.then(() =>
-			this.resolveFrame({ sinkData, time }),
+		const current = previous.then(() => {
+			if (this.seekGenerations.get(mediaId) !== generation) {
+				return sinkData.currentFrame ?? null;
+			}
+			return this.resolveFrame({ sinkData, time });
+		});
+		this.frameChain.set(
+			mediaId,
+			current.catch(() => {}),
 		);
-		this.frameChain.set(mediaId, current.catch(() => {}));
 		return current;
 	}
 
@@ -173,18 +183,7 @@ export class VideoCache {
 
 			if (frame) {
 				sinkData.currentFrame = frame;
-
-				// Aggressively fetch next frame immediately to fill buffer
-				// This matches the mediaplayer example which fetches 2 frames on start
-				try {
-					const { value: next } = await sinkData.iterator.next();
-					if (next) {
-						sinkData.nextFrame = next;
-					}
-				} catch (e) {
-					console.warn("Failed to pre-fetch next frame on seek:", e);
-				}
-
+				this.startPrefetch({ sinkData });
 				return frame;
 			}
 		} catch (error) {
@@ -313,6 +312,8 @@ export class VideoCache {
 		}
 
 		this.initPromises.delete(mediaId);
+		this.frameChain.delete(mediaId);
+		this.seekGenerations.delete(mediaId);
 	}
 
 	clearAll(): void {

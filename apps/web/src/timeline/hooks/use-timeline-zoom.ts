@@ -1,17 +1,17 @@
 import {
 	type WheelEvent as ReactWheelEvent,
 	type RefObject,
-	useCallback,
 	useEffect,
 	useLayoutEffect,
+	useReducer,
 	useRef,
-	useState,
 } from "react";
-import { TIMELINE_ZOOM_ANCHOR_PLAYHEAD_THRESHOLD } from "@/timeline/components/interaction";
-import { TIMELINE_ZOOM_MAX, TIMELINE_ZOOM_MIN } from "@/timeline/scale";
-import { timelineTimeToPixels } from "@/timeline/pixel-utils";
 import { useEditor } from "@/editor/use-editor";
-import { zoomToSlider } from "@/timeline/zoom-utils";
+import { TIMELINE_ZOOM_MIN } from "@/timeline/scale";
+import {
+	ZoomController,
+	type ZoomConfig,
+} from "@/timeline/controllers/zoom-controller";
 
 interface UseTimelineZoomProps {
 	containerRef: RefObject<HTMLDivElement | null>;
@@ -40,252 +40,53 @@ export function useTimelineZoom({
 	rulerScrollRef,
 }: UseTimelineZoomProps): UseTimelineZoomReturn {
 	const editor = useEditor();
-	const hasInitializedRef = useRef(false);
-	const hasRestoredPlayheadRef = useRef(false);
-	const scrollSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-		null,
-	);
+	const config: ZoomConfig = {
+		minZoom,
+		getContainerEl: () => containerRef.current,
+		getTracksScrollEl: () => tracksScrollRef.current,
+		getRulerScrollEl: () => rulerScrollRef.current,
+		getCurrentPlayheadTime: () => editor.playback.getCurrentTime(),
+		seek: (time) => editor.playback.seek({ time }),
+		setTimelineViewState: (viewState) =>
+			editor.project.setTimelineViewState({ viewState }),
+	};
+	const configRef = useRef(config);
+	configRef.current = config;
 
-	const [zoomLevel, setZoomLevelRaw] = useState(() => {
-		if (initialZoom !== undefined) {
-			hasInitializedRef.current = true;
-			return Math.max(minZoom, Math.min(TIMELINE_ZOOM_MAX, initialZoom));
-		}
-		return minZoom;
-	});
-	const previousZoomRef = useRef(zoomLevel);
-	const hasRestoredScrollRef = useRef(false);
-	const preZoomScrollLeftRef = useRef(0);
-	const prePlayheadAnchorScrollLeftRef = useRef(0);
-	const isInPlayheadAnchorModeRef = useRef(false);
+	const controllerRef = useRef<ZoomController | null>(null);
+	if (!controllerRef.current) {
+		controllerRef.current = new ZoomController({ configRef, initialZoom });
+	}
+	const controller = controllerRef.current;
+	const zoomLevel = controller.zoomLevel;
 
-	const setZoomLevel = useCallback(
-		(updater: number | ((prev: number) => number)) => {
-			const scrollElement = tracksScrollRef.current;
-			if (scrollElement) {
-				preZoomScrollLeftRef.current = scrollElement.scrollLeft;
-			}
-			setZoomLevelRaw(updater);
-		},
-		[tracksScrollRef],
-	);
-
-	const handleWheel = useCallback(
-		(event: ReactWheelEvent) => {
-			const isZoomGesture = event.ctrlKey || event.metaKey;
-			const isHorizontalScrollGesture =
-				event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
-
-			if (isHorizontalScrollGesture) {
-				return;
-			}
-
-			// pinch-zoom (ctrl/meta + wheel)
-			if (isZoomGesture) {
-				const normalizedDelta =
-					event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
-				const cappedDelta =
-					Math.sign(normalizedDelta) * Math.min(Math.abs(normalizedDelta), 30);
-				const zoomFactor = Math.exp(-cappedDelta / 300);
-				setZoomLevel((prev) => {
-					const nextZoom = Math.max(
-						minZoom,
-						Math.min(TIMELINE_ZOOM_MAX, prev * zoomFactor),
-					);
-					return nextZoom;
-				});
-				return;
-			}
-		},
-		[minZoom, setZoomLevel],
-	);
+	const [, rerender] = useReducer((n: number) => n + 1, 0);
+	useEffect(() => controller.subscribe(rerender), [controller]);
 
 	useEffect(() => {
-		if (initialZoom !== undefined && !hasInitializedRef.current) {
-			hasInitializedRef.current = true;
-			setZoomLevel(Math.max(minZoom, Math.min(TIMELINE_ZOOM_MAX, initialZoom)));
-			return;
-		}
-		setZoomLevel((prev) => {
-			if (prev < minZoom) {
-				return minZoom;
-			}
-			return prev;
-		});
-	}, [minZoom, initialZoom, setZoomLevel]);
-
-	const wrappedSetZoomLevel = useCallback(
-		(zoomLevelOrUpdater: number | ((prev: number) => number)) => {
-			setZoomLevel((prev) => {
-				const nextZoom =
-					typeof zoomLevelOrUpdater === "function"
-						? zoomLevelOrUpdater(prev)
-						: zoomLevelOrUpdater;
-				const clampedZoom = Math.max(
-					minZoom,
-					Math.min(TIMELINE_ZOOM_MAX, nextZoom),
-				);
-				return clampedZoom;
-			});
-		},
-		[minZoom, setZoomLevel],
-	);
+		controller.reconcileInitialAndMinZoom(minZoom, initialZoom);
+	}, [controller, minZoom, initialZoom]);
 
 	useLayoutEffect(() => {
-		const previousZoom = previousZoomRef.current;
-		if (previousZoom === zoomLevel) return;
-
-		const scrollElement = tracksScrollRef.current;
-		if (!scrollElement) {
-			previousZoomRef.current = zoomLevel;
-			return;
-		}
-
-		const currentScrollLeft = preZoomScrollLeftRef.current;
-		const playheadTime = editor.playback.getCurrentTime();
-		const sliderPercent = zoomToSlider({ zoomLevel, minZoom });
-		const previousSliderPercent = zoomToSlider({
-			zoomLevel: previousZoom,
-			minZoom,
-		});
-		const isCrossingThresholdUp =
-			previousSliderPercent < TIMELINE_ZOOM_ANCHOR_PLAYHEAD_THRESHOLD &&
-			sliderPercent >= TIMELINE_ZOOM_ANCHOR_PLAYHEAD_THRESHOLD;
-		const isCrossingThresholdDown =
-			previousSliderPercent >= TIMELINE_ZOOM_ANCHOR_PLAYHEAD_THRESHOLD &&
-			sliderPercent < TIMELINE_ZOOM_ANCHOR_PLAYHEAD_THRESHOLD;
-
-		const syncScroll = (scrollLeft: number) => {
-			scrollElement.scrollLeft = scrollLeft;
-			if (rulerScrollRef.current) {
-				rulerScrollRef.current.scrollLeft = scrollLeft;
-			}
-		};
-
-		const clampScrollLeft = (scrollLeft: number) => {
-			const maxScrollLeft =
-				scrollElement.scrollWidth - scrollElement.clientWidth;
-			return Math.max(0, Math.min(maxScrollLeft, scrollLeft));
-		};
-
-		if (isCrossingThresholdUp) {
-			prePlayheadAnchorScrollLeftRef.current = currentScrollLeft;
-			isInPlayheadAnchorModeRef.current = true;
-		}
-
-		if (sliderPercent >= TIMELINE_ZOOM_ANCHOR_PLAYHEAD_THRESHOLD) {
-			const playheadPixelsBefore = timelineTimeToPixels({
-				time: playheadTime,
-				zoomLevel: previousZoom,
-			});
-			const playheadPixelsAfter = timelineTimeToPixels({
-				time: playheadTime,
-				zoomLevel,
-			});
-
-			const viewportOffset = playheadPixelsBefore - currentScrollLeft;
-			const newScrollLeft = playheadPixelsAfter - viewportOffset;
-
-			syncScroll(clampScrollLeft(newScrollLeft));
-		} else if (isCrossingThresholdDown && isInPlayheadAnchorModeRef.current) {
-			syncScroll(clampScrollLeft(prePlayheadAnchorScrollLeftRef.current));
-			isInPlayheadAnchorModeRef.current = false;
-		}
-
-		previousZoomRef.current = zoomLevel;
-
-		editor.project.setTimelineViewState({
-			viewState: {
-				zoomLevel,
-				scrollLeft: scrollElement.scrollLeft,
-				playheadTime,
-			},
-		});
-	}, [zoomLevel, editor, tracksScrollRef, rulerScrollRef, minZoom]);
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: tracksScrollRef is a stable ref
-	const saveScrollPosition = useCallback(() => {
-		if (scrollSaveTimeoutRef.current) {
-			clearTimeout(scrollSaveTimeoutRef.current);
-		}
-		scrollSaveTimeoutRef.current = setTimeout(() => {
-			const scrollElement = tracksScrollRef.current;
-			if (scrollElement) {
-				editor.project.setTimelineViewState({
-					viewState: {
-						zoomLevel,
-						scrollLeft: scrollElement.scrollLeft,
-						playheadTime: editor.playback.getCurrentTime(),
-					},
-				});
-			}
-		}, 300);
-	}, [zoomLevel, editor]);
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: refs are stable
-	useEffect(() => {
-		if (initialScrollLeft === undefined) return;
-		if (hasRestoredScrollRef.current) return;
-		const scrollElement = tracksScrollRef.current;
-		if (!scrollElement) return;
-
-		const restoreScroll = () => {
-			scrollElement.scrollLeft = initialScrollLeft;
-			if (rulerScrollRef.current) {
-				rulerScrollRef.current.scrollLeft = initialScrollLeft;
-			}
-			hasRestoredScrollRef.current = true;
-		};
-
-		if (scrollElement.scrollWidth > 0) {
-			restoreScroll();
-		} else {
-			const observer = new ResizeObserver(() => {
-				if (scrollElement.scrollWidth > 0) {
-					restoreScroll();
-					observer.disconnect();
-				}
-			});
-			observer.observe(scrollElement);
-			return () => observer.disconnect();
-		}
-	}, [initialScrollLeft]);
+		controller.applyZoomLayout(zoomLevel);
+	}, [controller, zoomLevel]);
 
 	useEffect(() => {
-		if (initialPlayheadTime !== undefined && !hasRestoredPlayheadRef.current) {
-			hasRestoredPlayheadRef.current = true;
-			editor.playback.seek({ time: initialPlayheadTime });
-		}
-	}, [initialPlayheadTime, editor]);
+		return controller.restoreInitialScrollIfNeeded(initialScrollLeft);
+	}, [controller, initialScrollLeft]);
 
-	// prevent browser zoom in the timeline
 	useEffect(() => {
-		const preventZoom = (event: WheelEvent) => {
-			const isZoomKeyPressed = event.ctrlKey || event.metaKey;
-			const isInContainer = containerRef.current?.contains(
-				event.target as Node,
-			);
-			// only check isInContainer, not isInTimeline state - the state check
-			// causes race conditions where the closure captures stale state
-			if (isZoomKeyPressed && isInContainer) {
-				event.preventDefault();
-			}
-		};
+		controller.restoreInitialPlayheadIfNeeded(initialPlayheadTime);
+	}, [controller, initialPlayheadTime]);
 
-		document.addEventListener("wheel", preventZoom, {
-			passive: false,
-			capture: true,
-		});
+	useEffect(() => controller.bindPreventBrowserZoom(), [controller]);
 
-		return () => {
-			document.removeEventListener("wheel", preventZoom, { capture: true });
-		};
-	}, [containerRef]);
+	useEffect(() => () => controller.destroy(), [controller]);
 
 	return {
 		zoomLevel,
-		setZoomLevel: wrappedSetZoomLevel,
-		handleWheel,
-		saveScrollPosition,
+		setZoomLevel: controller.setZoomLevel,
+		handleWheel: controller.handleWheel,
+		saveScrollPosition: controller.saveScrollPosition,
 	};
 }

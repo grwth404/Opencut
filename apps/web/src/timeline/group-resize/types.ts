@@ -24,13 +24,13 @@ export interface GroupResizeUpdate extends ElementRef {
 }
 
 export interface GroupResizeResult {
-	deltaTime: number;
+	deltaTicks: number;
 	updates: GroupResizeUpdate[];
 }
 
 export interface ComputeGroupResizeArgs {
 	members: GroupResizeMember[];
 	side: ResizeSide;
-	deltaTime: number;
+	deltaTicks: number;
 	fps: FrameRate;
 }

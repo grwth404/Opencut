@@ -269,19 +269,22 @@ export type CreateTimelineElement =
 	| CreateGraphicElement
 	| CreateEffectElement;
 
-export interface ElementDragState {
-	isDragging: boolean;
-	elementId: string | null;
-	dragElementIds: string[];
-	dragTimeOffsets: Record<string, number>;
-	trackId: string | null;
-	startMouseX: number;
-	startMouseY: number;
-	startElementTime: number;
-	clickOffsetTime: number;
-	currentTime: number;
-	currentMouseY: number;
-}
+export type ElementDragView =
+	| { readonly kind: "idle" }
+	| {
+			readonly kind: "dragging";
+			readonly anchorElementId: string;
+			readonly trackId: string;
+			readonly memberTimeOffsets: ReadonlyMap<string, number>;
+			readonly startMouseX: number;
+			readonly startMouseY: number;
+			readonly startElementTime: number;
+			readonly clickOffsetTime: number;
+			readonly currentTime: number;
+			readonly currentMouseX: number;
+			readonly currentMouseY: number;
+			readonly dropTarget: DropTarget | null;
+	  };
 
 export interface DropTarget {
 	trackIndex: number;

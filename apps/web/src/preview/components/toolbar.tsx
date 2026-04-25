@@ -8,12 +8,10 @@ import { EditableTimecode } from "@/components/editable-timecode";
 import { Button } from "@/components/ui/button";
 import {
 	FullScreenIcon,
-	GridTableIcon,
 	PauseIcon,
 	PlayIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { getGuideById } from "@/guides";
 import { Separator } from "@/components/ui/separator";
 import {
 	Select,
@@ -24,17 +22,12 @@ import {
 } from "@/components/ui/select";
 import { PREVIEW_ZOOM_PRESETS } from "@/preview/zoom";
 import { usePreviewViewport } from "./preview-viewport";
-import { GridPopover } from "./guide-popover";
-import { usePreviewStore } from "@/preview/preview-store";
 
 export function PreviewToolbar({
 	onToggleFullscreen,
 }: {
 	onToggleFullscreen: () => void;
 }) {
-	const activeGuide = usePreviewStore((state) => state.activeGuide);
-	const activeGuideDefinition = getGuideById(activeGuide);
-
 	return (
 		<div className="grid grid-cols-[1fr_auto_1fr] items-center pb-3 pt-5 px-5">
 			<TimecodeDisplay />
@@ -72,15 +65,13 @@ function TimecodeDisplay() {
 	);
 
 	useEffect(() => {
-		const handler = (e: Event) =>
-			setCurrentTime((e as CustomEvent<{ time: number }>).detail.time);
-		window.addEventListener("playback-update", handler);
-		window.addEventListener("playback-seek", handler);
+		const unsubscribeUpdate = editor.playback.onUpdate(setCurrentTime);
+		const unsubscribeSeek = editor.playback.onSeek(setCurrentTime);
 		return () => {
-			window.removeEventListener("playback-update", handler);
-			window.removeEventListener("playback-seek", handler);
+			unsubscribeUpdate();
+			unsubscribeSeek();
 		};
-	}, []);
+	}, [editor.playback]);
 
 	return (
 		<div className="flex items-center">
@@ -94,7 +85,11 @@ function TimecodeDisplay() {
 			/>
 			<span className="text-muted-foreground px-2 font-mono text-xs">/</span>
 			<span className="text-muted-foreground font-mono text-xs">
-				{formatTimecode({ time: totalDuration, format: "HH:MM:SS:FF", rate: fps })}
+				{formatTimecode({
+					time: totalDuration,
+					format: "HH:MM:SS:FF",
+					rate: fps,
+				})}
 			</span>
 		</div>
 	);

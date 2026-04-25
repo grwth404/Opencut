@@ -34,7 +34,7 @@ import {
 import type {
 	TimelineElement as TimelineElementType,
 	TimelineTrack,
-	ElementDragState,
+	ElementDragView,
 	VideoElement,
 	ImageElement,
 	AudioElement,
@@ -214,7 +214,7 @@ interface TimelineElementProps {
 		event: React.MouseEvent,
 		element: TimelineElementType,
 	) => void;
-	dragState: ElementDragState;
+	dragView: ElementDragView;
 	isDropTarget?: boolean;
 }
 
@@ -226,7 +226,7 @@ export function TimelineElement({
 	onResizeStart,
 	onElementMouseDown,
 	onElementClick,
-	dragState,
+	dragView,
 	isDropTarget = false,
 }: TimelineElementProps) {
 	const mediaAssets = useEditor((e) => e.media.getAssets());
@@ -252,15 +252,18 @@ export function TimelineElement({
 			selected.elementId === element.id && selected.trackId === track.id,
 	);
 
-	const isBeingDragged = dragState.dragElementIds.includes(element.id);
+	const isDragging = dragView.kind === "dragging";
+	const dragTimeOffset = isDragging
+		? dragView.memberTimeOffsets.get(element.id)
+		: undefined;
+	const isBeingDragged = dragTimeOffset !== undefined;
 	const dragOffsetY =
-		isBeingDragged && dragState.isDragging
-			? dragState.currentMouseY - dragState.startMouseY
+		isDragging && isBeingDragged
+			? dragView.currentMouseY - dragView.startMouseY
 			: 0;
-	const dragTimeOffset = dragState.dragTimeOffsets[element.id] ?? 0;
 	const elementStartTime =
-		isBeingDragged && dragState.isDragging
-			? dragState.currentTime + dragTimeOffset
+		isDragging && isBeingDragged
+			? dragView.currentTime + dragTimeOffset
 			: renderElement.startTime;
 	const displayedStartTime = elementStartTime;
 	const displayedDuration = renderElement.duration;
@@ -382,7 +385,7 @@ export function TimelineElement({
 									? `${baseTrackHeight + expansionHeight}px`
 									: "100%",
 							transform:
-								isBeingDragged && dragState.isDragging
+								isBeingDragged && isDragging
 									? `translate3d(0, ${dragOffsetY}px, 0)`
 									: undefined,
 						}}

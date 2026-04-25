@@ -15,63 +15,63 @@ import type {
 export function computeGroupResize({
 	members,
 	side,
-	deltaTime,
+	deltaTicks,
 	fps,
 }: ComputeGroupResizeArgs): GroupResizeResult {
 	const minDuration = Math.round(
 		(TICKS_PER_SECOND * fps.denominator) / fps.numerator,
 	);
-	const minimumDeltaTime = Math.max(
+	const minimumDeltaTicks = Math.max(
 		...members.map((member) =>
-			getMinimumAllowedDeltaTime({
+			getMinimumAllowedDeltaTicks({
 				member,
 				side,
 				minDuration,
 			}),
 		),
 	);
-	const maximumDeltaTime = Math.min(
+	const maximumDeltaTicks = Math.min(
 		...members.map((member) =>
-			getMaximumAllowedDeltaTime({
+			getMaximumAllowedDeltaTicks({
 				member,
 				side,
 				minDuration,
 			}),
 		),
 	);
-	const clampedDeltaTime =
-		minimumDeltaTime > maximumDeltaTime
-			? minimumDeltaTime
-			: Math.min(maximumDeltaTime, Math.max(minimumDeltaTime, deltaTime));
+	const clampedDeltaTicks =
+		minimumDeltaTicks > maximumDeltaTicks
+			? minimumDeltaTicks
+			: Math.min(maximumDeltaTicks, Math.max(minimumDeltaTicks, deltaTicks));
 
 	// Snap the drag delta to a frame exactly once, then derive every patch
 	// field from that single snapped value. This keeps the invariant
 	// `trimStart + duration*rate + trimEnd == sourceDuration` exact: the same
 	// delta is added on one side of the element and removed from the other,
-	// so the rounding cancels by construction. Per-field rounding (the old
-	// approach) couldn't preserve this because the individual rounds don't
-	// compose when `sourceDuration` isn't frame-aligned.
-	const snappedDeltaTime =
-		roundToFrame({ time: clampedDeltaTime, rate: fps }) ?? clampedDeltaTime;
+	// so the rounding cancels by construction. Rounding each field
+	// independently would break this — the individual rounds don't compose
+	// when `sourceDuration` isn't frame-aligned.
+	const snappedDeltaTicks =
+		roundToFrame({ time: clampedDeltaTicks, rate: fps }) ?? clampedDeltaTicks;
 	// Re-clamp after rounding. Bounds derived from other elements are
 	// frame-aligned, so this is normally a no-op; at the source-extent limit
 	// the bound may not be frame-aligned, and honouring the bound takes
 	// precedence over frame alignment (you can't extend past real content).
-	const finalDeltaTime =
-		minimumDeltaTime > maximumDeltaTime
-			? minimumDeltaTime
+	const finalDeltaTicks =
+		minimumDeltaTicks > maximumDeltaTicks
+			? minimumDeltaTicks
 			: Math.min(
-					maximumDeltaTime,
-					Math.max(minimumDeltaTime, snappedDeltaTime),
+					maximumDeltaTicks,
+					Math.max(minimumDeltaTicks, snappedDeltaTicks),
 				);
 
 	return {
-		deltaTime: Object.is(finalDeltaTime, -0) ? 0 : finalDeltaTime,
+		deltaTicks: Object.is(finalDeltaTicks, -0) ? 0 : finalDeltaTicks,
 		updates: members.map((member) =>
 			buildResizeUpdate({
 				member,
 				side,
-				deltaTime: finalDeltaTime,
+				deltaTicks: finalDeltaTicks,
 			}),
 		),
 	};
@@ -80,15 +80,15 @@ export function computeGroupResize({
 function buildResizeUpdate({
 	member,
 	side,
-	deltaTime,
+	deltaTicks,
 }: {
 	member: GroupResizeMember;
 	side: ResizeSide;
-	deltaTime: number;
+	deltaTicks: number;
 }): GroupResizeUpdate {
 	const sourceDelta = getSourceDeltaForClipDelta({
 		member,
-		clipDelta: deltaTime,
+		clipDelta: deltaTicks,
 	});
 
 	if (side === "left") {
@@ -98,8 +98,8 @@ function buildResizeUpdate({
 			patch: {
 				trimStart: Math.max(0, member.trimStart + sourceDelta),
 				trimEnd: member.trimEnd,
-				startTime: member.startTime + deltaTime,
-				duration: member.duration - deltaTime,
+				startTime: member.startTime + deltaTicks,
+				duration: member.duration - deltaTicks,
 			},
 		};
 	}
@@ -111,12 +111,12 @@ function buildResizeUpdate({
 			trimStart: member.trimStart,
 			trimEnd: Math.max(0, member.trimEnd - sourceDelta),
 			startTime: member.startTime,
-			duration: member.duration + deltaTime,
+			duration: member.duration + deltaTicks,
 		},
 	};
 }
 
-function getMinimumAllowedDeltaTime({
+function getMinimumAllowedDeltaTicks({
 	member,
 	side,
 	minDuration,
@@ -148,7 +148,7 @@ function getMinimumAllowedDeltaTime({
 	return Math.max(leftNeighborFloor, -maximumSourceExtension);
 }
 
-function getMaximumAllowedDeltaTime({
+function getMaximumAllowedDeltaTicks({
 	member,
 	side,
 	minDuration,

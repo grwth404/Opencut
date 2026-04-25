@@ -16,6 +16,8 @@ use crate::perf;
 struct CompositorRuntime {
     canvas: web_sys::HtmlCanvasElement,
     compositor: Compositor,
+    surface: wgpu::Surface<'static>,
+    surface_size: (u32, u32),
 }
 
 thread_local! {
@@ -44,9 +46,23 @@ pub fn init_compositor(width: u32, height: u32) -> Result<(), JsValue> {
         canvas.set_height(height);
 
         let compositor = Compositor::new(&gpu_runtime.context);
+        let surface = gpu_runtime
+            .context
+            .instance()
+            .create_surface(wgpu::SurfaceTarget::Canvas(canvas.clone()))
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
+        gpu_runtime
+            .context
+            .configure_surface(&surface, width, height)
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
 
         COMPOSITOR_RUNTIME.with(|runtime| {
-            runtime.replace(Some(CompositorRuntime { canvas, compositor }));
+            runtime.replace(Some(CompositorRuntime {
+                canvas,
+                compositor,
+                surface,
+                surface_size: (width, height),
+            }));
         });
 
         Ok(())
@@ -55,16 +71,25 @@ pub fn init_compositor(width: u32, height: u32) -> Result<(), JsValue> {
 
 #[wasm_bindgen(js_name = resizeCompositor)]
 pub fn resize_compositor(width: u32, height: u32) -> Result<(), JsValue> {
-    COMPOSITOR_RUNTIME.with(|runtime| {
-        let mut borrow = runtime.borrow_mut();
-        let Some(runtime) = borrow.as_mut() else {
-            return Err(JsValue::from_str(
-                "Compositor is not initialized. Call initCompositor() first.",
-            ));
-        };
-        runtime.canvas.set_width(width);
-        runtime.canvas.set_height(height);
-        Ok(())
+    with_gpu_runtime(|gpu_runtime| {
+        COMPOSITOR_RUNTIME.with(|runtime| {
+            let mut borrow = runtime.borrow_mut();
+            let Some(runtime) = borrow.as_mut() else {
+                return Err(JsValue::from_str(
+                    "Compositor is not initialized. Call initCompositor() first.",
+                ));
+            };
+            runtime.canvas.set_width(width);
+            runtime.canvas.set_height(height);
+            if runtime.surface_size != (width, height) {
+                gpu_runtime
+                    .context
+                    .configure_surface(&runtime.surface, width, height)
+                    .map_err(|error| JsValue::from_str(&error.to_string()))?;
+                runtime.surface_size = (width, height);
+            }
+            Ok(())
+        })
     })
 }
 
@@ -144,15 +169,19 @@ pub fn render_frame(options: JsValue) -> Result<(), JsValue> {
                 ));
             };
 
-            if gpu_runtime.context.supports_surface_rendering() {
+            if runtime.surface_size != (frame.width, frame.height) {
+                runtime.canvas.set_width(frame.width);
+                runtime.canvas.set_height(frame.height);
                 let t_surface = perf::now_ms();
-                let surface = gpu_runtime
+                gpu_runtime
                     .context
-                    .instance()
-                    .create_surface(wgpu::SurfaceTarget::Canvas(runtime.canvas.clone()))
+                    .configure_surface(&runtime.surface, frame.width, frame.height)
                     .map_err(|error| JsValue::from_str(&error.to_string()))?;
-                perf::record("wasm.surfaceCreate", perf::now_ms() - t_surface);
+                perf::record("wasm.surfaceConfigure", perf::now_ms() - t_surface);
+                runtime.surface_size = (frame.width, frame.height);
+            }
 
+            if gpu_runtime.context.supports_surface_rendering() {
                 let t_render = perf::now_ms();
                 let result = runtime
                     .compositor
@@ -160,17 +189,15 @@ pub fn render_frame(options: JsValue) -> Result<(), JsValue> {
                         &gpu_runtime.context,
                         RenderFrameOptions {
                             frame: &frame,
-                            surface: &surface,
+                            surface: &runtime.surface,
                         },
                     )
                     .map_err(|error| JsValue::from_str(&error.to_string()));
                 perf::record("wasm.renderFrameToSurface", perf::now_ms() - t_render);
                 result
             } else {
-                // WebGL surface-renders to the canvas its GL context was created
-                // on; `init_compositor` already pointed `runtime.canvas` at that
-                // same canvas, so presenting writes directly to the canvas the
-                // UI mounts. No intermediate copy.
+                // WebGL still needs a separate composition pass, but the output
+                // surface is now persistent just like the WebGPU path.
                 let t_composite = perf::now_ms();
                 let texture = runtime
                     .compositor
@@ -181,9 +208,9 @@ pub fn render_frame(options: JsValue) -> Result<(), JsValue> {
                 let t_present = perf::now_ms();
                 gpu_runtime
                     .context
-                    .render_texture_to_gl_canvas_surface(&texture, frame.width, frame.height)
+                    .present_texture_to_surface(&texture, &runtime.surface)
                     .map_err(|error| JsValue::from_str(&error.to_string()))?;
-                perf::record("wasm.presentToGlCanvas", perf::now_ms() - t_present);
+                perf::record("wasm.presentToSurface", perf::now_ms() - t_present);
 
                 Ok(())
             }

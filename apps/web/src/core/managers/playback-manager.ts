@@ -10,6 +10,8 @@ export class PlaybackManager {
 	private previousVolume = 1;
 	private isScrubbing = false;
 	private listeners = new Set<() => void>();
+	private updateListeners = new Set<(time: number) => void>();
+	private seekListeners = new Set<(time: number) => void>();
 	private playbackTimer: number | null = null;
 	private playbackStartWallTime = 0;
 	private playbackStartTime = 0;
@@ -67,7 +69,7 @@ export class PlaybackManager {
 			this.playbackStartTime = this.currentTime;
 		}
 		this.notify();
-		this.dispatchSeekEvent(this.currentTime);
+		this.notifySeek(this.currentTime);
 	}
 
 	setVolume({ volume }: { volume: number }): void {
@@ -133,6 +135,16 @@ export class PlaybackManager {
 		return () => this.listeners.delete(listener);
 	}
 
+	onUpdate(listener: (time: number) => void): () => void {
+		this.updateListeners.add(listener);
+		return () => this.updateListeners.delete(listener);
+	}
+
+	onSeek(listener: (time: number) => void): () => void {
+		this.seekListeners.add(listener);
+		return () => this.seekListeners.delete(listener);
+	}
+
 	private reconcileTimelineScope(): void {
 		const maxTime = this.editor.timeline.getTotalDuration();
 		const nextTime = this.clampTimeToTimeline(this.currentTime);
@@ -152,7 +164,7 @@ export class PlaybackManager {
 		this.notify();
 
 		if (timeChanged) {
-			this.dispatchSeekEvent(this.currentTime);
+			this.notifySeek(this.currentTime);
 		}
 	}
 
@@ -196,12 +208,12 @@ export class PlaybackManager {
 			this.pause();
 			this.currentTime = maxTime;
 			this.notify();
-			this.dispatchSeekEvent(maxTime);
+			this.notifySeek(maxTime);
 			return;
 		}
 
 		this.currentTime = newTime;
-		this.dispatchUpdateEvent(newTime);
+		this.notifyUpdate(newTime);
 		this.playbackTimer = requestAnimationFrame(this.updateTime);
 	};
 
@@ -210,27 +222,15 @@ export class PlaybackManager {
 		return Math.max(0, Math.min(maxTime, time));
 	}
 
-	private dispatchSeekEvent(time: number): void {
-		if (typeof window === "undefined") {
-			return;
+	private notifySeek(time: number): void {
+		for (const fn of this.seekListeners) {
+			fn(time);
 		}
-
-		window.dispatchEvent(
-			new CustomEvent("playback-seek", {
-				detail: { time },
-			}),
-		);
 	}
 
-	private dispatchUpdateEvent(time: number): void {
-		if (typeof window === "undefined") {
-			return;
+	private notifyUpdate(time: number): void {
+		for (const fn of this.updateListeners) {
+			fn(time);
 		}
-
-		window.dispatchEvent(
-			new CustomEvent("playback-update", {
-				detail: { time },
-			}),
-		);
 	}
 }

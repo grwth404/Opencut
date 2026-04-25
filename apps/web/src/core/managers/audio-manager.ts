@@ -1,9 +1,6 @@
 import type { EditorCore } from "@/core";
 import { TICKS_PER_SECOND } from "@/wasm";
-import {
-	clampRetimeRate,
-	shouldMaintainPitch,
-} from "@/retime/rate";
+import { clampRetimeRate, shouldMaintainPitch } from "@/retime/rate";
 import type { AudioClipSource } from "@/media/audio";
 import { createAudioContext, collectAudioClips } from "@/media/audio";
 import {
@@ -56,10 +53,8 @@ export class AudioManager {
 			this.editor.playback.subscribe(this.handlePlaybackChange),
 			this.editor.timeline.subscribe(this.handleTimelineChange),
 			this.editor.media.subscribe(this.handleTimelineChange),
+			this.editor.playback.onSeek(this.handleSeek),
 		);
-		if (typeof window !== "undefined") {
-			window.addEventListener("playback-seek", this.handleSeek);
-		}
 	}
 
 	dispose(): void {
@@ -68,9 +63,6 @@ export class AudioManager {
 			unsub();
 		}
 		this.unsubscribers = [];
-		if (typeof window !== "undefined") {
-			window.removeEventListener("playback-seek", this.handleSeek);
-		}
 		this.disposeSinks();
 		this.preparedClipBuffers.clear();
 		this.decodedBuffers.clear();
@@ -102,17 +94,14 @@ export class AudioManager {
 		}
 	};
 
-	private handleSeek = (event: Event): void => {
-		const detail = (event as CustomEvent<{ time: number }>).detail;
-		if (!detail) return;
-
+	private handleSeek = (time: number): void => {
 		if (this.editor.playback.getIsScrubbing()) {
 			this.stopPlayback();
 			return;
 		}
 
 		if (this.editor.playback.getIsPlaying()) {
-			void this.startPlayback({ time: detail.time / TICKS_PER_SECOND });
+			void this.startPlayback({ time: time / TICKS_PER_SECOND });
 			return;
 		}
 
@@ -126,7 +115,9 @@ export class AudioManager {
 
 		if (!this.editor.playback.getIsPlaying()) return;
 
-		void this.startPlayback({ time: this.editor.playback.getCurrentTime() / TICKS_PER_SECOND });
+		void this.startPlayback({
+			time: this.editor.playback.getCurrentTime() / TICKS_PER_SECOND,
+		});
 	};
 
 	private ensureAudioContext(): AudioContext | null {

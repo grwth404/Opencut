@@ -9,6 +9,7 @@ import type {
 	RetimeConfig,
 } from "@/timeline";
 import { calculateTotalDuration } from "@/timeline";
+import { TimelineDragSource } from "@/timeline/drag-source";
 import { findTrackInSceneTracks } from "@/timeline/track-element-update";
 import {
 	canElementBeHidden,
@@ -67,6 +68,7 @@ export class TimelineManager {
 	private listeners = new Set<() => void>();
 	private previewOverlay = new Map<string, Partial<TimelineElement>>();
 	private previewTracks: SceneTracks | null = null;
+	public readonly dragSource = new TimelineDragSource();
 
 	constructor(private editor: EditorCore) {}
 
@@ -706,11 +708,11 @@ export class TimelineManager {
 	previewElements({
 		updates,
 	}: {
-		updates: Array<{
-			trackId: string;
-			elementId: string;
-			updates: Partial<TimelineElement>;
-		}>;
+		updates: readonly {
+			readonly trackId: string;
+			readonly elementId: string;
+			readonly updates: Partial<TimelineElement>;
+		}[];
 	}): void {
 		let changedOverlayCount = 0;
 		for (const { elementId, updates: elementUpdates } of updates) {
