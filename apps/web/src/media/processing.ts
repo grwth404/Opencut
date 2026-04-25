@@ -1,15 +1,25 @@
-import { Input, ALL_FORMATS, BlobSource, VideoSampleSink } from "mediabunny";
 import { toast } from "sonner";
 import { getMediaTypeFromFile } from "@/media/media-utils";
 import { formatStorageBytes } from "@/services/storage/quota";
 import { storageService } from "@/services/storage/service";
 import type { MediaAsset } from "@/media/types";
-import { getVideoInfo } from "./mediabunny";
+import { readVideoFile } from "./mediabunny";
+import type { VideoFileData } from "./mediabunny";
+import { renderThumbnailDataUrl } from "./thumbnail";
 
 export interface ProcessedMediaAsset extends Omit<MediaAsset, "id"> {}
 
-const THUMBNAIL_MAX_WIDTH = 1280;
-const THUMBNAIL_MAX_HEIGHT = 720;
+const getUnsupportedVideoDescription = ({
+	codec,
+}: {
+	codec: VideoFileData["codec"];
+}): string => {
+	const codecLabel = codec ? codec.toUpperCase() : "this video codec";
+
+	return codec === "hevc"
+		? `${codecLabel} cannot be decoded in this browser, so this clip may not preview correctly. Convert it to H.264 MP4 or try importing it in Safari.`
+		: `${codecLabel} cannot be decoded in this browser, so this clip may not preview correctly. Convert it to H.264 MP4 and reimport it.`;
+};
 
 const getStorageLimitDescription = ({
 	fileSize,
@@ -29,103 +39,6 @@ const getStorageLimitDescription = ({
 	})} is safely available in browser storage.`;
 };
 
-const getThumbnailSize = ({
-	width,
-	height,
-}: {
-	width: number;
-	height: number;
-}): { width: number; height: number } => {
-	const aspectRatio = width / height;
-	let targetWidth = width;
-	let targetHeight = height;
-
-	if (targetWidth > THUMBNAIL_MAX_WIDTH) {
-		targetWidth = THUMBNAIL_MAX_WIDTH;
-		targetHeight = Math.round(targetWidth / aspectRatio);
-	}
-	if (targetHeight > THUMBNAIL_MAX_HEIGHT) {
-		targetHeight = THUMBNAIL_MAX_HEIGHT;
-		targetWidth = Math.round(targetHeight * aspectRatio);
-	}
-
-	return { width: targetWidth, height: targetHeight };
-};
-
-const renderToThumbnailDataUrl = ({
-	width,
-	height,
-	draw,
-}: {
-	width: number;
-	height: number;
-	draw: ({
-		context,
-		width,
-		height,
-	}: {
-		context: CanvasRenderingContext2D;
-		width: number;
-		height: number;
-	}) => void;
-}): string => {
-	const size = getThumbnailSize({ width, height });
-	const canvas = document.createElement("canvas");
-	canvas.width = size.width;
-	canvas.height = size.height;
-	const context = canvas.getContext("2d");
-
-	if (!context) {
-		throw new Error("Could not get canvas context");
-	}
-
-	draw({ context, width: size.width, height: size.height });
-	return canvas.toDataURL("image/jpeg", 0.8);
-};
-
-async function generateThumbnail({
-	videoFile,
-	timeInSeconds,
-}: {
-	videoFile: File;
-	timeInSeconds: number;
-}): Promise<string> {
-	const input = new Input({
-		source: new BlobSource(videoFile),
-		formats: ALL_FORMATS,
-	});
-
-	const videoTrack = await input.getPrimaryVideoTrack();
-	if (!videoTrack) {
-		throw new Error("No video track found in the file");
-	}
-
-	const canDecode = await videoTrack.canDecode();
-	if (!canDecode) {
-		throw new Error("Video codec not supported for decoding");
-	}
-
-	const sink = new VideoSampleSink(videoTrack);
-
-	const frame = await sink.getSample(timeInSeconds);
-
-	if (!frame) {
-		throw new Error("Could not get frame at specified time");
-	}
-
-	try {
-		return renderToThumbnailDataUrl({
-			width: videoTrack.displayWidth,
-			height: videoTrack.displayHeight,
-			draw: ({ context, width, height }) => {
-				frame.draw(context, 0, 0, width, height);
-			},
-		});
-	} finally {
-		frame.close();
-	}
-}
-
 async function generateImageThumbnail({
 	imageFile,
 }: {
@@ -137,7 +50,7 @@ async function generateImageThumbnail({
 
 		image.addEventListener("load", () => {
 			try {
-				const thumbnailUrl = renderToThumbnailDataUrl({
+				const thumbnailUrl = renderThumbnailDataUrl({
 					width: image.naturalWidth,
 					height: image.naturalHeight,
 					draw: ({ context, width, height }) => {
@@ -220,24 +133,34 @@ export async function processMediaAssets({
 				height = result.height;
 			} else if (fileType === "video") {
 				try {
-					const videoInfo = await getVideoInfo({ videoFile: file });
-					duration = videoInfo.duration;
-					width = videoInfo.width;
-					height = videoInfo.height;
-					fps = Number.isFinite(videoInfo.fps)
-						? Math.round(videoInfo.fps)
+					const videoData = await readVideoFile({ file });
+					duration = videoData.duration;
+					width = videoData.width;
+					height = videoData.height;
+					fps = Number.isFinite(videoData.fps)
+						? Math.round(videoData.fps)
 						: undefined;
-					hasAudio = videoInfo.hasAudio;
+					hasAudio = videoData.hasAudio;
+					thumbnailUrl = videoData.thumbnailUrl ?? undefined;
 
-					thumbnailUrl = await generateThumbnail({
-						videoFile: file,
-						timeInSeconds: 1,
-					});
+					if (!videoData.canDecode) {
+						toast.error(`Can't preview ${file.name}`, {
+							description: getUnsupportedVideoDescription({
+								codec: videoData.codec,
+							}),
+						});
+					}
 				} catch (error) {
-					console.warn("Video processing failed", error);
+					const message =
+						error instanceof Error
+							? error.message
+							: "Could not process video";
+
+					toast.error(`Couldn't process ${file.name}`, {
+						description: message,
+					});
 				}
 			} else if (fileType === "audio") {
-				// For audio, we don't set width/height/fps (they'll be undefined)
 				duration = await getMediaDuration({ file });
 			}
 
@@ -264,7 +187,7 @@ export async function processMediaAssets({
 		} catch (error) {
 			console.error("Error processing file:", file.name, error);
 			toast.error(`Failed to process ${file.name}`);
-			URL.revokeObjectURL(url); // Clean up on error
+			URL.revokeObjectURL(url);
 		}
 	}
 
