@@ -23,4 +23,4 @@ bun.lockb
 
 target/
 
-.cargo-tools/
+.cargo-tools/random_gibberish.txt
