@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { hasDragData } from "@/timeline/drag-data";
+import { useEditor } from "@/editor/use-editor";
 
 interface UseFileUploadOptions {
 	accept?: string;
@@ -7,18 +7,22 @@ interface UseFileUploadOptions {
 	onFilesSelected?: (files: File[]) => void;
 }
 
-function containsFiles(dataTransfer: DataTransfer): boolean {
-	return !hasDragData({ dataTransfer }) && dataTransfer.types.includes("Files");
-}
-
 export function useFileUpload({
 	accept,
 	multiple,
 	onFilesSelected,
 }: UseFileUploadOptions = {}) {
+	const editor = useEditor();
 	const [isDragOver, setIsDragOver] = useState(false);
 	const dragCounterRef = useRef(0);
 	const inputRef = useRef<HTMLInputElement>(null);
+
+	function containsFiles(dataTransfer: DataTransfer): boolean {
+		return (
+			!editor.timeline.dragSource.isActive() &&
+			dataTransfer.types.includes("Files")
+		);
+	}
 
 	function openFilePicker() {
 		if (!inputRef.current) return;

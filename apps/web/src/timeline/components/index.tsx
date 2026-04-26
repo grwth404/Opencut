@@ -30,7 +30,7 @@ import {
 	type ReactNode,
 } from "react";
 import type { MediaTime } from "@/wasm";
-import type { ElementDragState, DropTarget } from "@/timeline";
+import type { ElementDragView, DropTarget } from "@/timeline";
 import { TimelineTrackContent } from "./timeline-track";
 import { TimelinePlayhead } from "./timeline-playhead";
 import { SelectionBox } from "@/selection/selection-box";
@@ -288,20 +288,15 @@ export function Timeline() {
 		isReady: tracks.length > 0,
 	});
 
-	const {
-		dragState,
-		dragDropTarget,
-		handleElementMouseDown,
-		handleElementClick,
-		lastMouseXRef,
-	} = useElementInteraction({
+	const { dragView, handleElementMouseDown, handleElementClick } =
+		useElementInteraction({
 		zoomLevel,
-		timelineRef,
 		tracksContainerRef,
 		tracksScrollRef,
 		snappingEnabled,
 		onSnapPointChange: handleSnapPointChange,
 	});
+	const isElementDragging = dragView.kind === "dragging";
 
 	const {
 		dragState: bookmarkDragState,
@@ -392,10 +387,19 @@ export function Timeline() {
 		contentWidth: dynamicTimelineWidth,
 	});
 
+	useEdgeAutoScroll({
+		isActive: isElementDragging,
+		getMouseClientX: () =>
+			dragView.kind === "dragging" ? dragView.currentMouseX : 0,
+		rulerScrollRef,
+		tracksScrollRef,
+		contentWidth: dynamicTimelineWidth,
+	});
+
 	const showSnapIndicator =
 		snappingEnabled &&
 		currentSnapPoint !== null &&
-		(dragState.isDragging || bookmarkDragState.isDragging || isResizing);
+		(isElementDragging || bookmarkDragState.isDragging || isResizing);
 
 	const {
 		handleTracksMouseDown,
@@ -458,9 +462,9 @@ export function Timeline() {
 						headerHeight={timelineHeaderHeight}
 					/>
 					<DragLine
-						dropTarget={dragDropTarget}
+						dropTarget={isElementDragging ? dragView.dropTarget : null}
 						tracks={tracks}
-						isVisible={dragState.isDragging}
+						isVisible={isElementDragging}
 						headerHeight={timelineHeaderHeight}
 					/>
 
@@ -541,9 +545,7 @@ export function Timeline() {
 									<TimelineTrackRows
 										mainTrackId={mainTrackId}
 										zoomLevel={zoomLevel}
-										dragState={dragState}
-										tracksScrollRef={tracksScrollRef}
-										lastMouseXRef={lastMouseXRef}
+										dragView={dragView}
 										onResizeStart={handleResizeStart}
 										onElementMouseDown={handleElementMouseDown}
 										onElementClick={handleElementClick}
@@ -719,9 +721,7 @@ function TrackLabelsPanel({
 function TimelineTrackRows({
 	mainTrackId,
 	zoomLevel,
-	dragState,
-	tracksScrollRef,
-	lastMouseXRef,
+	dragView,
 	onResizeStart,
 	onElementMouseDown,
 	onElementClick,
@@ -733,9 +733,7 @@ function TimelineTrackRows({
 }: {
 	mainTrackId: string | null;
 	zoomLevel: number;
-	dragState: ElementDragState;
-	tracksScrollRef: React.RefObject<HTMLDivElement | null>;
-	lastMouseXRef: React.RefObject<number>;
+	dragView: ElementDragView;
 	onResizeStart: React.ComponentProps<
 		typeof TimelineTrackContent
 	>["onResizeStart"];
@@ -777,8 +775,16 @@ function TimelineTrackRows({
 		[tracks, expandedElementIds],
 	);
 
+	const draggingElementIds = useMemo(
+		() =>
+			dragView.kind === "dragging"
+				? dragView.memberTimeOffsets
+				: (null as ReadonlyMap<string, MediaTime> | null),
+		[dragView],
+	);
 	const sortedTracks = useMemo(() => {
-		const draggingElementIds = new Set(dragState.dragElementIds);
+		if (!draggingElementIds)
+			return tracks.map((track, index) => ({ track, index }));
 		return [...tracks]
 			.map((track, index) => ({ track, index }))
 			.sort((a, b) => {
@@ -792,7 +798,7 @@ function TimelineTrackRows({
 				if (bHasDragged) return -1;
 				return 0;
 			});
-	}, [tracks, dragState.dragElementIds]);
+	}, [tracks, draggingElementIds]);
 
 	return (
 		<>
@@ -812,10 +818,7 @@ function TimelineTrackRows({
 							<TimelineTrackContent
 								track={track}
 								zoomLevel={zoomLevel}
-								dragState={dragState}
-								rulerScrollRef={tracksScrollRef}
-								tracksScrollRef={tracksScrollRef}
-								lastMouseXRef={lastMouseXRef}
+								dragView={dragView}
 								onResizeStart={onResizeStart}
 								onElementMouseDown={onElementMouseDown}
 								onElementClick={onElementClick}

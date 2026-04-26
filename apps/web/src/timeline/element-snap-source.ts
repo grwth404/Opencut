@@ -1,5 +1,6 @@
 import type { SceneTracks } from "@/timeline";
 import type { SnapPoint } from "@/timeline/snapping";
+import { addMediaTime } from "@/wasm";
 
 export function getElementEdgeSnapPoints({
 	tracks,
@@ -25,7 +26,7 @@ export function getElementEdgeSnapPoints({
 					trackId: track.id,
 				},
 				{
-					time: element.startTime + element.duration,
+					time: addMediaTime({ a: element.startTime, b: element.duration }),
 					type: "element-end",
 					elementId: element.id,
 					trackId: track.id,

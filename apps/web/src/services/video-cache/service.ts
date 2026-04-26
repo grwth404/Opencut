@@ -7,6 +7,7 @@ import {
 } from "mediabunny";
 
 interface VideoSinkData {
+	input: Input;
 	sink: CanvasSink;
 	iterator: AsyncGenerator<WrappedCanvas, void, unknown> | null;
 	currentFrame: WrappedCanvas | null;
@@ -20,6 +21,7 @@ export class VideoCache {
 	private sinks = new Map<string, VideoSinkData>();
 	private initPromises = new Map<string, Promise<void>>();
 	private frameChain = new Map<string, Promise<unknown>>();
+	private seekGenerations = new Map<string, number>();
 
 	async getFrameAt({
 		mediaId,
@@ -35,11 +37,20 @@ export class VideoCache {
 		const sinkData = this.sinks.get(mediaId);
 		if (!sinkData) return null;
 
+		const generation = (this.seekGenerations.get(mediaId) ?? 0) + 1;
+		this.seekGenerations.set(mediaId, generation);
+
 		const previous = this.frameChain.get(mediaId) ?? Promise.resolve();
-		const current = previous.then(() =>
-			this.resolveFrame({ sinkData, time }),
+		const current = previous.then(() => {
+			if (this.seekGenerations.get(mediaId) !== generation) {
+				return sinkData.currentFrame ?? null;
+			}
+			return this.resolveFrame({ sinkData, time });
+		});
+		this.frameChain.set(
+			mediaId,
+			current.catch(() => {}),
 		);
-		this.frameChain.set(mediaId, current.catch(() => {}));
 		return current;
 	}
 
@@ -172,18 +183,7 @@ export class VideoCache {
 
 			if (frame) {
 				sinkData.currentFrame = frame;
-
-				// Aggressively fetch next frame immediately to fill buffer
-				// This matches the mediaplayer example which fetches 2 frames on start
-				try {
-					const { value: next } = await sinkData.iterator.next();
-					if (next) {
-						sinkData.nextFrame = next;
-					}
-				} catch (e) {
-					console.warn("Failed to pre-fetch next frame on seek:", e);
-				}
-
+				this.startPrefetch({ sinkData });
 				return frame;
 			}
 		} catch (error) {
@@ -262,12 +262,12 @@ export class VideoCache {
 		mediaId: string;
 		file: File;
 	}): Promise<void> {
-		try {
-			const input = new Input({
-				source: new BlobSource(file),
-				formats: ALL_FORMATS,
-			});
+		const input = new Input({
+			source: new BlobSource(file),
+			formats: ALL_FORMATS,
+		});
 
+		try {
 			const videoTrack = await input.getPrimaryVideoTrack();
 			if (!videoTrack) {
 				throw new Error("No video track found");
@@ -284,6 +284,7 @@ export class VideoCache {
 			});
 
 			this.sinks.set(mediaId, {
+				input,
 				sink,
 				iterator: null,
 				currentFrame: null,
@@ -293,6 +294,7 @@ export class VideoCache {
 				prefetchPromise: null,
 			});
 		} catch (error) {
+			input.dispose();
 			console.error(`Failed to initialize video sink for ${mediaId}:`, error);
 			throw error;
 		}
@@ -305,10 +307,13 @@ export class VideoCache {
 				void sinkData.iterator.return();
 			}
 
+			sinkData.input.dispose();
 			this.sinks.delete(mediaId);
 		}
 
 		this.initPromises.delete(mediaId);
+		this.frameChain.delete(mediaId);
+		this.seekGenerations.delete(mediaId);
 	}
 
 	clearAll(): void {

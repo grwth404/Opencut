@@ -1,36 +1,37 @@
 import type { FrameRate } from "opencut-wasm";
 import type { ElementRef, RetimeConfig } from "@/timeline/types";
+import type { MediaTime } from "@/wasm";
 
 export type ResizeSide = "left" | "right";
 
 export interface GroupResizeMember extends ElementRef {
-	startTime: number;
-	duration: number;
-	trimStart: number;
-	trimEnd: number;
-	sourceDuration?: number;
+	startTime: MediaTime;
+	duration: MediaTime;
+	trimStart: MediaTime;
+	trimEnd: MediaTime;
+	sourceDuration?: MediaTime;
 	retime?: RetimeConfig;
-	leftNeighborBound: number;
-	rightNeighborBound: number;
+	leftNeighborBound: MediaTime | null;
+	rightNeighborBound: MediaTime | null;
 }
 
 export interface GroupResizeUpdate extends ElementRef {
 	patch: {
-		trimStart: number;
-		trimEnd: number;
-		startTime: number;
-		duration: number;
+		trimStart: MediaTime;
+		trimEnd: MediaTime;
+		startTime: MediaTime;
+		duration: MediaTime;
 	};
 }
 
 export interface GroupResizeResult {
-	deltaTime: number;
+	deltaTime: MediaTime;
 	updates: GroupResizeUpdate[];
 }
 
 export interface ComputeGroupResizeArgs {
 	members: GroupResizeMember[];
 	side: ResizeSide;
-	deltaTime: number;
+	deltaTime: MediaTime;
 	fps: FrameRate;
 }

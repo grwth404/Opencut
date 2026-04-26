@@ -1,49 +1,17 @@
-import {
-	useState,
-	useCallback,
-	useEffect,
-	useRef,
-	type MouseEvent as ReactMouseEvent,
-	type RefObject,
-} from "react";
+import { useEffect, useReducer, useRef, type RefObject } from "react";
 import { useEditor } from "@/editor/use-editor";
 import { useShiftKey } from "@/hooks/use-shift-key";
 import { useElementSelection } from "@/timeline/hooks/element/use-element-selection";
-import {
-	buildMoveGroup,
-	resolveGroupMove,
-	snapGroupEdges,
-	type GroupMoveResult,
-	type MoveGroup,
-} from "@/timeline/group-move";
-import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/timeline/scale";
-import {
-	addMediaTime,
-	type MediaTime,
-	mediaTime,
-	subMediaTime,
-	TICKS_PER_SECOND,
-	ZERO_MEDIA_TIME,
-} from "@/wasm";
-import { TIMELINE_DRAG_THRESHOLD_PX } from "@/timeline/components/interaction";
-import { roundToFrame } from "opencut-wasm";
-import { computeDropTarget } from "@/timeline/components/drop-target";
-import { getMouseTimeFromClientX } from "@/timeline/drag-utils";
-import { generateUUID } from "@/utils/id";
-import type { SnapPoint } from "@/timeline/snapping";
 import { registerCanceller } from "@/editor/cancel-interaction";
-import type {
-	DropTarget,
-	ElementRef,
-	ElementDragState,
-	SceneTracks,
-	TimelineElement,
-	TimelineTrack,
-} from "@/timeline";
+import {
+	ElementInteractionController,
+	type ElementInteractionDeps,
+	type ElementInteractionDepsRef,
+} from "@/timeline/controllers/element-interaction-controller";
+import type { SnapPoint } from "@/timeline/snapping";
 
 interface UseElementInteractionProps {
 	zoomLevel: number;
-	timelineRef: RefObject<HTMLDivElement | null>;
 	tracksContainerRef: RefObject<HTMLDivElement | null>;
 	tracksScrollRef: RefObject<HTMLDivElement | null>;
 	headerRef?: RefObject<HTMLElement | null>;
@@ -51,133 +19,8 @@ interface UseElementInteractionProps {
 	onSnapPointChange?: (snapPoint: SnapPoint | null) => void;
 }
 
-const MOUSE_BUTTON_RIGHT = 2;
-
-const initialDragState: ElementDragState = {
-	isDragging: false,
-	elementId: null,
-	dragElementIds: [],
-	dragTimeOffsets: {},
-	trackId: null,
-	startMouseX: 0,
-	startMouseY: 0,
-	startElementTime: ZERO_MEDIA_TIME,
-	clickOffsetTime: ZERO_MEDIA_TIME,
-	currentTime: ZERO_MEDIA_TIME,
-	currentMouseY: 0,
-};
-
-interface PendingDragState {
-	elementId: string;
-	trackId: string;
-	selectedElements: ElementRef[];
-	startMouseX: number;
-	startMouseY: number;
-	startElementTime: MediaTime;
-	clickOffsetTime: MediaTime;
-}
-
-function getClickOffsetTime({
-	clientX,
-	elementRect,
-	zoomLevel,
-}: {
-	clientX: number;
-	elementRect: DOMRect;
-	zoomLevel: number;
-}): MediaTime {
-	const clickOffsetX = clientX - elementRect.left;
-	const seconds = clickOffsetX / (BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel);
-	return mediaTime({
-		ticks: Math.round(seconds * TICKS_PER_SECOND),
-	});
-}
-
-function getVerticalDragDirection({
-	startMouseY,
-	currentMouseY,
-}: {
-	startMouseY: number;
-	currentMouseY: number;
-}): "up" | "down" | null {
-	if (currentMouseY < startMouseY) return "up";
-	if (currentMouseY > startMouseY) return "down";
-	return null;
-}
-
-function getDragDropTarget({
-	clientX,
-	clientY,
-	elementId,
-	trackId,
-	tracks,
-	tracksContainerRef,
-	tracksScrollRef,
-	headerRef,
-	zoomLevel,
-	snappedTime,
-	verticalDragDirection,
-}: {
-	clientX: number;
-	clientY: number;
-	elementId: string;
-	trackId: string;
-	tracks: SceneTracks;
-	tracksContainerRef: RefObject<HTMLDivElement | null>;
-	tracksScrollRef: RefObject<HTMLDivElement | null>;
-	headerRef?: RefObject<HTMLElement | null>;
-	zoomLevel: number;
-	snappedTime: MediaTime;
-	verticalDragDirection?: "up" | "down" | null;
-}): DropTarget | null {
-	const containerRect = tracksContainerRef.current?.getBoundingClientRect();
-	const scrollContainer = tracksScrollRef.current;
-	if (!containerRect || !scrollContainer) return null;
-
-	const sourceTrack = [...tracks.overlay, tracks.main, ...tracks.audio].find(
-		({ id }) => id === trackId,
-	);
-	const movingElement = sourceTrack?.elements.find(
-		({ id }) => id === elementId,
-	);
-	if (!movingElement) return null;
-
-	const elementDuration = movingElement.duration;
-	const scrollLeft = scrollContainer.scrollLeft;
-	const scrollTop = scrollContainer.scrollTop;
-	const scrollContainerRect = scrollContainer.getBoundingClientRect();
-	const headerHeight = headerRef?.current?.getBoundingClientRect().height ?? 0;
-	const mouseX = clientX - scrollContainerRect.left + scrollLeft;
-	const mouseY = clientY - scrollContainerRect.top + scrollTop - headerHeight;
-
-	return computeDropTarget({
-		elementType: movingElement.type,
-		mouseX,
-		mouseY,
-		tracks,
-		playheadTime: snappedTime,
-		isExternalDrop: false,
-		elementDuration,
-		pixelsPerSecond: BASE_TIMELINE_PIXELS_PER_SECOND,
-		zoomLevel,
-		startTimeOverride: snappedTime,
-		excludeElementId: movingElement.id,
-		verticalDragDirection,
-	});
-}
-
-interface StartDragParams
-	extends Omit<
-		ElementDragState,
-		"isDragging" | "currentTime" | "currentMouseY"
-	> {
-	initialCurrentTime: MediaTime;
-	initialCurrentMouseY: number;
-}
-
 export function useElementInteraction({
 	zoomLevel,
-	timelineRef,
 	tracksContainerRef,
 	tracksScrollRef,
 	headerRef,
@@ -186,597 +29,65 @@ export function useElementInteraction({
 }: UseElementInteractionProps) {
 	const editor = useEditor();
 	const isShiftHeldRef = useShiftKey();
-	const sceneTracks = editor.scenes.getActiveScene().tracks;
-	const {
-		selectedElements,
-		isElementSelected,
-		selectElement,
-		handleElementClick: handleSelectionClick,
-	} = useElementSelection();
+	const selection = useElementSelection();
 
-	const [dragState, setDragState] =
-		useState<ElementDragState>(initialDragState);
-	const [dragDropTarget, setDragDropTarget] = useState<DropTarget | null>(null);
-	const [isPendingDrag, setIsPendingDrag] = useState(false);
-	const pendingDragRef = useRef<PendingDragState | null>(null);
-	const moveGroupRef = useRef<MoveGroup | null>(null);
-	const newTrackIdsRef = useRef<string[]>([]);
-	const groupMoveResultRef = useRef<GroupMoveResult | null>(null);
-	const lastMouseXRef = useRef(0);
-	const mouseDownLocationRef = useRef<{ x: number; y: number } | null>(null);
-
-	const startDrag = useCallback(
-		({
-			elementId,
-			dragElementIds,
-			dragTimeOffsets,
-			trackId,
-			startMouseX,
-			startMouseY,
-			startElementTime,
-			clickOffsetTime,
-			initialCurrentTime,
-			initialCurrentMouseY,
-		}: StartDragParams) => {
-			setDragState({
-				isDragging: true,
-				elementId,
-				dragElementIds,
-				dragTimeOffsets,
-				trackId,
-				startMouseX,
-				startMouseY,
-				startElementTime,
-				clickOffsetTime,
-				currentTime: initialCurrentTime,
-				currentMouseY: initialCurrentMouseY,
-			});
+	const deps: ElementInteractionDeps = {
+		viewport: {
+			getZoomLevel: () => zoomLevel,
+			getTracksScrollEl: () => tracksScrollRef.current,
+			getTracksContainerEl: () => tracksContainerRef.current,
+			getHeaderEl: () => headerRef?.current ?? null,
 		},
-		[],
-	);
-
-	const endDrag = useCallback(() => {
-		moveGroupRef.current = null;
-		newTrackIdsRef.current = [];
-		groupMoveResultRef.current = null;
-		setDragState(initialDragState);
-		setDragDropTarget(null);
-	}, []);
-
-	const cancelCurrentDrag = useCallback(() => {
-		pendingDragRef.current = null;
-		mouseDownLocationRef.current = null;
-		setIsPendingDrag(false);
-		endDrag();
-		onSnapPointChange?.(null);
-	}, [endDrag, onSnapPointChange]);
-
-	const resolveGroupDragMove = useCallback(
-		({
-			group,
-			snappedTime,
-			dropTarget,
-		}: {
-			group: MoveGroup;
-			snappedTime: MediaTime;
-			dropTarget: DropTarget | null;
-		}): GroupMoveResult | null => {
-			if (!dropTarget) {
-				return null;
-			}
-
-			if (dropTarget.isNewTrack) {
-				return resolveGroupMove({
-					group,
-					tracks: sceneTracks,
-					anchorStartTime: snappedTime,
-					target: {
-						kind: "newTracks",
-						anchorInsertIndex: dropTarget.trackIndex,
-						newTrackIds: newTrackIdsRef.current,
-					},
-				});
-			}
-
-			const orderedTracks = [
-				...sceneTracks.overlay,
-				sceneTracks.main,
-				...sceneTracks.audio,
-			];
-			const targetTrack = orderedTracks[dropTarget.trackIndex];
-			if (!targetTrack) {
-				return null;
-			}
-
-			const existingTrackResult = resolveGroupMove({
-				group,
-				tracks: sceneTracks,
-				anchorStartTime: snappedTime,
-				target: {
-					kind: "existingTrack",
-					anchorTargetTrackId: targetTrack.id,
-				},
-			});
-			if (existingTrackResult) {
-				return existingTrackResult;
-			}
-
-			return resolveGroupMove({
-				group,
-				tracks: sceneTracks,
-				anchorStartTime: snappedTime,
-				target: {
-					kind: "newTracks",
-					anchorInsertIndex: dropTarget.trackIndex,
-					newTrackIds: newTrackIdsRef.current,
-				},
-			});
+		input: {
+			isShiftHeld: () => isShiftHeldRef.current,
 		},
-		[sceneTracks],
-	);
+		scene: {
+			getTracks: () => editor.scenes.getActiveScene().tracks,
+			getActiveFps: () => editor.project.getActive()?.settings.fps ?? null,
+		},
+		selection: {
+			getSelected: () => selection.selectedElements,
+			isSelected: selection.isElementSelected,
+			select: selection.selectElement,
+			handleClick: selection.handleElementClick,
+			clearKeyframeSelection: () => editor.selection.clearKeyframeSelection(),
+		},
+		playback: {
+			getCurrentTime: () => editor.playback.getCurrentTime(),
+		},
+		timeline: {
+			moveElements: (args) => editor.timeline.moveElements(args),
+		},
+		snap: {
+			isEnabled: () => snappingEnabled,
+			onChange: onSnapPointChange,
+		},
+	};
+
+	const depsRef = useRef<ElementInteractionDeps>(deps);
+	depsRef.current = deps;
+
+	const controllerRef = useRef<ElementInteractionController | null>(null);
+	if (!controllerRef.current) {
+		controllerRef.current = new ElementInteractionController({
+			depsRef: depsRef as ElementInteractionDepsRef,
+		});
+	}
+	const controller = controllerRef.current;
+
+	const [, rerender] = useReducer((n: number) => n + 1, 0);
+	useEffect(() => controller.subscribe(rerender), [controller]);
 
 	useEffect(() => {
-		if (!dragState.isDragging && !isPendingDrag) return;
+		if (!controller.isActive) return;
+		return registerCanceller({ fn: () => controller.cancel() });
+	}, [controller.isActive, controller]);
 
-		return registerCanceller({ fn: cancelCurrentDrag });
-	}, [dragState.isDragging, isPendingDrag, cancelCurrentDrag]);
-
-	const getDragSnapResult = useCallback(
-		({
-			frameSnappedTime,
-			group,
-		}: {
-			frameSnappedTime: MediaTime;
-			group: MoveGroup | null;
-		}) => {
-			if (!group || !snappingEnabled || isShiftHeldRef.current) {
-				return { snappedTime: frameSnappedTime, snapPoint: null };
-			}
-
-			const groupSnap = snapGroupEdges({
-				group,
-				anchorStartTime: frameSnappedTime,
-				tracks: sceneTracks,
-				playheadTime: editor.playback.getCurrentTime(),
-				zoomLevel,
-			});
-
-			return {
-				snappedTime: groupSnap.snappedAnchorStartTime,
-				snapPoint: groupSnap.snapPoint,
-			};
-		},
-		[snappingEnabled, editor.playback, sceneTracks, zoomLevel, isShiftHeldRef],
-	);
-
-	useEffect(() => {
-		if (!dragState.isDragging && !isPendingDrag) return;
-
-		const handleMouseMove = ({ clientX, clientY }: MouseEvent) => {
-			let startedDragThisEvent = false;
-			const timeline = timelineRef.current;
-			const scrollContainer = tracksScrollRef.current;
-			if (!timeline || !scrollContainer) return;
-			lastMouseXRef.current = clientX;
-
-			if (isPendingDrag && pendingDragRef.current) {
-				const deltaX = Math.abs(clientX - pendingDragRef.current.startMouseX);
-				const deltaY = Math.abs(clientY - pendingDragRef.current.startMouseY);
-				if (
-					deltaX > TIMELINE_DRAG_THRESHOLD_PX ||
-					deltaY > TIMELINE_DRAG_THRESHOLD_PX
-				) {
-					const activeProject = editor.project.getActive();
-					if (!activeProject) return;
-					const scrollLeft = scrollContainer.scrollLeft;
-					const mouseTime = getMouseTimeFromClientX({
-						clientX,
-						containerRect: scrollContainer.getBoundingClientRect(),
-						zoomLevel,
-						scrollLeft,
-					});
-					const adjustedTime =
-						mouseTime > pendingDragRef.current.clickOffsetTime
-							? subMediaTime({
-									a: mouseTime,
-									b: pendingDragRef.current.clickOffsetTime,
-								})
-							: ZERO_MEDIA_TIME;
-					const snappedTime = (
-						roundToFrame({
-							time: adjustedTime,
-							rate: activeProject.settings.fps,
-						}) ?? adjustedTime
-					) as MediaTime;
-					const moveGroup = buildMoveGroup({
-						anchorRef: {
-							trackId: pendingDragRef.current.trackId,
-							elementId: pendingDragRef.current.elementId,
-						},
-						selectedElements: pendingDragRef.current.selectedElements,
-						tracks: sceneTracks,
-					});
-					if (!moveGroup) {
-						return;
-					}
-
-					moveGroupRef.current = moveGroup;
-					newTrackIdsRef.current = moveGroup.members.map(() => generateUUID());
-					const dragTimeOffsets: Record<string, MediaTime> = {};
-					for (const member of moveGroup.members) {
-						dragTimeOffsets[member.elementId] = member.timeOffset;
-					}
-					const {
-						snappedTime: initialSnappedTime,
-						snapPoint: initialSnapPoint,
-					} = getDragSnapResult({
-						frameSnappedTime: snappedTime,
-						group: moveGroup,
-					});
-					const verticalDragDirection = getVerticalDragDirection({
-						startMouseY: pendingDragRef.current.startMouseY,
-						currentMouseY: clientY,
-					});
-					const anchorDropTarget = getDragDropTarget({
-						clientX,
-						clientY,
-						elementId: pendingDragRef.current.elementId,
-						trackId: pendingDragRef.current.trackId,
-						tracks: sceneTracks,
-						tracksContainerRef,
-						tracksScrollRef,
-						headerRef,
-						zoomLevel,
-						snappedTime: initialSnappedTime,
-						verticalDragDirection,
-					});
-					const nextGroupMoveResult =
-						anchorDropTarget != null
-							? resolveGroupDragMove({
-									group: moveGroup,
-									snappedTime: initialSnappedTime,
-									dropTarget: anchorDropTarget,
-								})
-							: null;
-					groupMoveResultRef.current = nextGroupMoveResult;
-					setDragDropTarget(
-						anchorDropTarget &&
-							(anchorDropTarget.isNewTrack || !nextGroupMoveResult)
-							? {
-									...anchorDropTarget,
-									isNewTrack: true,
-								}
-							: null,
-					);
-					startDrag({
-						...pendingDragRef.current,
-						dragElementIds: moveGroup.members.map((member) => member.elementId),
-						dragTimeOffsets,
-						initialCurrentTime: initialSnappedTime,
-						initialCurrentMouseY: clientY,
-					});
-					onSnapPointChange?.(initialSnapPoint);
-					startedDragThisEvent = true;
-					pendingDragRef.current = null;
-					setIsPendingDrag(false);
-				} else {
-					return;
-				}
-			}
-
-			if (startedDragThisEvent) {
-				return;
-			}
-
-			if (dragState.elementId && dragState.trackId) {
-				const alreadySelected = isElementSelected({
-					trackId: dragState.trackId,
-					elementId: dragState.elementId,
-				});
-				if (!alreadySelected) {
-					selectElement({
-						trackId: dragState.trackId,
-						elementId: dragState.elementId,
-					});
-				}
-			}
-
-			const activeProject = editor.project.getActive();
-			if (!activeProject) return;
-
-			const scrollLeft = scrollContainer.scrollLeft;
-			const mouseTime = getMouseTimeFromClientX({
-				clientX,
-				containerRect: scrollContainer.getBoundingClientRect(),
-				zoomLevel,
-				scrollLeft,
-			});
-			const adjustedTime =
-				mouseTime > dragState.clickOffsetTime
-					? subMediaTime({
-							a: mouseTime,
-							b: dragState.clickOffsetTime,
-						})
-					: ZERO_MEDIA_TIME;
-			const fps = activeProject.settings.fps;
-			const frameSnappedTime = (
-				roundToFrame({ time: adjustedTime, rate: fps }) ?? adjustedTime
-			) as MediaTime;
-
-			const moveGroup = moveGroupRef.current;
-			const { snappedTime, snapPoint } = getDragSnapResult({
-				frameSnappedTime,
-				group: moveGroup,
-			});
-			setDragState((previousDragState) => ({
-				...previousDragState,
-				currentTime: snappedTime,
-				currentMouseY: clientY,
-			}));
-			onSnapPointChange?.(snapPoint);
-
-			if (dragState.elementId && dragState.trackId) {
-				const verticalDragDirection = getVerticalDragDirection({
-					startMouseY: dragState.startMouseY,
-					currentMouseY: clientY,
-				});
-				const anchorDropTarget = getDragDropTarget({
-					clientX,
-					clientY,
-					elementId: dragState.elementId,
-					trackId: dragState.trackId,
-					tracks: sceneTracks,
-					tracksContainerRef,
-					tracksScrollRef,
-					headerRef,
-					zoomLevel,
-					snappedTime,
-					verticalDragDirection,
-				});
-				const nextGroupMoveResult =
-					moveGroup && anchorDropTarget
-						? resolveGroupDragMove({
-								group: moveGroup,
-								snappedTime,
-								dropTarget: anchorDropTarget,
-							})
-						: null;
-				groupMoveResultRef.current = nextGroupMoveResult;
-				setDragDropTarget(
-					anchorDropTarget &&
-						(anchorDropTarget.isNewTrack || !nextGroupMoveResult)
-						? {
-								...anchorDropTarget,
-								isNewTrack: true,
-							}
-						: null,
-				);
-			}
-		};
-
-		document.addEventListener("mousemove", handleMouseMove);
-		return () => document.removeEventListener("mousemove", handleMouseMove);
-	}, [
-		dragState.isDragging,
-		dragState.clickOffsetTime,
-		dragState.elementId,
-		dragState.startMouseY,
-		dragState.trackId,
-		zoomLevel,
-		isElementSelected,
-		selectElement,
-		editor.project,
-		timelineRef,
-		tracksScrollRef,
-		tracksContainerRef,
-		headerRef,
-		isPendingDrag,
-		startDrag,
-		getDragSnapResult,
-		resolveGroupDragMove,
-		sceneTracks,
-		onSnapPointChange,
-	]);
-
-	useEffect(() => {
-		if (!dragState.isDragging) return;
-
-		const handleMouseUp = ({ clientX, clientY }: MouseEvent) => {
-			if (!dragState.elementId || !dragState.trackId) return;
-
-			if (mouseDownLocationRef.current) {
-				const deltaX = Math.abs(clientX - mouseDownLocationRef.current.x);
-				const deltaY = Math.abs(clientY - mouseDownLocationRef.current.y);
-				if (
-					deltaX <= TIMELINE_DRAG_THRESHOLD_PX &&
-					deltaY <= TIMELINE_DRAG_THRESHOLD_PX
-				) {
-					mouseDownLocationRef.current = null;
-					endDrag();
-					onSnapPointChange?.(null);
-					return;
-				}
-			}
-
-			const moveGroup = moveGroupRef.current;
-			if (!moveGroup) {
-				endDrag();
-				onSnapPointChange?.(null);
-				return;
-			}
-
-			const groupMoveResult = groupMoveResultRef.current;
-			if (!groupMoveResult) {
-				endDrag();
-				onSnapPointChange?.(null);
-				return;
-			}
-
-			const didMove = groupMoveResult.moves.some((move) => {
-				const currentMember = moveGroup.members.find(
-					(member) => member.elementId === move.elementId,
-				);
-				const originalStartTime = addMediaTime({
-					a: dragState.startElementTime,
-					b: currentMember?.timeOffset ?? ZERO_MEDIA_TIME,
-				});
-				return (
-					currentMember?.trackId !== move.targetTrackId ||
-					originalStartTime !== move.newStartTime
-				);
-			});
-			if (!didMove && groupMoveResult.createTracks.length === 0) {
-				endDrag();
-				onSnapPointChange?.(null);
-				return;
-			}
-
-			editor.timeline.moveElements({
-				moves: groupMoveResult.moves,
-				createTracks: groupMoveResult.createTracks,
-			});
-			endDrag();
-			onSnapPointChange?.(null);
-		};
-
-		document.addEventListener("mouseup", handleMouseUp);
-		return () => document.removeEventListener("mouseup", handleMouseUp);
-	}, [
-		dragState.isDragging,
-		dragState.elementId,
-		dragState.startElementTime,
-		dragState.trackId,
-		endDrag,
-		onSnapPointChange,
-		editor.timeline,
-	]);
-
-	useEffect(() => {
-		if (!isPendingDrag) return;
-
-		const handleMouseUp = () => {
-			pendingDragRef.current = null;
-			setIsPendingDrag(false);
-			onSnapPointChange?.(null);
-		};
-
-		document.addEventListener("mouseup", handleMouseUp);
-		return () => document.removeEventListener("mouseup", handleMouseUp);
-	}, [isPendingDrag, onSnapPointChange]);
-
-	const handleElementMouseDown = useCallback(
-		({
-			event,
-			element,
-			track,
-		}: {
-			event: ReactMouseEvent;
-			element: TimelineElement;
-			track: TimelineTrack;
-		}) => {
-			const isRightClick = event.button === MOUSE_BUTTON_RIGHT;
-
-			// right-click: don't stop propagation so ContextMenu can open
-			if (isRightClick) {
-				const alreadySelected = isElementSelected({
-					trackId: track.id,
-					elementId: element.id,
-				});
-				if (!alreadySelected) {
-					handleSelectionClick({
-						trackId: track.id,
-						elementId: element.id,
-						isMultiKey: false,
-					});
-				}
-				return;
-			}
-
-			event.stopPropagation();
-			mouseDownLocationRef.current = { x: event.clientX, y: event.clientY };
-
-			const isMultiSelect = event.metaKey || event.ctrlKey || event.shiftKey;
-
-			if (isMultiSelect) {
-				handleSelectionClick({
-					trackId: track.id,
-					elementId: element.id,
-					isMultiKey: true,
-				});
-			}
-
-			const clickOffsetTime = getClickOffsetTime({
-				clientX: event.clientX,
-				elementRect: event.currentTarget.getBoundingClientRect(),
-				zoomLevel,
-			});
-			const elementRef = {
-				trackId: track.id,
-				elementId: element.id,
-			};
-			const pendingSelectedElements = isElementSelected(elementRef)
-				? selectedElements
-				: [elementRef];
-			pendingDragRef.current = {
-				elementId: element.id,
-				trackId: track.id,
-				selectedElements: pendingSelectedElements,
-				startMouseX: event.clientX,
-				startMouseY: event.clientY,
-				startElementTime: element.startTime,
-				clickOffsetTime,
-			};
-			setIsPendingDrag(true);
-		},
-		[zoomLevel, isElementSelected, handleSelectionClick, selectedElements],
-	);
-
-	const handleElementClick = useCallback(
-		({
-			event,
-			element,
-			track,
-		}: {
-			event: ReactMouseEvent;
-			element: TimelineElement;
-			track: TimelineTrack;
-		}) => {
-			event.stopPropagation();
-
-			if (mouseDownLocationRef.current) {
-				const deltaX = Math.abs(event.clientX - mouseDownLocationRef.current.x);
-				const deltaY = Math.abs(event.clientY - mouseDownLocationRef.current.y);
-				if (
-					deltaX > TIMELINE_DRAG_THRESHOLD_PX ||
-					deltaY > TIMELINE_DRAG_THRESHOLD_PX
-				) {
-					mouseDownLocationRef.current = null;
-					return;
-				}
-			}
-
-			// modifier keys already handled in mousedown
-			if (event.metaKey || event.ctrlKey || event.shiftKey) return;
-
-			const alreadySelected = isElementSelected({
-				trackId: track.id,
-				elementId: element.id,
-			});
-			if (!alreadySelected || selectedElements.length > 1) {
-				selectElement({ trackId: track.id, elementId: element.id });
-				return;
-			}
-
-			editor.selection.clearKeyframeSelection();
-		},
-		[editor.selection, isElementSelected, selectElement, selectedElements],
-	);
+	useEffect(() => () => controller.destroy(), [controller]);
 
 	return {
-		dragState,
-		dragDropTarget,
-		handleElementMouseDown,
-		handleElementClick,
-		lastMouseXRef,
+		dragView: controller.view,
+		handleElementMouseDown: controller.onElementMouseDown,
+		handleElementClick: controller.onElementClick,
 	};
 }

@@ -7,7 +7,6 @@ import type { BookmarkDragState } from "../hooks/use-bookmark-drag";
 import { DEFAULT_TIMELINE_BOOKMARK_COLOR } from "@/timeline/components/theme";
 import { TIMELINE_BOOKMARK_ROW_HEIGHT_PX } from "@/timeline/components/layout";
 import { DEFAULT_FPS } from "@/fps/defaults";
-import { snappedSeekTime } from "opencut-wasm";
 import {
 	ArrowTurnBackwardIcon,
 	Delete02Icon,
@@ -30,6 +29,7 @@ import {
 	type MediaTime,
 	mediaTimeFromSeconds,
 	mediaTimeToSeconds,
+	snapSeekMediaTime,
 	subMediaTime,
 	ZERO_MEDIA_TIME,
 } from "@/wasm";
@@ -51,7 +51,7 @@ function seekToBookmarkTime({
 	const activeProject = editor.project.getActive();
 	const duration = editor.timeline.getTotalDuration();
 	const rate = activeProject?.settings.fps ?? DEFAULT_FPS;
-	const snappedTime = (snappedSeekTime({ time, duration, rate }) ?? time) as MediaTime;
+	const snappedTime = snapSeekMediaTime({ time, duration, fps: rate });
 	editor.playback.seek({ time: snappedTime });
 }
 

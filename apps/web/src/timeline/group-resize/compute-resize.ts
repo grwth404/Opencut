@@ -1,9 +1,20 @@
-import { roundToFrame } from "opencut-wasm";
 import {
 	getSourceSpanAtClipTime,
 	getTimelineDurationForSourceSpan,
 } from "@/retime";
-import { TICKS_PER_SECOND, roundMediaTime } from "@/wasm";
+import {
+	addMediaTime,
+	clampMediaTime,
+	maxMediaTime,
+	type MediaTime,
+	mediaTime,
+	minMediaTime,
+	roundFrameTicks,
+	roundMediaTime,
+	subMediaTime,
+	TICKS_PER_SECOND,
+	ZERO_MEDIA_TIME,
+} from "@/wasm";
 import type {
 	ComputeGroupResizeArgs,
 	GroupResizeMember,
@@ -18,31 +29,54 @@ export function computeGroupResize({
 	deltaTime,
 	fps,
 }: ComputeGroupResizeArgs): GroupResizeResult {
-	const minDuration = Math.round(
-		(TICKS_PER_SECOND * fps.denominator) / fps.numerator,
-	);
-	const minimumDeltaTime = Math.max(
-		...members.map((member) =>
-			getMinimumAllowedDeltaTime({
+	if (members.length === 0) {
+		return { deltaTime: ZERO_MEDIA_TIME, updates: [] };
+	}
+
+	const minDuration = mediaTime({
+		ticks: Math.round((TICKS_PER_SECOND * fps.denominator) / fps.numerator),
+	});
+	let minimumDeltaTime = getMinimumAllowedDeltaTime({
+		member: members[0],
+		side,
+		minDuration,
+	});
+	let maximumDeltaTime = getMaximumAllowedDeltaTime({
+		member: members[0],
+		side,
+		minDuration,
+	});
+
+	for (const member of members.slice(1)) {
+		minimumDeltaTime = maxMediaTime({
+			a: minimumDeltaTime,
+			b: getMinimumAllowedDeltaTime({
 				member,
 				side,
 				minDuration,
 			}),
-		),
-	);
-	const maximumDeltaTime = Math.min(
-		...members.map((member) =>
-			getMaximumAllowedDeltaTime({
-				member,
-				side,
-				minDuration,
-			}),
-		),
-	);
+		});
+		const memberMaximum = getMaximumAllowedDeltaTime({
+			member,
+			side,
+			minDuration,
+		});
+		if (memberMaximum !== null) {
+			maximumDeltaTime =
+				maximumDeltaTime === null
+					? memberMaximum
+					: minMediaTime({ a: maximumDeltaTime, b: memberMaximum });
+		}
+	}
+
 	const clampedDeltaTime =
-		minimumDeltaTime > maximumDeltaTime
-			? minimumDeltaTime
-			: Math.min(maximumDeltaTime, Math.max(minimumDeltaTime, deltaTime));
+		maximumDeltaTime === null
+			? maxMediaTime({ a: minimumDeltaTime, b: deltaTime })
+			: clampMediaTime({
+					time: deltaTime,
+					min: minimumDeltaTime,
+					max: maximumDeltaTime,
+				});
 
 	// Snap the drag delta to a frame exactly once, then derive every patch
 	// field from that single snapped value. This keeps the invariant
@@ -51,22 +85,24 @@ export function computeGroupResize({
 	// so the rounding cancels by construction. Per-field rounding (the old
 	// approach) couldn't preserve this because the individual rounds don't
 	// compose when `sourceDuration` isn't frame-aligned.
-	const snappedDeltaTime =
-		roundToFrame({ time: clampedDeltaTime, rate: fps }) ?? clampedDeltaTime;
+	const snappedDeltaTime = mediaTime({
+		ticks: roundFrameTicks({ ticks: clampedDeltaTime, fps }),
+	});
 	// Re-clamp after rounding. Bounds derived from other elements are
 	// frame-aligned, so this is normally a no-op; at the source-extent limit
 	// the bound may not be frame-aligned, and honouring the bound takes
 	// precedence over frame alignment (you can't extend past real content).
 	const finalDeltaTime =
-		minimumDeltaTime > maximumDeltaTime
-			? minimumDeltaTime
-			: Math.min(
-					maximumDeltaTime,
-					Math.max(minimumDeltaTime, snappedDeltaTime),
-				);
+		maximumDeltaTime === null
+			? maxMediaTime({ a: minimumDeltaTime, b: snappedDeltaTime })
+			: clampMediaTime({
+					time: snappedDeltaTime,
+					min: minimumDeltaTime,
+					max: maximumDeltaTime,
+				});
 
 	return {
-		deltaTime: Object.is(finalDeltaTime, -0) ? 0 : finalDeltaTime,
+		deltaTime: Object.is(finalDeltaTime, -0) ? ZERO_MEDIA_TIME : finalDeltaTime,
 		updates: members.map((member) =>
 			buildResizeUpdate({
 				member,
@@ -84,7 +120,7 @@ function buildResizeUpdate({
 }: {
 	member: GroupResizeMember;
 	side: ResizeSide;
-	deltaTime: number;
+	deltaTime: MediaTime;
 }): GroupResizeUpdate {
 	const sourceDelta = getSourceDeltaForClipDelta({
 		member,
@@ -96,10 +132,13 @@ function buildResizeUpdate({
 			trackId: member.trackId,
 			elementId: member.elementId,
 			patch: {
-				trimStart: Math.max(0, member.trimStart + sourceDelta),
+				trimStart: maxMediaTime({
+					a: ZERO_MEDIA_TIME,
+					b: addMediaTime({ a: member.trimStart, b: sourceDelta }),
+				}),
 				trimEnd: member.trimEnd,
-				startTime: member.startTime + deltaTime,
-				duration: member.duration - deltaTime,
+				startTime: addMediaTime({ a: member.startTime, b: deltaTime }),
+				duration: subMediaTime({ a: member.duration, b: deltaTime }),
 			},
 		};
 	}
@@ -109,9 +148,12 @@ function buildResizeUpdate({
 		elementId: member.elementId,
 		patch: {
 			trimStart: member.trimStart,
-			trimEnd: Math.max(0, member.trimEnd - sourceDelta),
+			trimEnd: maxMediaTime({
+				a: ZERO_MEDIA_TIME,
+				b: subMediaTime({ a: member.trimEnd, b: sourceDelta }),
+			}),
 			startTime: member.startTime,
-			duration: member.duration + deltaTime,
+			duration: addMediaTime({ a: member.duration, b: deltaTime }),
 		},
 	};
 }
@@ -123,29 +165,37 @@ function getMinimumAllowedDeltaTime({
 }: {
 	member: GroupResizeMember;
 	side: ResizeSide;
-	minDuration: number;
-}): number {
+	minDuration: MediaTime;
+}): MediaTime {
 	if (side === "right") {
-		return minDuration - member.duration;
+		return subMediaTime({ a: minDuration, b: member.duration });
 	}
 
-	const leftNeighborFloor = Number.isFinite(member.leftNeighborBound)
-		? member.leftNeighborBound - member.startTime
-		: -member.startTime;
+	const leftNeighborFloor =
+		member.leftNeighborBound !== null
+			? subMediaTime({ a: member.leftNeighborBound, b: member.startTime })
+			: subMediaTime({ a: ZERO_MEDIA_TIME, b: member.startTime });
 	if (member.sourceDuration == null) {
 		return leftNeighborFloor;
 	}
 
-	const maximumSourceExtension =
-		getDurationForVisibleSourceSpan({
+	const maximumSourceExtension = subMediaTime({
+		a: getDurationForVisibleSourceSpan({
 			member,
-			sourceSpan:
-				getVisibleSourceSpanForDuration({
+			sourceSpan: addMediaTime({
+				a: getVisibleSourceSpanForDuration({
 					member,
 					duration: member.duration,
-				}) + member.trimStart,
-		}) - member.duration;
-	return Math.max(leftNeighborFloor, -maximumSourceExtension);
+				}),
+				b: member.trimStart,
+			}),
+		}),
+		b: member.duration,
+	});
+	return maxMediaTime({
+		a: leftNeighborFloor,
+		b: subMediaTime({ a: ZERO_MEDIA_TIME, b: maximumSourceExtension }),
+	});
 }
 
 function getMaximumAllowedDeltaTime({
@@ -155,26 +205,38 @@ function getMaximumAllowedDeltaTime({
 }: {
 	member: GroupResizeMember;
 	side: ResizeSide;
-	minDuration: number;
-}): number {
+	minDuration: MediaTime;
+}): MediaTime | null {
 	if (side === "left") {
-		return member.duration - minDuration;
+		return subMediaTime({ a: member.duration, b: minDuration });
 	}
 
-	const rightNeighborCeiling = Number.isFinite(member.rightNeighborBound)
-		? member.rightNeighborBound - (member.startTime + member.duration)
-		: Infinity;
+	const rightNeighborCeiling =
+		member.rightNeighborBound === null
+			? null
+			: subMediaTime({
+					a: member.rightNeighborBound,
+					b: addMediaTime({ a: member.startTime, b: member.duration }),
+				});
 	if (member.sourceDuration == null) {
 		return rightNeighborCeiling;
 	}
 
-	const maximumVisibleSourceSpan =
-		getSourceDuration({ member }) - member.trimStart;
+	const maximumVisibleSourceSpan = subMediaTime({
+		a: getSourceDuration({ member }),
+		b: member.trimStart,
+	});
 	const maximumDuration = getDurationForVisibleSourceSpan({
 		member,
 		sourceSpan: maximumVisibleSourceSpan,
 	});
-	return Math.min(rightNeighborCeiling, maximumDuration - member.duration);
+	const sourceDurationCeiling = subMediaTime({
+		a: maximumDuration,
+		b: member.duration,
+	});
+	return rightNeighborCeiling === null
+		? sourceDurationCeiling
+		: minMediaTime({ a: rightNeighborCeiling, b: sourceDurationCeiling });
 }
 
 function getSourceDeltaForClipDelta({
@@ -182,8 +244,8 @@ function getSourceDeltaForClipDelta({
 	clipDelta,
 }: {
 	member: GroupResizeMember;
-	clipDelta: number;
-}): number {
+	clipDelta: MediaTime;
+}): MediaTime {
 	if (!member.retime) {
 		return clipDelta;
 	}
@@ -206,15 +268,17 @@ function getVisibleSourceSpanForDuration({
 	duration,
 }: {
 	member: GroupResizeMember;
-	duration: number;
-}): number {
+	duration: MediaTime;
+}): MediaTime {
 	if (!member.retime) {
 		return duration;
 	}
 
-	return getSourceSpanAtClipTime({
-		clipTime: duration,
-		retime: member.retime,
+	return roundMediaTime({
+		time: getSourceSpanAtClipTime({
+			clipTime: duration,
+			retime: member.retime,
+		}),
 	});
 }
 
@@ -223,8 +287,8 @@ function getDurationForVisibleSourceSpan({
 	sourceSpan,
 }: {
 	member: GroupResizeMember;
-	sourceSpan: number;
-}): number {
+	sourceSpan: MediaTime;
+}): MediaTime {
 	if (!member.retime) {
 		return sourceSpan;
 	}
@@ -237,17 +301,19 @@ function getDurationForVisibleSourceSpan({
 	});
 }
 
-function getSourceDuration({ member }: { member: GroupResizeMember }): number {
-	if (typeof member.sourceDuration === "number") {
+function getSourceDuration({ member }: { member: GroupResizeMember }): MediaTime {
+	if (member.sourceDuration != null) {
 		return member.sourceDuration;
 	}
 
-	return (
-		member.trimStart +
-		getVisibleSourceSpanForDuration({
+	return addMediaTime({
+		a: addMediaTime({
+			a: member.trimStart,
+			b: getVisibleSourceSpanForDuration({
 			member,
 			duration: member.duration,
-		}) +
-		member.trimEnd
-	);
+			}),
+		}),
+		b: member.trimEnd,
+	});
 }

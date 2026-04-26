@@ -284,6 +284,23 @@ export interface ElementDragState {
 	currentMouseY: number;
 }
 
+export type ElementDragView =
+	| { readonly kind: "idle" }
+	| {
+			readonly kind: "dragging";
+			readonly anchorElementId: string;
+			readonly trackId: string;
+			readonly memberTimeOffsets: ReadonlyMap<string, MediaTime>;
+			readonly startMouseX: number;
+			readonly startMouseY: number;
+			readonly startElementTime: MediaTime;
+			readonly clickOffsetTime: MediaTime;
+			readonly currentTime: MediaTime;
+			readonly currentMouseX: number;
+			readonly currentMouseY: number;
+			readonly dropTarget: DropTarget | null;
+	  };
+
 export interface DropTarget {
 	trackIndex: number;
 	isNewTrack: boolean;

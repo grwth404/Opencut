@@ -9,8 +9,9 @@ import type {
 	RetimeConfig,
 } from "@/timeline";
 import { calculateTotalDuration } from "@/timeline";
+import { TimelineDragSource } from "@/timeline/drag-source";
 import { findTrackInSceneTracks } from "@/timeline/track-element-update";
-import { type MediaTime, ZERO_MEDIA_TIME } from "@/wasm";
+import { lastFrameMediaTime, type MediaTime, ZERO_MEDIA_TIME } from "@/wasm";
 import {
 	canElementBeHidden,
 	canElementHaveAudio,
@@ -27,7 +28,6 @@ import {
 	resolveAnimationTarget,
 	resolveAnimationPathValueAtTime,
 } from "@/animation";
-import { lastFrameTime } from "opencut-wasm";
 import { BatchCommand } from "@/commands";
 import {
 	AddTrackCommand,
@@ -68,6 +68,7 @@ export class TimelineManager {
 	private listeners = new Set<() => void>();
 	private previewOverlay = new Map<string, Partial<TimelineElement>>();
 	private previewTracks: SceneTracks | null = null;
+	public readonly dragSource = new TimelineDragSource();
 
 	constructor(private editor: EditorCore) {}
 
@@ -214,7 +215,7 @@ export class TimelineManager {
 		const duration = this.getTotalDuration();
 		const fps = this.editor.project.getActive()?.settings.fps;
 		if (!fps || duration <= 0) return duration;
-		return (lastFrameTime({ duration, rate: fps }) ?? duration) as MediaTime;
+		return lastFrameMediaTime({ duration, fps });
 	}
 
 	getTrackById({ trackId }: { trackId: string }): TimelineTrack | null {
@@ -707,11 +708,11 @@ export class TimelineManager {
 	previewElements({
 		updates,
 	}: {
-		updates: Array<{
+		updates: readonly {
 			trackId: string;
 			elementId: string;
 			updates: Partial<TimelineElement>;
-		}>;
+		}[];
 	}): void {
 		let changedOverlayCount = 0;
 		for (const { elementId, updates: elementUpdates } of updates) {

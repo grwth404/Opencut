@@ -1,7 +1,6 @@
 import type { Bookmark } from "@/timeline";
 import type { FrameRate } from "opencut-wasm";
-import { roundToFrame } from "opencut-wasm";
-import { addMediaTime, type MediaTime } from "@/wasm";
+import { addMediaTime, roundFrameTime, type MediaTime } from "@/wasm";
 
 function bookmarkTimeEqual({
 	bookmarkTime,
@@ -114,7 +113,7 @@ export function getFrameTime({
 	time: MediaTime;
 	fps: FrameRate;
 }): MediaTime {
-	return (roundToFrame({ time, rate: fps }) ?? time) as MediaTime;
+	return roundFrameTime({ time, fps });
 }
 
 export function getBookmarkAtTime({

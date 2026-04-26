@@ -73,15 +73,13 @@ function TimecodeDisplay() {
 	);
 
 	useEffect(() => {
-		const handler = (e: Event) =>
-			setCurrentTime((e as CustomEvent<{ time: MediaTime }>).detail.time);
-		window.addEventListener("playback-update", handler);
-		window.addEventListener("playback-seek", handler);
+		const unsubscribeUpdate = editor.playback.onUpdate(setCurrentTime);
+		const unsubscribeSeek = editor.playback.onSeek(setCurrentTime);
 		return () => {
-			window.removeEventListener("playback-update", handler);
-			window.removeEventListener("playback-seek", handler);
+			unsubscribeUpdate();
+			unsubscribeSeek();
 		};
-	}, []);
+	}, [editor.playback]);
 
 	return (
 		<div className="flex items-center">

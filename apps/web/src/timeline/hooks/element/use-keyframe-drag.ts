@@ -1,48 +1,16 @@
-import {
-	useState,
-	useCallback,
-	useEffect,
-	useRef,
-	type MouseEvent as ReactMouseEvent,
-} from "react";
+import { useEffect, useReducer, useRef } from "react";
 import { useEditor } from "@/editor/use-editor";
-import { getKeyframeById } from "@/animation";
 import { useKeyframeSelection } from "./use-keyframe-selection";
-import { roundToFrame, snappedSeekTime } from "opencut-wasm";
-import { timelineTimeToSnappedPixels } from "@/timeline";
-import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/timeline/scale";
-import {
-	addMediaTime,
-	type MediaTime,
-	maxMediaTime,
-	mediaTime,
-	minMediaTime,
-	TICKS_PER_SECOND,
-	ZERO_MEDIA_TIME,
-} from "@/wasm";
-import { TIMELINE_DRAG_THRESHOLD_PX } from "@/timeline/components/interaction";
-import { RetimeKeyframeCommand } from "@/commands/timeline/element/keyframes/retime-keyframe";
-import { BatchCommand } from "@/commands";
-import type { SelectedKeyframeRef } from "@/animation/types";
-import type { TimelineElement } from "@/timeline";
-import type { Command } from "@/commands/base-command";
 import { registerCanceller } from "@/editor/cancel-interaction";
-export interface KeyframeDragState {
-	isDragging: boolean;
-	draggingKeyframeIds: Set<string>;
-	deltaTime: MediaTime;
-}
+import {
+	KeyframeDragController,
+	type KeyframeDragConfig,
+	type KeyframeDragState,
+} from "@/timeline/controllers/keyframe-drag-controller";
+import type { TimelineElement } from "@/timeline";
+import type { MediaTime } from "@/wasm";
 
-const initialDragState: KeyframeDragState = {
-	isDragging: false,
-	draggingKeyframeIds: new Set(),
-	deltaTime: ZERO_MEDIA_TIME,
-};
-
-interface PendingKeyframeDrag {
-	keyframeRefs: SelectedKeyframeRef[];
-	startMouseX: number;
-}
+export type { KeyframeDragState };
 
 export function useKeyframeDrag({
 	zoomLevel,
@@ -62,286 +30,44 @@ export function useKeyframeDrag({
 		selectKeyframeRange,
 	} = useKeyframeSelection();
 
-	const [dragState, setDragState] =
-		useState<KeyframeDragState>(initialDragState);
-	const [isPendingDrag, setIsPendingDrag] = useState(false);
-
-	const pendingDragRef = useRef<PendingKeyframeDrag | null>(null);
-	const mouseDownXRef = useRef<number | null>(null);
-
-	const activeProject = editor.project.getActive();
-	const fps = activeProject.settings.fps;
-
-	const pixelsPerSecond = BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel;
-
-	const endDrag = useCallback(() => {
-		setDragState(initialDragState);
-	}, []);
-
-	const cancelDrag = useCallback(() => {
-		pendingDragRef.current = null;
-		mouseDownXRef.current = null;
-		setIsPendingDrag(false);
-		endDrag();
-	}, [endDrag]);
-
-	const commitDrag = useCallback(
-		({
-			keyframeRefs,
-			deltaTime,
-		}: {
-			keyframeRefs: SelectedKeyframeRef[];
-			deltaTime: MediaTime;
-		}) => {
-			const commands: Command[] = keyframeRefs.flatMap((keyframeRef) => {
-				const keyframe = getKeyframeById({
-					animations: element.animations,
-					propertyPath: keyframeRef.propertyPath,
-					keyframeId: keyframeRef.keyframeId,
-				});
-				if (!keyframe) return [];
-				const nextTime = maxMediaTime({
-					a: ZERO_MEDIA_TIME,
-					b: minMediaTime({
-						a: element.duration,
-						b: addMediaTime({ a: keyframe.time, b: deltaTime }),
-					}),
-				});
-				return [
-					new RetimeKeyframeCommand({
-						trackId: keyframeRef.trackId,
-						elementId: keyframeRef.elementId,
-						propertyPath: keyframeRef.propertyPath,
-						keyframeId: keyframeRef.keyframeId,
-						nextTime,
-					}),
-				];
-			});
-
-			if (commands.length === 1) {
-				editor.command.execute({ command: commands[0] });
-			} else if (commands.length > 1) {
-				editor.command.execute({ command: new BatchCommand(commands) });
-			}
-		},
-		[editor.command, element],
-	);
-
-	useEffect(() => {
-		if (!dragState.isDragging && !isPendingDrag) return;
-
-		return registerCanceller({ fn: cancelDrag });
-	}, [dragState.isDragging, isPendingDrag, cancelDrag]);
-
-	useEffect(() => {
-		if (!dragState.isDragging && !isPendingDrag) return;
-
-		const handleMouseMove = ({ clientX }: MouseEvent) => {
-			if (isPendingDrag && pendingDragRef.current) {
-				const deltaX = Math.abs(clientX - pendingDragRef.current.startMouseX);
-				if (deltaX <= TIMELINE_DRAG_THRESHOLD_PX) return;
-
-				const pending = pendingDragRef.current;
-				pendingDragRef.current = null;
-				setIsPendingDrag(false);
-				setDragState({
-					isDragging: true,
-					draggingKeyframeIds: new Set(
-						pending.keyframeRefs.map((keyframe) => keyframe.keyframeId),
-					),
-					deltaTime: ZERO_MEDIA_TIME,
-				});
-				return;
-			}
-
-			if (!dragState.isDragging) return;
-
-			const startX = mouseDownXRef.current ?? clientX;
-			const rawDelta = mediaTime({
-				ticks: Math.round(
-					((clientX - startX) / pixelsPerSecond) * TICKS_PER_SECOND,
-				),
-			});
-			const snappedDelta = (
-				roundToFrame({ time: rawDelta, rate: fps }) ?? rawDelta
-			) as MediaTime;
-
-			setDragState((previous) => ({ ...previous, deltaTime: snappedDelta }));
-		};
-
-		document.addEventListener("mousemove", handleMouseMove);
-		return () => document.removeEventListener("mousemove", handleMouseMove);
-	}, [dragState.isDragging, isPendingDrag, pixelsPerSecond, fps]);
-
-	useEffect(() => {
-		if (!dragState.isDragging) return;
-
-		const handleMouseUp = () => {
-			const draggingRefs = selectedKeyframes.filter(
-				(keyframe) =>
-					keyframe.elementId === element.id &&
-					dragState.draggingKeyframeIds.has(keyframe.keyframeId),
-			);
-
-			if (draggingRefs.length > 0 && dragState.deltaTime !== 0) {
-				commitDrag({
-					keyframeRefs: draggingRefs,
-					deltaTime: dragState.deltaTime,
-				});
-			}
-
-			endDrag();
-		};
-
-		document.addEventListener("mouseup", handleMouseUp);
-		return () => document.removeEventListener("mouseup", handleMouseUp);
-	}, [
-		dragState.isDragging,
-		dragState.draggingKeyframeIds,
-		dragState.deltaTime,
+	const config: KeyframeDragConfig = {
+		zoomLevel,
+		element,
+		displayedStartTime,
+		getFps: () => editor.project.getActive()?.settings.fps ?? null,
 		selectedKeyframes,
-		element.id,
-		commitDrag,
-		endDrag,
-	]);
+		isKeyframeSelected,
+		setKeyframeSelection,
+		toggleKeyframeSelection,
+		selectKeyframeRange,
+		executeCommand: (command) => editor.command.execute({ command }),
+		seek: ({ time }) => editor.playback.seek({ time }),
+		getTotalDuration: () => editor.timeline.getTotalDuration(),
+	};
+
+	const configRef = useRef<KeyframeDragConfig>(config);
+	configRef.current = config;
+
+	const controllerRef = useRef<KeyframeDragController | null>(null);
+	if (!controllerRef.current) {
+		controllerRef.current = new KeyframeDragController({ configRef });
+	}
+	const controller = controllerRef.current;
+
+	const [, rerender] = useReducer((n: number) => n + 1, 0);
+	useEffect(() => controller.subscribe(rerender), [controller]);
 
 	useEffect(() => {
-		if (!isPendingDrag) return;
+		if (!controller.isActive) return;
+		return registerCanceller({ fn: () => controller.cancel() });
+	}, [controller.isActive, controller]);
 
-		const handleMouseUp = () => {
-			pendingDragRef.current = null;
-			setIsPendingDrag(false);
-		};
-
-		document.addEventListener("mouseup", handleMouseUp);
-		return () => document.removeEventListener("mouseup", handleMouseUp);
-	}, [isPendingDrag]);
-
-	const handleKeyframeMouseDown = useCallback(
-		({
-			event,
-			keyframes,
-		}: {
-			event: ReactMouseEvent;
-			keyframes: SelectedKeyframeRef[];
-		}) => {
-			event.preventDefault();
-			event.stopPropagation();
-
-			mouseDownXRef.current = event.clientX;
-
-			const anySelected = keyframes.some((keyframe) =>
-				isKeyframeSelected({ keyframe }),
-			);
-
-			const isModifierKey = event.shiftKey || event.metaKey || event.ctrlKey;
-			if (!anySelected && !isModifierKey) {
-				setKeyframeSelection({ keyframes });
-			}
-
-			const keyframeRefsToTrack = anySelected ? selectedKeyframes : keyframes;
-
-			pendingDragRef.current = {
-				keyframeRefs: keyframeRefsToTrack,
-				startMouseX: event.clientX,
-			};
-			setIsPendingDrag(true);
-		},
-		[isKeyframeSelected, selectedKeyframes, setKeyframeSelection],
-	);
-
-	const handleKeyframeClick = useCallback(
-		({
-			event,
-			keyframes,
-			orderedKeyframes,
-			indicatorTime,
-		}: {
-			event: ReactMouseEvent;
-			keyframes: SelectedKeyframeRef[];
-			orderedKeyframes: SelectedKeyframeRef[];
-			indicatorTime: MediaTime;
-		}) => {
-			event.stopPropagation();
-
-			const wasDrag =
-				mouseDownXRef.current !== null &&
-				Math.abs(event.clientX - mouseDownXRef.current) >
-					TIMELINE_DRAG_THRESHOLD_PX;
-			mouseDownXRef.current = null;
-
-			if (wasDrag) return;
-
-			const duration = editor.timeline.getTotalDuration();
-			const absoluteIndicatorTime = addMediaTime({
-				a: displayedStartTime,
-				b: indicatorTime,
-			});
-			const seekTime = (
-				snappedSeekTime({
-					time: absoluteIndicatorTime,
-					duration,
-					rate: fps,
-				}) ?? absoluteIndicatorTime
-			) as MediaTime;
-			editor.playback.seek({ time: seekTime });
-
-			if (event.shiftKey) {
-				selectKeyframeRange({
-					orderedKeyframes,
-					targetKeyframes: keyframes,
-					isAdditive: event.metaKey || event.ctrlKey,
-				});
-				return;
-			}
-
-			toggleKeyframeSelection({
-				keyframes,
-				isMultiKey: event.metaKey || event.ctrlKey,
-			});
-		},
-		[
-			toggleKeyframeSelection,
-			selectKeyframeRange,
-			editor,
-			displayedStartTime,
-			fps,
-		],
-	);
-
-	const getVisualOffsetPx = useCallback(
-		({
-			indicatorTime,
-			indicatorOffsetPx,
-			isBeingDragged,
-			displayedStartTime,
-			elementLeft,
-		}: {
-			indicatorTime: number;
-			indicatorOffsetPx: number;
-			isBeingDragged: boolean;
-			displayedStartTime: number;
-			elementLeft: number;
-		}): number => {
-			if (!isBeingDragged) return indicatorOffsetPx;
-			const clampedTime = Math.max(
-				0,
-				Math.min(element.duration, indicatorTime + dragState.deltaTime),
-			);
-			return (
-				timelineTimeToSnappedPixels({
-					time: displayedStartTime + clampedTime,
-					zoomLevel,
-				}) - elementLeft
-			);
-		},
-		[dragState.deltaTime, element.duration, zoomLevel],
-	);
+	useEffect(() => () => controller.destroy(), [controller]);
 
 	return {
-		keyframeDragState: dragState,
-		handleKeyframeMouseDown,
-		handleKeyframeClick,
-		getVisualOffsetPx,
+		keyframeDragState: controller.keyframeDragState,
+		handleKeyframeMouseDown: controller.onKeyframeMouseDown,
+		handleKeyframeClick: controller.onKeyframeClick,
+		getVisualOffsetPx: controller.getVisualOffsetPx,
 	};
 }

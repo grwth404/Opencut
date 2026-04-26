@@ -34,7 +34,7 @@ import {
 import type {
 	TimelineElement as TimelineElementType,
 	TimelineTrack,
-	ElementDragState,
+	ElementDragView,
 	VideoElement,
 	ImageElement,
 	AudioElement,
@@ -49,12 +49,7 @@ import {
 import { buildWaveformGainSamples } from "@/timeline/audio-state";
 import { getTimelinePixelsPerSecond } from "@/timeline";
 import { buildWaveformSourceKey } from "@/media/waveform-summary";
-import {
-	addMediaTime,
-	type MediaTime,
-	TICKS_PER_SECOND,
-	ZERO_MEDIA_TIME,
-} from "@/wasm";
+import { addMediaTime, type MediaTime, TICKS_PER_SECOND } from "@/wasm";
 import {
 	getActionDefinition,
 	type TAction,
@@ -219,7 +214,7 @@ interface TimelineElementProps {
 		event: React.MouseEvent,
 		element: TimelineElementType,
 	) => void;
-	dragState: ElementDragState;
+	dragView: ElementDragView;
 	isDropTarget?: boolean;
 }
 
@@ -231,7 +226,7 @@ export function TimelineElement({
 	onResizeStart,
 	onElementMouseDown,
 	onElementClick,
-	dragState,
+	dragView,
 	isDropTarget = false,
 }: TimelineElementProps) {
 	const mediaAssets = useEditor((e) => e.media.getAssets());
@@ -257,16 +252,18 @@ export function TimelineElement({
 			selected.elementId === element.id && selected.trackId === track.id,
 	);
 
-	const isBeingDragged = dragState.dragElementIds.includes(element.id);
+	const isDragging = dragView.kind === "dragging";
+	const dragTimeOffset = isDragging
+		? dragView.memberTimeOffsets.get(element.id)
+		: undefined;
+	const isBeingDragged = dragTimeOffset !== undefined;
 	const dragOffsetY =
-		isBeingDragged && dragState.isDragging
-			? dragState.currentMouseY - dragState.startMouseY
+		isDragging && isBeingDragged
+			? dragView.currentMouseY - dragView.startMouseY
 			: 0;
-	const dragTimeOffset =
-		dragState.dragTimeOffsets[element.id] ?? ZERO_MEDIA_TIME;
 	const elementStartTime =
-		isBeingDragged && dragState.isDragging
-			? addMediaTime({ a: dragState.currentTime, b: dragTimeOffset })
+		isDragging && isBeingDragged
+			? addMediaTime({ a: dragView.currentTime, b: dragTimeOffset })
 			: renderElement.startTime;
 	const displayedStartTime = elementStartTime;
 	const displayedDuration = renderElement.duration;
@@ -388,7 +385,7 @@ export function TimelineElement({
 									? `${baseTrackHeight + expansionHeight}px`
 									: "100%",
 							transform:
-								isBeingDragged && dragState.isDragging
+								isDragging && isBeingDragged
 									? `translate3d(0, ${dragOffsetY}px, 0)`
 									: undefined,
 						}}

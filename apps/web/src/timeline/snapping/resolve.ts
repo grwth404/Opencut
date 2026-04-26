@@ -1,11 +1,12 @@
 import type { SnapPoint, SnapResult } from "./types";
+import type { MediaTime } from "@/wasm";
 
 export function resolveTimelineSnap({
 	targetTime,
 	snapPoints,
 	maxSnapDistance,
 }: {
-	targetTime: number;
+	targetTime: MediaTime;
 	snapPoints: SnapPoint[];
 	maxSnapDistance: number;
 }): SnapResult {

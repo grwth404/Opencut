@@ -1,3 +1,5 @@
+import type { MediaTime } from "@/wasm";
+
 export type SnapPointType =
 	| "element-start"
 	| "element-end"
@@ -6,14 +8,14 @@ export type SnapPointType =
 	| "keyframe";
 
 export interface SnapPoint {
-	time: number;
+	time: MediaTime;
 	type: SnapPointType;
 	elementId?: string;
 	trackId?: string;
 }
 
 export interface SnapResult {
-	snappedTime: number;
+	snappedTime: MediaTime;
 	snapPoint: SnapPoint | null;
 	snapDistance: number;
 }

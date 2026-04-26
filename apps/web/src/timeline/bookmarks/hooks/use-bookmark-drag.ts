@@ -8,7 +8,6 @@ import {
 import { useEditor } from "@/editor/use-editor";
 import { useShiftKey } from "@/hooks/use-shift-key";
 import { TIMELINE_DRAG_THRESHOLD_PX } from "@/timeline/components/interaction";
-import { roundToFrame } from "opencut-wasm";
 import { getMouseTimeFromClientX } from "@/timeline/drag-utils";
 import {
 	buildTimelineSnapPoints,
@@ -21,7 +20,7 @@ import { getElementEdgeSnapPoints } from "@/timeline/element-snap-source";
 import { getPlayheadSnapPoints } from "@/timeline/playhead-snap-source";
 import { getAnimationKeyframeSnapPointsForTimeline } from "@/animation/timeline-snap-points";
 import type { Bookmark } from "@/timeline";
-import { type MediaTime, ZERO_MEDIA_TIME } from "@/wasm";
+import { roundFrameTime, type MediaTime, ZERO_MEDIA_TIME } from "@/wasm";
 
 export interface BookmarkDragState {
 	isDragging: boolean;
@@ -117,7 +116,7 @@ export function useBookmarkDrag({
 				maxSnapDistance: getTimelineSnapThresholdInTicks({ zoomLevel }),
 			});
 			return {
-				snappedTime: result.snappedTime as MediaTime,
+				snappedTime: result.snappedTime,
 				snapPoint: result.snapPoint,
 			};
 		},
@@ -165,12 +164,10 @@ export function useBookmarkDrag({
 				});
 				const clampedTime =
 					mouseTime > duration ? duration : mouseTime;
-				const frameSnappedTime = (
-					roundToFrame({
-						time: clampedTime,
-						rate: activeProject.settings.fps,
-					}) ?? clampedTime
-				) as MediaTime;
+				const frameSnappedTime = roundFrameTime({
+					time: clampedTime,
+					fps: activeProject.settings.fps,
+				});
 				const { snappedTime: initialTime } = getSnapResult({
 					rawTime: frameSnappedTime,
 					excludeBookmarkTime: bookmarkTime,
@@ -199,10 +196,10 @@ export function useBookmarkDrag({
 			});
 			const clampedTime =
 				mouseTime > duration ? duration : mouseTime;
-			const frameSnappedTime = (
-				roundToFrame({ time: clampedTime, rate: activeProject.settings.fps }) ??
-				clampedTime
-			) as MediaTime;
+			const frameSnappedTime = roundFrameTime({
+				time: clampedTime,
+				fps: activeProject.settings.fps,
+			});
 			const snapResult = getSnapResult({
 				rawTime: frameSnappedTime,
 				excludeBookmarkTime: dragState.bookmarkTime,

@@ -1,7 +1,13 @@
 import {
+	lastFrameTime as _lastFrameTime,
+	parseTimecode as _parseTimecode,
+	roundToFrame as _roundToFrame,
+	snappedSeekTime as _snappedSeekTime,
 	TICKS_PER_SECOND as _TICKS_PER_SECOND,
 	mediaTimeFromSeconds as _mediaTimeFromSeconds,
 	mediaTimeToSeconds as _mediaTimeToSeconds,
+	type FrameRate,
+	type TimeCodeFormat,
 } from "opencut-wasm";
 
 /**
@@ -126,4 +132,59 @@ export function clampMediaTime({
 	if (time < min) return min;
 	if (time > max) return max;
 	return time;
+}
+
+export function roundFrameTime({
+	time,
+	fps,
+}: {
+	time: MediaTime;
+	fps: FrameRate;
+}): MediaTime {
+	return (_roundToFrame({ time, rate: fps }) ?? time) as MediaTime;
+}
+
+export function roundFrameTicks({
+	ticks,
+	fps,
+}: {
+	ticks: number;
+	fps: FrameRate;
+}): number {
+	return _roundToFrame({ time: ticks, rate: fps }) ?? ticks;
+}
+
+export function snapSeekMediaTime({
+	time,
+	duration,
+	fps,
+}: {
+	time: MediaTime;
+	duration: MediaTime;
+	fps: FrameRate;
+}): MediaTime {
+	return (_snappedSeekTime({ time, duration, rate: fps }) ?? time) as MediaTime;
+}
+
+export function lastFrameMediaTime({
+	duration,
+	fps,
+}: {
+	duration: MediaTime;
+	fps: FrameRate;
+}): MediaTime {
+	return (_lastFrameTime({ duration, rate: fps }) ?? duration) as MediaTime;
+}
+
+export function parseMediaTimecode({
+	timeCode,
+	format,
+	fps,
+}: {
+	timeCode: string;
+	format: TimeCodeFormat;
+	fps: FrameRate;
+}): MediaTime | null {
+	const parsedTime = _parseTimecode({ timeCode, format, rate: fps });
+	return parsedTime == null ? null : (parsedTime as MediaTime);
 }

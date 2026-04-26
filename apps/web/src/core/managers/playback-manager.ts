@@ -4,9 +4,9 @@ import {
 	clampMediaTime,
 	type MediaTime,
 	mediaTimeFromSeconds,
+	roundFrameTime,
 	ZERO_MEDIA_TIME,
 } from "@/wasm";
-import { roundToFrame } from "opencut-wasm";
 
 export class PlaybackManager {
 	private isPlaying = false;
@@ -16,6 +16,8 @@ export class PlaybackManager {
 	private previousVolume = 1;
 	private isScrubbing = false;
 	private listeners = new Set<() => void>();
+	private updateListeners = new Set<(time: MediaTime) => void>();
+	private seekListeners = new Set<(time: MediaTime) => void>();
 	private playbackTimer: number | null = null;
 	private playbackStartWallTime = 0;
 	private playbackStartTime: MediaTime = ZERO_MEDIA_TIME;
@@ -139,6 +141,16 @@ export class PlaybackManager {
 		return () => this.listeners.delete(listener);
 	}
 
+	onUpdate(listener: (time: MediaTime) => void): () => void {
+		this.updateListeners.add(listener);
+		return () => this.updateListeners.delete(listener);
+	}
+
+	onSeek(listener: (time: MediaTime) => void): () => void {
+		this.seekListeners.add(listener);
+		return () => this.seekListeners.delete(listener);
+	}
+
 	private reconcileTimelineScope(): void {
 		const maxTime = this.editor.timeline.getTotalDuration();
 		const nextTime = this.clampTimeToTimeline(this.currentTime);
@@ -158,6 +170,7 @@ export class PlaybackManager {
 		this.notify();
 
 		if (timeChanged) {
+			this.notifySeek(this.currentTime);
 			this.dispatchSeekEvent(this.currentTime);
 		}
 	}
@@ -165,6 +178,18 @@ export class PlaybackManager {
 	private notify(): void {
 		this.listeners.forEach((fn) => {
 			fn();
+		});
+	}
+
+	private notifyUpdate(time: MediaTime): void {
+		this.updateListeners.forEach((fn) => {
+			fn(time);
+		});
+	}
+
+	private notifySeek(time: MediaTime): void {
+		this.seekListeners.forEach((fn) => {
+			fn(time);
 		});
 	}
 
@@ -195,20 +220,20 @@ export class PlaybackManager {
 			a: this.playbackStartTime,
 			b: mediaTimeFromSeconds({ seconds: elapsedSeconds }),
 		});
-		const newTime = (fps
-			? (roundToFrame({ time: rawTime, rate: fps }) ?? rawTime)
-			: rawTime) as MediaTime;
+		const newTime = fps ? roundFrameTime({ time: rawTime, fps }) : rawTime;
 		const maxTime = this.editor.timeline.getTotalDuration();
 
 		if (newTime >= maxTime) {
 			this.pause();
 			this.currentTime = maxTime;
 			this.notify();
+			this.notifySeek(maxTime);
 			this.dispatchSeekEvent(maxTime);
 			return;
 		}
 
 		this.currentTime = newTime;
+		this.notifyUpdate(newTime);
 		this.dispatchUpdateEvent(newTime);
 		this.playbackTimer = requestAnimationFrame(this.updateTime);
 	};

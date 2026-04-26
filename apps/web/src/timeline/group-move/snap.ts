@@ -63,7 +63,7 @@ export function snapGroupEdges({
 		) {
 			closestSnapDistance = memberStartSnap.snapDistance;
 			snappedAnchorStartTime = subMediaTime({
-				a: memberStartSnap.snappedTime as MediaTime,
+				a: memberStartSnap.snappedTime,
 				b: member.timeOffset,
 			});
 			snapPoint = memberStartSnap.snapPoint;
@@ -84,7 +84,7 @@ export function snapGroupEdges({
 			closestSnapDistance = memberEndSnap.snapDistance;
 			snappedAnchorStartTime = subMediaTime({
 				a: subMediaTime({
-					a: memberEndSnap.snappedTime as MediaTime,
+					a: memberEndSnap.snappedTime,
 					b: member.duration,
 				}),
 				b: member.timeOffset,

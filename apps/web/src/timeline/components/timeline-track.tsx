@@ -5,18 +5,12 @@ import { TimelineElement } from "./timeline-element";
 import type { TimelineTrack } from "@/timeline";
 import type { TimelineElement as TimelineElementType } from "@/timeline";
 import { TIMELINE_LAYERS } from "./layers";
-import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/timeline/scale";
-import { useEdgeAutoScroll } from "@/timeline/hooks/use-edge-auto-scroll";
-import type { ElementDragState } from "@/timeline";
-import { useEditor } from "@/editor/use-editor";
+import type { ElementDragView } from "@/timeline";
 
 interface TimelineTrackContentProps {
 	track: TimelineTrack;
 	zoomLevel: number;
-	dragState: ElementDragState;
-	rulerScrollRef: React.RefObject<HTMLDivElement | null>;
-	tracksScrollRef: React.RefObject<HTMLDivElement | null>;
-	lastMouseXRef: React.RefObject<number>;
+	dragView: ElementDragView;
 	onResizeStart: (params: {
 		event: React.MouseEvent;
 		element: TimelineElementType;
@@ -42,10 +36,7 @@ interface TimelineTrackContentProps {
 export function TimelineTrackContent({
 	track,
 	zoomLevel,
-	dragState,
-	rulerScrollRef,
-	tracksScrollRef,
-	lastMouseXRef,
+	dragView,
 	onResizeStart,
 	onElementMouseDown,
 	onElementClick,
@@ -55,15 +46,6 @@ export function TimelineTrackContent({
 	targetElementId = null,
 }: TimelineTrackContentProps) {
 	const { isElementSelected } = useElementSelection();
-	const duration = useEditor((e) => e.timeline.getTotalDuration());
-
-	useEdgeAutoScroll({
-		isActive: dragState.isDragging,
-		getMouseClientX: () => lastMouseXRef.current ?? 0,
-		rulerScrollRef,
-		tracksScrollRef,
-		contentWidth: duration * BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel,
-	});
 
 	return (
 		<div className="relative size-full">
@@ -120,7 +102,7 @@ export function TimelineTrackContent({
 								onElementClick={(event, element) =>
 									onElementClick({ event, element, track })
 								}
-								dragState={dragState}
+								dragView={dragView}
 								isDropTarget={element.id === targetElementId}
 							/>
 						);

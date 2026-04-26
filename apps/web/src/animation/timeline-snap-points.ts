@@ -1,6 +1,7 @@
 import { getElementKeyframes } from "@/animation";
 import type { SceneTracks } from "@/timeline";
 import type { SnapPoint } from "@/timeline/snapping";
+import { addMediaTime } from "@/wasm";
 
 export function getAnimationKeyframeSnapPointsForTimeline({
 	tracks,
@@ -22,7 +23,7 @@ export function getAnimationKeyframeSnapPointsForTimeline({
 				animations: element.animations,
 			})) {
 				snapPoints.push({
-					time: element.startTime + keyframe.time,
+					time: addMediaTime({ a: element.startTime, b: keyframe.time }),
 					type: "keyframe",
 					elementId: element.id,
 					trackId: track.id,
