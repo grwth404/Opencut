@@ -49,7 +49,12 @@ import {
 import { buildWaveformGainSamples } from "@/timeline/audio-state";
 import { getTimelinePixelsPerSecond } from "@/timeline";
 import { buildWaveformSourceKey } from "@/media/waveform-summary";
-import { addMediaTime, TICKS_PER_SECOND, ZERO_MEDIA_TIME } from "@/wasm";
+import {
+	addMediaTime,
+	type MediaTime,
+	TICKS_PER_SECOND,
+	ZERO_MEDIA_TIME,
+} from "@/wasm";
 import {
 	getActionDefinition,
 	type TAction,
@@ -96,7 +101,7 @@ const PixelsPerSecondContext = createContext<number | null>(null);
 const THUMBNAIL_ASPECT_RATIO = 16 / 9;
 
 interface KeyframeIndicator {
-	time: number;
+	time: MediaTime;
 	offsetPx: number;
 	keyframes: SelectedKeyframeRef[];
 }
@@ -112,11 +117,11 @@ export function buildKeyframeIndicator({
 	keyframe: ElementKeyframe;
 	trackId: string;
 	elementId: string;
-	displayedStartTime: number;
+	displayedStartTime: MediaTime;
 	zoomLevel: number;
 	elementLeft: number;
 }): {
-	time: number;
+	time: MediaTime;
 	offsetPx: number;
 	keyframeRef: SelectedKeyframeRef;
 } {
@@ -149,7 +154,7 @@ export function getKeyframeIndicators({
 	keyframes: ElementKeyframe[];
 	trackId: string;
 	elementId: string;
-	displayedStartTime: number;
+	displayedStartTime: MediaTime;
 	zoomLevel: number;
 	elementLeft: number;
 	elementWidth: number;
@@ -158,7 +163,7 @@ export function getKeyframeIndicators({
 		return [];
 	}
 
-	const keyframesByTime = new Map<number, KeyframeIndicator>();
+	const keyframesByTime = new Map<MediaTime, KeyframeIndicator>();
 	for (const keyframe of keyframes) {
 		const indicator = buildKeyframeIndicator({
 			keyframe,
@@ -662,7 +667,7 @@ function KeyframeIndicators({
 }: {
 	indicators: KeyframeIndicator[];
 	dragState: KeyframeDragState;
-	displayedStartTime: number;
+	displayedStartTime: MediaTime;
 	elementLeft: number;
 	onKeyframeMouseDown: (params: {
 		event: React.MouseEvent;
@@ -672,13 +677,13 @@ function KeyframeIndicators({
 		event: React.MouseEvent;
 		keyframes: SelectedKeyframeRef[];
 		orderedKeyframes: SelectedKeyframeRef[];
-		indicatorTime: number;
+		indicatorTime: MediaTime;
 	}) => void;
 	getVisualOffsetPx: (params: {
-		indicatorTime: number;
+		indicatorTime: MediaTime;
 		indicatorOffsetPx: number;
 		isBeingDragged: boolean;
-		displayedStartTime: number;
+		displayedStartTime: MediaTime;
 		elementLeft: number;
 	}) => number;
 }) {
@@ -756,7 +761,7 @@ function ExpandedKeyframeLanes({
 	keyframes: ElementKeyframe[];
 	trackId: string;
 	elementId: string;
-	displayedStartTime: number;
+	displayedStartTime: MediaTime;
 	zoomLevel: number;
 	elementLeft: number;
 	keyframeDragState: KeyframeDragState;
@@ -777,13 +782,13 @@ function ExpandedKeyframeLanes({
 		event: React.MouseEvent;
 		keyframes: SelectedKeyframeRef[];
 		orderedKeyframes: SelectedKeyframeRef[];
-		indicatorTime: number;
+		indicatorTime: MediaTime;
 	}) => void;
 	getVisualOffsetPx: (params: {
-		indicatorTime: number;
+		indicatorTime: MediaTime;
 		indicatorOffsetPx: number;
 		isBeingDragged: boolean;
-		displayedStartTime: number;
+		displayedStartTime: MediaTime;
 		elementLeft: number;
 	}) => number;
 }) {
