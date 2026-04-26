@@ -1,4 +1,5 @@
 import type { SceneTracks, TimelineElement, VideoTrack } from "@/timeline";
+import { type MediaTime, ZERO_MEDIA_TIME } from "@/wasm";
 
 export const MAIN_TRACK_NAME = "Main Track";
 
@@ -31,9 +32,9 @@ export function enforceMainTrackStart({
 }: {
 	tracks: SceneTracks;
 	targetTrackId: string;
-	requestedStartTime: number;
+	requestedStartTime: MediaTime;
 	excludeElementId?: string;
-}): number {
+}): MediaTime {
 	if (tracks.main.id !== targetTrackId) {
 		return requestedStartTime;
 	}
@@ -43,11 +44,11 @@ export function enforceMainTrackStart({
 		excludeElementId,
 	});
 	if (!earliestElement) {
-		return 0;
+		return ZERO_MEDIA_TIME;
 	}
 
 	if (requestedStartTime <= earliestElement.startTime) {
-		return 0;
+		return ZERO_MEDIA_TIME;
 	}
 
 	return requestedStartTime;

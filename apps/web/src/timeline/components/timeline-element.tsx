@@ -49,7 +49,7 @@ import {
 import { buildWaveformGainSamples } from "@/timeline/audio-state";
 import { getTimelinePixelsPerSecond } from "@/timeline";
 import { buildWaveformSourceKey } from "@/media/waveform-summary";
-import { TICKS_PER_SECOND } from "@/wasm/ticks";
+import { addMediaTime, TICKS_PER_SECOND, ZERO_MEDIA_TIME } from "@/wasm";
 import {
 	getActionDefinition,
 	type TAction,
@@ -257,10 +257,11 @@ export function TimelineElement({
 		isBeingDragged && dragState.isDragging
 			? dragState.currentMouseY - dragState.startMouseY
 			: 0;
-	const dragTimeOffset = dragState.dragTimeOffsets[element.id] ?? 0;
+	const dragTimeOffset =
+		dragState.dragTimeOffsets[element.id] ?? ZERO_MEDIA_TIME;
 	const elementStartTime =
 		isBeingDragged && dragState.isDragging
-			? dragState.currentTime + dragTimeOffset
+			? addMediaTime({ a: dragState.currentTime, b: dragTimeOffset })
 			: renderElement.startTime;
 	const displayedStartTime = elementStartTime;
 	const displayedDuration = renderElement.duration;

@@ -9,12 +9,18 @@ import { EditorCore } from "@/core";
 import { isRetimableElement } from "@/timeline";
 import { splitAnimationsAtTime } from "@/animation";
 import { getSourceSpanAtClipTime } from "@/retime";
+import {
+	addMediaTime,
+	type MediaTime,
+	roundMediaTime,
+	subMediaTime,
+} from "@/wasm";
 
 export class SplitElementsCommand extends Command {
 	private savedState: SceneTracks | null = null;
 	private rightSideElements: { trackId: string; elementId: string }[] = [];
 	private readonly elements: { trackId: string; elementId: string }[];
-	private readonly splitTime: number;
+	private readonly splitTime: MediaTime;
 	private readonly retainSide: "both" | "left" | "right";
 
 	constructor({
@@ -23,7 +29,7 @@ export class SplitElementsCommand extends Command {
 		retainSide = "both",
 	}: {
 		elements: { trackId: string; elementId: string }[];
-		splitTime: number;
+		splitTime: MediaTime;
 		retainSide?: "both" | "left" | "right";
 	}) {
 		super();
@@ -73,21 +79,39 @@ export class SplitElementsCommand extends Command {
 					return [element];
 				}
 
-				const relativeTime = this.splitTime - element.startTime;
+				const relativeTime = subMediaTime({
+					a: this.splitTime,
+					b: element.startTime,
+				});
 				const leftVisibleDuration = relativeTime;
-				const rightVisibleDuration = element.duration - relativeTime;
+				const rightVisibleDuration = subMediaTime({
+					a: element.duration,
+					b: relativeTime,
+				});
 				const retimeRef = isRetimableElement(element)
 					? element.retime
 					: undefined;
-				const leftSourceSpan = getSourceSpanAtClipTime({
-					clipTime: leftVisibleDuration,
-					retime: retimeRef,
+				// Snap the source-side split point exactly once and derive the right
+				// half from it. Independently rounding both spans (left and total)
+				// would let a 1-tick rounding error desynchronise them, breaking the
+				// invariant `leftSourceSpan + rightSourceSpan == totalSourceSpan`.
+				// See the same discipline in `compute-resize.ts` (snap-once comment).
+				const leftSourceSpan = roundMediaTime({
+					time: getSourceSpanAtClipTime({
+						clipTime: leftVisibleDuration,
+						retime: retimeRef,
+					}),
 				});
-				const totalSourceSpan = getSourceSpanAtClipTime({
-					clipTime: element.duration,
-					retime: retimeRef,
+				const totalSourceSpan = roundMediaTime({
+					time: getSourceSpanAtClipTime({
+						clipTime: element.duration,
+						retime: retimeRef,
+					}),
 				});
-				const rightSourceSpan = totalSourceSpan - leftSourceSpan;
+				const rightSourceSpan = subMediaTime({
+					a: totalSourceSpan,
+					b: leftSourceSpan,
+				});
 				const { leftAnimations, rightAnimations } = splitAnimationsAtTime({
 					animations: element.animations,
 					splitTime: relativeTime,
@@ -95,12 +119,21 @@ export class SplitElementsCommand extends Command {
 				});
 				let splitResult: TimelineElement[];
 
+				const leftTrimEnd = addMediaTime({
+					a: element.trimEnd,
+					b: rightSourceSpan,
+				});
+				const rightTrimStart = addMediaTime({
+					a: element.trimStart,
+					b: leftSourceSpan,
+				});
+
 				if (this.retainSide === "left") {
 					splitResult = [
 						{
 							...element,
 							duration: leftVisibleDuration,
-							trimEnd: element.trimEnd + rightSourceSpan,
+							trimEnd: leftTrimEnd,
 							name: `${element.name} (left)`,
 							animations: leftAnimations,
 							...(retimeRef !== undefined ? { retime: retimeRef } : {}),
@@ -118,14 +151,13 @@ export class SplitElementsCommand extends Command {
 							id: newId,
 							startTime: this.splitTime,
 							duration: rightVisibleDuration,
-							trimStart: element.trimStart + leftSourceSpan,
+							trimStart: rightTrimStart,
 							name: `${element.name} (right)`,
 							animations: rightAnimations,
 							...(retimeRef !== undefined ? { retime: retimeRef } : {}),
 						},
 					];
 				} else {
-					// "both" - split into two pieces
 					const secondElementId = generateUUID();
 					this.rightSideElements.push({
 						trackId: track.id,
@@ -135,7 +167,7 @@ export class SplitElementsCommand extends Command {
 						{
 							...element,
 							duration: leftVisibleDuration,
-							trimEnd: element.trimEnd + rightSourceSpan,
+							trimEnd: leftTrimEnd,
 							name: `${element.name} (left)`,
 							animations: leftAnimations,
 							...(retimeRef !== undefined ? { retime: retimeRef } : {}),
@@ -145,7 +177,7 @@ export class SplitElementsCommand extends Command {
 							id: secondElementId,
 							startTime: this.splitTime,
 							duration: rightVisibleDuration,
-							trimStart: element.trimStart + leftSourceSpan,
+							trimStart: rightTrimStart,
 							name: `${element.name} (right)`,
 							animations: rightAnimations,
 							...(retimeRef !== undefined ? { retime: retimeRef } : {}),

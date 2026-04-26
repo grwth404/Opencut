@@ -14,13 +14,14 @@ import { useEditor } from "@/editor/use-editor";
 import { clearDragData, setDragData } from "@/timeline/drag-data";
 import type { TimelineDragData } from "@/timeline/drag";
 import { cn } from "@/utils/ui";
+import type { MediaTime } from "@/wasm";
 
 export interface DraggableItemProps {
 	name: string;
 	preview: ReactNode;
 	dragData: TimelineDragData;
 	onDragStart?: ({ e }: { e: React.DragEvent }) => void;
-	onAddToTimeline?: ({ currentTime }: { currentTime: number }) => void;
+	onAddToTimeline?: ({ currentTime }: { currentTime: MediaTime }) => void;
 	aspectRatio?: number;
 	className?: string;
 	containerClassName?: string;

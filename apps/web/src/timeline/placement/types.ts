@@ -1,8 +1,9 @@
 import type { ElementType, TrackType } from "@/timeline";
+import type { MediaTime } from "@/wasm";
 
 export interface PlacementTimeSpan {
-	startTime: number;
-	duration: number;
+	startTime: MediaTime;
+	duration: MediaTime;
 	excludeElementId?: string;
 }
 
@@ -29,7 +30,7 @@ export type PlacementResult =
 			trackId: string;
 			trackIndex: number;
 			trackType: TrackType;
-			adjustedStartTime?: number;
+			adjustedStartTime?: MediaTime;
 	  }
 	| {
 			kind: "newTrack";

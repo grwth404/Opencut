@@ -17,7 +17,14 @@ import {
 	type MoveGroup,
 } from "@/timeline/group-move";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/timeline/scale";
-import { TICKS_PER_SECOND } from "@/wasm";
+import {
+	addMediaTime,
+	type MediaTime,
+	mediaTime,
+	subMediaTime,
+	TICKS_PER_SECOND,
+	ZERO_MEDIA_TIME,
+} from "@/wasm";
 import { TIMELINE_DRAG_THRESHOLD_PX } from "@/timeline/components/interaction";
 import { roundToFrame } from "opencut-wasm";
 import { computeDropTarget } from "@/timeline/components/drop-target";
@@ -54,9 +61,9 @@ const initialDragState: ElementDragState = {
 	trackId: null,
 	startMouseX: 0,
 	startMouseY: 0,
-	startElementTime: 0,
-	clickOffsetTime: 0,
-	currentTime: 0,
+	startElementTime: ZERO_MEDIA_TIME,
+	clickOffsetTime: ZERO_MEDIA_TIME,
+	currentTime: ZERO_MEDIA_TIME,
 	currentMouseY: 0,
 };
 
@@ -66,8 +73,8 @@ interface PendingDragState {
 	selectedElements: ElementRef[];
 	startMouseX: number;
 	startMouseY: number;
-	startElementTime: number;
-	clickOffsetTime: number;
+	startElementTime: MediaTime;
+	clickOffsetTime: MediaTime;
 }
 
 function getClickOffsetTime({
@@ -78,10 +85,12 @@ function getClickOffsetTime({
 	clientX: number;
 	elementRect: DOMRect;
 	zoomLevel: number;
-}): number {
+}): MediaTime {
 	const clickOffsetX = clientX - elementRect.left;
 	const seconds = clickOffsetX / (BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel);
-	return Math.round(seconds * TICKS_PER_SECOND);
+	return mediaTime({
+		ticks: Math.round(seconds * TICKS_PER_SECOND),
+	});
 }
 
 function getVerticalDragDirection({
@@ -118,7 +127,7 @@ function getDragDropTarget({
 	tracksScrollRef: RefObject<HTMLDivElement | null>;
 	headerRef?: RefObject<HTMLElement | null>;
 	zoomLevel: number;
-	snappedTime: number;
+	snappedTime: MediaTime;
 	verticalDragDirection?: "up" | "down" | null;
 }): DropTarget | null {
 	const containerRect = tracksContainerRef.current?.getBoundingClientRect();
@@ -162,7 +171,7 @@ interface StartDragParams
 		ElementDragState,
 		"isDragging" | "currentTime" | "currentMouseY"
 	> {
-	initialCurrentTime: number;
+	initialCurrentTime: MediaTime;
 	initialCurrentMouseY: number;
 }
 
@@ -249,7 +258,7 @@ export function useElementInteraction({
 			dropTarget,
 		}: {
 			group: MoveGroup;
-			snappedTime: number;
+			snappedTime: MediaTime;
 			dropTarget: DropTarget | null;
 		}): GroupMoveResult | null => {
 			if (!dropTarget) {
@@ -317,7 +326,7 @@ export function useElementInteraction({
 			frameSnappedTime,
 			group,
 		}: {
-			frameSnappedTime: number;
+			frameSnappedTime: MediaTime;
 			group: MoveGroup | null;
 		}) => {
 			if (!group || !snappingEnabled || isShiftHeldRef.current) {
@@ -366,15 +375,19 @@ export function useElementInteraction({
 						zoomLevel,
 						scrollLeft,
 					});
-					const adjustedTime = Math.max(
-						0,
-						mouseTime - pendingDragRef.current.clickOffsetTime,
-					);
-					const snappedTime =
+					const adjustedTime =
+						mouseTime > pendingDragRef.current.clickOffsetTime
+							? subMediaTime({
+									a: mouseTime,
+									b: pendingDragRef.current.clickOffsetTime,
+								})
+							: ZERO_MEDIA_TIME;
+					const snappedTime = (
 						roundToFrame({
 							time: adjustedTime,
 							rate: activeProject.settings.fps,
-						}) ?? adjustedTime;
+						}) ?? adjustedTime
+					) as MediaTime;
 					const moveGroup = buildMoveGroup({
 						anchorRef: {
 							trackId: pendingDragRef.current.trackId,
@@ -389,7 +402,7 @@ export function useElementInteraction({
 
 					moveGroupRef.current = moveGroup;
 					newTrackIdsRef.current = moveGroup.members.map(() => generateUUID());
-					const dragTimeOffsets: Record<string, number> = {};
+					const dragTimeOffsets: Record<string, MediaTime> = {};
 					for (const member of moveGroup.members) {
 						dragTimeOffsets[member.elementId] = member.timeOffset;
 					}
@@ -478,10 +491,17 @@ export function useElementInteraction({
 				zoomLevel,
 				scrollLeft,
 			});
-			const adjustedTime = Math.max(0, mouseTime - dragState.clickOffsetTime);
+			const adjustedTime =
+				mouseTime > dragState.clickOffsetTime
+					? subMediaTime({
+							a: mouseTime,
+							b: dragState.clickOffsetTime,
+						})
+					: ZERO_MEDIA_TIME;
 			const fps = activeProject.settings.fps;
-			const frameSnappedTime =
-				roundToFrame({ time: adjustedTime, rate: fps }) ?? adjustedTime;
+			const frameSnappedTime = (
+				roundToFrame({ time: adjustedTime, rate: fps }) ?? adjustedTime
+			) as MediaTime;
 
 			const moveGroup = moveGroupRef.current;
 			const { snappedTime, snapPoint } = getDragSnapResult({
@@ -596,8 +616,10 @@ export function useElementInteraction({
 				const currentMember = moveGroup.members.find(
 					(member) => member.elementId === move.elementId,
 				);
-				const originalStartTime =
-					dragState.startElementTime + (currentMember?.timeOffset ?? 0);
+				const originalStartTime = addMediaTime({
+					a: dragState.startElementTime,
+					b: currentMember?.timeOffset ?? ZERO_MEDIA_TIME,
+				});
 				return (
 					currentMember?.trackId !== move.targetTrackId ||
 					originalStartTime !== move.newStartTime

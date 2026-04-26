@@ -29,6 +29,7 @@ import {
 	useState,
 	type ReactNode,
 } from "react";
+import type { MediaTime } from "@/wasm";
 import type { ElementDragState, DropTarget } from "@/timeline";
 import { TimelineTrackContent } from "./timeline-track";
 import { TimelinePlayhead } from "./timeline-playhead";
@@ -132,7 +133,7 @@ export function Timeline() {
 		[scene],
 	);
 	const mainTrackId = scene?.tracks.main.id ?? null;
-	const seek = (time: number) => editor.playback.seek({ time });
+	const seek = (time: MediaTime) => editor.playback.seek({ time });
 
 	const timelineRef = useRef<HTMLDivElement>(null);
 	const timelineHeaderRef = useRef<HTMLDivElement>(null);

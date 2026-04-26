@@ -8,6 +8,7 @@ import type { AnimationPropertyPath, ElementAnimations } from "@/animation/types
 import type { TimelineElement } from "@/timeline";
 import { snapToStep } from "@/utils/math";
 import { usePropertyDraft } from "./use-property-draft";
+import type { MediaTime } from "@/wasm";
 
 export function useKeyframedNumberProperty({
 	trackId,
@@ -27,7 +28,7 @@ export function useKeyframedNumberProperty({
 	elementId: string;
 	animations: ElementAnimations | undefined;
 	propertyPath: AnimationPropertyPath;
-	localTime: number;
+	localTime: MediaTime;
 	isPlayheadWithinElementRange: boolean;
 	displayValue: string;
 	parse: (input: string) => number | null;

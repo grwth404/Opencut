@@ -2,7 +2,7 @@ import { useCallback, useRef } from "react";
 import type { MutableRefObject, RefObject } from "react";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/timeline/scale";
 import { snappedSeekTime } from "opencut-wasm";
-import { TICKS_PER_SECOND } from "@/wasm";
+import { mediaTime, type MediaTime, TICKS_PER_SECOND } from "@/wasm";
 import { useEditor } from "@/editor/use-editor";
 
 interface UseTimelineSeekProps {
@@ -11,10 +11,10 @@ interface UseTimelineSeekProps {
 	rulerScrollRef: RefObject<HTMLDivElement | null>;
 	tracksScrollRef: RefObject<HTMLDivElement | null>;
 	zoomLevel: number;
-	duration: number;
+	duration: MediaTime;
 	isSelecting: boolean;
 	clearSelectedElements: () => void;
-	seek: (time: number) => void;
+	seek: (time: MediaTime) => void;
 }
 
 function resetMouseTracking({
@@ -135,11 +135,13 @@ export function useTimelineSeek({
 					(mouseX + scrollLeft) / (BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel),
 				),
 			);
-			const rawTime = Math.round(rawTimeSeconds * TICKS_PER_SECOND);
+			const rawTime = mediaTime({
+				ticks: Math.round(rawTimeSeconds * TICKS_PER_SECOND),
+			});
 
 			const rate = activeProject?.settings.fps;
 			const time = rate
-				? (snappedSeekTime({ time: rawTime, duration, rate }) ?? rawTime)
+				? ((snappedSeekTime({ time: rawTime, duration, rate }) ?? rawTime) as MediaTime)
 				: rawTime;
 			seek(time);
 			editor.project.setTimelineViewState({

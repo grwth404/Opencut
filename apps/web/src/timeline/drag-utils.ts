@@ -1,5 +1,5 @@
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/timeline/scale";
-import { TICKS_PER_SECOND } from "@/wasm";
+import { mediaTime, type MediaTime, TICKS_PER_SECOND } from "@/wasm";
 
 export function getMouseTimeFromClientX({
 	clientX,
@@ -11,11 +11,13 @@ export function getMouseTimeFromClientX({
 	containerRect: DOMRect;
 	zoomLevel: number;
 	scrollLeft: number;
-}): number {
+}): MediaTime {
 	const mouseX = clientX - containerRect.left + scrollLeft;
 	const seconds = Math.max(
 		0,
 		mouseX / (BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel),
 	);
-	return Math.round(seconds * TICKS_PER_SECOND);
+	return mediaTime({
+		ticks: Math.round(seconds * TICKS_PER_SECOND),
+	});
 }

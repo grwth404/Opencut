@@ -30,14 +30,15 @@ import { useElementPlayhead } from "@/components/editor/panels/properties/hooks/
 import { resolveOpacityAtTime } from "@/animation";
 import { DEFAULTS } from "@/timeline/defaults";
 import { isPropertyAtDefault } from "./transform-tab";
+import type { MediaTime } from "@/wasm";
 
 type BlendingElement = {
 	id: string;
 	opacity: number;
 	type: ElementType;
 	blendMode?: BlendMode;
-	startTime: number;
-	duration: number;
+	startTime: MediaTime;
+	duration: MediaTime;
 	animations?: ElementAnimations;
 };
 

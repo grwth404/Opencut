@@ -3,7 +3,7 @@ import {
 	getSourceSpanAtClipTime,
 	getTimelineDurationForSourceSpan,
 } from "@/retime";
-import { TICKS_PER_SECOND } from "@/wasm";
+import { TICKS_PER_SECOND, roundMediaTime } from "@/wasm";
 import type {
 	ComputeGroupResizeArgs,
 	GroupResizeMember,
@@ -188,15 +188,17 @@ function getSourceDeltaForClipDelta({
 		return clipDelta;
 	}
 
-	return clipDelta >= 0
-		? getSourceSpanAtClipTime({
-				clipTime: clipDelta,
-				retime: member.retime,
-			})
-		: -getSourceSpanAtClipTime({
-				clipTime: Math.abs(clipDelta),
-				retime: member.retime,
-			});
+	const sourceDelta =
+		clipDelta >= 0
+			? getSourceSpanAtClipTime({
+					clipTime: clipDelta,
+					retime: member.retime,
+				})
+			: -getSourceSpanAtClipTime({
+					clipTime: Math.abs(clipDelta),
+					retime: member.retime,
+				});
+	return roundMediaTime({ time: sourceDelta });
 }
 
 function getVisibleSourceSpanForDuration({
@@ -227,9 +229,11 @@ function getDurationForVisibleSourceSpan({
 		return sourceSpan;
 	}
 
-	return getTimelineDurationForSourceSpan({
-		sourceSpan,
-		retime: member.retime,
+	return roundMediaTime({
+		time: getTimelineDurationForSourceSpan({
+			sourceSpan,
+			retime: member.retime,
+		}),
 	});
 }
 

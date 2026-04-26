@@ -8,13 +8,19 @@ import type {
 	AnimationInterpolation,
 	AnimationValue,
 } from "@/animation/types";
+import {
+	type MediaTime,
+	maxMediaTime,
+	minMediaTime,
+	ZERO_MEDIA_TIME,
+} from "@/wasm";
 
 export class UpsertKeyframeCommand extends Command {
 	private savedState: SceneTracks | null = null;
 	private readonly trackId: string;
 	private readonly elementId: string;
 	private readonly propertyPath: AnimationPath;
-	private readonly time: number;
+	private readonly time: MediaTime;
 	private readonly value: AnimationValue;
 	private readonly interpolation: AnimationInterpolation | undefined;
 	private readonly keyframeId: string | undefined;
@@ -31,7 +37,7 @@ export class UpsertKeyframeCommand extends Command {
 		trackId: string;
 		elementId: string;
 		propertyPath: AnimationPath;
-		time: number;
+		time: MediaTime;
 		value: AnimationValue;
 		interpolation?: AnimationInterpolation;
 		keyframeId?: string;
@@ -63,7 +69,10 @@ export class UpsertKeyframeCommand extends Command {
 					return element;
 				}
 
-				const boundedTime = Math.max(0, Math.min(this.time, element.duration));
+				const boundedTime = maxMediaTime({
+					a: ZERO_MEDIA_TIME,
+					b: minMediaTime({ a: this.time, b: element.duration }),
+				});
 				return {
 					...element,
 					animations: upsertPathKeyframe({

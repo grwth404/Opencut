@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { formatTimecode, parseTimecode, snappedSeekTime, type FrameRate, type TimeCodeFormat } from "opencut-wasm";
 import { cn } from "@/utils/ui";
+import type { MediaTime } from "@/wasm";
 
 interface EditableTimecodeProps {
-	time: number;
-	duration: number;
+	time: MediaTime;
+	duration: MediaTime;
 	format?: TimeCodeFormat;
 	fps: FrameRate;
-	onTimeChange?: ({ time }: { time: number }) => void;
+	onTimeChange?: ({ time }: { time: MediaTime }) => void;
 	className?: string;
 	disabled?: boolean;
 }
@@ -53,9 +54,12 @@ export function EditableTimecode({
 			return;
 		}
 
-		const clampedTime = duration
-			? (snappedSeekTime({ time: parsedTime, duration, rate: fps }) ?? parsedTime)
-			: parsedTime;
+		const clampedTime = (
+			duration
+				? (snappedSeekTime({ time: parsedTime, duration, rate: fps }) ??
+					parsedTime)
+				: parsedTime
+		) as MediaTime;
 
 		onTimeChange?.({ time: clampedTime });
 		setIsEditing(false);

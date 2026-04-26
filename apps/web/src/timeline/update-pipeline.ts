@@ -6,6 +6,7 @@ import {
 } from "@/retime";
 import type { RetimeConfig, SceneTracks, TimelineElement } from "@/timeline";
 import { isRetimableElement } from "@/timeline";
+import { ZERO_MEDIA_TIME, roundMediaTime } from "@/wasm";
 
 type ElementUpdateField = keyof TimelineElement | string;
 
@@ -61,9 +62,11 @@ const deriveRules: ElementUpdateRule[] = [
 				0,
 				sourceDuration - element.trimStart - element.trimEnd,
 			);
-			const nextDuration = getTimelineDurationForSourceSpan({
-				sourceSpan: visibleSourceSpan,
-				retime: nextRetime,
+			const nextDuration = roundMediaTime({
+				time: getTimelineDurationForSourceSpan({
+					sourceSpan: visibleSourceSpan,
+					retime: nextRetime,
+				}),
 			});
 
 			return {
@@ -94,7 +97,10 @@ const enforceRules: ElementUpdateRule[] = [
 	{
 		triggers: ["startTime"],
 		apply: ({ element, context }) => {
-			const requestedStartTime = Math.max(0, element.startTime);
+			const requestedStartTime =
+				element.startTime < ZERO_MEDIA_TIME
+					? ZERO_MEDIA_TIME
+					: element.startTime;
 			if (context.trackId !== context.tracks.main.id) {
 				return {
 					element: {
@@ -118,7 +124,7 @@ const enforceRules: ElementUpdateRule[] = [
 					...element,
 					startTime:
 						!earliestElement || requestedStartTime <= earliestElement.startTime
-							? 0
+							? ZERO_MEDIA_TIME
 							: requestedStartTime,
 				},
 			};

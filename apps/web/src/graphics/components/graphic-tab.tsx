@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { MinusSignIcon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/utils/ui";
+import type { MediaTime } from "@/wasm";
 
 registerDefaultGraphics();
 
@@ -197,10 +198,11 @@ function AnimatedGraphicParamField({
 	isPlayheadWithinElementRange,
 	resolvedParams,
 }: {
+	key?: string;
 	param: ParamDefinition;
 	trackId: string;
 	element: GraphicElement;
-	localTime: number;
+	localTime: MediaTime;
 	isPlayheadWithinElementRange: boolean;
 	resolvedParams: ParamValues;
 }) {

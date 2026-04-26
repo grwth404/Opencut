@@ -1,5 +1,5 @@
 import { snappedSeekTime } from "opencut-wasm";
-import { TICKS_PER_SECOND } from "@/wasm";
+import { mediaTime, type MediaTime, TICKS_PER_SECOND } from "@/wasm";
 import { useEffect, useCallback, useRef } from "react";
 import { useEdgeAutoScroll } from "@/timeline/hooks/use-edge-auto-scroll";
 import { useEditor } from "@/editor/use-editor";
@@ -53,11 +53,11 @@ export function useTimelinePlayhead({
 	}, [zoomLevel, duration, isScrubbing, editor.playback]);
 
 	const seek = useCallback(
-		({ time }: { time: number }) => editor.playback.seek({ time }),
+		({ time }: { time: MediaTime }) => editor.playback.seek({ time }),
 		[editor.playback],
 	);
 
-	const scrubTimeRef = useRef<number | null>(null);
+	const scrubTimeRef = useRef<MediaTime | null>(null);
 	const isDraggingRulerRef = useRef(false);
 	const hasDraggedRulerRef = useRef(false);
 	const lastMouseXRef = useRef<number>(0);
@@ -92,11 +92,14 @@ export function useTimelinePlayhead({
 					clampedMouseX / (BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel),
 				),
 			);
-			const rawTime = Math.round(rawTimeSeconds * TICKS_PER_SECOND);
+			const rawTime = mediaTime({
+				ticks: Math.round(rawTimeSeconds * TICKS_PER_SECOND),
+			});
 
 			const rate = activeProject.settings.fps;
-			const frameTime =
-				snappedSeekTime({ time: rawTime, duration, rate }) ?? rawTime;
+			const frameTime = (
+				snappedSeekTime({ time: rawTime, duration, rate }) ?? rawTime
+			) as MediaTime;
 
 			const shouldSnap = snappingEnabled && !isShiftHeldRef.current;
 			const time = (() => {
@@ -224,7 +227,7 @@ export function useTimelinePlayhead({
 	}, [isScrubbing, seek, handleScrub, editor, tracksScrollRef, zoomLevel]);
 
 	const updatePlayheadLeft = useCallback(
-		(time: number) => {
+		(time: MediaTime) => {
 			const playheadEl = playheadRef?.current;
 			if (!playheadEl) return;
 			const centerPosition = timelineTimeToSnappedPixels({
@@ -251,8 +254,7 @@ export function useTimelinePlayhead({
 	}, [editor.playback, rulerScrollRef, updatePlayheadLeft]);
 
 	useEffect(() => {
-		const handlePlaybackUpdate = (e: Event) => {
-			const time = (e as CustomEvent<{ time: number }>).detail.time;
+		const handlePlaybackTime = (time: MediaTime) => {
 			updatePlayheadLeft(time);
 
 			if (!isPlayingRef.current || isScrubbingRef.current) return;
@@ -280,11 +282,12 @@ export function useTimelinePlayhead({
 				rulerViewport.scrollLeft = tracksViewport.scrollLeft = desiredScroll;
 			}
 		};
+		const handlePlaybackUpdate = (e: Event) => {
+			handlePlaybackTime((e as CustomEvent<{ time: MediaTime }>).detail.time);
+		};
 
 		const initialTime = editor.playback.getCurrentTime();
-		handlePlaybackUpdate({
-			detail: { time: initialTime },
-		} as CustomEvent<{ time: number }>);
+		handlePlaybackTime(initialTime);
 
 		window.addEventListener("playback-update", handlePlaybackUpdate);
 		window.addEventListener("playback-seek", handlePlaybackUpdate);

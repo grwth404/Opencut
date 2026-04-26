@@ -15,6 +15,7 @@ import type {
 } from "@/animation/types";
 import type { ParamDefinition } from "@/params";
 import type { TimelineElement } from "@/timeline";
+import type { MediaTime } from "@/wasm";
 
 export interface KeyframedParamPropertyResult {
 	hasAnimatedKeyframes: boolean;
@@ -39,7 +40,7 @@ export function useKeyframedParamProperty({
 	trackId: string;
 	elementId: string;
 	animations: ElementAnimations | undefined;
-	localTime: number;
+	localTime: MediaTime;
 	isPlayheadWithinElementRange: boolean;
 	resolvedValue: number | string | boolean;
 	buildBaseUpdates: ({

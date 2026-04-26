@@ -6,6 +6,7 @@ import {
 	type CopyContext,
 	type PasteContext,
 } from "@/clipboard";
+import type { MediaTime } from "@/wasm";
 
 export class ClipboardManager {
 	private entry: ClipboardEntry | null = null;
@@ -34,7 +35,7 @@ export class ClipboardManager {
 		return true;
 	}
 
-	paste({ time }: { time?: number } = {}): boolean {
+	paste({ time }: { time?: MediaTime } = {}): boolean {
 		if (!this.entry) {
 			return false;
 		}
@@ -64,7 +65,7 @@ export class ClipboardManager {
 		};
 	}
 
-	private getPasteContext({ time }: { time?: number }): PasteContext {
+	private getPasteContext({ time }: { time?: MediaTime }): PasteContext {
 		return {
 			editor: this.editor,
 			selectedElements: this.editor.selection.getSelectedElements(),

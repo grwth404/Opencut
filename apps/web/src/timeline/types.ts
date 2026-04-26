@@ -3,6 +3,7 @@ import type { Effect } from "@/effects/types";
 import type { Mask } from "@/masks/types";
 import type { ParamValues } from "@/params";
 import type { BlendMode, Transform } from "@/rendering";
+import type { MediaTime } from "@/wasm";
 
 export type ElementRef = {
 	trackId: string;
@@ -10,10 +11,10 @@ export type ElementRef = {
 };
 
 export interface Bookmark {
-	time: number;
+	time: MediaTime;
 	note?: string;
 	color?: string;
-	duration?: number;
+	duration?: MediaTime;
 }
 
 export interface TScene {
@@ -107,11 +108,11 @@ export type AudioElement = UploadAudioElement | LibraryAudioElement;
 interface BaseTimelineElement {
 	id: string;
 	name: string;
-	duration: number;
-	startTime: number;
-	trimStart: number;
-	trimEnd: number;
-	sourceDuration?: number;
+	duration: MediaTime;
+	startTime: MediaTime;
+	trimStart: MediaTime;
+	trimEnd: MediaTime;
+	sourceDuration?: MediaTime;
 	animations?: ElementAnimations;
 }
 
@@ -273,13 +274,13 @@ export interface ElementDragState {
 	isDragging: boolean;
 	elementId: string | null;
 	dragElementIds: string[];
-	dragTimeOffsets: Record<string, number>;
+	dragTimeOffsets: Record<string, MediaTime>;
 	trackId: string | null;
 	startMouseX: number;
 	startMouseY: number;
-	startElementTime: number;
-	clickOffsetTime: number;
-	currentTime: number;
+	startElementTime: MediaTime;
+	clickOffsetTime: MediaTime;
+	currentTime: MediaTime;
 	currentMouseY: number;
 }
 
@@ -287,7 +288,7 @@ export interface DropTarget {
 	trackIndex: number;
 	isNewTrack: boolean;
 	insertPosition: "above" | "below" | null;
-	xPosition: number;
+	xPosition: MediaTime;
 	targetElement: { elementId: string; trackId: string } | null;
 }
 
@@ -296,13 +297,13 @@ export interface ComputeDropTargetParams {
 	mouseX: number;
 	mouseY: number;
 	tracks: SceneTracks;
-	playheadTime: number;
+	playheadTime: MediaTime;
 	isExternalDrop: boolean;
-	elementDuration: number;
+	elementDuration: MediaTime;
 	pixelsPerSecond: number;
 	zoomLevel: number;
 	verticalDragDirection?: "up" | "down" | null;
-	startTimeOverride?: number;
+	startTimeOverride?: MediaTime;
 	excludeElementId?: string;
 	targetElementTypes?: string[];
 }

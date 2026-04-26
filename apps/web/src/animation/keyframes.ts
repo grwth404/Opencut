@@ -35,6 +35,12 @@ import {
 	coerceAnimationValueForProperty,
 	getAnimationPropertyDefinition,
 } from "./property-registry";
+import {
+	type MediaTime,
+	roundMediaTime,
+	subMediaTime,
+	ZERO_MEDIA_TIME,
+} from "@/wasm";
 
 function isNearlySameTime({
 	leftTime,
@@ -171,7 +177,7 @@ function createScalarKey({
 	previousKey,
 }: {
 	id: string;
-	time: number;
+	time: MediaTime;
 	value: number;
 	interpolation?: AnimationInterpolation;
 	previousKey?: ScalarAnimationKey;
@@ -195,7 +201,7 @@ function createDiscreteKey({
 	value,
 }: {
 	id: string;
-	time: number;
+	time: MediaTime;
 	value: string | boolean;
 }): DiscreteAnimationKey {
 	return {
@@ -241,7 +247,7 @@ function getTargetKeyMetadata({
 	keyframeId,
 }: {
 	channel: AnimationChannel | undefined;
-	time: number;
+	time: MediaTime;
 	keyframeId?: string;
 }) {
 	const normalizedChannel =
@@ -280,7 +286,7 @@ function upsertDiscreteChannelKey({
 	keyframeId,
 }: {
 	channel: DiscreteAnimationChannel | undefined;
-	time: number;
+	time: MediaTime;
 	value: string | boolean;
 	keyframeId?: string;
 }): DiscreteAnimationChannel {
@@ -337,7 +343,7 @@ function upsertScalarChannelKey({
 	keyframeId,
 }: {
 	channel: ScalarAnimationChannel | undefined;
-	time: number;
+	time: MediaTime;
 	value: number;
 	interpolation?: AnimationInterpolation;
 	defaultInterpolation?: AnimationInterpolation;
@@ -442,7 +448,7 @@ export function upsertPathKeyframe({
 }: {
 	animations: ElementAnimations | undefined;
 	propertyPath: AnimationPath;
-	time: number;
+	time: MediaTime;
 	value: AnimationValue;
 	interpolation?: AnimationInterpolation;
 	keyframeId?: string;
@@ -537,7 +543,7 @@ export function upsertElementKeyframe({
 }: {
 	animations: ElementAnimations | undefined;
 	propertyPath: AnimationPropertyPath;
-	time: number;
+	time: MediaTime;
 	value: AnimationValue;
 	interpolation?: AnimationInterpolation;
 	keyframeId?: string;
@@ -576,7 +582,7 @@ export function upsertKeyframe({
 	keyframeId,
 }: {
 	channel: AnimationChannel | undefined;
-	time: number;
+	time: MediaTime;
 	value: AnimationValue;
 	interpolation?: AnimationInterpolation;
 	keyframeId?: string;
@@ -642,7 +648,7 @@ export function retimeKeyframe({
 }: {
 	channel: AnimationChannel | undefined;
 	keyframeId: string;
-	time: number;
+	time: MediaTime;
 }): AnimationChannel | undefined {
 	if (!channel) {
 		return undefined;
@@ -887,7 +893,7 @@ export function clampAnimationsToDuration({
 	duration,
 }: {
 	animations: ElementAnimations | undefined;
-	duration: number;
+	duration: MediaTime;
 }): ElementAnimations | undefined {
 	if (!animations || duration <= 0) {
 		return undefined;
@@ -923,7 +929,7 @@ function splitDiscreteChannelAtTime({
 	shouldIncludeSplitBoundary,
 }: {
 	channel: DiscreteAnimationChannel | undefined;
-	splitTime: number;
+	splitTime: MediaTime;
 	leftBoundaryId: string;
 	rightBoundaryId: string;
 	shouldIncludeSplitBoundary: boolean;
@@ -939,7 +945,10 @@ function splitDiscreteChannelAtTime({
 	let leftKeys = normalizedChannel.keys.filter((key) => key.time <= splitTime);
 	let rightKeys = normalizedChannel.keys
 		.filter((key) => key.time >= splitTime)
-		.map((key) => ({ ...key, time: key.time - splitTime }));
+		.map((key) => ({
+			...key,
+			time: subMediaTime({ a: key.time, b: splitTime }),
+		}));
 
 	if (shouldIncludeSplitBoundary) {
 		const hasBoundaryOnLeft = leftKeys.some((key) =>
@@ -967,7 +976,7 @@ function splitDiscreteChannelAtTime({
 			rightKeys = [
 				createDiscreteKey({
 					id: rightBoundaryId,
-					time: 0,
+					time: ZERO_MEDIA_TIME,
 					value: boundaryValue as string | boolean,
 				}),
 				...rightKeys,
@@ -993,7 +1002,7 @@ function splitScalarChannelAtTime({
 	shouldIncludeSplitBoundary,
 }: {
 	channel: ScalarAnimationChannel | undefined;
-	splitTime: number;
+	splitTime: MediaTime;
 	leftBoundaryId: string;
 	rightBoundaryId: string;
 	shouldIncludeSplitBoundary: boolean;
@@ -1009,7 +1018,10 @@ function splitScalarChannelAtTime({
 	let leftKeys = normalizedChannel.keys.filter((key) => key.time <= splitTime);
 	let rightKeys = normalizedChannel.keys
 		.filter((key) => key.time >= splitTime)
-		.map((key) => ({ ...key, time: key.time - splitTime }));
+		.map((key) => ({
+			...key,
+			time: subMediaTime({ a: key.time, b: splitTime }),
+		}));
 
 	const hasBoundaryOnLeft = leftKeys.some((key) =>
 		isNearlySameTime({ leftTime: key.time, rightTime: splitTime }),
@@ -1089,7 +1101,7 @@ function splitScalarChannelAtTime({
 				{
 					...leftKey,
 					rightHandle: {
-						dt: q0.x - p0.x,
+						dt: roundMediaTime({ time: q0.x - p0.x }),
 						dv: q0.y - p0.y,
 					},
 				},
@@ -1098,7 +1110,7 @@ function splitScalarChannelAtTime({
 					time: splitTime,
 					value: boundaryValue,
 					leftHandle: {
-						dt: r0.x - splitPoint.x,
+						dt: roundMediaTime({ time: r0.x - splitPoint.x }),
 						dv: r0.y - splitPoint.y,
 					},
 					segmentToNext: leftKey.segmentToNext,
@@ -1108,10 +1120,10 @@ function splitScalarChannelAtTime({
 			rightKeys = [
 				{
 					id: rightBoundaryId,
-					time: 0,
+					time: ZERO_MEDIA_TIME,
 					value: boundaryValue,
 					rightHandle: {
-						dt: r1.x - splitPoint.x,
+						dt: roundMediaTime({ time: r1.x - splitPoint.x }),
 						dv: r1.y - splitPoint.y,
 					},
 					segmentToNext: "bezier",
@@ -1119,9 +1131,9 @@ function splitScalarChannelAtTime({
 				},
 				{
 					...rightKey,
-					time: rightKey.time - splitTime,
+					time: subMediaTime({ a: rightKey.time, b: splitTime }),
 					leftHandle: {
-						dt: q2.x - p3.x,
+						dt: roundMediaTime({ time: q2.x - p3.x }),
 						dv: q2.y - p3.y,
 					},
 				},
@@ -1129,7 +1141,7 @@ function splitScalarChannelAtTime({
 					.filter((key) => key.time > rightKey.time)
 					.map((key) => ({
 						...key,
-						time: key.time - splitTime,
+						time: subMediaTime({ a: key.time, b: splitTime }),
 					})),
 			];
 		} else {
@@ -1145,7 +1157,7 @@ function splitScalarChannelAtTime({
 			rightKeys = [
 				createScalarKey({
 					id: rightBoundaryId,
-					time: 0,
+					time: ZERO_MEDIA_TIME,
 					value: boundaryValue,
 					interpolation: getScalarSegmentInterpolation({
 						segment: leftKey.segmentToNext,
@@ -1201,7 +1213,7 @@ export function splitAnimationsAtTime({
 	shouldIncludeSplitBoundary = true,
 }: {
 	animations: ElementAnimations | undefined;
-	splitTime: number;
+	splitTime: MediaTime;
 	shouldIncludeSplitBoundary?: boolean;
 }): {
 	leftAnimations: ElementAnimations | undefined;
@@ -1317,7 +1329,7 @@ export function retimeElementKeyframe({
 	animations: ElementAnimations | undefined;
 	propertyPath: AnimationPath;
 	keyframeId: string;
-	time: number;
+	time: MediaTime;
 }): ElementAnimations | undefined {
 	const binding = getBinding({ animations, propertyPath });
 	if (!binding) {

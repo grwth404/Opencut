@@ -3,7 +3,12 @@ import type { ComputeDropTargetParams, DropTarget } from "@/timeline";
 import { resolveTrackPlacement } from "@/timeline/placement";
 import { TIMELINE_TRACK_GAP_PX } from "./layout";
 import { getTrackHeight } from "./track-layout";
-import { TICKS_PER_SECOND } from "@/wasm";
+import {
+	mediaTime,
+	type MediaTime,
+	roundMediaTime,
+	TICKS_PER_SECOND,
+} from "@/wasm";
 
 function findElementAtPosition({
 	mouseX,
@@ -20,9 +25,11 @@ function findElementAtPosition({
 	pixelsPerSecond: number;
 	zoomLevel: number;
 }): { elementId: string; trackId: string } | null {
-	const time = Math.round(
-		(mouseX / (pixelsPerSecond * zoomLevel)) * TICKS_PER_SECOND,
-	);
+	const time = mediaTime({
+		ticks: Math.round(
+			(mouseX / (pixelsPerSecond * zoomLevel)) * TICKS_PER_SECOND,
+		),
+	});
 	const track = tracks[trackIndex];
 	if (!track || !("elements" in track)) return null;
 
@@ -82,7 +89,7 @@ const EMPTY_TARGET_ELEMENT = null;
 function fallbackNewTrackDropTarget({
 	xPosition,
 }: {
-	xPosition: number;
+	xPosition: MediaTime;
 }): DropTarget {
 	return {
 		trackIndex: 0,
@@ -111,13 +118,16 @@ export function computeDropTarget({
 	const orderedTracks = [...tracks.overlay, tracks.main, ...tracks.audio];
 	const mainTrackIndex = tracks.overlay.length;
 	const xPosition =
-		typeof startTimeOverride === "number"
+		startTimeOverride !== undefined
 			? startTimeOverride
 			: isExternalDrop
 				? playheadTime
-				: Math.round(
-				Math.max(0, mouseX / (pixelsPerSecond * zoomLevel)) * TICKS_PER_SECOND,
-			);
+				: mediaTime({
+						ticks: Math.round(
+							Math.max(0, mouseX / (pixelsPerSecond * zoomLevel)) *
+								TICKS_PER_SECOND,
+						),
+					});
 
 	if (orderedTracks.length === 0) {
 		const placementResult = resolveTrackPlacement({
@@ -221,7 +231,10 @@ export function computeDropTarget({
 	}
 
 	if (placementResult.kind === "existingTrack") {
-		const adjustedXPosition = placementResult.adjustedStartTime ?? xPosition;
+		const adjustedXPosition =
+			placementResult.adjustedStartTime !== undefined
+				? roundMediaTime({ time: placementResult.adjustedStartTime })
+				: xPosition;
 
 		return {
 			trackIndex: placementResult.trackIndex,

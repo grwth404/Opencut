@@ -1,1 +1,1 @@
-export * from "./ticks";
+export * from "./media-time";

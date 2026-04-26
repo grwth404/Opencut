@@ -8,6 +8,7 @@ import { generateUUID } from "@/utils/id";
 import { EditorCore } from "@/core";
 import { applyPlacement, resolveTrackPlacement } from "@/timeline/placement";
 import { cloneAnimations } from "@/animation";
+import type { MediaTime } from "@/wasm";
 
 interface DuplicateElementsParams {
 	elements: { trackId: string; elementId: string }[];
@@ -119,7 +120,7 @@ function buildDuplicateElement({
 }: {
 	element: TimelineElement;
 	id: string;
-	startTime: number;
+	startTime: MediaTime;
 }): TimelineElement {
 	return {
 		...element,

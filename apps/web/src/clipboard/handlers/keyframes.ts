@@ -7,6 +7,7 @@ import type {
 	KeyframeClipboardCurvePatch,
 	KeyframeClipboardItem,
 } from "../types";
+import { roundMediaTime, subMediaTime, type MediaTime } from "@/wasm";
 
 function resolveSingleSourceElement({
 	selectedKeyframes,
@@ -80,7 +81,7 @@ function buildClipboardItem({
 	element: TimelineElement;
 	propertyPath: KeyframeClipboardItem["propertyPath"];
 	keyframeId: string;
-}): (Omit<KeyframeClipboardItem, "timeOffset"> & { time: number }) | null {
+}): (Omit<KeyframeClipboardItem, "timeOffset"> & { time: MediaTime }) | null {
 	const keyframe = getKeyframeById({
 		animations: element.animations,
 		propertyPath,
@@ -136,10 +137,11 @@ export const KeyframesClipboardHandler = {
 		}
 
 		const minTime = Math.min(...rawItems.map((item) => item.time));
+		const minTimeMedia = roundMediaTime({ time: minTime });
 		const items = rawItems
 			.map(({ time, ...item }) => ({
 				...item,
-				timeOffset: time - minTime,
+				timeOffset: subMediaTime({ a: time, b: minTimeMedia }),
 			}))
 			.sort(
 				(left, right) =>

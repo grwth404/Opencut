@@ -12,6 +12,13 @@ import {
 	getTrackPlacementByDisplayIndex,
 	getTrackPlacementById,
 } from "./track-placement";
+import {
+	addMediaTime,
+	maxMediaTime,
+	type MediaTime,
+	subMediaTime,
+	ZERO_MEDIA_TIME,
+} from "@/wasm";
 
 type GroupMoveTarget =
 	| {
@@ -32,7 +39,7 @@ export function resolveGroupMove({
 }: {
 	group: MoveGroup;
 	tracks: SceneTracks;
-	anchorStartTime: number;
+	anchorStartTime: MediaTime;
 	target: GroupMoveTarget;
 }): GroupMoveResult | null {
 	if (target.kind === "newTracks") {
@@ -61,7 +68,7 @@ function resolveExistingTrackMove({
 }: {
 	group: MoveGroup;
 	tracks: SceneTracks;
-	anchorStartTime: number;
+	anchorStartTime: MediaTime;
 	anchorTargetTrackId: string;
 }): GroupMoveResult | null {
 	const anchorTargetPlacement = getTrackPlacementById({
@@ -93,7 +100,10 @@ function resolveExistingTrackMove({
 		targetTrackId:
 			targetTrackIdsByElementId.get(member.elementId) ?? member.trackId,
 		elementId: member.elementId,
-		newStartTime: clampedAnchorStartTime + member.timeOffset,
+		newStartTime: addMediaTime({
+			a: clampedAnchorStartTime,
+			b: member.timeOffset,
+		}),
 	}));
 
 	if (!canApplyMovesToExistingTracks({ tracks, moves })) {
@@ -119,7 +129,7 @@ function resolveNewTrackMove({
 }: {
 	group: MoveGroup;
 	tracks: SceneTracks;
-	anchorStartTime: number;
+	anchorStartTime: MediaTime;
 	anchorInsertIndex: number;
 	newTrackIds: string[];
 }): GroupMoveResult | null {
@@ -173,7 +183,10 @@ function resolveNewTrackMove({
 		sourceTrackId: member.trackId,
 		targetTrackId: newTrackIds[memberIndex],
 		elementId: member.elementId,
-		newStartTime: clampedAnchorStartTime + member.timeOffset,
+		newStartTime: addMediaTime({
+			a: clampedAnchorStartTime,
+			b: member.timeOffset,
+		}),
 	}));
 
 	return {
@@ -335,17 +348,26 @@ function clampAnchorStartTime({
 }: {
 	group: MoveGroup;
 	tracks: SceneTracks;
-	anchorStartTime: number;
+	anchorStartTime: MediaTime;
 	targetTrackIdsByElementId: Map<string, string>;
-}): number {
-	const minimumAnchorStartTime = Math.max(
-		0,
-		...group.members.map((member) => -member.timeOffset),
+}): MediaTime {
+	const minimumAnchorStartTime = group.members.reduce(
+		(minimumStartTime, member) =>
+			member.timeOffset < ZERO_MEDIA_TIME
+				? maxMediaTime({
+						a: minimumStartTime,
+						b: subMediaTime({
+							a: ZERO_MEDIA_TIME,
+							b: member.timeOffset,
+						}),
+					})
+				: minimumStartTime,
+		ZERO_MEDIA_TIME,
 	);
-	let clampedAnchorStartTime = Math.max(
-		minimumAnchorStartTime,
-		anchorStartTime,
-	);
+	let clampedAnchorStartTime =
+		anchorStartTime < minimumAnchorStartTime
+			? minimumAnchorStartTime
+			: anchorStartTime;
 
 	const memberOnMainTrack = group.members.find(
 		(member) =>
@@ -358,11 +380,13 @@ function clampAnchorStartTime({
 	const movingElementIds = new Set(
 		group.members.map((member) => member.elementId),
 	);
-	const requestedMainStartTime =
-		clampedAnchorStartTime + memberOnMainTrack.timeOffset;
+	const requestedMainStartTime = addMediaTime({
+		a: clampedAnchorStartTime,
+		b: memberOnMainTrack.timeOffset,
+	});
 	const earliestStationaryMainStartTime = tracks.main.elements
 		.filter((element) => !movingElementIds.has(element.id))
-		.reduce<number | null>((earliestStartTime, element) => {
+		.reduce<MediaTime | null>((earliestStartTime, element) => {
 			if (earliestStartTime == null || element.startTime < earliestStartTime) {
 				return element.startTime;
 			}
@@ -373,10 +397,13 @@ function clampAnchorStartTime({
 		earliestStationaryMainStartTime == null ||
 		requestedMainStartTime <= earliestStationaryMainStartTime
 	) {
-		clampedAnchorStartTime = Math.max(
-			minimumAnchorStartTime,
-			-memberOnMainTrack.timeOffset,
-		);
+		clampedAnchorStartTime = maxMediaTime({
+			a: minimumAnchorStartTime,
+			b: subMediaTime({
+				a: ZERO_MEDIA_TIME,
+				b: memberOnMainTrack.timeOffset,
+			}),
+		});
 	}
 
 	return clampedAnchorStartTime;
@@ -422,7 +449,7 @@ function canApplyMovesToExistingTracks({
 			const sourceElement = sourceElements.get(move.elementId);
 			return {
 				startTime: move.newStartTime,
-				duration: sourceElement?.duration ?? 0,
+				duration: sourceElement?.duration ?? ZERO_MEDIA_TIME,
 			};
 		});
 		if (hasOverlappingTimeSpans({ timeSpans })) {

@@ -4,7 +4,7 @@ import { processMediaAssets } from "@/media/processing";
 import { toast } from "sonner";
 import { showMediaUploadToast } from "@/media/upload-toast";
 import { DEFAULT_NEW_ELEMENT_DURATION } from "@/timeline/creation";
-import { TICKS_PER_SECOND } from "@/wasm";
+import { mediaTimeFromSeconds, type MediaTime } from "@/wasm";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/timeline/scale";
 import { roundToFrame } from "opencut-wasm";
 import {
@@ -45,9 +45,9 @@ export function useTimelineDragDrop({
 	const [dragElementType, setElementType] = useState<ElementType | null>(null);
 
 	const getSnappedTime = useCallback(
-		({ time }: { time: number }) => {
+		({ time }: { time: MediaTime }) => {
 			const projectFps = editor.project.getActive().settings.fps;
-			return roundToFrame({ time, rate: projectFps }) ?? time;
+			return (roundToFrame({ time, rate: projectFps }) ?? time) as MediaTime;
 		},
 		[editor],
 	);
@@ -76,7 +76,7 @@ export function useTimelineDragDrop({
 		}: {
 			elementType: ElementType;
 			mediaId?: string;
-		}): number => {
+		}): MediaTime => {
 			if (
 				elementType === "text" ||
 				elementType === "graphic" ||
@@ -89,7 +89,7 @@ export function useTimelineDragDrop({
 				const mediaAssets = editor.media.getAssets();
 				const media = mediaAssets.find((m) => m.id === mediaId);
 				return media?.duration != null
-					? Math.round(media.duration * TICKS_PER_SECOND)
+					? mediaTimeFromSeconds({ seconds: media.duration })
 					: DEFAULT_NEW_ELEMENT_DURATION;
 			}
 			return DEFAULT_NEW_ELEMENT_DURATION;
@@ -346,7 +346,7 @@ export function useTimelineDragDrop({
 
 			const duration =
 				mediaAsset.duration != null
-					? Math.round(mediaAsset.duration * TICKS_PER_SECOND)
+					? mediaTimeFromSeconds({ seconds: mediaAsset.duration })
 					: DEFAULT_NEW_ELEMENT_DURATION;
 			const element = buildElementFromMedia({
 				mediaId: mediaAsset.id,
@@ -470,7 +470,7 @@ export function useTimelineDragDrop({
 
 						const duration =
 							createdAsset.duration != null
-								? Math.round(createdAsset.duration * TICKS_PER_SECOND)
+								? mediaTimeFromSeconds({ seconds: createdAsset.duration })
 								: DEFAULT_NEW_ELEMENT_DURATION;
 						const sceneTracks = editor.scenes.getActiveScene().tracks;
 						const currentTime = editor.playback.getCurrentTime();

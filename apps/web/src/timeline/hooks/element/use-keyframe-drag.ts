@@ -11,7 +11,15 @@ import { useKeyframeSelection } from "./use-keyframe-selection";
 import { roundToFrame, snappedSeekTime } from "opencut-wasm";
 import { timelineTimeToSnappedPixels } from "@/timeline";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/timeline/scale";
-import { TICKS_PER_SECOND } from "@/wasm";
+import {
+	addMediaTime,
+	type MediaTime,
+	maxMediaTime,
+	mediaTime,
+	minMediaTime,
+	TICKS_PER_SECOND,
+	ZERO_MEDIA_TIME,
+} from "@/wasm";
 import { TIMELINE_DRAG_THRESHOLD_PX } from "@/timeline/components/interaction";
 import { RetimeKeyframeCommand } from "@/commands/timeline/element/keyframes/retime-keyframe";
 import { BatchCommand } from "@/commands";
@@ -22,13 +30,13 @@ import { registerCanceller } from "@/editor/cancel-interaction";
 export interface KeyframeDragState {
 	isDragging: boolean;
 	draggingKeyframeIds: Set<string>;
-	deltaTime: number;
+	deltaTime: MediaTime;
 }
 
 const initialDragState: KeyframeDragState = {
 	isDragging: false,
 	draggingKeyframeIds: new Set(),
-	deltaTime: 0,
+	deltaTime: ZERO_MEDIA_TIME,
 };
 
 interface PendingKeyframeDrag {
@@ -43,7 +51,7 @@ export function useKeyframeDrag({
 }: {
 	zoomLevel: number;
 	element: TimelineElement;
-	displayedStartTime: number;
+	displayedStartTime: MediaTime;
 }) {
 	const editor = useEditor();
 	const {
@@ -83,7 +91,7 @@ export function useKeyframeDrag({
 			deltaTime,
 		}: {
 			keyframeRefs: SelectedKeyframeRef[];
-			deltaTime: number;
+			deltaTime: MediaTime;
 		}) => {
 			const commands: Command[] = keyframeRefs.flatMap((keyframeRef) => {
 				const keyframe = getKeyframeById({
@@ -92,10 +100,13 @@ export function useKeyframeDrag({
 					keyframeId: keyframeRef.keyframeId,
 				});
 				if (!keyframe) return [];
-				const nextTime = Math.max(
-					0,
-					Math.min(element.duration, keyframe.time + deltaTime),
-				);
+				const nextTime = maxMediaTime({
+					a: ZERO_MEDIA_TIME,
+					b: minMediaTime({
+						a: element.duration,
+						b: addMediaTime({ a: keyframe.time, b: deltaTime }),
+					}),
+				});
 				return [
 					new RetimeKeyframeCommand({
 						trackId: keyframeRef.trackId,
@@ -138,7 +149,7 @@ export function useKeyframeDrag({
 					draggingKeyframeIds: new Set(
 						pending.keyframeRefs.map((keyframe) => keyframe.keyframeId),
 					),
-					deltaTime: 0,
+					deltaTime: ZERO_MEDIA_TIME,
 				});
 				return;
 			}
@@ -146,11 +157,14 @@ export function useKeyframeDrag({
 			if (!dragState.isDragging) return;
 
 			const startX = mouseDownXRef.current ?? clientX;
-			const rawDelta = Math.round(
-				((clientX - startX) / pixelsPerSecond) * TICKS_PER_SECOND,
-			);
-			const snappedDelta =
-				roundToFrame({ time: rawDelta, rate: fps }) ?? rawDelta;
+			const rawDelta = mediaTime({
+				ticks: Math.round(
+					((clientX - startX) / pixelsPerSecond) * TICKS_PER_SECOND,
+				),
+			});
+			const snappedDelta = (
+				roundToFrame({ time: rawDelta, rate: fps }) ?? rawDelta
+			) as MediaTime;
 
 			setDragState((previous) => ({ ...previous, deltaTime: snappedDelta }));
 		};
@@ -246,7 +260,7 @@ export function useKeyframeDrag({
 			event: ReactMouseEvent;
 			keyframes: SelectedKeyframeRef[];
 			orderedKeyframes: SelectedKeyframeRef[];
-			indicatorTime: number;
+			indicatorTime: MediaTime;
 		}) => {
 			event.stopPropagation();
 
@@ -259,12 +273,17 @@ export function useKeyframeDrag({
 			if (wasDrag) return;
 
 			const duration = editor.timeline.getTotalDuration();
-			const seekTime =
+			const absoluteIndicatorTime = addMediaTime({
+				a: displayedStartTime,
+				b: indicatorTime,
+			});
+			const seekTime = (
 				snappedSeekTime({
-					time: displayedStartTime + indicatorTime,
+					time: absoluteIndicatorTime,
 					duration,
 					rate: fps,
-				}) ?? displayedStartTime + indicatorTime;
+				}) ?? absoluteIndicatorTime
+			) as MediaTime;
 			editor.playback.seek({ time: seekTime });
 
 			if (event.shiftKey) {

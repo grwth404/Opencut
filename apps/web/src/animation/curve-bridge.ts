@@ -7,6 +7,7 @@ import type {
 	NormalizedCubicBezier,
 	ScalarAnimationKey,
 } from "@/animation/types";
+import { roundMediaTime } from "@/wasm";
 
 const VALUE_EPSILON = 1e-6;
 
@@ -84,11 +85,11 @@ export function getCurveHandlesForNormalizedCubicBezier({
 
 	return {
 		rightHandle: {
-			dt: spanTime * x1,
+			dt: roundMediaTime({ time: spanTime * x1 }),
 			dv: effectiveSpanValue * y1,
 		},
 		leftHandle: {
-			dt: spanTime * (x2 - 1),
+			dt: roundMediaTime({ time: spanTime * (x2 - 1) }),
 			dv: effectiveSpanValue * (y2 - 1),
 		},
 	};

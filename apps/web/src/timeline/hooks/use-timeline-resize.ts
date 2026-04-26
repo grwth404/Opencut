@@ -139,7 +139,7 @@ export function useTimelineResize({
 				updates: result.updates.map(({ trackId, elementId, patch }) => ({
 					trackId,
 					elementId,
-					updates: patch,
+					updates: patch as Partial<TimelineElement>,
 				})),
 			});
 		};
@@ -155,7 +155,7 @@ export function useTimelineResize({
 					updates: result.updates.map(({ trackId, elementId, patch }) => ({
 						trackId,
 						elementId,
-						patch,
+						patch: patch as Partial<TimelineElement>,
 					})),
 				});
 			}

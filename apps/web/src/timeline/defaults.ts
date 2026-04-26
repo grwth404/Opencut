@@ -1,6 +1,7 @@
 import { DEFAULT_NEW_ELEMENT_DURATION } from "@/timeline/creation";
 import type { TTimelineViewState } from "@/project/types";
 import type { BlendMode, Transform } from "@/rendering";
+import { ZERO_MEDIA_TIME } from "@/wasm";
 import type { TextElement } from "./types";
 
 const defaultTransform: Transform = {
@@ -42,9 +43,9 @@ const defaultTextElement: Omit<TextElement, "id"> = {
 	letterSpacing: defaultTextLetterSpacing,
 	lineHeight: defaultTextLineHeight,
 	duration: DEFAULT_NEW_ELEMENT_DURATION,
-	startTime: 0,
-	trimStart: 0,
-	trimEnd: 0,
+	startTime: ZERO_MEDIA_TIME,
+	trimStart: ZERO_MEDIA_TIME,
+	trimEnd: ZERO_MEDIA_TIME,
 	transform: {
 		...defaultTransform,
 		position: { ...defaultTransform.position },
@@ -55,7 +56,7 @@ const defaultTextElement: Omit<TextElement, "id"> = {
 const defaultTimelineViewState: TTimelineViewState = {
 	zoomLevel: 1,
 	scrollLeft: 0,
-	playheadTime: 0,
+	playheadTime: ZERO_MEDIA_TIME,
 };
 
 export const DEFAULTS = {

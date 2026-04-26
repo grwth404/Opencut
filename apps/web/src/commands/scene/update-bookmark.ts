@@ -6,12 +6,13 @@ import {
 	getFrameTime,
 	updateBookmarkInArray,
 } from "@/timeline/bookmarks/index";
+import type { MediaTime } from "@/wasm";
 
 export class UpdateBookmarkCommand extends Command {
 	private savedScenes: TScene[] | null = null;
 
 	constructor(
-		private time: number,
+		private time: MediaTime,
 		private updates: Partial<Omit<Bookmark, "time">>,
 	) {
 		super();

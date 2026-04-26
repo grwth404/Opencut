@@ -10,6 +10,7 @@ import type {
 } from "@/timeline";
 import { calculateTotalDuration } from "@/timeline";
 import { findTrackInSceneTracks } from "@/timeline/track-element-update";
+import { type MediaTime, ZERO_MEDIA_TIME } from "@/wasm";
 import {
 	canElementBeHidden,
 	canElementHaveAudio,
@@ -95,10 +96,10 @@ export class TimelineManager {
 		pushHistory = true,
 	}: {
 		elementId: string;
-		trimStart: number;
-		trimEnd: number;
-		startTime?: number;
-		duration?: number;
+		trimStart: MediaTime;
+		trimEnd: MediaTime;
+		startTime?: MediaTime;
+		duration?: MediaTime;
 		pushHistory?: boolean;
 	}): void {
 		const trackId = this.findTrackIdForElement({ elementId });
@@ -188,7 +189,7 @@ export class TimelineManager {
 		retainSide = "both",
 	}: {
 		elements: { trackId: string; elementId: string }[];
-		splitTime: number;
+		splitTime: MediaTime;
 		retainSide?: "both" | "left" | "right";
 	}): { trackId: string; elementId: string }[] {
 		const command = new SplitElementsCommand({
@@ -200,20 +201,20 @@ export class TimelineManager {
 		return command.getRightSideElements();
 	}
 
-	getTotalDuration(): number {
+	getTotalDuration(): MediaTime {
 		const activeScene = this.editor.scenes.getActiveSceneOrNull();
 		if (!activeScene) {
-			return 0;
+			return ZERO_MEDIA_TIME;
 		}
 
 		return calculateTotalDuration({ tracks: activeScene.tracks });
 	}
 
-	getLastFrameTime(): number {
+	getLastFrameTime(): MediaTime {
 		const duration = this.getTotalDuration();
 		const fps = this.editor.project.getActive()?.settings.fps;
 		if (!fps || duration <= 0) return duration;
-		return lastFrameTime({ duration, rate: fps }) ?? duration;
+		return (lastFrameTime({ duration, rate: fps }) ?? duration) as MediaTime;
 	}
 
 	getTrackById({ trackId }: { trackId: string }): TimelineTrack | null {
@@ -483,7 +484,7 @@ export class TimelineManager {
 			trackId: string;
 			elementId: string;
 			propertyPath: AnimationPath;
-			time: number;
+			time: MediaTime;
 			value: AnimationValue;
 			interpolation?: AnimationInterpolation;
 			keyframeId?: string;
@@ -600,7 +601,7 @@ export class TimelineManager {
 		elementId: string;
 		propertyPath: AnimationPath;
 		keyframeId: string;
-		time: number;
+		time: MediaTime;
 	}): void {
 		const command = new RetimeKeyframeCommand({
 			trackId,
@@ -658,7 +659,7 @@ export class TimelineManager {
 		elementId: string;
 		effectId: string;
 		paramKey: string;
-		time: number;
+		time: MediaTime;
 		value: number;
 		interpolation?: "linear" | "hold";
 		keyframeId?: string;

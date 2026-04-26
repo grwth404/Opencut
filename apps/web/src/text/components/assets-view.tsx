@@ -3,11 +3,12 @@ import { PanelView } from "@/components/editor/panels/assets/views/base-panel";
 import { useEditor } from "@/editor/use-editor";
 import { DEFAULTS } from "@/timeline/defaults";
 import { buildTextElement } from "@/timeline/element-utils";
+import type { MediaTime } from "@/wasm";
 
 export function TextView() {
 	const editor = useEditor();
 
-	const handleAddToTimeline = ({ currentTime }: { currentTime: number }) => {
+	const handleAddToTimeline = ({ currentTime }: { currentTime: MediaTime }) => {
 		const activeScene = editor.scenes.getActiveScene();
 		if (!activeScene) return;
 

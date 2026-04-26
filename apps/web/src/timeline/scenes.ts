@@ -2,6 +2,7 @@ import type { TScene } from "@/timeline";
 import { generateUUID } from "@/utils/id";
 import { calculateTotalDuration } from "@/timeline";
 import { MAIN_TRACK_NAME } from "@/timeline/placement/main-track";
+import { type MediaTime, ZERO_MEDIA_TIME } from "@/wasm";
 
 export function getMainScene({ scenes }: { scenes: TScene[] }): TScene | null {
 	return scenes.find((scene) => scene.isMain) || null;
@@ -89,10 +90,10 @@ export function getProjectDurationFromScenes({
 	scenes,
 }: {
 	scenes: TScene[];
-}): number {
+}): MediaTime {
 	const mainScene = getMainScene({ scenes }) ?? scenes[0] ?? null;
 	if (!mainScene?.tracks) {
-		return 0;
+		return ZERO_MEDIA_TIME;
 	}
 
 	return calculateTotalDuration({ tracks: mainScene.tracks });

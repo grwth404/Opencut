@@ -1,5 +1,5 @@
 import type { EditorCore } from "@/core";
-import type { SceneTracks, TScene } from "@/timeline";
+import type { Bookmark, SceneTracks, TScene } from "@/timeline";
 import { storageService } from "@/services/storage/service";
 import {
 	getMainScene,
@@ -21,6 +21,7 @@ import {
 	ToggleBookmarkCommand,
 	UpdateBookmarkCommand,
 } from "@/commands/scene";
+import type { MediaTime } from "@/wasm";
 
 export class ScenesManager {
 	private active: TScene | null = null;
@@ -106,12 +107,12 @@ export class ScenesManager {
 		this.notify();
 	}
 
-	async toggleBookmark({ time }: { time: number }): Promise<void> {
+	async toggleBookmark({ time }: { time: MediaTime }): Promise<void> {
 		const command = new ToggleBookmarkCommand(time);
 		this.editor.command.execute({ command });
 	}
 
-	isBookmarked({ time }: { time: number }): boolean {
+	isBookmarked({ time }: { time: MediaTime }): boolean {
 		const activeScene = this.getActiveScene();
 		const activeProject = this.editor.project.getActive();
 
@@ -125,7 +126,7 @@ export class ScenesManager {
 		return isBookmarkAtTime({ bookmarks: activeScene.bookmarks, frameTime });
 	}
 
-	async removeBookmark({ time }: { time: number }): Promise<void> {
+	async removeBookmark({ time }: { time: MediaTime }): Promise<void> {
 		const command = new RemoveBookmarkCommand(time);
 		this.editor.command.execute({ command });
 	}
@@ -134,8 +135,8 @@ export class ScenesManager {
 		time,
 		updates,
 	}: {
-		time: number;
-		updates: Partial<{ note: string; color: string; duration: number }>;
+		time: MediaTime;
+		updates: Partial<Omit<Bookmark, "time">>;
 	}): Promise<void> {
 		const command = new UpdateBookmarkCommand(time, updates);
 		this.editor.command.execute({ command });
@@ -145,14 +146,14 @@ export class ScenesManager {
 		fromTime,
 		toTime,
 	}: {
-		fromTime: number;
-		toTime: number;
+		fromTime: MediaTime;
+		toTime: MediaTime;
 	}): Promise<void> {
 		const command = new MoveBookmarkCommand(fromTime, toTime);
 		this.editor.command.execute({ command });
 	}
 
-	getBookmarkAtTime({ time }: { time: number }) {
+	getBookmarkAtTime({ time }: { time: MediaTime }) {
 		const activeScene = this.active;
 		const activeProject = this.editor.project.getActive();
 

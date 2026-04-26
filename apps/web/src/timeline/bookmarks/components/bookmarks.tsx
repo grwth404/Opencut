@@ -26,6 +26,13 @@ import { Label } from "@/components/ui/label";
 import { uppercase } from "@/utils/string";
 import { clamp, formatNumberForDisplay } from "@/utils/math";
 import { timelineTimeToPixels, timelineTimeToSnappedPixels } from "@/timeline";
+import {
+	type MediaTime,
+	mediaTimeFromSeconds,
+	mediaTimeToSeconds,
+	subMediaTime,
+	ZERO_MEDIA_TIME,
+} from "@/wasm";
 
 const MIN_BOOKMARK_WIDTH_PX = 2;
 const BOOKMARK_MARKER_WIDTH_PX = 12;
@@ -39,12 +46,12 @@ function seekToBookmarkTime({
 	time,
 }: {
 	editor: EditorCore;
-	time: number;
+	time: MediaTime;
 }) {
 	const activeProject = editor.project.getActive();
 	const duration = editor.timeline.getTotalDuration();
 	const rate = activeProject?.settings.fps ?? DEFAULT_FPS;
-	const snappedTime = snappedSeekTime({ time, duration, rate }) ?? time;
+	const snappedTime = (snappedSeekTime({ time, duration, rate }) ?? time) as MediaTime;
 	editor.playback.seek({ time: snappedTime });
 }
 
@@ -137,7 +144,7 @@ function TimelineBookmark({
 
 	const displayTime = isDragging ? dragState.currentTime : bookmark.time;
 	const time = bookmark.time;
-	const bookmarkDuration = bookmark.duration ?? 0;
+	const bookmarkDuration = bookmark.duration ?? ZERO_MEDIA_TIME;
 	const durationWidth =
 		bookmarkDuration > 0
 			? timelineTimeToPixels({ time: bookmarkDuration, zoomLevel })
@@ -182,7 +189,7 @@ function TimelineBookmark({
 						left: `${bookmarkLeft}px`,
 						width: `${bookmarkWidth}px`,
 					}}
-					aria-label={`Bookmark at ${formatNumberForDisplay({ value: time, fractionDigits: 1 })}s`}
+					aria-label={`Bookmark at ${formatNumberForDisplay({ value: mediaTimeToSeconds({ time }), fractionDigits: 1 })}s`}
 					type="button"
 					onMouseDown={handleMouseDown}
 					onClick={handleClick}
@@ -286,8 +293,8 @@ function BookmarkPopoverContent({
 	onPopoverClose,
 }: {
 	bookmark: Bookmark;
-	time: number;
-	timelineDuration: number;
+	time: MediaTime;
+	timelineDuration: MediaTime;
 	onPopoverClose: () => void;
 }) {
 	const editor = useEditor();
@@ -314,9 +321,8 @@ function BookmarkPopoverContent({
 		note,
 		color,
 		duration,
-	}: Partial<{ note: string; color: string; duration: number }>) => {
-		const updates: Partial<{ note: string; color: string; duration: number }> =
-			{};
+	}: Partial<Omit<Bookmark, "time">>) => {
+		const updates: Partial<Omit<Bookmark, "time">> = {};
 		if (note !== undefined && note !== bookmark.note) updates.note = note;
 		if (
 			color !== undefined &&
@@ -330,6 +336,15 @@ function BookmarkPopoverContent({
 		if (Object.keys(updates).length === 0) return;
 		editor.scenes.updateBookmark({ time, updates });
 	};
+	const maxDuration = mediaTimeToSeconds({
+		time:
+			timelineDuration > time
+				? subMediaTime({ a: timelineDuration, b: time })
+				: ZERO_MEDIA_TIME,
+	});
+	const durationSeconds = mediaTimeToSeconds({
+		time: bookmark.duration ?? ZERO_MEDIA_TIME,
+	});
 
 	return (
 		<>
@@ -387,7 +402,7 @@ function BookmarkPopoverContent({
 						type="number"
 						min={0}
 						step={0.1}
-						value={bookmark.duration ?? 0}
+						value={durationSeconds}
 						onChange={(event) => {
 							const parsed = parseFloat(event.target.value);
 							const value = Number.isNaN(parsed)
@@ -395,9 +410,11 @@ function BookmarkPopoverContent({
 								: clamp({
 										value: parsed,
 										min: 0,
-										max: Math.max(0, timelineDuration - time),
+										max: maxDuration,
 									});
-							handleUpdate({ duration: value });
+							handleUpdate({
+								duration: mediaTimeFromSeconds({ seconds: value }),
+							});
 						}}
 						className="h-8 text-sm"
 						containerClassName="w-full"

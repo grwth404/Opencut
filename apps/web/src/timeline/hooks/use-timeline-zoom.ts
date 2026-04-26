@@ -12,13 +12,14 @@ import { TIMELINE_ZOOM_MAX, TIMELINE_ZOOM_MIN } from "@/timeline/scale";
 import { timelineTimeToPixels } from "@/timeline/pixel-utils";
 import { useEditor } from "@/editor/use-editor";
 import { zoomToSlider } from "@/timeline/zoom-utils";
+import type { MediaTime } from "@/wasm";
 
 interface UseTimelineZoomProps {
 	containerRef: RefObject<HTMLDivElement | null>;
 	minZoom?: number;
 	initialZoom?: number;
 	initialScrollLeft?: number;
-	initialPlayheadTime?: number;
+	initialPlayheadTime?: MediaTime;
 	tracksScrollRef: RefObject<HTMLDivElement | null>;
 	rulerScrollRef: RefObject<HTMLDivElement | null>;
 }
@@ -106,7 +107,7 @@ export function useTimelineZoom({
 			setZoomLevel(Math.max(minZoom, Math.min(TIMELINE_ZOOM_MAX, initialZoom)));
 			return;
 		}
-		setZoomLevel((prev) => {
+		setZoomLevel((prev: number) => {
 			if (prev < minZoom) {
 				return minZoom;
 			}
@@ -116,7 +117,7 @@ export function useTimelineZoom({
 
 	const wrappedSetZoomLevel = useCallback(
 		(zoomLevelOrUpdater: number | ((prev: number) => number)) => {
-			setZoomLevel((prev) => {
+			setZoomLevel((prev: number) => {
 				const nextZoom =
 					typeof zoomLevelOrUpdater === "function"
 						? zoomLevelOrUpdater(prev)

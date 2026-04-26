@@ -21,15 +21,16 @@ import { getElementEdgeSnapPoints } from "@/timeline/element-snap-source";
 import { getPlayheadSnapPoints } from "@/timeline/playhead-snap-source";
 import { getAnimationKeyframeSnapPointsForTimeline } from "@/animation/timeline-snap-points";
 import type { Bookmark } from "@/timeline";
+import { type MediaTime, ZERO_MEDIA_TIME } from "@/wasm";
 
 export interface BookmarkDragState {
 	isDragging: boolean;
-	bookmarkTime: number | null;
-	currentTime: number;
+	bookmarkTime: MediaTime | null;
+	currentTime: MediaTime;
 }
 
 interface PendingBookmarkDrag {
-	bookmarkTime: number;
+	bookmarkTime: MediaTime;
 	startMouseX: number;
 	startMouseY: number;
 }
@@ -58,7 +59,7 @@ export function useBookmarkDrag({
 	const [dragState, setDragState] = useState<BookmarkDragState>({
 		isDragging: false,
 		bookmarkTime: null,
-		currentTime: 0,
+		currentTime: ZERO_MEDIA_TIME,
 	});
 	const [isPendingDrag, setIsPendingDrag] = useState(false);
 	const pendingDragRef = useRef<PendingBookmarkDrag | null>(null);
@@ -69,8 +70,8 @@ export function useBookmarkDrag({
 			bookmarkTime,
 			initialCurrentTime,
 		}: {
-			bookmarkTime: number;
-			initialCurrentTime: number;
+			bookmarkTime: MediaTime;
+			initialCurrentTime: MediaTime;
 		}) => {
 			setDragState({
 				isDragging: true,
@@ -85,7 +86,7 @@ export function useBookmarkDrag({
 		setDragState({
 			isDragging: false,
 			bookmarkTime: null,
-			currentTime: 0,
+			currentTime: ZERO_MEDIA_TIME,
 		});
 	}, []);
 
@@ -94,9 +95,9 @@ export function useBookmarkDrag({
 			rawTime,
 			excludeBookmarkTime,
 		}: {
-			rawTime: number;
-			excludeBookmarkTime: number;
-		}): { snappedTime: number; snapPoint: SnapPoint | null } => {
+			rawTime: MediaTime;
+			excludeBookmarkTime: MediaTime;
+		}): { snappedTime: MediaTime; snapPoint: SnapPoint | null } => {
 			const shouldSnap = snappingEnabled && !isShiftHeldRef.current;
 			if (!shouldSnap) {
 				return { snappedTime: rawTime, snapPoint: null };
@@ -116,7 +117,7 @@ export function useBookmarkDrag({
 				maxSnapDistance: getTimelineSnapThresholdInTicks({ zoomLevel }),
 			});
 			return {
-				snappedTime: result.snappedTime,
+				snappedTime: result.snappedTime as MediaTime,
 				snapPoint: result.snapPoint,
 			};
 		},
@@ -162,11 +163,14 @@ export function useBookmarkDrag({
 					zoomLevel,
 					scrollLeft,
 				});
-				const frameSnappedTime =
+				const clampedTime =
+					mouseTime > duration ? duration : mouseTime;
+				const frameSnappedTime = (
 					roundToFrame({
-						time: Math.max(0, Math.min(mouseTime, duration)),
+						time: clampedTime,
 						rate: activeProject.settings.fps,
-					}) ?? Math.max(0, Math.min(mouseTime, duration));
+					}) ?? clampedTime
+				) as MediaTime;
 				const { snappedTime: initialTime } = getSnapResult({
 					rawTime: frameSnappedTime,
 					excludeBookmarkTime: bookmarkTime,
@@ -193,10 +197,12 @@ export function useBookmarkDrag({
 				zoomLevel,
 				scrollLeft,
 			});
-			const clampedTime = Math.max(0, Math.min(mouseTime, duration));
-			const frameSnappedTime =
+			const clampedTime =
+				mouseTime > duration ? duration : mouseTime;
+			const frameSnappedTime = (
 				roundToFrame({ time: clampedTime, rate: activeProject.settings.fps }) ??
-				clampedTime;
+				clampedTime
+			) as MediaTime;
 			const snapResult = getSnapResult({
 				rawTime: frameSnappedTime,
 				excludeBookmarkTime: dragState.bookmarkTime,
@@ -234,10 +240,8 @@ export function useBookmarkDrag({
 				return;
 			}
 
-			const clampedTime = Math.max(
-				0,
-				Math.min(dragState.currentTime, duration),
-			);
+			const clampedTime =
+				dragState.currentTime > duration ? duration : dragState.currentTime;
 
 			editor.scenes.moveBookmark({
 				fromTime: dragState.bookmarkTime,

@@ -1,4 +1,4 @@
-import { mediaTimeToSeconds } from "opencut-wasm";
+import { mediaTimeToSeconds, roundMediaTime } from "@/wasm";
 import {
 	getElementLocalTime,
 	resolveColorAtTime,
@@ -204,7 +204,7 @@ async function resolveVideoNode({
 	const frame = await videoCache.getFrameAt({
 		mediaId: node.params.mediaId,
 		file: node.params.file,
-		time: mediaTimeToSeconds({ time: sourceTimeTicks }),
+		time: mediaTimeToSeconds({ time: roundMediaTime({ time: sourceTimeTicks }) }),
 	});
 	if (!frame) {
 		return null;
@@ -421,7 +421,7 @@ async function resolveBackdropSource({
 		const frame = await videoCache.getFrameAt({
 			mediaId: node.params.mediaId,
 			file: node.params.file,
-			time: mediaTimeToSeconds({ time: sourceTimeTicks }),
+			time: mediaTimeToSeconds({ time: roundMediaTime({ time: sourceTimeTicks }) }),
 		});
 		if (!frame) {
 			return null;

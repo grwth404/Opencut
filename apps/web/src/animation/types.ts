@@ -1,4 +1,5 @@
 import type { ParamValues } from "@/params";
+import type { MediaTime } from "@/wasm";
 
 export const ANIMATION_PROPERTY_PATHS = [
 	"transform.positionX",
@@ -77,13 +78,13 @@ export type TangentMode = "auto" | "aligned" | "broken" | "flat";
 export type ChannelExtrapolationMode = "hold" | "linear";
 
 export interface CurveHandle {
-	dt: number;
+	dt: MediaTime;
 	dv: number;
 }
 
 interface BaseAnimationKeyframe<TValue extends number | DiscreteValue> {
 	id: string;
-	time: number; // relative to element start time
+	time: MediaTime; // relative to element start time
 	value: TValue;
 }
 
@@ -209,7 +210,7 @@ export interface ScalarCurveKeyframePatch {
 export interface ElementKeyframe {
 	propertyPath: AnimationPath;
 	id: string;
-	time: number;
+	time: MediaTime;
 	value: AnimationValue;
 	interpolation: AnimationInterpolation;
 }

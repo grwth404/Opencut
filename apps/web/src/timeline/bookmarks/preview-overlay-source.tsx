@@ -5,6 +5,7 @@ import {
 	type PreviewOverlaySourceResult,
 } from "@/preview/overlays";
 import { getBookmarksActiveAtTime } from "./utils";
+import type { MediaTime } from "@/wasm";
 
 export const bookmarkNotesPreviewOverlay: PreviewOverlayDefinition = {
 	id: "bookmark-notes",
@@ -15,7 +16,7 @@ export const bookmarkNotesPreviewOverlay: PreviewOverlayDefinition = {
 function BookmarkNotesOverlay({
 	bookmarks,
 }: {
-	bookmarks: Array<{ time: number; note: string; color?: string }>;
+	bookmarks: Array<{ time: MediaTime; note: string; color?: string }>;
 }) {
 	return (
 		<div className="flex flex-col gap-1.5" aria-live="polite">
@@ -43,7 +44,7 @@ export function getBookmarkPreviewOverlaySource({
 	isVisible,
 }: {
 	bookmarks: Bookmark[];
-	time: number;
+	time: MediaTime;
 	isVisible: boolean;
 }): PreviewOverlaySourceResult {
 	const bookmarksWithNotes = getBookmarksActiveAtTime({

@@ -29,6 +29,7 @@ import { buildDefaultEffectInstance } from "@/effects";
 import { buildDefaultGraphicInstance } from "@/graphics";
 import type { ParamValues } from "@/params";
 import { capitalizeFirstLetter } from "@/utils/string";
+import { type MediaTime, ZERO_MEDIA_TIME } from "@/wasm";
 
 export function canElementHaveAudio(
 	element: TimelineElement,
@@ -107,7 +108,7 @@ export function buildTextElement({
 	startTime,
 }: {
 	raw: Partial<Omit<TextElement, "type" | "id">>;
-	startTime: number;
+	startTime: MediaTime;
 }): CreateTimelineElement {
 	const t = raw as Partial<TextElement>;
 
@@ -117,8 +118,8 @@ export function buildTextElement({
 		content: t.content ?? DEFAULTS.text.element.content,
 		duration: t.duration ?? DEFAULT_NEW_ELEMENT_DURATION,
 		startTime,
-		trimStart: 0,
-		trimEnd: 0,
+		trimStart: ZERO_MEDIA_TIME,
+		trimEnd: ZERO_MEDIA_TIME,
 		fontSize: t.fontSize ?? DEFAULTS.text.element.fontSize,
 		fontFamily: t.fontFamily ?? DEFAULTS.text.element.fontFamily,
 		color: t.color ?? DEFAULTS.text.element.color,
@@ -141,8 +142,8 @@ export function buildEffectElement({
 	duration,
 }: {
 	effectType: string;
-	startTime: number;
-	duration?: number;
+	startTime: MediaTime;
+	duration?: MediaTime;
 }): CreateEffectElement {
 	const instance = buildDefaultEffectInstance({ effectType });
 	return {
@@ -152,8 +153,8 @@ export function buildEffectElement({
 		params: instance.params,
 		duration: duration ?? DEFAULT_NEW_ELEMENT_DURATION,
 		startTime,
-		trimStart: 0,
-		trimEnd: 0,
+		trimStart: ZERO_MEDIA_TIME,
+		trimEnd: ZERO_MEDIA_TIME,
 	};
 }
 
@@ -166,7 +167,7 @@ export function buildStickerElement({
 }: {
 	stickerId: string;
 	name?: string;
-	startTime: number;
+	startTime: MediaTime;
 	intrinsicWidth?: number;
 	intrinsicHeight?: number;
 }): CreateStickerElement {
@@ -180,8 +181,8 @@ export function buildStickerElement({
 		intrinsicHeight,
 		duration: DEFAULT_NEW_ELEMENT_DURATION,
 		startTime,
-		trimStart: 0,
-		trimEnd: 0,
+		trimStart: ZERO_MEDIA_TIME,
+		trimEnd: ZERO_MEDIA_TIME,
 		transform: {
 			...DEFAULTS.element.transform,
 			position: { ...DEFAULTS.element.transform.position },
@@ -199,7 +200,7 @@ export function buildGraphicElement({
 }: {
 	definitionId: string;
 	name?: string;
-	startTime: number;
+	startTime: MediaTime;
 	params?: Partial<ParamValues>;
 }): CreateGraphicElement {
 	const instance = buildDefaultGraphicInstance({ definitionId });
@@ -210,8 +211,8 @@ export function buildGraphicElement({
 		params: { ...instance.params, ...(params ?? {}) } as ParamValues,
 		duration: DEFAULT_NEW_ELEMENT_DURATION,
 		startTime,
-		trimStart: 0,
-		trimEnd: 0,
+		trimStart: ZERO_MEDIA_TIME,
+		trimEnd: ZERO_MEDIA_TIME,
 		transform: {
 			...DEFAULTS.element.transform,
 			position: { ...DEFAULTS.element.transform.position },
@@ -229,8 +230,8 @@ function buildVideoElement({
 }: {
 	mediaId: string;
 	name: string;
-	duration: number;
-	startTime: number;
+	duration: MediaTime;
+	startTime: MediaTime;
 }): CreateVideoElement {
 	return {
 		type: "video",
@@ -238,8 +239,8 @@ function buildVideoElement({
 		name,
 		duration,
 		startTime,
-		trimStart: 0,
-		trimEnd: 0,
+		trimStart: ZERO_MEDIA_TIME,
+		trimEnd: ZERO_MEDIA_TIME,
 		sourceDuration: duration,
 		muted: false,
 		isSourceAudioEnabled: true,
@@ -262,8 +263,8 @@ function buildImageElement({
 }: {
 	mediaId: string;
 	name: string;
-	duration: number;
-	startTime: number;
+	duration: MediaTime;
+	startTime: MediaTime;
 }): CreateImageElement {
 	return {
 		type: "image",
@@ -271,8 +272,8 @@ function buildImageElement({
 		name,
 		duration,
 		startTime,
-		trimStart: 0,
-		trimEnd: 0,
+		trimStart: ZERO_MEDIA_TIME,
+		trimEnd: ZERO_MEDIA_TIME,
 		hidden: false,
 		transform: {
 			...DEFAULTS.element.transform,
@@ -292,8 +293,8 @@ function buildUploadAudioElement({
 }: {
 	mediaId: string;
 	name: string;
-	duration: number;
-	startTime: number;
+	duration: MediaTime;
+	startTime: MediaTime;
 	buffer?: AudioBuffer;
 }): CreateUploadAudioElement {
 	const element: CreateUploadAudioElement = {
@@ -303,8 +304,8 @@ function buildUploadAudioElement({
 		name,
 		duration,
 		startTime,
-		trimStart: 0,
-		trimEnd: 0,
+		trimStart: ZERO_MEDIA_TIME,
+		trimEnd: ZERO_MEDIA_TIME,
 		sourceDuration: duration,
 		volume: DEFAULTS.element.volume,
 		muted: false,
@@ -326,8 +327,8 @@ export function buildElementFromMedia({
 	mediaId: string;
 	mediaType: MediaType;
 	name: string;
-	duration: number;
-	startTime: number;
+	duration: MediaTime;
+	startTime: MediaTime;
 	buffer?: AudioBuffer;
 }): CreateTimelineElement {
 	switch (mediaType) {
@@ -355,8 +356,8 @@ export function buildLibraryAudioElement({
 }: {
 	sourceUrl: string;
 	name: string;
-	duration: number;
-	startTime: number;
+	duration: MediaTime;
+	startTime: MediaTime;
 	buffer?: AudioBuffer;
 }): CreateLibraryAudioElement {
 	const element: CreateLibraryAudioElement = {
@@ -366,8 +367,8 @@ export function buildLibraryAudioElement({
 		name,
 		duration,
 		startTime,
-		trimStart: 0,
-		trimEnd: 0,
+		trimStart: ZERO_MEDIA_TIME,
+		trimEnd: ZERO_MEDIA_TIME,
 		sourceDuration: duration,
 		volume: DEFAULTS.element.volume,
 		muted: false,

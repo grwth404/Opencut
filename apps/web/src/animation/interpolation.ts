@@ -9,6 +9,7 @@ import type {
 	ScalarSegmentType,
 } from "@/animation/types";
 import { clamp } from "@/utils/math";
+import { mediaTime } from "@/wasm";
 import {
 	getBezierPoint,
 	getDefaultLeftHandle,
@@ -63,9 +64,13 @@ function normalizeRightHandle({
 		return undefined;
 	}
 
-	const span = Math.max(1, rightKey.time - leftKey.time);
+	const span = mediaTime({
+		ticks: Math.max(1, rightKey.time - leftKey.time),
+	});
 	return {
-		dt: Math.min(span, Math.max(0, handle.dt)),
+		dt: mediaTime({
+			ticks: Math.min(span, Math.max(0, handle.dt)),
+		}),
 		dv: handle.dv,
 	};
 }
@@ -83,9 +88,13 @@ function normalizeLeftHandle({
 		return undefined;
 	}
 
-	const span = Math.max(1, rightKey.time - leftKey.time);
+	const span = mediaTime({
+		ticks: Math.max(1, rightKey.time - leftKey.time),
+	});
 	return {
-		dt: Math.max(-span, Math.min(0, handle.dt)),
+		dt: mediaTime({
+			ticks: Math.max(-span, Math.min(0, handle.dt)),
+		}),
 		dv: handle.dv,
 	};
 }

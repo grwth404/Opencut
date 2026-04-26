@@ -14,6 +14,7 @@ import type {
 } from "@/timeline";
 import type { Transform } from "@/rendering";
 import { resolveTrackPlacement } from "@/timeline/placement";
+import { mediaTime, ZERO_MEDIA_TIME } from "@/wasm";
 
 function buildTransform(): Transform {
 	return {
@@ -67,10 +68,10 @@ function buildElement({
 				id,
 				type: "audio",
 				name: id,
-				startTime,
-				duration,
-				trimStart: 0,
-				trimEnd: 0,
+				startTime: mediaTime({ ticks: startTime }),
+				duration: mediaTime({ ticks: duration }),
+				trimStart: ZERO_MEDIA_TIME,
+				trimEnd: ZERO_MEDIA_TIME,
 				volume: 1,
 				sourceType: "upload",
 				mediaId: `media-${id}`,
@@ -80,10 +81,10 @@ function buildElement({
 				id,
 				type: "graphic",
 				name: id,
-				startTime,
-				duration,
-				trimStart: 0,
-				trimEnd: 0,
+				startTime: mediaTime({ ticks: startTime }),
+				duration: mediaTime({ ticks: duration }),
+				trimStart: ZERO_MEDIA_TIME,
+				trimEnd: ZERO_MEDIA_TIME,
 				definitionId: `graphic-${id}`,
 				params: {},
 				transform: buildTransform(),
@@ -94,10 +95,10 @@ function buildElement({
 				id,
 				type: "text",
 				name: id,
-				startTime,
-				duration,
-				trimStart: 0,
-				trimEnd: 0,
+				startTime: mediaTime({ ticks: startTime }),
+				duration: mediaTime({ ticks: duration }),
+				trimStart: ZERO_MEDIA_TIME,
+				trimEnd: ZERO_MEDIA_TIME,
 				content: id,
 				fontSize: 32,
 				fontFamily: "sans-serif",
@@ -118,10 +119,10 @@ function buildElement({
 				id,
 				type: "video",
 				name: id,
-				startTime,
-				duration,
-				trimStart: 0,
-				trimEnd: 0,
+				startTime: mediaTime({ ticks: startTime }),
+				duration: mediaTime({ ticks: duration }),
+				trimStart: ZERO_MEDIA_TIME,
+				trimEnd: ZERO_MEDIA_TIME,
 				mediaId: `media-${id}`,
 				transform: buildTransform(),
 				opacity: 1,
@@ -224,7 +225,11 @@ function buildTimeSpan({
 	duration: number;
 	excludeElementId?: string;
 }) {
-	return { startTime, duration, excludeElementId };
+	return {
+		startTime: mediaTime({ ticks: startTime }),
+		duration: mediaTime({ ticks: duration }),
+		excludeElementId,
+	};
 }
 
 function buildSceneTracks({

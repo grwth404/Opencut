@@ -6,6 +6,7 @@ import {
 } from "@/animation";
 import type { AnimationPropertyPath, ElementAnimations } from "@/animation/types";
 import type { TimelineElement } from "@/timeline";
+import type { MediaTime } from "@/wasm";
 
 export function useKeyframedColorProperty({
 	trackId,
@@ -21,7 +22,7 @@ export function useKeyframedColorProperty({
 	elementId: string;
 	animations: ElementAnimations | undefined;
 	propertyPath: AnimationPropertyPath;
-	localTime: number;
+	localTime: MediaTime;
 	isPlayheadWithinElementRange: boolean;
 	resolvedColor: string;
 	buildBaseUpdates: ({ value }: { value: string }) => Partial<TimelineElement>;

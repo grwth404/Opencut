@@ -13,18 +13,25 @@ import {
 	enforceMainTrackStart,
 } from "@/timeline/placement";
 import { cloneAnimations } from "@/animation";
+import {
+	addMediaTime,
+	type MediaTime,
+	maxMediaTime,
+	subMediaTime,
+	ZERO_MEDIA_TIME,
+} from "@/wasm";
 
 export class PasteCommand extends Command {
 	private savedState: SceneTracks | null = null;
 	private pastedElements: { trackId: string; elementId: string }[] = [];
-	private readonly time: number;
+	private readonly time: MediaTime;
 	private readonly clipboardItems: ElementClipboardItem[];
 
 	constructor({
 		time,
 		clipboardItems,
 	}: {
-		time: number;
+		time: MediaTime;
 		clipboardItems: ElementClipboardItem[];
 	}) {
 		super();
@@ -39,8 +46,12 @@ export class PasteCommand extends Command {
 		this.savedState = editor.scenes.getActiveScene().tracks;
 		this.pastedElements = [];
 
-		const minStart = Math.min(
-			...this.clipboardItems.map((item) => item.element.startTime),
+		const minStart = this.clipboardItems.reduce(
+			(earliestStartTime, item) =>
+				item.element.startTime < earliestStartTime
+					? item.element.startTime
+					: earliestStartTime,
+			this.clipboardItems[0].element.startTime,
 		);
 
 		let updatedTracks = this.savedState;
@@ -97,12 +108,18 @@ export class PasteCommand extends Command {
 						targetTrackId: targetTrack.id,
 						requestedStartTime: earliestElement.startTime,
 					});
-					const delta = adjustedEarliestStartTime - earliestElement.startTime;
+					const delta = subMediaTime({
+						a: adjustedEarliestStartTime,
+						b: earliestElement.startTime,
+					});
 
-					if (delta !== 0) {
+					if (delta !== ZERO_MEDIA_TIME) {
 						elementsForPlacement = elementsToAdd.map((element) => ({
 							...element,
-							startTime: Math.max(0, element.startTime + delta),
+							startTime: maxMediaTime({
+								a: ZERO_MEDIA_TIME,
+								b: addMediaTime({ a: element.startTime, b: delta }),
+							}),
 						}));
 					}
 				}
@@ -168,14 +185,20 @@ function buildPastedElements({
 	time,
 }: {
 	items: ElementClipboardItem[];
-	minStart: number;
-	time: number;
+	minStart: MediaTime;
+	time: MediaTime;
 }): TimelineElement[] {
 	const elementsToAdd: TimelineElement[] = [];
 
 	for (const item of items) {
-		const relativeOffset = item.element.startTime - minStart;
-		const startTime = Math.max(0, time + relativeOffset);
+		const relativeOffset = subMediaTime({
+			a: item.element.startTime,
+			b: minStart,
+		});
+		const startTime = maxMediaTime({
+			a: ZERO_MEDIA_TIME,
+			b: addMediaTime({ a: time, b: relativeOffset }),
+		});
 		const newElementId = generateUUID();
 
 		elementsToAdd.push({

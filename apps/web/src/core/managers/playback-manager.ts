@@ -1,10 +1,16 @@
 import type { EditorCore } from "@/core";
-import { TICKS_PER_SECOND } from "@/wasm";
+import {
+	addMediaTime,
+	clampMediaTime,
+	type MediaTime,
+	mediaTimeFromSeconds,
+	ZERO_MEDIA_TIME,
+} from "@/wasm";
 import { roundToFrame } from "opencut-wasm";
 
 export class PlaybackManager {
 	private isPlaying = false;
-	private currentTime = 0;
+	private currentTime: MediaTime = ZERO_MEDIA_TIME;
 	private volume = 1;
 	private muted = false;
 	private previousVolume = 1;
@@ -12,7 +18,7 @@ export class PlaybackManager {
 	private listeners = new Set<() => void>();
 	private playbackTimer: number | null = null;
 	private playbackStartWallTime = 0;
-	private playbackStartTime = 0;
+	private playbackStartTime: MediaTime = ZERO_MEDIA_TIME;
 	private timelineScopeBound = false;
 
 	constructor(private editor: EditorCore) {}
@@ -38,7 +44,7 @@ export class PlaybackManager {
 		}
 
 		if (this.currentTime >= maxTime) {
-			this.seek({ time: 0 });
+			this.seek({ time: ZERO_MEDIA_TIME });
 		}
 
 		this.isPlaying = true;
@@ -60,7 +66,7 @@ export class PlaybackManager {
 		}
 	}
 
-	seek({ time }: { time: number }): void {
+	seek({ time }: { time: MediaTime }): void {
 		this.currentTime = this.clampTimeToTimeline(time);
 		if (this.isPlaying) {
 			this.playbackStartWallTime = performance.now();
@@ -107,7 +113,7 @@ export class PlaybackManager {
 		return this.isPlaying;
 	}
 
-	getCurrentTime(): number {
+	getCurrentTime(): MediaTime {
 		return this.currentTime;
 	}
 
@@ -185,11 +191,13 @@ export class PlaybackManager {
 		const fps = this.editor.project.getActive()?.settings.fps;
 		const elapsedSeconds =
 			(performance.now() - this.playbackStartWallTime) / 1000;
-		const rawTime =
-			this.playbackStartTime + Math.round(elapsedSeconds * TICKS_PER_SECOND);
-		const newTime = fps
+		const rawTime = addMediaTime({
+			a: this.playbackStartTime,
+			b: mediaTimeFromSeconds({ seconds: elapsedSeconds }),
+		});
+		const newTime = (fps
 			? (roundToFrame({ time: rawTime, rate: fps }) ?? rawTime)
-			: rawTime;
+			: rawTime) as MediaTime;
 		const maxTime = this.editor.timeline.getTotalDuration();
 
 		if (newTime >= maxTime) {
@@ -205,12 +213,12 @@ export class PlaybackManager {
 		this.playbackTimer = requestAnimationFrame(this.updateTime);
 	};
 
-	private clampTimeToTimeline(time: number): number {
+	private clampTimeToTimeline(time: MediaTime): MediaTime {
 		const maxTime = this.editor.timeline.getTotalDuration();
-		return Math.max(0, Math.min(maxTime, time));
+		return clampMediaTime({ time, min: ZERO_MEDIA_TIME, max: maxTime });
 	}
 
-	private dispatchSeekEvent(time: number): void {
+	private dispatchSeekEvent(time: MediaTime): void {
 		if (typeof window === "undefined") {
 			return;
 		}
@@ -222,7 +230,7 @@ export class PlaybackManager {
 		);
 	}
 
-	private dispatchUpdateEvent(time: number): void {
+	private dispatchUpdateEvent(time: MediaTime): void {
 		if (typeof window === "undefined") {
 			return;
 		}

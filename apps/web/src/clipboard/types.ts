@@ -12,6 +12,7 @@ import type {
 	ElementRef,
 	TrackType,
 } from "@/timeline";
+import type { MediaTime } from "@/wasm";
 
 export interface ElementClipboardItem {
 	trackId: string;
@@ -26,7 +27,7 @@ export interface KeyframeClipboardCurvePatch {
 
 export interface KeyframeClipboardItem {
 	propertyPath: AnimationPath;
-	timeOffset: number;
+	timeOffset: MediaTime;
 	value: AnimationValue;
 	interpolation: AnimationInterpolation;
 	curvePatches: KeyframeClipboardCurvePatch[];
@@ -61,7 +62,7 @@ export interface PasteContext {
 	editor: EditorCore;
 	selectedElements: ElementRef[];
 	selectedKeyframes: SelectedKeyframeRef[];
-	time: number;
+	time: MediaTime;
 }
 
 export interface ClipboardHandler<TType extends ClipboardEntryType> {

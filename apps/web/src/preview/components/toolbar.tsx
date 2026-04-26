@@ -26,6 +26,7 @@ import { PREVIEW_ZOOM_PRESETS } from "@/preview/zoom";
 import { usePreviewViewport } from "./preview-viewport";
 import { GridPopover } from "./guide-popover";
 import { usePreviewStore } from "@/preview/preview-store";
+import type { MediaTime } from "@/wasm";
 
 export function PreviewToolbar({
 	onToggleFullscreen,
@@ -67,13 +68,13 @@ function TimecodeDisplay() {
 	const editor = useEditor();
 	const totalDuration = useEditor((e) => e.timeline.getTotalDuration());
 	const fps = useEditor((e) => e.project.getActive().settings.fps);
-	const [currentTime, setCurrentTime] = useState(() =>
+	const [currentTime, setCurrentTime] = useState<MediaTime>(() =>
 		editor.playback.getCurrentTime(),
 	);
 
 	useEffect(() => {
 		const handler = (e: Event) =>
-			setCurrentTime((e as CustomEvent<{ time: number }>).detail.time);
+			setCurrentTime((e as CustomEvent<{ time: MediaTime }>).detail.time);
 		window.addEventListener("playback-update", handler);
 		window.addEventListener("playback-seek", handler);
 		return () => {

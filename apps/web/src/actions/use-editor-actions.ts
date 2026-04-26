@@ -5,7 +5,16 @@ import { useTimelineStore } from "@/timeline/timeline-store";
 import { useActionHandler } from "@/actions/use-action-handler";
 import { useEditor } from "@/editor/use-editor";
 import { useElementSelection } from "@/timeline/hooks/element/use-element-selection";
-import { TICKS_PER_SECOND } from "@/wasm";
+import {
+	addMediaTime,
+	maxMediaTime,
+	mediaTime,
+	mediaTimeFromSeconds,
+	minMediaTime,
+	subMediaTime,
+	TICKS_PER_SECOND,
+	ZERO_MEDIA_TIME,
+} from "@/wasm";
 import { useKeyframeSelection } from "@/timeline/hooks/element/use-keyframe-selection";
 import { getElementsAtTime, hasMediaId } from "@/timeline";
 import { cancelInteraction } from "@/editor/cancel-interaction";
@@ -83,7 +92,7 @@ export function useEditorActions() {
 			if (editor.playback.getIsPlaying()) {
 				editor.playback.toggle();
 			}
-			editor.playback.seek({ time: 0 });
+			editor.playback.seek({ time: ZERO_MEDIA_TIME });
 		},
 		undefined,
 	);
@@ -92,11 +101,15 @@ export function useEditorActions() {
 		"seek-forward",
 		(args) => {
 			const seconds = args?.seconds ?? 1;
+			const delta = mediaTimeFromSeconds({ seconds });
 			editor.playback.seek({
-				time: Math.min(
-					editor.timeline.getTotalDuration(),
-					editor.playback.getCurrentTime() + seconds,
-				),
+				time: minMediaTime({
+					a: editor.timeline.getTotalDuration(),
+					b: addMediaTime({
+						a: editor.playback.getCurrentTime(),
+						b: delta,
+					}),
+				}),
 			});
 		},
 		undefined,
@@ -106,8 +119,15 @@ export function useEditorActions() {
 		"seek-backward",
 		(args) => {
 			const seconds = args?.seconds ?? 1;
+			const delta = mediaTimeFromSeconds({ seconds });
 			editor.playback.seek({
-				time: Math.max(0, editor.playback.getCurrentTime() - seconds),
+				time: maxMediaTime({
+					a: ZERO_MEDIA_TIME,
+					b: subMediaTime({
+						a: editor.playback.getCurrentTime(),
+						b: delta,
+					}),
+				}),
 			});
 		},
 		undefined,
@@ -117,14 +137,19 @@ export function useEditorActions() {
 		"frame-step-forward",
 		() => {
 			const fps = editor.project.getActive().settings.fps;
-			const ticksPerFrame = Math.round(
-				(TICKS_PER_SECOND * fps.denominator) / fps.numerator,
-			);
-			editor.playback.seek({
-				time: Math.min(
-					editor.timeline.getTotalDuration(),
-					editor.playback.getCurrentTime() + ticksPerFrame,
+			const ticksPerFrame = mediaTime({
+				ticks: Math.round(
+					(TICKS_PER_SECOND * fps.denominator) / fps.numerator,
 				),
+			});
+			editor.playback.seek({
+				time: minMediaTime({
+					a: editor.timeline.getTotalDuration(),
+					b: addMediaTime({
+						a: editor.playback.getCurrentTime(),
+						b: ticksPerFrame,
+					}),
+				}),
 			});
 		},
 		undefined,
@@ -134,11 +159,19 @@ export function useEditorActions() {
 		"frame-step-backward",
 		() => {
 			const fps = editor.project.getActive().settings.fps;
-			const ticksPerFrame = Math.round(
-				(TICKS_PER_SECOND * fps.denominator) / fps.numerator,
-			);
+			const ticksPerFrame = mediaTime({
+				ticks: Math.round(
+					(TICKS_PER_SECOND * fps.denominator) / fps.numerator,
+				),
+			});
 			editor.playback.seek({
-				time: Math.max(0, editor.playback.getCurrentTime() - ticksPerFrame),
+				time: maxMediaTime({
+					a: ZERO_MEDIA_TIME,
+					b: subMediaTime({
+						a: editor.playback.getCurrentTime(),
+						b: ticksPerFrame,
+					}),
+				}),
 			});
 		},
 		undefined,
@@ -148,11 +181,15 @@ export function useEditorActions() {
 		"jump-forward",
 		(args) => {
 			const seconds = args?.seconds ?? 5;
+			const delta = mediaTimeFromSeconds({ seconds });
 			editor.playback.seek({
-				time: Math.min(
-					editor.timeline.getTotalDuration(),
-					editor.playback.getCurrentTime() + seconds,
-				),
+				time: minMediaTime({
+					a: editor.timeline.getTotalDuration(),
+					b: addMediaTime({
+						a: editor.playback.getCurrentTime(),
+						b: delta,
+					}),
+				}),
 			});
 		},
 		undefined,
@@ -162,8 +199,15 @@ export function useEditorActions() {
 		"jump-backward",
 		(args) => {
 			const seconds = args?.seconds ?? 5;
+			const delta = mediaTimeFromSeconds({ seconds });
 			editor.playback.seek({
-				time: Math.max(0, editor.playback.getCurrentTime() - seconds),
+				time: maxMediaTime({
+					a: ZERO_MEDIA_TIME,
+					b: subMediaTime({
+						a: editor.playback.getCurrentTime(),
+						b: delta,
+					}),
+				}),
 			});
 		},
 		undefined,
@@ -172,7 +216,7 @@ export function useEditorActions() {
 	useActionHandler(
 		"goto-start",
 		() => {
-			editor.playback.seek({ time: 0 });
+			editor.playback.seek({ time: ZERO_MEDIA_TIME });
 		},
 		undefined,
 	);

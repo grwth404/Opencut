@@ -10,6 +10,13 @@ import type { KeyframeClipboardItem } from "@/clipboard";
 import type { SceneTracks, TimelineElement } from "@/timeline";
 import { updateElementInSceneTracks } from "@/timeline";
 import { generateUUID } from "@/utils/id";
+import {
+	addMediaTime,
+	type MediaTime,
+	maxMediaTime,
+	minMediaTime,
+	ZERO_MEDIA_TIME,
+} from "@/wasm";
 
 function pasteKeyframesIntoElement({
 	element,
@@ -17,7 +24,7 @@ function pasteKeyframesIntoElement({
 	clipboardItems,
 }: {
 	element: TimelineElement;
-	time: number;
+	time: MediaTime;
 	clipboardItems: KeyframeClipboardItem[];
 }): TimelineElement {
 	let nextElement = element;
@@ -31,10 +38,13 @@ function pasteKeyframesIntoElement({
 			continue;
 		}
 
-		const keyframeTime = Math.max(
-			0,
-			Math.min(time + item.timeOffset, nextElement.duration),
-		);
+		const keyframeTime = maxMediaTime({
+			a: ZERO_MEDIA_TIME,
+			b: minMediaTime({
+				a: addMediaTime({ a: time, b: item.timeOffset }),
+				b: nextElement.duration,
+			}),
+		});
 		const nextAnimations = upsertPathKeyframe({
 			animations: nextElement.animations,
 			propertyPath: item.propertyPath,
@@ -79,7 +89,7 @@ export class PasteKeyframesCommand extends Command {
 	private savedState: SceneTracks | null = null;
 	private readonly trackId: string;
 	private readonly elementId: string;
-	private readonly time: number;
+	private readonly time: MediaTime;
 	private readonly clipboardItems: KeyframeClipboardItem[];
 
 	constructor({
@@ -90,7 +100,7 @@ export class PasteKeyframesCommand extends Command {
 	}: {
 		trackId: string;
 		elementId: string;
-		time: number;
+		time: MediaTime;
 		clipboardItems: KeyframeClipboardItem[];
 	}) {
 		super();

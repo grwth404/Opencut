@@ -13,6 +13,7 @@ import type {
 	PlacementSubject,
 	PlacementTimeSpan,
 } from "./types";
+import { ZERO_MEDIA_TIME } from "@/wasm";
 
 type ResolveTrackPlacementParams = PlacementSubject & {
 	tracks: SceneTracks;
@@ -32,7 +33,7 @@ function buildExistingTrackResult({
 	timeSpans: PlacementTimeSpan[];
 }): PlacementResult {
 	const firstSpan = timeSpans[0];
-	const requestedStartTime = firstSpan?.startTime ?? 0;
+	const requestedStartTime = firstSpan?.startTime ?? ZERO_MEDIA_TIME;
 	const adjustedStartTime = enforceMainTrackStart({
 		tracks,
 		targetTrackId: track.id,
