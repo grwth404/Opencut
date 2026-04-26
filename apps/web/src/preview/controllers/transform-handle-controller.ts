@@ -20,11 +20,11 @@ import { isVisualElement } from "@/timeline/element-utils";
 import {
 	getElementLocalTime,
 	hasKeyframesForPath,
-	resolveTransformAtTime,
 	setChannel,
 } from "@/animation";
 import type { ElementAnimations } from "@/animation/types";
 import type { Transform } from "@/rendering";
+import { resolveTransformAtTime } from "@/rendering/animation-values";
 import type {
 	ElementRef,
 	SceneTracks,

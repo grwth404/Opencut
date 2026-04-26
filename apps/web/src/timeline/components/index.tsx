@@ -778,8 +778,8 @@ function TimelineTrackRows({
 	const draggingElementIds = useMemo(
 		() =>
 			dragView.kind === "dragging"
-				? dragView.memberTimeOffsets
-				: (null as ReadonlyMap<string, MediaTime> | null),
+			? dragView.memberTimeOffsets
+			: (null as ReadonlyMap<string, MediaTime> | null),
 		[dragView],
 	);
 	const sortedTracks = useMemo(() => {

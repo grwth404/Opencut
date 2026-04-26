@@ -25,9 +25,9 @@ import type {
 } from "@/animation/types";
 import {
 	getElementLocalTime,
-	resolveAnimationTarget,
 	resolveAnimationPathValueAtTime,
 } from "@/animation";
+import { resolveAnimationTarget } from "@/timeline/animation-targets";
 import { BatchCommand } from "@/commands";
 import {
 	AddTrackCommand,

@@ -1,6 +1,9 @@
 use wgpu::util::DeviceExt;
 
 #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+use std::cell::RefCell;
+
+#[cfg(all(feature = "wasm", target_arch = "wasm32"))]
 use wasm_bindgen::JsCast;
 
 use crate::{FULLSCREEN_SHADER_SOURCE, GpuError};
@@ -15,6 +18,12 @@ impl wgpu::rwh::HasDisplayHandle for WebDisplay {
         let raw = wgpu::rwh::WebDisplayHandle::new();
         Ok(unsafe { wgpu::rwh::DisplayHandle::borrow_raw(raw.into()) })
     }
+}
+
+#[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+struct CachedCanvasSurface {
+    surface: wgpu::Surface<'static>,
+    size: (u32, u32),
 }
 
 const BLIT_SHADER_SOURCE: &str = include_str!("shaders/blit.wgsl");
@@ -44,6 +53,8 @@ pub struct GpuContext {
     /// fallback path. Used by render_texture_via_gl_canvas to output frames on WebGL.
     #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
     gl_canvas: Option<web_sys::HtmlCanvasElement>,
+    #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+    gl_surface: RefCell<Option<CachedCanvasSurface>>,
 }
 
 impl GpuContext {
@@ -170,6 +181,8 @@ impl GpuContext {
             supports_external_texture_copies,
             #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
             gl_canvas,
+            #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+            gl_surface: RefCell::new(None),
         })
     }
 
@@ -184,17 +197,15 @@ impl GpuContext {
         ),
         GpuError,
     > {
-        // Temporary fix: force the wasm renderer onto the WebGL backend even when
-        // WebGPU is available while a WebGPU bug is being investigated.
-        // let instance = wgpu::util::new_instance_with_webgpu_detection(
-        //     wgpu::InstanceDescriptor::new_without_display_handle(),
-        // )
-        // .await;
+        let instance = wgpu::util::new_instance_with_webgpu_detection(
+            wgpu::InstanceDescriptor::new_without_display_handle(),
+        )
+        .await;
 
-        // match Self::try_request_device(&instance, None).await {
-        //     Ok((adapter, device, queue)) => return Ok((instance, adapter, device, queue, None)),
-        //     Err(_) => {}
-        // }
+        match Self::try_request_device(&instance, None).await {
+            Ok((adapter, device, queue)) => return Ok((instance, adapter, device, queue, None)),
+            Err(_) => {}
+        }
         let (gl_instance, adapter, device, queue, canvas) = Self::try_gl_fallback().await?;
         Ok((gl_instance, adapter, device, queue, Some(canvas)))
     }
@@ -353,6 +364,14 @@ impl GpuContext {
         self.supports_external_texture_copies
     }
 
+    /// The HTML canvas that owns the backing WebGL context, if running on the
+    /// WebGL fallback. Callers on that path can mount this canvas directly
+    /// instead of copying pixels out of it every frame.
+    #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+    pub fn gl_canvas(&self) -> Option<&web_sys::HtmlCanvasElement> {
+        self.gl_canvas.as_ref()
+    }
+
     pub fn render_texture_to_surface(
         &self,
         texture: &wgpu::Texture,
@@ -361,6 +380,14 @@ impl GpuContext {
         height: u32,
     ) -> Result<(), GpuError> {
         self.configure_surface(surface, width, height)?;
+        self.present_texture_to_surface(texture, surface)
+    }
+
+    pub fn present_texture_to_surface(
+        &self,
+        texture: &wgpu::Texture,
+        surface: &wgpu::Surface<'_>,
+    ) -> Result<(), GpuError> {
         let surface_texture = self.acquire_surface_texture(surface)?;
         let target_view = surface_texture
             .texture
@@ -382,14 +409,36 @@ impl GpuContext {
         width: u32,
         height: u32,
     ) -> Result<(), GpuError> {
-        let Some(config) = surface.get_default_config(&self.adapter, width, height) else {
-            return Err(GpuError::UnsupportedSurfaceFormat);
-        };
-        if config.format != self.texture_format {
-            return Err(GpuError::UnsupportedSurfaceFormat);
-        }
+        let config = self.build_surface_configuration(surface, width, height)?;
         surface.configure(&self.device, &config);
         Ok(())
+    }
+
+    fn build_surface_configuration(
+        &self,
+        surface: &wgpu::Surface<'_>,
+        width: u32,
+        height: u32,
+    ) -> Result<wgpu::SurfaceConfiguration, GpuError> {
+        let caps = surface.get_capabilities(&self.adapter);
+        if !caps.formats.contains(&self.texture_format) {
+            return Err(GpuError::UnsupportedSurfaceFormat);
+        }
+
+        Ok(wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: self.texture_format,
+            width,
+            height,
+            present_mode: wgpu::PresentMode::Fifo,
+            alpha_mode: caps
+                .alpha_modes
+                .first()
+                .copied()
+                .unwrap_or(wgpu::CompositeAlphaMode::Auto),
+            view_formats: vec![],
+            desired_maximum_frame_latency: 2,
+        })
     }
 
     pub fn acquire_surface_texture(
@@ -571,7 +620,7 @@ impl GpuContext {
     }
 
     #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
-    fn render_texture_to_gl_canvas_surface(
+    pub fn render_texture_to_gl_canvas_surface(
         &self,
         texture: &wgpu::Texture,
         width: u32,
@@ -585,57 +634,29 @@ impl GpuContext {
         gl_canvas.set_width(width);
         gl_canvas.set_height(height);
 
-        let surface = self
-            .instance
-            .create_surface(wgpu::SurfaceTarget::Canvas(gl_canvas.clone()))?;
-
-        let caps = surface.get_capabilities(&self.adapter);
-        let surface_format = if caps.formats.contains(&self.texture_format) {
-            self.texture_format
-        } else if !caps.formats.is_empty() {
-            caps.formats[0]
-        } else {
-            return Err(GpuError::UnsupportedSurfaceFormat);
+        let mut cached_surface = self.gl_surface.borrow_mut();
+        let cached_surface = match cached_surface.as_mut() {
+            Some(cached_surface) => cached_surface,
+            None => {
+                let surface = self
+                    .instance
+                    .create_surface(wgpu::SurfaceTarget::Canvas(gl_canvas.clone()))?;
+                cached_surface.replace(CachedCanvasSurface {
+                    surface,
+                    size: (0, 0),
+                });
+                cached_surface
+                    .as_mut()
+                    .expect("gl_surface cache should exist after initialization")
+            }
         };
 
-        if surface_format != self.texture_format {
-            return Err(GpuError::UnsupportedSurfaceFormat);
+        if cached_surface.size != (width, height) {
+            self.configure_surface(&cached_surface.surface, width, height)?;
+            cached_surface.size = (width, height);
         }
 
-        let config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface_format,
-            width,
-            height,
-            present_mode: wgpu::PresentMode::Fifo,
-            alpha_mode: caps
-                .alpha_modes
-                .first()
-                .copied()
-                .unwrap_or(wgpu::CompositeAlphaMode::Auto),
-            view_formats: vec![],
-            desired_maximum_frame_latency: 2,
-        };
-        surface.configure(&self.device, &config);
-
-        let surface_texture = self.acquire_surface_texture(&surface)?;
-        let surface_view = surface_texture
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
-
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("gpu-gl-canvas-blit-encoder"),
-            });
-        self.encode_texture_blit_to_view(
-            &mut encoder,
-            texture,
-            &surface_view,
-            "gpu-gl-canvas-blit",
-        );
-        self.queue.submit([encoder.finish()]);
-        surface_texture.present();
+        self.present_texture_to_surface(texture, &cached_surface.surface)?;
 
         Ok(gl_canvas)
     }

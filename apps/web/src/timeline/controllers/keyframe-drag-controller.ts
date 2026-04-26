@@ -282,14 +282,14 @@ export class KeyframeDragController {
 					elementId: ref.elementId,
 					propertyPath: ref.propertyPath,
 					keyframeId: ref.keyframeId,
-					nextTime: clampMediaTime({
-						time: addMediaTime({
-							a: keyframe.time,
-							b: mediaTime({ ticks: deltaTicks }),
-						}),
-						min: ZERO_MEDIA_TIME,
-						max: element.duration,
+				nextTime: clampMediaTime({
+					time: addMediaTime({
+						a: keyframe.time,
+						b: mediaTime({ ticks: deltaTicks }),
 					}),
+					min: ZERO_MEDIA_TIME,
+					max: element.duration,
+				}),
 				}),
 			];
 		});
@@ -329,8 +329,7 @@ export class KeyframeDragController {
 			((clientX - this.session.startMouseX) / pixelsPerSecond) *
 				TICKS_PER_SECOND,
 		);
-		this.session.deltaTicks =
-			roundFrameTicks({ ticks: rawDeltaTicks, fps });
+		this.session.deltaTicks = roundFrameTicks({ ticks: rawDeltaTicks, fps });
 		this.notify();
 	}
 

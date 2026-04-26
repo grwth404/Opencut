@@ -131,15 +131,15 @@ function buildResizeUpdate({
 		return {
 			trackId: member.trackId,
 			elementId: member.elementId,
-			patch: {
-				trimStart: maxMediaTime({
-					a: ZERO_MEDIA_TIME,
-					b: addMediaTime({ a: member.trimStart, b: sourceDelta }),
-				}),
-				trimEnd: member.trimEnd,
-				startTime: addMediaTime({ a: member.startTime, b: deltaTime }),
-				duration: subMediaTime({ a: member.duration, b: deltaTime }),
-			},
+		patch: {
+			trimStart: maxMediaTime({
+				a: ZERO_MEDIA_TIME,
+				b: addMediaTime({ a: member.trimStart, b: sourceDelta }),
+			}),
+			trimEnd: member.trimEnd,
+			startTime: addMediaTime({ a: member.startTime, b: deltaTime }),
+			duration: subMediaTime({ a: member.duration, b: deltaTime }),
+		},
 		};
 	}
 

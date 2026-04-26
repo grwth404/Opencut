@@ -13,7 +13,7 @@ import {
 	getChannelValueAtTime,
 	getScalarSegmentInterpolation,
 } from "./interpolation";
-import { isAnimationPath } from "./target-resolver";
+import { isAnimationPath } from "./path";
 
 function getBindingFallbackValue({
 	channel,

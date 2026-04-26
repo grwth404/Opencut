@@ -1,11 +1,5 @@
 import { mediaTimeToSeconds, roundMediaTime } from "@/wasm";
-import {
-	getElementLocalTime,
-	resolveColorAtTime,
-	resolveGraphicParamsAtTime,
-	resolveOpacityAtTime,
-	resolveTransformAtTime,
-} from "@/animation";
+import { getElementLocalTime } from "@/animation";
 import { resolveEffectParamsAtTime } from "@/animation/effect-param-channel";
 import {
 	buildGaussianBlurPasses,
@@ -14,11 +8,16 @@ import {
 import { effectsRegistry, resolveEffectPasses } from "@/effects";
 import type { Effect, EffectPass } from "@/effects/types";
 import { getSourceTimeAtClipTime } from "@/retime";
-import { DEFAULT_GRAPHIC_SOURCE_SIZE } from "@/graphics";
+import {
+	DEFAULT_GRAPHIC_SOURCE_SIZE,
+	resolveGraphicElementParamsAtTime,
+} from "@/graphics";
 import {
 	getTextMeasurementContext,
 	measureTextElement,
 } from "@/text/measure-element";
+import { resolveColorAtTime, resolveOpacityAtTime } from "@/animation/values";
+import { resolveTransformAtTime } from "@/rendering/animation-values";
 import { videoCache } from "@/services/video-cache/service";
 import type { CanvasRenderer } from "./canvas-renderer";
 import type { AnyBaseNode } from "./nodes/base-node";
@@ -113,7 +112,8 @@ function resolveEffectPassGroups({
 		.filter((effect) => effect.enabled)
 		.map((effect) => {
 			const resolvedParams = resolveEffectParamsAtTime({
-				effect,
+				effectId: effect.id,
+				params: effect.params,
 				animations,
 				localTime,
 			});
@@ -304,7 +304,7 @@ function resolveGraphicNode({
 
 	return {
 		...visualState,
-		resolvedParams: resolveGraphicParamsAtTime({
+		resolvedParams: resolveGraphicElementParamsAtTime({
 			element: node.params,
 			localTime: visualState.localTime,
 		}),

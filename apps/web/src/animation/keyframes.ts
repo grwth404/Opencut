@@ -14,7 +14,6 @@ import type {
 	ScalarCurveKeyframePatch,
 	ScalarSegmentType,
 } from "@/animation/types";
-import { generateUUID } from "@/utils/id";
 import {
 	cloneAnimationBinding,
 	createAnimationBinding,
@@ -41,6 +40,7 @@ import {
 	subMediaTime,
 	ZERO_MEDIA_TIME,
 } from "@/wasm";
+import { generateUUID } from "@/utils/id";
 
 function isNearlySameTime({
 	leftTime,

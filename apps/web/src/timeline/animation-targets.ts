@@ -3,30 +3,32 @@ import type {
 	AnimationInterpolation,
 	AnimationPath,
 	AnimationValue,
+	NumericSpec,
 } from "@/animation/types";
 import {
+	coerceAnimationParamValue,
+	getAnimationParamDefaultInterpolation,
+	getAnimationParamNumericRange,
+	getAnimationParamValueKind,
+} from "@/animation/animated-params";
+import {
 	parseEffectParamPath,
-	isEffectParamPath,
 } from "@/animation/effect-param-channel";
 import {
-	isGraphicParamPath,
 	parseGraphicParamPath,
 } from "@/animation/graphic-param-channel";
-import type { ParamDefinition } from "@/params";
 import { effectsRegistry, registerDefaultEffects } from "@/effects";
 import { getGraphicDefinition } from "@/graphics";
+import type { ParamDefinition } from "@/params";
 import type { TimelineElement } from "@/timeline";
 import { isVisualElement } from "@/timeline/element-utils";
-import { snapToStep } from "@/utils/math";
+import { isAnimationPropertyPath } from "@/animation/path";
 import {
 	coerceAnimationValueForProperty,
 	getAnimationPropertyDefinition,
 	getElementBaseValueForProperty,
-	isAnimationPropertyPath,
-	type NumericSpec,
 	withElementBaseValueForProperty,
-} from "./property-registry";
-import { parseColorToLinearRgba } from "./binding-values";
+} from "./animation-properties";
 
 export interface AnimationPathDescriptor {
 	kind: AnimationBindingKind;
@@ -37,79 +39,16 @@ export interface AnimationPathDescriptor {
 	setBaseValue: ({ value }: { value: AnimationValue }) => TimelineElement;
 }
 
-export function getParamValueKind({
-	param,
-}: {
-	param: ParamDefinition;
-}): AnimationBindingKind {
-	if (param.type === "number") {
-		return "number";
-	}
-
-	if (param.type === "color") {
-		return "color";
-	}
-
-	return "discrete";
-}
-
-export function getParamDefaultInterpolation({
-	param,
-}: {
-	param: ParamDefinition;
-}): AnimationInterpolation {
-	return param.type === "number" || param.type === "color" ? "linear" : "hold";
-}
-
-function getParamNumericRange({
+// Number/discrete bindings expose a single component named "value"
+// (see binding-values.ts). Multi-component kinds (vector2, color) don't carry
+// numeric ranges yet — revisit when one does.
+function paramNumericRanges({
 	param,
 }: {
 	param: ParamDefinition;
 }): Partial<Record<string, NumericSpec>> | undefined {
-	if (param.type !== "number") {
-		return undefined;
-	}
-
-	return {
-		value: {
-			min: param.min,
-			max: param.max,
-			step: param.step,
-		},
-	};
-}
-
-export function coerceAnimationValueForParam({
-	param,
-	value,
-}: {
-	param: ParamDefinition;
-	value: AnimationValue;
-}): number | string | boolean | null {
-	if (param.type === "number") {
-		if (typeof value !== "number" || Number.isNaN(value)) {
-			return null;
-		}
-
-		const steppedValue = snapToStep({ value, step: param.step });
-		const minValue = param.min;
-		const maxValue = param.max ?? Number.POSITIVE_INFINITY;
-		return Math.min(maxValue, Math.max(minValue, steppedValue));
-	}
-
-	if (param.type === "color") {
-		return typeof value === "string" ? value : null;
-	}
-
-	if (param.type === "boolean") {
-		return typeof value === "boolean" ? value : null;
-	}
-
-	if (typeof value !== "string") {
-		return null;
-	}
-
-	return param.options.some((option) => option.value === value) ? value : null;
+	const range = getAnimationParamNumericRange({ param });
+	return range ? { value: range } : undefined;
 }
 
 function buildGraphicParamDescriptor({
@@ -132,13 +71,13 @@ function buildGraphicParamDescriptor({
 	}
 
 	return {
-		kind: getParamValueKind({ param }),
-		defaultInterpolation: getParamDefaultInterpolation({ param }),
-		numericRanges: getParamNumericRange({ param }),
-		coerceValue: ({ value }) => coerceAnimationValueForParam({ param, value }),
+		kind: getAnimationParamValueKind({ param }),
+		defaultInterpolation: getAnimationParamDefaultInterpolation({ param }),
+		numericRanges: paramNumericRanges({ param }),
+		coerceValue: ({ value }) => coerceAnimationParamValue({ param, value }),
 		getBaseValue: () => element.params[param.key] ?? param.default,
 		setBaseValue: ({ value }) => {
-			const coercedValue = coerceAnimationValueForParam({ param, value });
+			const coercedValue = coerceAnimationParamValue({ param, value });
 			if (coercedValue === null) {
 				return element;
 			}
@@ -180,13 +119,13 @@ function buildEffectParamDescriptor({
 	}
 
 	return {
-		kind: getParamValueKind({ param }),
-		defaultInterpolation: getParamDefaultInterpolation({ param }),
-		numericRanges: getParamNumericRange({ param }),
-		coerceValue: ({ value }) => coerceAnimationValueForParam({ param, value }),
+		kind: getAnimationParamValueKind({ param }),
+		defaultInterpolation: getAnimationParamDefaultInterpolation({ param }),
+		numericRanges: paramNumericRanges({ param }),
+		coerceValue: ({ value }) => coerceAnimationParamValue({ param, value }),
 		getBaseValue: () => effect.params[param.key] ?? param.default,
 		setBaseValue: ({ value }) => {
-			const coercedValue = coerceAnimationValueForParam({ param, value });
+			const coercedValue = coerceAnimationParamValue({ param, value });
 			if (coercedValue === null) {
 				return element;
 			}
@@ -208,16 +147,6 @@ function buildEffectParamDescriptor({
 			};
 		},
 	};
-}
-
-export function isAnimationPath(
-	propertyPath: string,
-): propertyPath is AnimationPath {
-	return (
-		isAnimationPropertyPath(propertyPath) ||
-		isGraphicParamPath(propertyPath) ||
-		isEffectParamPath(propertyPath)
-	);
 }
 
 export function resolveAnimationTarget({

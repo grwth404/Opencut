@@ -27,7 +27,7 @@ import { RainDropIcon } from "@hugeicons/core-free-icons";
 import { KeyframeToggle } from "@/components/editor/panels/properties/components/keyframe-toggle";
 import { useKeyframedNumberProperty } from "@/components/editor/panels/properties/hooks/use-keyframed-number-property";
 import { useElementPlayhead } from "@/components/editor/panels/properties/hooks/use-element-playhead";
-import { resolveOpacityAtTime } from "@/animation";
+import { resolveOpacityAtTime } from "@/animation/values";
 import { DEFAULTS } from "@/timeline/defaults";
 import { isPropertyAtDefault } from "./transform-tab";
 import type { MediaTime } from "@/wasm";

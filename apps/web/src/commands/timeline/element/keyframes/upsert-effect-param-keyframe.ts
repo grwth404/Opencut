@@ -2,11 +2,11 @@ import { EditorCore } from "@/core";
 import { Command, type CommandResult } from "@/commands/base-command";
 import {
 	buildEffectParamPath,
-	resolveAnimationTarget,
 	upsertPathKeyframe,
 } from "@/animation";
 import { updateElementInSceneTracks } from "@/timeline";
 import { isVisualElement } from "@/timeline/element-utils";
+import { resolveAnimationTarget } from "@/timeline/animation-targets";
 import type { AnimationInterpolation } from "@/animation/types";
 import type { SceneTracks } from "@/timeline";
 import {

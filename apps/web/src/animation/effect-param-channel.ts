@@ -1,9 +1,8 @@
-import type { ParamValues } from "@/params";
-import type { Effect } from "@/effects/types";
 import type {
 	ElementAnimations,
 	EffectParamPath,
 } from "@/animation/types";
+import type { ParamValues } from "@/params";
 import { removeElementKeyframe } from "./keyframes";
 import { resolveAnimationPathValueAtTime } from "./resolve";
 
@@ -56,23 +55,26 @@ export function parseEffectParamPath({
 }
 
 export function resolveEffectParamsAtTime({
-	effect,
+	effectId,
+	params,
 	animations,
 	localTime,
 }: {
-	effect: Effect;
+	effectId: string;
+	params: ParamValues;
 	animations: ElementAnimations | undefined;
 	localTime: number;
 }): ParamValues {
+	const safeLocalTime = Math.max(0, localTime);
 	const resolved: ParamValues = {};
 
-	for (const [paramKey, staticValue] of Object.entries(effect.params)) {
-		const path = buildEffectParamPath({ effectId: effect.id, paramKey });
+	for (const [paramKey, staticValue] of Object.entries(params)) {
+		const path = buildEffectParamPath({ effectId, paramKey });
 		resolved[paramKey] = animations?.bindings[path]
 			? resolveAnimationPathValueAtTime({
 					animations,
 					propertyPath: path,
-					localTime,
+					localTime: safeLocalTime,
 					fallbackValue: staticValue,
 				})
 			: staticValue;

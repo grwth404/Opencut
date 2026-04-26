@@ -20,8 +20,8 @@ import {
 import {
 	getGroupKeyframesAtTime,
 	hasGroupKeyframeAtTime,
-	resolveTransformAtTime,
 } from "@/animation";
+import { resolveTransformAtTime } from "@/rendering/animation-values";
 import { DEFAULTS } from "@/timeline/defaults";
 import { useElementPlayhead } from "@/components/editor/panels/properties/hooks/use-element-playhead";
 import { KeyframeToggle } from "@/components/editor/panels/properties/components/keyframe-toggle";

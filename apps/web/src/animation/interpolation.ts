@@ -8,7 +8,6 @@ import type {
 	ScalarAnimationKey,
 	ScalarSegmentType,
 } from "@/animation/types";
-import { clamp } from "@/utils/math";
 import { mediaTime } from "@/wasm";
 import {
 	getBezierPoint,
@@ -16,6 +15,7 @@ import {
 	getDefaultRightHandle,
 	solveBezierProgressForTime,
 } from "./bezier";
+import { clamp } from "@/utils/math";
 
 function byTimeAscending({
 	leftTime,

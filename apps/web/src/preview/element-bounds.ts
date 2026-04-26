@@ -5,8 +5,8 @@ import { DEFAULT_GRAPHIC_SOURCE_SIZE } from "@/graphics";
 import { measureTextElement } from "@/text/measure-element";
 import {
 	getElementLocalTime,
-	resolveTransformAtTime,
 } from "@/animation";
+import { resolveTransformAtTime } from "@/rendering/animation-values";
 
 export interface ElementBounds {
 	cx: number;

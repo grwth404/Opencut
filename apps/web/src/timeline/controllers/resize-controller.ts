@@ -24,7 +24,7 @@ import {
 } from "@/timeline/snapping";
 import { getElementEdgeSnapPoints } from "@/timeline/element-snap-source";
 import { getPlayheadSnapPoints } from "@/timeline/playhead-snap-source";
-import { getAnimationKeyframeSnapPointsForTimeline } from "@/animation/timeline-snap-points";
+import { getAnimationKeyframeSnapPointsForTimeline } from "@/timeline/animation-snap-points";
 import {
 	isRetimableElement,
 	type SceneTracks,

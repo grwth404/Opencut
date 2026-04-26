@@ -75,7 +75,7 @@ export class PlaybackManager {
 			this.playbackStartTime = this.currentTime;
 		}
 		this.notify();
-		this.dispatchSeekEvent(this.currentTime);
+		this.notifySeek(this.currentTime);
 	}
 
 	setVolume({ volume }: { volume: number }): void {
@@ -227,9 +227,9 @@ export class PlaybackManager {
 			this.pause();
 			this.currentTime = maxTime;
 			this.notify();
-			this.notifySeek(maxTime);
-			this.dispatchSeekEvent(maxTime);
-			return;
+		this.notifySeek(maxTime);
+		this.dispatchSeekEvent(maxTime);
+		return;
 		}
 
 		this.currentTime = newTime;
@@ -247,23 +247,11 @@ export class PlaybackManager {
 		if (typeof window === "undefined") {
 			return;
 		}
-
-		window.dispatchEvent(
-			new CustomEvent("playback-seek", {
-				detail: { time },
-			}),
-		);
 	}
 
 	private dispatchUpdateEvent(time: MediaTime): void {
 		if (typeof window === "undefined") {
 			return;
 		}
-
-		window.dispatchEvent(
-			new CustomEvent("playback-update", {
-				detail: { time },
-			}),
-		);
 	}
 }

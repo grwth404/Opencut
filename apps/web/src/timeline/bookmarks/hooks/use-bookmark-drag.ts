@@ -18,7 +18,7 @@ import {
 import { getBookmarkSnapPoints } from "../snap-source";
 import { getElementEdgeSnapPoints } from "@/timeline/element-snap-source";
 import { getPlayheadSnapPoints } from "@/timeline/playhead-snap-source";
-import { getAnimationKeyframeSnapPointsForTimeline } from "@/animation/timeline-snap-points";
+import { getAnimationKeyframeSnapPointsForTimeline } from "@/timeline/animation-snap-points";
 import type { Bookmark } from "@/timeline";
 import { roundFrameTime, type MediaTime, ZERO_MEDIA_TIME } from "@/wasm";
 

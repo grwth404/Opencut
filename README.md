@@ -1,26 +1,16 @@
-<table width="100%">
-  <tr>
-    <td align="left" width="120">
-      <img src="apps/web/public/logos/opencut/icon.svg" alt="OpenCut Logo" width="100" />
-    </td>
-    <td align="right">
-      <h1>OpenCut</h1>
-      <h3 style="margin-top: -10px;">A free, open-source video editor for web, desktop, and mobile.</h3>
-    </td>
-  </tr>
-</table>
+
+|     |                                                                        |
+| --- | ---------------------------------------------------------------------- |
+|     | OpenCutA free, open-source video editor for web, desktop, and mobile. |
+
 
 ## Sponsors
 
 Thanks to [Vercel](https://vercel.com?utm_source=github-opencut&utm_campaign=oss) and [fal.ai](https://fal.ai?utm_source=github-opencut&utm_campaign=oss) for their support of open-source software.
 
-<a href="https://vercel.com/oss">
-  <img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge.svg" />
-</a>
 
-<a href="https://fal.ai">
-  <img alt="Powered by fal.ai" src="https://img.shields.io/badge/Powered%20by-fal.ai-000000?style=flat&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCAxMEwxMy4wOSAxNS43NEwxMiAyMkwxMC45MSAxNS43NEw0IDEwTDEwLjkxIDguMjZMMTIgMloiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=" />
-</a>
+
+
 
 ## Why?
 
@@ -47,29 +37,23 @@ Thanks to [Vercel](https://vercel.com?utm_source=github-opencut&utm_campaign=oss
 ### Setup
 
 1. Fork and clone the repository
-
 2. Copy the environment file:
-
-   ```bash
+  ```bash
    # Unix/Linux/Mac
    cp apps/web/.env.example apps/web/.env.local
 
    # Windows PowerShell
    Copy-Item apps/web/.env.example apps/web/.env.local
-   ```
-
+  ```
 3. Start the database and Redis:
-
-   ```bash
+  ```bash
    docker compose up -d db redis serverless-redis-http
-   ```
-
+  ```
 4. Install dependencies and start the dev server:
-
-   ```bash
+  ```bash
    bun install
    bun dev:web
-   ```
+  ```
 
 The application will be available at [http://localhost:3000](http://localhost:3000).
 
@@ -79,7 +63,7 @@ The `.env.example` has sensible defaults that match the Docker Compose config â€
 
 Desktop is opt-in. If you're only working on the web app, skip this entirely.
 
-If you want to get ready for `apps/desktop`, see [`apps/desktop/README.md`](apps/desktop/README.md). It's a two-step setup: Rust toolchain first, then desktop native dependencies.
+If you want to get ready for `apps/desktop`, see `[apps/desktop/README.md](apps/desktop/README.md)`. It's a two-step setup: Rust toolchain first, then desktop native dependencies.
 
 ### Local WASM development
 
@@ -99,30 +83,23 @@ cargo install cargo-watch
 ```
 
 1. Build the package once from the repo root:
-
-   ```bash
+  ```bash
    bun run build:wasm
-   ```
-
+  ```
 2. Register the generated package for linking:
-
-   ```bash
+  ```bash
    cd rust/wasm/pkg
    bun link
-   ```
-
+  ```
 3. Link `apps/web` to the local package:
-
-   ```bash
+  ```bash
    cd apps/web
    bun link opencut-wasm
-   ```
-
+  ```
 4. Rebuild on changes while you work:
-
-   ```bash
+  ```bash
    bun dev:wasm
-   ```
+  ```
 
 To switch `apps/web` back to the published package, run:
 
@@ -155,7 +132,7 @@ See our [Contributing Guide](.github/CONTRIBUTING.md) for detailed setup instruc
 
 - Fork the repo and clone locally
 - Follow the setup instructions in CONTRIBUTING.md
-- Working on `apps/desktop`? See [`apps/desktop/README.md`](apps/desktop/README.md) for setup
+- Working on `apps/desktop`? See `[apps/desktop/README.md](apps/desktop/README.md)` for setup
 - Create a feature branch and submit a PR
 
 ## License
@@ -164,4 +141,4 @@ See our [Contributing Guide](.github/CONTRIBUTING.md) for detailed setup instruc
 
 ---
 
-![Star History Chart](https://api.star-history.com/svg?repos=opencut-app/opencut&type=Date)
+Star History Chart

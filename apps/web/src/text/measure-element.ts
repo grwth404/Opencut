@@ -1,7 +1,7 @@
 import { CORNER_RADIUS_MIN } from "@/text/background";
-import { resolveNumberAtTime } from "@/animation";
 import { DEFAULTS } from "@/timeline/defaults";
 import type { TextBackground, TextElement } from "@/timeline";
+import { resolveNumberAtTime } from "@/animation/values";
 import {
 	getTextVisualRect,
 } from "./layout";

@@ -1,43 +1,81 @@
-import { Input, ALL_FORMATS, BlobSource } from "mediabunny";
+import {
+	Input,
+	ALL_FORMATS,
+	BlobSource,
+	VideoSampleSink,
+	type VideoCodec,
+} from "mediabunny";
 import { createTimelineAudioBuffer } from "@/media/audio";
 import type { SceneTracks } from "@/timeline";
 import type { MediaAsset } from "@/media/types";
 import { TICKS_PER_SECOND } from "@/wasm";
+import { renderThumbnailDataUrl } from "./thumbnail";
 
-export async function getVideoInfo({
-	videoFile,
-}: {
-	videoFile: File;
-}): Promise<{
+export type VideoFileData = {
 	duration: number;
 	width: number;
 	height: number;
 	fps: number;
 	hasAudio: boolean;
-}> {
+	codec: VideoCodec | null;
+	canDecode: boolean;
+	thumbnailUrl: string | null;
+};
+
+export async function readVideoFile({
+	file,
+}: {
+	file: File;
+}): Promise<VideoFileData> {
 	const input = new Input({
-		source: new BlobSource(videoFile),
+		source: new BlobSource(file),
 		formats: ALL_FORMATS,
 	});
 
-	const duration = await input.computeDuration();
-	const videoTrack = await input.getPrimaryVideoTrack();
+	try {
+		const duration = await input.computeDuration();
+		const videoTrack = await input.getPrimaryVideoTrack();
 
-	if (!videoTrack) {
-		throw new Error("No video track found in the file");
+		if (!videoTrack) {
+			throw new Error("No video track found in the file");
+		}
+
+		const canDecode = await videoTrack.canDecode();
+		const packetStats = await videoTrack.computePacketStats(100);
+		const audioTrack = await input.getPrimaryAudioTrack();
+
+		let thumbnailUrl: string | null = null;
+		if (canDecode) {
+			const sink = new VideoSampleSink(videoTrack);
+			const frame = await sink.getSample(1);
+			if (frame) {
+				try {
+					thumbnailUrl = renderThumbnailDataUrl({
+						width: videoTrack.displayWidth,
+						height: videoTrack.displayHeight,
+						draw: ({ context, width, height }) => {
+							frame.draw(context, 0, 0, width, height);
+						},
+					});
+				} finally {
+					frame.close();
+				}
+			}
+		}
+
+		return {
+			duration,
+			width: videoTrack.displayWidth,
+			height: videoTrack.displayHeight,
+			fps: packetStats.averagePacketRate,
+			hasAudio: audioTrack !== null,
+			codec: videoTrack.codec,
+			canDecode,
+			thumbnailUrl,
+		};
+	} finally {
+		input.dispose();
 	}
-
-	const packetStats = await videoTrack.computePacketStats(100);
-	const fps = packetStats.averagePacketRate;
-	const audioTrack = await input.getPrimaryAudioTrack();
-
-	return {
-		duration,
-		width: videoTrack.displayWidth,
-		height: videoTrack.displayHeight,
-		fps,
-		hasAudio: audioTrack !== null,
-	};
 }
 
 const SAMPLE_RATE = 44100;
