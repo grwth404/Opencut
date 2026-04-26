@@ -4,6 +4,7 @@ import { storageService } from "@/services/storage/service";
 import { toast } from "sonner";
 import { EditorCore } from "@/core";
 import { buildLibraryAudioElement } from "@/timeline/element-utils";
+import { mediaTimeFromSeconds } from "@/wasm";
 
 interface SoundsStore {
 	topSoundEffects: SoundEffect[];
@@ -227,7 +228,7 @@ export const useSoundsStore = create<SoundsStore>((set, get) => ({
 			const element = buildLibraryAudioElement({
 				sourceUrl: audioUrl,
 				name: sound.name,
-				duration: sound.duration,
+				duration: mediaTimeFromSeconds({ seconds: sound.duration }),
 				startTime: currentTime,
 				buffer,
 			});
