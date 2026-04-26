@@ -3,16 +3,18 @@
 import { useEditor } from "@/editor/use-editor";
 import {
 	buildGraphicParamPath,
-	coerceAnimationValueForParam,
 	getKeyframeAtTime,
-	getParamDefaultInterpolation,
-	getParamValueKind,
 	hasKeyframesForPath,
 	upsertPathKeyframe,
 } from "@/animation";
 import type {
 	ElementAnimations,
 } from "@/animation/types";
+import {
+	coerceAnimationParamValue,
+	getAnimationParamDefaultInterpolation,
+	getAnimationParamValueKind,
+} from "@/animation/animated-params";
 import type { ParamDefinition } from "@/params";
 import type { TimelineElement } from "@/timeline";
 
@@ -79,12 +81,12 @@ export function useKeyframedParamProperty({
 								propertyPath,
 								time: localTime,
 								value,
-								kind: getParamValueKind({ param }),
-								defaultInterpolation: getParamDefaultInterpolation({
+								kind: getAnimationParamValueKind({ param }),
+								defaultInterpolation: getAnimationParamDefaultInterpolation({
 									param,
 								}),
 								coerceValue: ({ value: nextValue }) =>
-									coerceAnimationValueForParam({
+									coerceAnimationParamValue({
 										param,
 										value: nextValue,
 									}),

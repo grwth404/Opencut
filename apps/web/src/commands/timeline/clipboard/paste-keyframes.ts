@@ -1,7 +1,6 @@
 import { EditorCore } from "@/core";
 import {
 	getKeyframeAtTime,
-	resolveAnimationTarget,
 	updateScalarKeyframeCurve,
 	upsertPathKeyframe,
 } from "@/animation";
@@ -9,6 +8,7 @@ import { Command, type CommandResult } from "@/commands/base-command";
 import type { KeyframeClipboardItem } from "@/clipboard";
 import type { SceneTracks, TimelineElement } from "@/timeline";
 import { updateElementInSceneTracks } from "@/timeline";
+import { resolveAnimationTarget } from "@/timeline/animation-targets";
 import { generateUUID } from "@/utils/id";
 
 function pasteKeyframesIntoElement({

@@ -24,9 +24,9 @@ import type {
 } from "@/animation/types";
 import {
 	getElementLocalTime,
-	resolveAnimationTarget,
 	resolveAnimationPathValueAtTime,
 } from "@/animation";
+import { resolveAnimationTarget } from "@/timeline/animation-targets";
 import { lastFrameTime } from "opencut-wasm";
 import { BatchCommand } from "@/commands";
 import {

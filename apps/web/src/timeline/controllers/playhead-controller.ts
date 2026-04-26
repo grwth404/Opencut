@@ -8,7 +8,7 @@ import {
 } from "@/timeline/snapping";
 import { getBookmarkSnapPoints } from "@/timeline/bookmarks/index";
 import { getElementEdgeSnapPoints } from "@/timeline/element-snap-source";
-import { getAnimationKeyframeSnapPointsForTimeline } from "@/animation/timeline-snap-points";
+import { getAnimationKeyframeSnapPointsForTimeline } from "@/timeline/animation-snap-points";
 import {
 	getCenteredLineLeft,
 	timelineTimeToPixels,

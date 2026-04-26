@@ -3,10 +3,15 @@ import type {
 	AnimationInterpolation,
 	AnimationPropertyPath,
 	AnimationValue,
+	ElementAnimations,
+	NumericSpec,
 } from "@/animation/types";
-import { parseColorToLinearRgba } from "./binding-values";
-import type { TimelineElement } from "@/timeline";
+import { upsertPathKeyframe } from "@/animation";
+import { parseColorToLinearRgba } from "@/animation/binding-values";
+import { isAnimationPropertyPath } from "@/animation/path";
 import { MIN_TRANSFORM_SCALE } from "@/animation/transform";
+import { snapToStep } from "@/utils/math";
+import type { TimelineElement } from "@/timeline";
 import {
 	CORNER_RADIUS_MAX,
 	CORNER_RADIUS_MIN,
@@ -17,13 +22,6 @@ import {
 } from "@/timeline/element-utils";
 import { VOLUME_DB_MAX, VOLUME_DB_MIN } from "@/timeline/audio-constants";
 import { DEFAULTS } from "@/timeline/defaults";
-import { snapToStep } from "@/utils/math";
-
-export interface NumericSpec {
-	min?: number;
-	max?: number;
-	step?: number;
-}
 
 export interface AnimationPropertyDefinition {
 	kind: AnimationBindingKind;
@@ -313,12 +311,6 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 	}),
 };
 
-export function isAnimationPropertyPath(
-	propertyPath: string,
-): propertyPath is AnimationPropertyPath {
-	return Object.hasOwn(ANIMATION_PROPERTY_REGISTRY, propertyPath);
-}
-
 export function getAnimationPropertyDefinition({
 	propertyPath,
 }: {
@@ -349,6 +341,7 @@ export function getElementBaseValueForProperty({
 	if (!definition.supportsElement({ element })) {
 		return null;
 	}
+
 	return definition.getValue({ element });
 }
 
@@ -366,6 +359,7 @@ export function withElementBaseValueForProperty({
 	if (coercedValue === null || !definition.supportsElement({ element })) {
 		return element;
 	}
+
 	return definition.setValue({ element, value: coercedValue });
 }
 
@@ -387,4 +381,45 @@ export function coerceAnimationValueForProperty({
 }): AnimationValue | null {
 	const propertyDefinition = getAnimationPropertyDefinition({ propertyPath });
 	return propertyDefinition.coerceValue({ value });
+}
+
+export function upsertElementKeyframe({
+	animations,
+	propertyPath,
+	time,
+	value,
+	interpolation,
+	keyframeId,
+}: {
+	animations: ElementAnimations | undefined;
+	propertyPath: AnimationPropertyPath;
+	time: number;
+	value: AnimationValue;
+	interpolation?: AnimationInterpolation;
+	keyframeId?: string;
+}): ElementAnimations | undefined {
+	const coercedValue = coerceAnimationValueForProperty({
+		propertyPath,
+		value,
+	});
+	if (coercedValue === null) {
+		return animations;
+	}
+
+	const propertyDefinition = getAnimationPropertyDefinition({ propertyPath });
+	return upsertPathKeyframe({
+		animations,
+		propertyPath,
+		time,
+		value: coercedValue,
+		interpolation,
+		keyframeId,
+		kind: propertyDefinition.kind,
+		defaultInterpolation: propertyDefinition.defaultInterpolation,
+		coerceValue: ({ value: nextValue }) =>
+			coerceAnimationValueForProperty({
+				propertyPath,
+				value: nextValue,
+			}),
+	});
 }

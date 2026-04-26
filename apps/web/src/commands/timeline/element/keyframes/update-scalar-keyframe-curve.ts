@@ -1,10 +1,10 @@
 import { EditorCore } from "@/core";
 import {
-	resolveAnimationTarget,
 	updateScalarKeyframeCurve,
 } from "@/animation";
 import { Command, type CommandResult } from "@/commands/base-command";
 import { updateElementInSceneTracks } from "@/timeline";
+import { resolveAnimationTarget } from "@/timeline/animation-targets";
 import type {
 	AnimationPath,
 	ScalarCurveKeyframePatch,

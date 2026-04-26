@@ -1,8 +1,9 @@
 import { EditorCore } from "@/core";
 import { Command, type CommandResult } from "@/commands/base-command";
-import { resolveAnimationTarget, upsertPathKeyframe } from "@/animation";
+import { upsertPathKeyframe } from "@/animation";
 import { updateElementInSceneTracks } from "@/timeline";
 import type { SceneTracks } from "@/timeline";
+import { resolveAnimationTarget } from "@/timeline/animation-targets";
 import type {
 	AnimationPath,
 	AnimationInterpolation,

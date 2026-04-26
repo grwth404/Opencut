@@ -1,5 +1,3 @@
-import type { ParamValues } from "@/params";
-
 export const ANIMATION_PROPERTY_PATHS = [
 	"transform.positionX",
 	"transform.positionY",
@@ -50,7 +48,13 @@ export interface AnimationPropertyValueMap {
 	"background.offsetY": number;
 	"background.cornerRadius": number;
 }
-export type DynamicAnimationPathValue = ParamValues[string];
+export type DynamicAnimationPathValue = number | string | boolean;
+
+export interface NumericSpec {
+	min?: number;
+	max?: number;
+	step?: number;
+}
 export type AnimationValueForPath<TPath extends AnimationPath> =
 	TPath extends AnimationPropertyPath
 		? AnimationPropertyValueMap[TPath]

@@ -2,11 +2,7 @@ import type {
 	ElementAnimations,
 	GraphicParamPath,
 } from "@/animation/types";
-import type { ParamValues } from "@/params";
-import {
-	getGraphicDefinition,
-	resolveGraphicParams,
-} from "@/graphics";
+import type { ParamDefinition, ParamValues } from "@/params";
 import { resolveAnimationPathValueAtTime } from "./resolve";
 
 export const GRAPHIC_PARAM_PATH_PREFIX = "params.";
@@ -39,33 +35,29 @@ export function parseGraphicParamPath({
 }
 
 export function resolveGraphicParamsAtTime({
-	element,
+	params,
+	definitions,
+	animations,
 	localTime,
 }: {
-	element: {
-		definitionId: string;
-		params: ParamValues;
-		animations?: ElementAnimations;
-	};
+	params: ParamValues;
+	definitions: ParamDefinition[];
+	animations?: ElementAnimations;
 	localTime: number;
 }): ParamValues {
-	const definition = getGraphicDefinition({
-		definitionId: element.definitionId,
-	});
-	const baseParams = resolveGraphicParams(definition, element.params);
-	const resolved: ParamValues = { ...baseParams };
+	const resolved: ParamValues = { ...params };
 
-	for (const param of definition.params) {
+	for (const param of definitions) {
 		const path = buildGraphicParamPath({ paramKey: param.key });
-		if (!element.animations?.bindings[path]) {
+		if (!animations?.bindings[path]) {
 			continue;
 		}
 
 		resolved[param.key] = resolveAnimationPathValueAtTime({
-			animations: element.animations,
+			animations,
 			propertyPath: path,
 			localTime: Math.max(0, localTime),
-			fallbackValue: baseParams[param.key] ?? param.default,
+			fallbackValue: params[param.key] ?? param.default,
 		});
 	}
 

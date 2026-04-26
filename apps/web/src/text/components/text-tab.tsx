@@ -30,7 +30,10 @@ import { useKeyframedNumberProperty } from "@/components/editor/panels/propertie
 import { useElementPlayhead } from "@/components/editor/panels/properties/hooks/use-element-playhead";
 import { KeyframeToggle } from "@/components/editor/panels/properties/components/keyframe-toggle";
 import { isPropertyAtDefault } from "@/rendering/components/transform-tab";
-import { resolveColorAtTime, resolveNumberAtTime } from "@/animation";
+import {
+	resolveColorAtTime,
+	resolveNumberAtTime,
+} from "@/animation/values";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
 	MinusSignIcon,

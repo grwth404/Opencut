@@ -2,12 +2,12 @@ import { EditorCore } from "@/core";
 import {
 	hasKeyframesForPath,
 	removeElementKeyframe,
-	resolveAnimationTarget,
 } from "@/animation";
 import { Command, type CommandResult } from "@/commands/base-command";
 import { updateElementInSceneTracks } from "@/timeline";
 import type { AnimationPath, AnimationValue } from "@/animation/types";
 import type { SceneTracks, TimelineElement } from "@/timeline";
+import { resolveAnimationTarget } from "@/timeline/animation-targets";
 
 function removeKeyframeAndPersist({
 	element,

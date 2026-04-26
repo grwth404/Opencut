@@ -16,30 +16,13 @@ export {
 	setChannel,
 	splitAnimationsAtTime,
 	updateScalarKeyframeCurve,
-	upsertElementKeyframe,
 	upsertPathKeyframe,
 } from "./keyframes";
 
 export {
 	getElementLocalTime,
 	resolveAnimationPathValueAtTime,
-	resolveColorAtTime,
-	resolveNumberAtTime,
-	resolveOpacityAtTime,
-	resolveTransformAtTime,
 } from "./resolve";
-
-export {
-	coerceAnimationValueForProperty,
-	getAnimationPropertyDefinition,
-	getDefaultInterpolationForProperty,
-	getElementBaseValueForProperty,
-	isAnimationPropertyPath,
-	supportsAnimationProperty,
-	type AnimationPropertyDefinition,
-	type NumericSpec,
-	withElementBaseValueForProperty,
-} from "./property-registry";
 
 export {
 	getElementKeyframes,
@@ -76,15 +59,6 @@ export {
 } from "./effect-param-channel";
 
 export {
-	isAnimationPath,
-	coerceAnimationValueForParam,
-	resolveAnimationTarget,
-	getParamValueKind,
-	getParamDefaultInterpolation,
-	type AnimationPathDescriptor,
-} from "./target-resolver";
-
-export {
 	getGroupKeyframesAtTime,
 	hasGroupKeyframeAtTime,
 	type GroupKeyframeRef,
@@ -94,3 +68,7 @@ export {
 	type EasingMode,
 	getEasingModeForKind,
 } from "./binding-values";
+
+export {
+	isAnimationPath,
+} from "./path";

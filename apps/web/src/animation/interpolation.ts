@@ -8,13 +8,13 @@ import type {
 	ScalarAnimationKey,
 	ScalarSegmentType,
 } from "@/animation/types";
-import { clamp } from "@/utils/math";
 import {
 	getBezierPoint,
 	getDefaultLeftHandle,
 	getDefaultRightHandle,
 	solveBezierProgressForTime,
 } from "./bezier";
+import { clamp } from "@/utils/math";
 
 function byTimeAscending({
 	leftTime,

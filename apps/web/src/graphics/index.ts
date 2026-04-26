@@ -1,3 +1,5 @@
+import { resolveGraphicParamsAtTime } from "@/animation";
+import type { ElementAnimations } from "@/animation/types";
 import { buildDefaultParamValues } from "@/params/registry";
 import type { ParamValues } from "@/params";
 import { graphicsRegistry } from "./registry";
@@ -66,6 +68,28 @@ export function resolveGraphicParams(
 		...buildDefaultParamValues(definition.params),
 		...(params ?? {}),
 	};
+}
+
+export function resolveGraphicElementParamsAtTime({
+	element,
+	localTime,
+}: {
+	element: {
+		definitionId: string;
+		params: ParamValues;
+		animations?: ElementAnimations;
+	};
+	localTime: number;
+}): ParamValues {
+	const definition = getGraphicDefinition({
+		definitionId: element.definitionId,
+	});
+	return resolveGraphicParamsAtTime({
+		params: resolveGraphicParams(definition, element.params),
+		definitions: definition.params,
+		animations: element.animations,
+		localTime,
+	});
 }
 
 export function buildGraphicPreviewUrl({

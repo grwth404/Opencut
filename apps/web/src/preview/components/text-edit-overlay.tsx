@@ -7,8 +7,8 @@ import type { TextElement } from "@/timeline";
 import { DEFAULTS } from "@/timeline/defaults";
 import {
 	getElementLocalTime,
-	resolveTransformAtTime,
 } from "@/animation";
+import { resolveTransformAtTime } from "@/rendering/animation-values";
 import { resolveTextLayout } from "@/text/primitives";
 
 export function TextEditOverlay({
