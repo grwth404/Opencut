@@ -7,6 +7,7 @@ import {
 	getElementLocalTime,
 } from "@/animation";
 import { resolveTransformAtTime } from "@/rendering/animation-values";
+import { buildTransformFromParams } from "@/rendering";
 
 export interface ElementBounds {
 	cx: number;
@@ -123,7 +124,7 @@ function getElementBounds({
 
 	if (element.type === "video" || element.type === "image") {
 		const transform = resolveTransformAtTime({
-			baseTransform: element.transform,
+			baseTransform: buildTransformFromParams({ params: element.params }),
 			animations: element.animations,
 			localTime,
 		});
@@ -140,7 +141,7 @@ function getElementBounds({
 
 	if (element.type === "sticker") {
 		const transform = resolveTransformAtTime({
-			baseTransform: element.transform,
+			baseTransform: buildTransformFromParams({ params: element.params }),
 			animations: element.animations,
 			localTime,
 		});
@@ -155,7 +156,7 @@ function getElementBounds({
 
 	if (element.type === "graphic") {
 		const transform = resolveTransformAtTime({
-			baseTransform: element.transform,
+			baseTransform: buildTransformFromParams({ params: element.params }),
 			animations: element.animations,
 			localTime,
 		});
@@ -170,7 +171,7 @@ function getElementBounds({
 
 	if (element.type === "text") {
 		const transform = resolveTransformAtTime({
-			baseTransform: element.transform,
+			baseTransform: buildTransformFromParams({ params: element.params }),
 			animations: element.animations,
 			localTime,
 		});

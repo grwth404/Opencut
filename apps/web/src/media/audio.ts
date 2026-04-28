@@ -11,6 +11,7 @@ import { applyAudioMasteringToBuffer } from "@/media/audio-mastering";
 import type { AudioCapableElement } from "@/timeline/audio-state";
 import {
 	hasAnimatedVolume,
+	isElementMuted,
 	resolveEffectiveAudioGain,
 } from "@/timeline/audio-state";
 import { doesElementHaveEnabledAudio } from "@/timeline/audio-separation";
@@ -128,7 +129,7 @@ export function timelineHasAudio({
 	mediaAssets: MediaAsset[];
 }): boolean {
 	return collectAudibleCandidates({ tracks, mediaAssets }).some(
-		({ element }) => element.muted !== true,
+		({ element }) => !isElementMuted({ element }),
 	);
 }
 
@@ -168,7 +169,7 @@ export async function collectAudioElements({
 							trackMuted: false,
 							localTime: 0,
 						}),
-						muted: element.muted === true,
+						muted: isElementMuted({ element }),
 						retime: element.retime,
 					};
 				}),
@@ -197,7 +198,7 @@ export async function collectAudioElements({
 							trackMuted: false,
 							localTime: 0,
 						}),
-						muted: element.muted ?? false,
+						muted: isElementMuted({ element }),
 						retime: element.retime,
 					};
 				}),
@@ -501,7 +502,7 @@ export async function collectAudioMixSources({
 
 		for (const element of track.elements) {
 			if (!canElementHaveAudio(element)) continue;
-			if (element.muted === true) continue;
+			if (isElementMuted({ element })) continue;
 			const mediaAsset = hasMediaId(element)
 				? (mediaMap.get(element.mediaId) ?? null)
 				: null;
@@ -570,9 +571,7 @@ export async function collectAudioClips({
 				: null;
 			if (!doesElementHaveEnabledAudio({ element, mediaAsset })) continue;
 
-			const isElementMuted =
-				"muted" in element ? (element.muted ?? false) : false;
-			const muted = isTrackMuted || isElementMuted;
+			const muted = isTrackMuted || isElementMuted({ element });
 			const volume = resolveEffectiveAudioGain({
 				element,
 				trackMuted: isTrackMuted,

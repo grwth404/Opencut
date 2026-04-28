@@ -189,7 +189,7 @@ export class InsertElementCommand extends Command {
 			}
 		}
 
-		if (element.type === "text" && !element.content) {
+		if (element.type === "text" && !element.params.content) {
 			console.error("Text element must have content");
 			return false;
 		}

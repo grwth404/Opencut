@@ -1,5 +1,6 @@
-import type { TextBackground, TextElement } from "@/timeline";
+import type { TextBackground } from "@/timeline";
 import { DEFAULTS } from "@/timeline/defaults";
+import type { TextAlign } from "@/text/primitives";
 
 type TextRect = {
 	left: number;
@@ -78,7 +79,7 @@ function getTextRect({
 	textAlign,
 	block,
 }: {
-	textAlign: TextElement["textAlign"];
+	textAlign: TextAlign;
 	block: TextBlockMeasurement;
 }): TextRect {
 	const textAlignToLeft: Record<typeof textAlign, number> = {
@@ -114,7 +115,7 @@ export function getTextBackgroundRect({
 	background,
 	fontSizeRatio = 1,
 }: {
-	textAlign: TextElement["textAlign"];
+	textAlign: TextAlign;
 	block: TextBlockMeasurement;
 	background: TextBackground;
 	fontSizeRatio?: number;
@@ -145,7 +146,7 @@ export function getTextVisualRect({
 	background,
 	fontSizeRatio = 1,
 }: {
-	textAlign: TextElement["textAlign"];
+	textAlign: TextAlign;
 	block: TextBlockMeasurement;
 	background: TextBackground;
 	fontSizeRatio?: number;

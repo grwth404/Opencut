@@ -36,7 +36,7 @@ export function TextView() {
 					id: "temp-text-id",
 					type: DEFAULTS.text.element.type,
 					name: DEFAULTS.text.element.name,
-					content: DEFAULTS.text.element.content,
+					content: "Default text",
 				}}
 				aspectRatio={1}
 				onAddToTimeline={handleAddToTimeline}

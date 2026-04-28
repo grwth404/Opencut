@@ -72,7 +72,7 @@ function buildElement({
 				duration: mediaTime({ ticks: duration }),
 				trimStart: ZERO_MEDIA_TIME,
 				trimEnd: ZERO_MEDIA_TIME,
-				volume: 1,
+				params: { volume: 1, muted: false },
 				sourceType: "upload",
 				mediaId: `media-${id}`,
 			} satisfies AudioElement;
@@ -86,9 +86,14 @@ function buildElement({
 				trimStart: ZERO_MEDIA_TIME,
 				trimEnd: ZERO_MEDIA_TIME,
 				definitionId: `graphic-${id}`,
-				params: {},
-				transform: buildTransform(),
-				opacity: 1,
+				params: {
+					"transform.positionX": 0,
+					"transform.positionY": 0,
+					"transform.scaleX": 1,
+					"transform.scaleY": 1,
+					"transform.rotate": 0,
+					opacity: 1,
+				},
 			} satisfies GraphicElement;
 		case "text":
 			return {
@@ -99,20 +104,24 @@ function buildElement({
 				duration: mediaTime({ ticks: duration }),
 				trimStart: ZERO_MEDIA_TIME,
 				trimEnd: ZERO_MEDIA_TIME,
-				content: id,
-				fontSize: 32,
-				fontFamily: "sans-serif",
-				color: "#ffffff",
-				background: {
-					enabled: false,
-					color: "#000000",
+				params: {
+					content: id,
+					fontSize: 32,
+					fontFamily: "sans-serif",
+					color: "#ffffff",
+					"background.enabled": false,
+					"background.color": "#000000",
+					textAlign: "left",
+					fontWeight: "normal",
+					fontStyle: "normal",
+					textDecoration: "none",
+					"transform.positionX": 0,
+					"transform.positionY": 0,
+					"transform.scaleX": 1,
+					"transform.scaleY": 1,
+					"transform.rotate": 0,
+					opacity: 1,
 				},
-				textAlign: "left",
-				fontWeight: "normal",
-				fontStyle: "normal",
-				textDecoration: "none",
-				transform: buildTransform(),
-				opacity: 1,
 			} satisfies TextElement;
 		case "video":
 			return {
@@ -124,8 +133,14 @@ function buildElement({
 				trimStart: ZERO_MEDIA_TIME,
 				trimEnd: ZERO_MEDIA_TIME,
 				mediaId: `media-${id}`,
-				transform: buildTransform(),
-				opacity: 1,
+				params: {
+					"transform.positionX": 0,
+					"transform.positionY": 0,
+					"transform.scaleX": 1,
+					"transform.scaleY": 1,
+					"transform.rotate": 0,
+					opacity: 1,
+				},
 			} satisfies VideoElement;
 	}
 

@@ -385,7 +385,10 @@ export class DragDropController {
 		dragData: Extract<TimelineDragData, { type: "text" }>;
 	}): void {
 		const element = buildTextElement({
-			raw: { name: dragData.name ?? "", content: dragData.content ?? "" },
+			raw: {
+				name: dragData.name ?? "",
+				params: { content: dragData.content ?? "" },
+			},
 			startTime: target.xPosition,
 		});
 		this.insertAtTarget({ element, target, trackType: "text" });

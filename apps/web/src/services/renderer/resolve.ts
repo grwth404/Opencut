@@ -13,6 +13,7 @@ import {
 	resolveGraphicElementParamsAtTime,
 } from "@/graphics";
 import {
+	buildTextBackgroundFromElement,
 	getTextMeasurementContext,
 	measureTextElement,
 } from "@/text/measure-element";
@@ -330,6 +331,7 @@ function resolveTextNode({
 		elementStartTime: node.params.startTime,
 		elementDuration: node.params.duration,
 	});
+	const background = buildTextBackgroundFromElement({ element: node.params });
 
 	return {
 		transform: resolveTransformAtTime({
@@ -343,13 +345,16 @@ function resolveTextNode({
 			localTime,
 		}),
 		textColor: resolveColorAtTime({
-			baseColor: node.params.color,
+			baseColor:
+				typeof node.params.params.color === "string"
+					? node.params.params.color
+					: "#ffffff",
 			animations: node.params.animations,
 			propertyPath: "color",
 			localTime,
 		}),
 		backgroundColor: resolveColorAtTime({
-			baseColor: node.params.background.color,
+			baseColor: background.color,
 			animations: node.params.animations,
 			propertyPath: "background.color",
 			localTime,

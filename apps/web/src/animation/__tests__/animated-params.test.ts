@@ -1,15 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
-	coerceAnimationParamValue,
-	getAnimationParamDefaultInterpolation,
-	getAnimationParamNumericRange,
-	getAnimationParamValueKind,
-} from "@/animation/animated-params";
+	coerceParamValue,
+	getParamDefaultInterpolation,
+	getParamNumericRange,
+	getParamValueKind,
+} from "@/params";
 
 describe("animated params", () => {
 	test("snaps and clamps number params", () => {
 		expect(
-			coerceAnimationParamValue({
+			coerceParamValue({
 				param: {
 					key: "intensity",
 					label: "Intensity",
@@ -24,7 +24,7 @@ describe("animated params", () => {
 		).toBe(0.5);
 
 		expect(
-			coerceAnimationParamValue({
+			coerceParamValue({
 				param: {
 					key: "intensity",
 					label: "Intensity",
@@ -49,14 +49,14 @@ describe("animated params", () => {
 			max: 1,
 			step: 0.25,
 		};
-		expect(coerceAnimationParamValue({ param, value: Number.NaN })).toBeNull();
-		expect(coerceAnimationParamValue({ param, value: "0.5" })).toBeNull();
-		expect(coerceAnimationParamValue({ param, value: true })).toBeNull();
+		expect(coerceParamValue({ param, value: Number.NaN })).toBeNull();
+		expect(coerceParamValue({ param, value: "0.5" })).toBeNull();
+		expect(coerceParamValue({ param, value: true })).toBeNull();
 	});
 
 	test("passthrough with step <= 0 guard", () => {
 		expect(
-			coerceAnimationParamValue({
+			coerceParamValue({
 				param: {
 					key: "x",
 					label: "X",
@@ -81,13 +81,13 @@ describe("animated params", () => {
 				{ value: "multiply", label: "Multiply" },
 			],
 		};
-		expect(coerceAnimationParamValue({ param, value: "normal" })).toBe("normal");
-		expect(coerceAnimationParamValue({ param, value: "multiply" })).toBe("multiply");
+		expect(coerceParamValue({ param, value: "normal" })).toBe("normal");
+		expect(coerceParamValue({ param, value: "multiply" })).toBe("multiply");
 	});
 
 	test("rejects select values outside the allowed options", () => {
 		expect(
-			coerceAnimationParamValue({
+			coerceParamValue({
 				param: {
 					key: "blend",
 					label: "Blend",
@@ -111,9 +111,9 @@ describe("animated params", () => {
 			default: "normal",
 			options: [{ value: "normal", label: "Normal" }],
 		};
-		expect(coerceAnimationParamValue({ param, value: 42 })).toBeNull();
-		expect(coerceAnimationParamValue({ param, value: null })).toBeNull();
-		expect(coerceAnimationParamValue({ param, value: undefined })).toBeNull();
+		expect(coerceParamValue({ param, value: 42 })).toBeNull();
+		expect(coerceParamValue({ param, value: null })).toBeNull();
+		expect(coerceParamValue({ param, value: undefined })).toBeNull();
 	});
 
 	test("boolean params accept booleans and reject other types", () => {
@@ -123,10 +123,10 @@ describe("animated params", () => {
 			type: "boolean" as const,
 			default: true,
 		};
-		expect(coerceAnimationParamValue({ param, value: true })).toBe(true);
-		expect(coerceAnimationParamValue({ param, value: false })).toBe(false);
-		expect(coerceAnimationParamValue({ param, value: 1 })).toBeNull();
-		expect(coerceAnimationParamValue({ param, value: "true" })).toBeNull();
+		expect(coerceParamValue({ param, value: true })).toBe(true);
+		expect(coerceParamValue({ param, value: false })).toBe(false);
+		expect(coerceParamValue({ param, value: 1 })).toBeNull();
+		expect(coerceParamValue({ param, value: "true" })).toBeNull();
 	});
 
 	test("color params accept strings and reject other types", () => {
@@ -136,14 +136,14 @@ describe("animated params", () => {
 			type: "color" as const,
 			default: "#ffffff",
 		};
-		expect(coerceAnimationParamValue({ param, value: "#ff0000" })).toBe("#ff0000");
-		expect(coerceAnimationParamValue({ param, value: 0xff0000 })).toBeNull();
-		expect(coerceAnimationParamValue({ param, value: null })).toBeNull();
+		expect(coerceParamValue({ param, value: "#ff0000" })).toBe("#ff0000");
+		expect(coerceParamValue({ param, value: 0xff0000 })).toBeNull();
+		expect(coerceParamValue({ param, value: null })).toBeNull();
 	});
 
 	test("getAnimationParamValueKind maps param type to binding kind", () => {
 		expect(
-			getAnimationParamValueKind({
+			getParamValueKind({
 				param: {
 					key: "n",
 					label: "N",
@@ -155,17 +155,17 @@ describe("animated params", () => {
 			}),
 		).toBe("number");
 		expect(
-			getAnimationParamValueKind({
+			getParamValueKind({
 				param: { key: "c", label: "C", type: "color", default: "#fff" },
 			}),
 		).toBe("color");
 		expect(
-			getAnimationParamValueKind({
+			getParamValueKind({
 				param: { key: "b", label: "B", type: "boolean", default: false },
 			}),
 		).toBe("discrete");
 		expect(
-			getAnimationParamValueKind({
+			getParamValueKind({
 				param: {
 					key: "s",
 					label: "S",
@@ -179,7 +179,7 @@ describe("animated params", () => {
 
 	test("getAnimationParamDefaultInterpolation is linear for continuous, hold for discrete", () => {
 		expect(
-			getAnimationParamDefaultInterpolation({
+			getParamDefaultInterpolation({
 				param: {
 					key: "n",
 					label: "N",
@@ -191,17 +191,17 @@ describe("animated params", () => {
 			}),
 		).toBe("linear");
 		expect(
-			getAnimationParamDefaultInterpolation({
+			getParamDefaultInterpolation({
 				param: { key: "c", label: "C", type: "color", default: "#fff" },
 			}),
 		).toBe("linear");
 		expect(
-			getAnimationParamDefaultInterpolation({
+			getParamDefaultInterpolation({
 				param: { key: "b", label: "B", type: "boolean", default: false },
 			}),
 		).toBe("hold");
 		expect(
-			getAnimationParamDefaultInterpolation({
+			getParamDefaultInterpolation({
 				param: {
 					key: "s",
 					label: "S",
@@ -215,7 +215,7 @@ describe("animated params", () => {
 
 	test("getAnimationParamNumericRange returns spec for number params, undefined otherwise", () => {
 		expect(
-			getAnimationParamNumericRange({
+			getParamNumericRange({
 				param: {
 					key: "intensity",
 					label: "Intensity",
@@ -228,12 +228,12 @@ describe("animated params", () => {
 			}),
 		).toEqual({ min: 0, max: 1, step: 0.1 });
 		expect(
-			getAnimationParamNumericRange({
+			getParamNumericRange({
 				param: { key: "c", label: "C", type: "color", default: "#fff" },
 			}),
 		).toBeUndefined();
 		expect(
-			getAnimationParamNumericRange({
+			getParamNumericRange({
 				param: { key: "b", label: "B", type: "boolean", default: false },
 			}),
 		).toBeUndefined();

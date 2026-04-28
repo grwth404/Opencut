@@ -6,12 +6,6 @@ import type {
 	NumericSpec,
 } from "@/animation/types";
 import {
-	coerceAnimationParamValue,
-	getAnimationParamDefaultInterpolation,
-	getAnimationParamNumericRange,
-	getAnimationParamValueKind,
-} from "@/animation/animated-params";
-import {
 	parseEffectParamPath,
 } from "@/animation/effect-param-channel";
 import {
@@ -19,16 +13,22 @@ import {
 } from "@/animation/graphic-param-channel";
 import { effectsRegistry, registerDefaultEffects } from "@/effects";
 import { getGraphicDefinition } from "@/graphics";
-import type { ParamDefinition } from "@/params";
+import {
+	coerceParamValue,
+	getParamDefaultInterpolation,
+	getParamNumericRange,
+	getParamValueKind,
+	type ParamDefinition,
+	type ParamValues,
+} from "@/params";
+import {
+	getElementParam,
+	readElementParamValue,
+	writeElementParamValue,
+	type ElementParamDefinition,
+} from "@/params/registry";
 import type { TimelineElement } from "@/timeline";
 import { isVisualElement } from "@/timeline/element-utils";
-import { isAnimationPropertyPath } from "@/animation/path";
-import {
-	coerceAnimationValueForProperty,
-	getAnimationPropertyDefinition,
-	getElementBaseValueForProperty,
-	withElementBaseValueForProperty,
-} from "@/animation";
 
 export interface AnimationPathDescriptor {
 	kind: AnimationBindingKind;
@@ -47,8 +47,84 @@ function paramNumericRanges({
 }: {
 	param: ParamDefinition;
 }): Partial<Record<string, NumericSpec>> | undefined {
-	const range = getAnimationParamNumericRange({ param });
+	const range = getParamNumericRange({ param });
 	return range ? { value: range } : undefined;
+}
+
+function buildParamDescriptor({
+	param,
+	baseParams,
+	setParams,
+}: {
+	param: ParamDefinition;
+	baseParams: ParamValues;
+	setParams: (params: ParamValues) => TimelineElement;
+}): AnimationPathDescriptor | null {
+	if (param.keyframable === false) {
+		return null;
+	}
+
+	return {
+		kind: getParamValueKind({ param }),
+		defaultInterpolation: getParamDefaultInterpolation({ param }),
+		numericRanges: paramNumericRanges({ param }),
+		coerceValue: ({ value }) => coerceParamValue({ param, value }),
+		getBaseValue: () => baseParams[param.key] ?? param.default,
+		setBaseValue: ({ value }) => {
+			const coercedValue = coerceParamValue({ param, value });
+			if (coercedValue === null) {
+				return setParams(baseParams);
+			}
+
+			return setParams({
+				...baseParams,
+				[param.key]: coercedValue,
+			});
+		},
+	};
+}
+
+function buildElementParamDescriptor({
+	element,
+	paramKey,
+}: {
+	element: TimelineElement;
+	paramKey: string;
+}): AnimationPathDescriptor | null {
+	const param = getElementParam({ element, key: paramKey });
+	if (!param) {
+		return null;
+	}
+
+	return buildTimelineElementParamDescriptor({ element, param });
+}
+
+function buildTimelineElementParamDescriptor({
+	element,
+	param,
+}: {
+	element: TimelineElement;
+	param: ElementParamDefinition;
+}): AnimationPathDescriptor | null {
+	if (param.keyframable === false) {
+		return null;
+	}
+
+	return {
+		kind: getParamValueKind({ param }),
+		defaultInterpolation: getParamDefaultInterpolation({ param }),
+		numericRanges: paramNumericRanges({ param }),
+		coerceValue: ({ value }) => coerceParamValue({ param, value }),
+		getBaseValue: () => readElementParamValue({ element, param }),
+		setBaseValue: ({ value }) => {
+			const coercedValue = coerceParamValue({ param, value });
+			if (coercedValue === null) {
+				return element;
+			}
+
+			return writeElementParamValue({ element, param, value: coercedValue });
+		},
+	};
 }
 
 function buildGraphicParamDescriptor({
@@ -70,27 +146,14 @@ function buildGraphicParamDescriptor({
 		return null;
 	}
 
-	return {
-		kind: getAnimationParamValueKind({ param }),
-		defaultInterpolation: getAnimationParamDefaultInterpolation({ param }),
-		numericRanges: paramNumericRanges({ param }),
-		coerceValue: ({ value }) => coerceAnimationParamValue({ param, value }),
-		getBaseValue: () => element.params[param.key] ?? param.default,
-		setBaseValue: ({ value }) => {
-			const coercedValue = coerceAnimationParamValue({ param, value });
-			if (coercedValue === null) {
-				return element;
-			}
-
-			return {
-				...element,
-				params: {
-					...element.params,
-					[param.key]: coercedValue,
-				},
-			};
-		},
-	};
+	return buildParamDescriptor({
+		param,
+		baseParams: element.params,
+		setParams: (params) => ({
+			...element,
+			params,
+		}),
+	});
 }
 
 function buildEffectParamDescriptor({
@@ -118,35 +181,22 @@ function buildEffectParamDescriptor({
 		return null;
 	}
 
-	return {
-		kind: getAnimationParamValueKind({ param }),
-		defaultInterpolation: getAnimationParamDefaultInterpolation({ param }),
-		numericRanges: paramNumericRanges({ param }),
-		coerceValue: ({ value }) => coerceAnimationParamValue({ param, value }),
-		getBaseValue: () => effect.params[param.key] ?? param.default,
-		setBaseValue: ({ value }) => {
-			const coercedValue = coerceAnimationParamValue({ param, value });
-			if (coercedValue === null) {
-				return element;
-			}
-
-			return {
-				...element,
-				effects:
-					element.effects?.map((candidate) =>
-						candidate.id !== effectId
-							? candidate
-							: {
-									...candidate,
-									params: {
-										...candidate.params,
-										[param.key]: coercedValue,
-									},
-								},
-					) ?? element.effects,
-			};
-		},
-	};
+	return buildParamDescriptor({
+		param,
+		baseParams: effect.params,
+		setParams: (params) => ({
+			...element,
+			effects:
+				element.effects?.map((candidate) =>
+					candidate.id !== effectId
+						? candidate
+						: {
+								...candidate,
+								params,
+							},
+				) ?? element.effects,
+		}),
+	});
 }
 
 export function resolveAnimationTarget({
@@ -156,41 +206,12 @@ export function resolveAnimationTarget({
 	element: TimelineElement;
 	path: AnimationPath;
 }): AnimationPathDescriptor | null {
-	if (isAnimationPropertyPath(path)) {
-		const propertyDefinition = getAnimationPropertyDefinition({
-			propertyPath: path,
-		});
-		if (!propertyDefinition.supportsElement({ element })) {
-			return null;
-		}
-
-		return {
-			kind: propertyDefinition.kind,
-			defaultInterpolation: propertyDefinition.defaultInterpolation,
-			numericRanges: propertyDefinition.numericRanges,
-			coerceValue: ({ value }) =>
-				coerceAnimationValueForProperty({
-					propertyPath: path,
-					value,
-				}),
-			getBaseValue: () =>
-				getElementBaseValueForProperty({
-					element,
-					propertyPath: path,
-				}),
-			setBaseValue: ({ value }) => {
-				const coercedValue = propertyDefinition.coerceValue({ value });
-				if (coercedValue === null) {
-					return element;
-				}
-
-				return withElementBaseValueForProperty({
-					element,
-					propertyPath: path,
-					value: coercedValue,
-				});
-			},
-		};
+	const elementParamTarget = buildElementParamDescriptor({
+		element,
+		paramKey: path,
+	});
+	if (elementParamTarget) {
+		return elementParamTarget;
 	}
 
 	const graphicParamTarget = parseGraphicParamPath({ propertyPath: path });

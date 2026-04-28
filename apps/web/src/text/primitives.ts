@@ -85,7 +85,7 @@ export function resolveTextLayout({
 	const letterSpacing = text.letterSpacing ?? DEFAULTS.text.letterSpacing;
 	const lineHeightPx =
 		scaledFontSize * (text.lineHeight ?? DEFAULTS.text.lineHeight);
-	const fontSizeRatio = text.fontSize / DEFAULTS.text.element.fontSize;
+	const fontSizeRatio = text.fontSize / 15;
 
 	return {
 		scaledFontSize,

@@ -2,7 +2,6 @@ import type { ElementAnimations } from "@/animation/types";
 import type { Effect } from "@/effects/types";
 import type { Mask } from "@/masks/types";
 import type { ParamValues } from "@/params";
-import type { BlendMode, Transform } from "@/rendering";
 import type { MediaTime } from "@/wasm";
 
 export type ElementRef = {
@@ -87,8 +86,6 @@ export interface RetimeConfig {
 
 interface BaseAudioElement extends BaseTimelineElement {
 	type: "audio";
-	volume: number;
-	muted?: boolean;
 	buffer?: AudioBuffer;
 	retime?: RetimeConfig;
 }
@@ -114,6 +111,7 @@ interface BaseTimelineElement {
 	trimEnd: MediaTime;
 	sourceDuration?: MediaTime;
 	animations?: ElementAnimations;
+	params: ParamValues;
 }
 
 export interface VideoElement extends BaseTimelineElement {
@@ -124,9 +122,6 @@ export interface VideoElement extends BaseTimelineElement {
 	isSourceAudioEnabled?: boolean;
 	hidden?: boolean;
 	retime?: RetimeConfig;
-	transform: Transform;
-	opacity: number;
-	blendMode?: BlendMode;
 	effects?: Effect[];
 	masks?: Mask[];
 }
@@ -135,9 +130,6 @@ export interface ImageElement extends BaseTimelineElement {
 	type: "image";
 	mediaId: string;
 	hidden?: boolean;
-	transform: Transform;
-	opacity: number;
-	blendMode?: BlendMode;
 	effects?: Effect[];
 	masks?: Mask[];
 }
@@ -154,21 +146,7 @@ export interface TextBackground {
 
 export interface TextElement extends BaseTimelineElement {
 	type: "text";
-	content: string;
-	fontSize: number;
-	fontFamily: string;
-	color: string;
-	background: TextBackground;
-	textAlign: "left" | "center" | "right";
-	fontWeight: "normal" | "bold";
-	fontStyle: "normal" | "italic";
-	textDecoration: "none" | "underline" | "line-through";
-	letterSpacing?: number;
-	lineHeight?: number;
 	hidden?: boolean;
-	transform: Transform;
-	opacity: number;
-	blendMode?: BlendMode;
 	effects?: Effect[];
 }
 
@@ -179,20 +157,13 @@ export interface StickerElement extends BaseTimelineElement {
 	intrinsicWidth?: number;
 	intrinsicHeight?: number;
 	hidden?: boolean;
-	transform: Transform;
-	opacity: number;
-	blendMode?: BlendMode;
 	effects?: Effect[];
 }
 
 export interface GraphicElement extends BaseTimelineElement {
 	type: "graphic";
 	definitionId: string;
-	params: ParamValues;
 	hidden?: boolean;
-	transform: Transform;
-	opacity: number;
-	blendMode?: BlendMode;
 	effects?: Effect[];
 	masks?: Mask[];
 }
@@ -200,13 +171,9 @@ export interface GraphicElement extends BaseTimelineElement {
 export interface EffectElement extends BaseTimelineElement {
 	type: "effect";
 	effectType: string;
-	params: ParamValues;
 }
 
-export type ElementUpdatePatch =
-	| { transform: Transform }
-	| { opacity: number }
-	| { volume: number };
+export type ElementUpdatePatch = { params?: Partial<ParamValues> };
 
 export type TimelineElement =
 	| AudioElement

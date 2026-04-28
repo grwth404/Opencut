@@ -16,7 +16,6 @@ export {
 	setChannel,
 	splitAnimationsAtTime,
 	updateScalarKeyframeCurve,
-	upsertElementKeyframe,
 	upsertPathKeyframe,
 } from "./keyframes";
 
@@ -75,13 +74,4 @@ export {
 	isAnimationPropertyPath,
 } from "./path";
 
-export {
-	coerceAnimationValueForProperty,
-	getAnimationPropertyDefinition,
-	getDefaultInterpolationForProperty,
-	getElementBaseValueForProperty,
-	supportsAnimationProperty,
-	type AnimationPropertyDefinition,
-	type NumericSpec,
-	withElementBaseValueForProperty,
-} from "./property-registry";
+export type { NumericSpec } from "./types";

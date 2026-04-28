@@ -11,7 +11,6 @@ import {
 	type CreateStickerElement,
 	type CreateUploadAudioElement,
 	type CreateLibraryAudioElement,
-	type TextBackground,
 	type TextElement,
 	type SceneTracks,
 	type TimelineElement,
@@ -28,6 +27,10 @@ import type { MediaType } from "@/media/types";
 import { buildDefaultEffectInstance } from "@/effects";
 import { buildDefaultGraphicInstance } from "@/graphics";
 import type { ParamValues } from "@/params";
+import {
+	buildDefaultParamValues,
+	getBuiltInElementParams,
+} from "@/params/registry";
 import { capitalizeFirstLetter } from "@/utils/string";
 import { type MediaTime, ZERO_MEDIA_TIME } from "@/wasm";
 
@@ -87,20 +90,12 @@ export function requiresMediaId({
 	);
 }
 
-function buildTextBackground(
-	raw: Partial<TextBackground> | undefined,
-): TextBackground {
-	const color = raw?.color ?? DEFAULTS.text.element.background.color;
-	const enabled = raw?.enabled ?? color !== "transparent";
-	return {
-		enabled,
-		color,
-		cornerRadius: raw?.cornerRadius,
-		paddingX: raw?.paddingX,
-		paddingY: raw?.paddingY,
-		offsetX: raw?.offsetX,
-		offsetY: raw?.offsetY,
-	};
+function buildDefaultElementParams({
+	type,
+}: {
+	type: TimelineElement["type"];
+}): ParamValues {
+	return buildDefaultParamValues(getBuiltInElementParams({ type }));
 }
 
 export function buildTextElement({
@@ -115,24 +110,14 @@ export function buildTextElement({
 	return {
 		type: "text",
 		name: t.name ?? DEFAULTS.text.element.name,
-		content: t.content ?? DEFAULTS.text.element.content,
 		duration: t.duration ?? DEFAULT_NEW_ELEMENT_DURATION,
 		startTime,
 		trimStart: ZERO_MEDIA_TIME,
 		trimEnd: ZERO_MEDIA_TIME,
-		fontSize: t.fontSize ?? DEFAULTS.text.element.fontSize,
-		fontFamily: t.fontFamily ?? DEFAULTS.text.element.fontFamily,
-		color: t.color ?? DEFAULTS.text.element.color,
-		background: buildTextBackground(t.background),
-		textAlign: t.textAlign ?? DEFAULTS.text.element.textAlign,
-		fontWeight: t.fontWeight ?? DEFAULTS.text.element.fontWeight,
-		fontStyle: t.fontStyle ?? DEFAULTS.text.element.fontStyle,
-		textDecoration: t.textDecoration ?? DEFAULTS.text.element.textDecoration,
-		letterSpacing: t.letterSpacing ?? DEFAULTS.text.element.letterSpacing,
-		lineHeight: t.lineHeight ?? DEFAULTS.text.element.lineHeight,
-		transform: t.transform ?? DEFAULTS.text.element.transform,
-		opacity: t.opacity ?? DEFAULTS.text.element.opacity,
-		blendMode: t.blendMode ?? DEFAULTS.element.blendMode,
+		params: {
+			...buildDefaultElementParams({ type: "text" }),
+			...(t.params ?? {}),
+		},
 	};
 }
 
@@ -183,12 +168,7 @@ export function buildStickerElement({
 		startTime,
 		trimStart: ZERO_MEDIA_TIME,
 		trimEnd: ZERO_MEDIA_TIME,
-		transform: {
-			...DEFAULTS.element.transform,
-			position: { ...DEFAULTS.element.transform.position },
-		},
-		opacity: DEFAULTS.element.opacity,
-		blendMode: DEFAULTS.element.blendMode,
+		params: buildDefaultElementParams({ type: "sticker" }),
 	};
 }
 
@@ -208,18 +188,34 @@ export function buildGraphicElement({
 		type: "graphic",
 		name: name ?? capitalizeFirstLetter({ string: instance.definitionId }),
 		definitionId: instance.definitionId,
-		params: { ...instance.params, ...(params ?? {}) } as ParamValues,
+		params: mergeParamValues({
+			base: {
+				...buildDefaultElementParams({ type: "graphic" }),
+				...instance.params,
+			},
+			overrides: params,
+		}),
 		duration: DEFAULT_NEW_ELEMENT_DURATION,
 		startTime,
 		trimStart: ZERO_MEDIA_TIME,
 		trimEnd: ZERO_MEDIA_TIME,
-		transform: {
-			...DEFAULTS.element.transform,
-			position: { ...DEFAULTS.element.transform.position },
-		},
-		opacity: DEFAULTS.element.opacity,
-		blendMode: DEFAULTS.element.blendMode,
 	};
+}
+
+function mergeParamValues({
+	base,
+	overrides,
+}: {
+	base: ParamValues;
+	overrides?: Partial<ParamValues>;
+}): ParamValues {
+	const result: ParamValues = { ...base };
+	for (const [key, value] of Object.entries(overrides ?? {})) {
+		if (value !== undefined) {
+			result[key] = value;
+		}
+	}
+	return result;
 }
 
 function buildVideoElement({
@@ -242,16 +238,9 @@ function buildVideoElement({
 		trimStart: ZERO_MEDIA_TIME,
 		trimEnd: ZERO_MEDIA_TIME,
 		sourceDuration: duration,
-		muted: false,
 		isSourceAudioEnabled: true,
 		hidden: false,
-		transform: {
-			...DEFAULTS.element.transform,
-			position: { ...DEFAULTS.element.transform.position },
-		},
-		opacity: DEFAULTS.element.opacity,
-		blendMode: DEFAULTS.element.blendMode,
-		volume: DEFAULTS.element.volume,
+		params: buildDefaultElementParams({ type: "video" }),
 	};
 }
 
@@ -275,12 +264,7 @@ function buildImageElement({
 		trimStart: ZERO_MEDIA_TIME,
 		trimEnd: ZERO_MEDIA_TIME,
 		hidden: false,
-		transform: {
-			...DEFAULTS.element.transform,
-			position: { ...DEFAULTS.element.transform.position },
-		},
-		opacity: DEFAULTS.element.opacity,
-		blendMode: DEFAULTS.element.blendMode,
+		params: buildDefaultElementParams({ type: "image" }),
 	};
 }
 
@@ -307,8 +291,7 @@ function buildUploadAudioElement({
 		trimStart: ZERO_MEDIA_TIME,
 		trimEnd: ZERO_MEDIA_TIME,
 		sourceDuration: duration,
-		volume: DEFAULTS.element.volume,
-		muted: false,
+		params: buildDefaultElementParams({ type: "audio" }),
 	};
 	if (buffer) {
 		element.buffer = buffer;
@@ -370,8 +353,7 @@ export function buildLibraryAudioElement({
 		trimStart: ZERO_MEDIA_TIME,
 		trimEnd: ZERO_MEDIA_TIME,
 		sourceDuration: duration,
-		volume: DEFAULTS.element.volume,
-		muted: false,
+		params: buildDefaultElementParams({ type: "audio" }),
 	};
 	if (buffer) {
 		element.buffer = buffer;
@@ -411,8 +393,8 @@ export function getElementFontFamilies({
 	const families = new Set<string>();
 	for (const track of [...tracks.overlay, tracks.main, ...tracks.audio]) {
 		for (const element of track.elements) {
-			if (element.type === "text" && element.fontFamily) {
-				families.add(element.fontFamily);
+			if (element.type === "text" && typeof element.params.fontFamily === "string") {
+				families.add(element.params.fontFamily);
 			}
 			if ("masks" in element) {
 				for (const mask of element.masks ?? []) {

@@ -1,4 +1,10 @@
-import type { TextBackground, TextElement } from "@/timeline";
+import type { TextBackground } from "@/timeline";
+import type {
+	TextAlign,
+	TextDecoration,
+	TextFontStyle,
+	TextFontWeight,
+} from "@/text/primitives";
 import type { CaptionChunk } from "@/transcription/types";
 
 export interface SubtitlePlacementStyle {
@@ -26,10 +32,10 @@ export interface SubtitleStyleOverrides {
 	color?: string;
 	background?: Pick<TextBackground, "enabled" | "color"> &
 		Partial<Omit<TextBackground, "enabled" | "color">>;
-	textAlign?: TextElement["textAlign"];
-	fontWeight?: TextElement["fontWeight"];
-	fontStyle?: TextElement["fontStyle"];
-	textDecoration?: TextElement["textDecoration"];
+	textAlign?: TextAlign;
+	fontWeight?: TextFontWeight;
+	fontStyle?: TextFontStyle;
+	textDecoration?: TextDecoration;
 	letterSpacing?: number;
 	lineHeight?: number;
 	placement?: SubtitlePlacementStyle;

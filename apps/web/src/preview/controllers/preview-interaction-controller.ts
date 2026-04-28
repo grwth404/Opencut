@@ -18,7 +18,8 @@ import {
 	type SnapLine,
 } from "@/preview/preview-snap";
 import type { TCanvasSize } from "@/project/types";
-import type { Transform } from "@/rendering";
+import type { ParamValues } from "@/params";
+import { buildTransformFromParams, type Transform } from "@/rendering";
 import { isVisualElement } from "@/timeline/element-utils";
 import type {
 	ElementRef,
@@ -51,6 +52,7 @@ interface DragElementSnapshot {
 	readonly trackId: string;
 	readonly elementId: string;
 	readonly initialTransform: Transform;
+	readonly initialParams: ParamValues;
 }
 
 interface DraggingGesture extends CapturedPointerState {
@@ -218,7 +220,8 @@ function toDragElementSnapshots({
 		.map(({ track, element }) => ({
 			trackId: track.id,
 			elementId: element.id,
-			initialTransform: element.transform,
+			initialTransform: buildTransformFromParams({ params: element.params }),
+			initialParams: element.params,
 		}));
 }
 
@@ -565,16 +568,14 @@ export class PreviewInteractionController {
 			snappedPosition.y - firstElement.initialTransform.position.y;
 
 		this.deps.timeline.previewElements(
-			drag.elements.map(({ trackId, elementId, initialTransform }) => ({
+			drag.elements.map(({ trackId, elementId, initialTransform, initialParams }) => ({
 				trackId,
 				elementId,
 				updates: {
-					transform: {
-						...initialTransform,
-						position: {
-							x: initialTransform.position.x + deltaSnappedX,
-							y: initialTransform.position.y + deltaSnappedY,
-						},
+					params: {
+						...initialParams,
+						"transform.positionX": initialTransform.position.x + deltaSnappedX,
+						"transform.positionY": initialTransform.position.y + deltaSnappedY,
 					},
 				},
 			})),

@@ -23,8 +23,14 @@ function buildVideoElement(overrides: Partial<VideoElement> = {}): VideoElement 
 		trimStart: ZERO_MEDIA_TIME,
 		trimEnd: ZERO_MEDIA_TIME,
 		mediaId: "media-1",
-		transform: buildTransform(),
-		opacity: 1,
+		params: {
+			"transform.positionX": 0,
+			"transform.positionY": 0,
+			"transform.scaleX": 1,
+			"transform.scaleY": 1,
+			"transform.rotate": 0,
+			opacity: 1,
+		},
 		...overrides,
 	};
 }

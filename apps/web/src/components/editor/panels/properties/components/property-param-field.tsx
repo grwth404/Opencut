@@ -1,6 +1,10 @@
 "use client";
 
-import type { ParamDefinition, NumberParamDefinition } from "@/params";
+import type {
+	ParamDefinition,
+	NumberParamDefinition,
+	ParamValue,
+} from "@/params";
 import {
 	formatNumberForDisplay,
 	getFractionDigitsForStep,
@@ -19,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { usePropertyDraft } from "../hooks/use-property-draft";
 import { KeyframeToggle } from "./keyframe-toggle";
+import { Textarea } from "@/components/ui/textarea";
 
 export function PropertyParamField({
 	param,
@@ -28,8 +33,8 @@ export function PropertyParamField({
 	keyframe,
 }: {
 	param: ParamDefinition;
-	value: number | string | boolean;
-	onPreview: (value: number | string | boolean) => void;
+	value: ParamValue;
+	onPreview: (value: ParamValue) => void;
 	onCommit: () => void;
 	keyframe?: {
 		isActive: boolean;
@@ -41,7 +46,7 @@ export function PropertyParamField({
 		<SectionField
 			label={param.label}
 			beforeLabel={
-				keyframe ? (
+				keyframe && param.keyframable !== false ? (
 					<KeyframeToggle
 						isActive={keyframe.isActive}
 						isDisabled={keyframe.isDisabled}
@@ -68,8 +73,8 @@ function ParamInput({
 	onCommit,
 }: {
 	param: ParamDefinition;
-	value: number | string | boolean;
-	onPreview: (value: number | string | boolean) => void;
+	value: ParamValue;
+	onPreview: (value: ParamValue) => void;
 	onCommit: () => void;
 }) {
 	if (param.type === "number") {
@@ -127,6 +132,27 @@ function ParamInput({
 					onPreview(`#${color}`);
 					onCommit();
 				}}
+			/>
+		);
+	}
+
+	if (param.type === "text") {
+		return (
+			<Textarea
+				value={String(value)}
+				onChange={(event) => onPreview(event.currentTarget.value)}
+				onBlur={onCommit}
+			/>
+		);
+	}
+
+	if (param.type === "font") {
+		return (
+			<input
+				className="border-input bg-accent h-9 w-full rounded-md border px-3 text-sm outline-none"
+				value={String(value)}
+				onChange={(event) => onPreview(event.currentTarget.value)}
+				onBlur={onCommit}
 			/>
 		);
 	}

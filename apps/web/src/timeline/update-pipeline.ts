@@ -141,7 +141,14 @@ export function applyElementUpdate({
 	patch: Partial<TimelineElement>;
 	context: ElementUpdateContext;
 }): TimelineElement {
-	let nextElement = { ...element, ...patch } as TimelineElement;
+	let nextElement = {
+		...element,
+		...patch,
+		params: {
+			...element.params,
+			...(patch.params ?? {}),
+		},
+	} as TimelineElement;
 	const changedFields = new Set(
 		Object.keys(patch) as ElementUpdateField[],
 	);

@@ -3,13 +3,12 @@
 import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEditor } from "@/editor/use-editor";
-import { DEFAULTS } from "@/timeline/defaults";
 import {
 	getDbFromLinePos,
 	getLinePosFromDb,
 } from "@/timeline/audio-display";
 import { VOLUME_DB_MAX, VOLUME_DB_MIN } from "@/timeline/audio-constants";
-import { hasAnimatedVolume } from "@/timeline/audio-state";
+import { getElementVolume, hasAnimatedVolume } from "@/timeline/audio-state";
 import type { AudioElement } from "@/timeline/types";
 import {
 	clamp,
@@ -60,10 +59,8 @@ export function AudioVolumeLine({
 	const editor = useEditor();
 	const surfaceRef = useRef<HTMLDivElement>(null);
 	const activePointerIdRef = useRef<number | null>(null);
-	const startVolumeRef = useRef(element.volume ?? DEFAULTS.element.volume);
-	const lastPreviewVolumeRef = useRef(
-		element.volume ?? DEFAULTS.element.volume,
-	);
+	const startVolumeRef = useRef(getElementVolume({ element }));
+	const lastPreviewVolumeRef = useRef(getElementVolume({ element }));
 	const hasChangedRef = useRef(false);
 	const [isDragging, setIsDragging] = useState(false);
 	const [tooltipClientPos, setTooltipClientPos] = useState<{
@@ -72,7 +69,7 @@ export function AudioVolumeLine({
 	} | null>(null);
 
 	const hasAnimatedEnvelope = hasAnimatedVolume({ element });
-	const currentVolume = element.volume ?? DEFAULTS.element.volume;
+	const currentVolume = getElementVolume({ element });
 	const lineTop = `${getLinePosFromDb({ db: currentVolume })}%`;
 
 	const volumeLabel = `${formatNumberForDisplay({
@@ -96,7 +93,7 @@ export function AudioVolumeLine({
 					{
 						trackId,
 						elementId: element.id,
-						updates: { volume: nextVolume },
+						updates: { params: { volume: nextVolume } },
 					},
 				],
 			});

@@ -9,7 +9,12 @@ import {
 	getElementLocalTime,
 } from "@/animation";
 import { resolveTransformAtTime } from "@/rendering/animation-values";
+import { buildTransformFromParams } from "@/rendering";
 import { resolveTextLayout } from "@/text/primitives";
+import {
+	buildTextBackgroundFromElement,
+	buildTextLayoutParamsFromElement,
+} from "@/text/measure-element";
 
 export function TextEditOverlay({
 	trackId,
@@ -42,7 +47,7 @@ export function TextEditOverlay({
 		if (!div) return;
 		const text = div.innerText;
 		editor.timeline.previewElements({
-			updates: [{ trackId, elementId, updates: { content: text } }],
+			updates: [{ trackId, elementId, updates: { params: { content: text } } }],
 		});
 	}, [editor.timeline, trackId, elementId]);
 
@@ -69,7 +74,7 @@ export function TextEditOverlay({
 		elementDuration: element.duration,
 	});
 	const transform = resolveTransformAtTime({
-		baseTransform: element.transform,
+		baseTransform: buildTransformFromParams({ params: element.params }),
 		animations: element.animations,
 		localTime,
 	});
@@ -80,26 +85,17 @@ export function TextEditOverlay({
 	});
 
 	const { x: displayScaleX } = viewport.getDisplayScale();
+	const textParams = buildTextLayoutParamsFromElement({ element });
 	const resolvedTextLayout = resolveTextLayout({
-		text: {
-			content: element.content,
-			fontSize: element.fontSize,
-			fontFamily: element.fontFamily,
-			fontWeight: element.fontWeight,
-			fontStyle: element.fontStyle,
-			textAlign: element.textAlign,
-			textDecoration: element.textDecoration,
-			letterSpacing: element.letterSpacing,
-			lineHeight: element.lineHeight,
-		},
+		text: textParams,
 		canvasHeight: canvasSize.height,
 	});
 
-	const lineHeight = element.lineHeight ?? DEFAULTS.text.lineHeight;
-	const canvasLetterSpacing = element.letterSpacing ?? 0;
+	const lineHeight = textParams.lineHeight ?? DEFAULTS.text.lineHeight;
+	const canvasLetterSpacing = textParams.letterSpacing ?? 0;
 	const lineHeightPx = resolvedTextLayout.lineHeightPx;
 
-	const bg = element.background;
+	const bg = buildTextBackgroundFromElement({ element });
 	const shouldShowBackground =
 		bg.enabled && bg.color && bg.color !== "transparent";
 	const fontSizeRatio = resolvedTextLayout.fontSizeRatio;
@@ -130,17 +126,20 @@ export function TextEditOverlay({
 				className="cursor-text select-text outline-none whitespace-pre"
 				style={{
 					fontSize: resolvedTextLayout.scaledFontSize,
-					fontFamily: element.fontFamily,
-					fontWeight: element.fontWeight === "bold" ? "bold" : "normal",
-					fontStyle: element.fontStyle === "italic" ? "italic" : "normal",
-					textAlign: element.textAlign,
+					fontFamily: textParams.fontFamily,
+					fontWeight: textParams.fontWeight === "bold" ? "bold" : "normal",
+					fontStyle: textParams.fontStyle === "italic" ? "italic" : "normal",
+					textAlign: textParams.textAlign,
 					letterSpacing: `${canvasLetterSpacing}px`,
 					lineHeight,
 					color: "transparent",
-					caretColor: element.color,
+					caretColor:
+						typeof element.params.color === "string"
+							? element.params.color
+							: "#ffffff",
 					backgroundColor: shouldShowBackground ? bg.color : "transparent",
 					minHeight: lineHeightPx,
-					textDecoration: element.textDecoration ?? "none",
+					textDecoration: textParams.textDecoration ?? "none",
 					padding: shouldShowBackground
 						? `${canvasPaddingY}px ${canvasPaddingX}px`
 						: 0,
@@ -150,7 +149,7 @@ export function TextEditOverlay({
 				onBlur={onCommit}
 				onKeyDown={(event) => handleKeyDown({ event })}
 			>
-				{element.content || ""}
+				{textParams.content}
 			</div>
 		</div>
 	);

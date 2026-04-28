@@ -16,6 +16,7 @@ import {
 	canElementBeHidden,
 	canElementHaveAudio,
 } from "@/timeline/element-utils";
+import { isElementMuted } from "@/timeline/audio-state";
 import type {
 	AnimationPath,
 	AnimationInterpolation,
@@ -843,7 +844,7 @@ export class TimelineManager {
 	}): void {
 		const shouldMute = elements.some(({ trackId, elementId }) => {
 			const element = this.getElementByRef({ trackId, elementId });
-			return element && canElementHaveAudio(element) && !element.muted;
+			return element && canElementHaveAudio(element) && !isElementMuted({ element });
 		});
 
 		const nextUpdates = elements.flatMap(({ trackId, elementId }) => {
@@ -856,7 +857,7 @@ export class TimelineManager {
 				{
 					trackId,
 					elementId,
-					patch: { muted: shouldMute },
+					patch: { params: { muted: shouldMute } },
 				},
 			];
 		});

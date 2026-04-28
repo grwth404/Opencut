@@ -1,4 +1,3 @@
-import type { ParamValues } from "@/params";
 import type { MediaTime } from "@/wasm";
 
 export const ANIMATION_PROPERTY_PATHS = [
@@ -21,10 +20,7 @@ export const ANIMATION_PROPERTY_PATHS = [
 export type AnimationPropertyPath = (typeof ANIMATION_PROPERTY_PATHS)[number];
 export type GraphicParamPath = `params.${string}`;
 export type EffectParamPath = `effects.${string}.params.${string}`;
-export type AnimationPath =
-	| AnimationPropertyPath
-	| GraphicParamPath
-	| EffectParamPath;
+export type AnimationPath = string;
 
 export const ANIMATION_PROPERTY_GROUPS = {
 	"transform.scale": ["transform.scaleX", "transform.scaleY"],
@@ -63,7 +59,7 @@ export type AnimationValueForPath<TPath extends AnimationPath> =
 		? AnimationPropertyValueMap[TPath]
 		: TPath extends GraphicParamPath | EffectParamPath
 			? DynamicAnimationPathValue
-			: never;
+			: DynamicAnimationPathValue;
 export type AnimationNumericPropertyPath = {
 	[K in AnimationPropertyPath]: AnimationValueForPath<K> extends number ? K : never;
 }[AnimationPropertyPath];

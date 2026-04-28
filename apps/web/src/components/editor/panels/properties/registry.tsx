@@ -22,15 +22,42 @@ import {
 	MagicWand05Icon,
 	DashboardSpeed02Icon,
 } from "@hugeicons/core-free-icons";
-import { TransformTab } from "@/rendering/components/transform-tab";
-import { BlendingTab } from "@/rendering/components/blending-tab";
-import { AudioTab } from "@/timeline/components/audio-tab";
-import { TextTab } from "@/text/components/text-tab";
+import { ElementParamsTab } from "./components/element-params-tab";
 import { ClipEffectsTab, StandaloneEffectTab } from "@/effects/components/effects-tab";
 import { MasksTab } from "@/masks/components/masks-tab";
 import { SpeedTab } from "@/speed/components/speed-tab";
 import { GraphicTab } from "@/graphics/components/graphic-tab";
 import { OcShapesIcon } from "@/components/icons";
+
+const TRANSFORM_PARAM_KEYS = [
+	"transform.positionX",
+	"transform.positionY",
+	"transform.scaleX",
+	"transform.scaleY",
+	"transform.rotate",
+] as const;
+
+const BLENDING_PARAM_KEYS = ["opacity", "blendMode"] as const;
+const AUDIO_PARAM_KEYS = ["volume", "muted"] as const;
+const TEXT_PARAM_KEYS = [
+	"content",
+	"fontFamily",
+	"fontSize",
+	"color",
+	"textAlign",
+	"fontWeight",
+	"fontStyle",
+	"textDecoration",
+	"letterSpacing",
+	"lineHeight",
+	"background.enabled",
+	"background.color",
+	"background.cornerRadius",
+	"background.paddingX",
+	"background.paddingY",
+	"background.offsetX",
+	"background.offsetY",
+] as const;
 
 export type TabContentProps = {
 	trackId: string;
@@ -58,7 +85,12 @@ function buildTransformTab({
 		label: "Transform",
 		icon: <HugeiconsIcon icon={ArrowExpandIcon} size={16} />,
 		content: ({ trackId }) => (
-			<TransformTab element={element} trackId={trackId} />
+			<ElementParamsTab
+				element={element}
+				trackId={trackId}
+				paramKeys={TRANSFORM_PARAM_KEYS}
+				sectionKey="transform"
+			/>
 		),
 	};
 }
@@ -73,7 +105,12 @@ function buildBlendingTab({
 		label: "Blending",
 		icon: <HugeiconsIcon icon={RainDropIcon} size={16} />,
 		content: ({ trackId }) => (
-			<BlendingTab element={element} trackId={trackId} />
+			<ElementParamsTab
+				element={element}
+				trackId={trackId}
+				paramKeys={BLENDING_PARAM_KEYS}
+				sectionKey="blending"
+			/>
 		),
 	};
 }
@@ -87,7 +124,14 @@ function buildAudioTab({
 		id: "audio",
 		label: "Audio",
 		icon: <HugeiconsIcon icon={MusicNote03Icon} size={16} />,
-		content: ({ trackId }) => <AudioTab element={element} trackId={trackId} />,
+		content: ({ trackId }) => (
+			<ElementParamsTab
+				element={element}
+				trackId={trackId}
+				paramKeys={AUDIO_PARAM_KEYS}
+				sectionKey="audio"
+			/>
+		),
 	};
 }
 
@@ -137,7 +181,14 @@ function buildTextTab({ element }: { element: TextElement }): PropertiesTabDef {
 		id: "text",
 		label: "Text",
 		icon: <HugeiconsIcon icon={TextFontIcon} size={16} />,
-		content: ({ trackId }) => <TextTab element={element} trackId={trackId} />,
+		content: ({ trackId }) => (
+			<ElementParamsTab
+				element={element}
+				trackId={trackId}
+				paramKeys={TEXT_PARAM_KEYS}
+				sectionKey="text"
+			/>
+		),
 	};
 }
 

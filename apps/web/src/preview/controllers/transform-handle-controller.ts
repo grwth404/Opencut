@@ -23,7 +23,8 @@ import {
 	setChannel,
 } from "@/animation";
 import type { ElementAnimations } from "@/animation/types";
-import type { Transform } from "@/rendering";
+import type { ParamValues } from "@/params";
+import { buildTransformFromParams, type Transform } from "@/rendering";
 import { resolveTransformAtTime } from "@/rendering/animation-values";
 import type {
 	ElementRef,
@@ -47,6 +48,7 @@ interface CornerScaleSession extends CapturedPointerState {
 	readonly trackId: string;
 	readonly elementId: string;
 	readonly initialTransform: Transform;
+	readonly initialParams: ParamValues;
 	readonly initialDistance: number;
 	readonly initialBoundsCx: number;
 	readonly initialBoundsCy: number;
@@ -62,6 +64,7 @@ interface EdgeScaleSession extends CapturedPointerState {
 	readonly trackId: string;
 	readonly elementId: string;
 	readonly initialTransform: Transform;
+	readonly initialParams: ParamValues;
 	readonly initialBoundsCx: number;
 	readonly initialBoundsCy: number;
 	readonly baseWidth: number;
@@ -76,6 +79,7 @@ interface RotationSession extends CapturedPointerState {
 	readonly trackId: string;
 	readonly elementId: string;
 	readonly initialTransform: Transform;
+	readonly initialParams: ParamValues;
 	readonly initialAngle: number;
 	readonly initialBoundsCx: number;
 	readonly initialBoundsCy: number;
@@ -369,6 +373,7 @@ export class TransformHandleController {
 			trackId: context.trackId,
 			elementId: context.elementId,
 			initialTransform: context.resolvedTransform,
+			initialParams: context.element.params,
 			initialDistance: getCornerDistance({
 				bounds: context.bounds,
 				corner,
@@ -410,6 +415,7 @@ export class TransformHandleController {
 			trackId: context.trackId,
 			elementId: context.elementId,
 			initialTransform: context.resolvedTransform,
+			initialParams: context.element.params,
 			initialAngle,
 			initialBoundsCx: context.bounds.cx,
 			initialBoundsCy: context.bounds.cy,
@@ -447,6 +453,7 @@ export class TransformHandleController {
 			trackId: context.trackId,
 			elementId: context.elementId,
 			initialTransform: context.resolvedTransform,
+			initialParams: context.element.params,
 			initialBoundsCx: context.bounds.cx,
 			initialBoundsCy: context.bounds.cy,
 			baseWidth: context.bounds.width / context.resolvedTransform.scaleX,
@@ -561,7 +568,9 @@ export class TransformHandleController {
 			element: selectedWithBounds.element,
 			bounds: selectedWithBounds.bounds,
 			resolvedTransform: resolveTransformAtTime({
-				baseTransform: selectedWithBounds.element.transform,
+				baseTransform: buildTransformFromParams({
+					params: selectedWithBounds.element.params,
+				}),
 				animations: selectedWithBounds.element.animations,
 				localTime,
 			}),
@@ -608,15 +617,18 @@ export class TransformHandleController {
 				trackId: session.trackId,
 				elementId: session.elementId,
 				updates: {
-					transform: {
-						...session.initialTransform,
-						scaleX: clampScaleNonZero(
-							session.initialTransform.scaleX * snappedScale,
-						),
-						scaleY: clampScaleNonZero(
-							session.initialTransform.scaleY * snappedScale,
-						),
-					},
+					params: buildParamsWithTransform({
+						params: session.initialParams,
+						transform: {
+							...session.initialTransform,
+							scaleX: clampScaleNonZero(
+								session.initialTransform.scaleX * snappedScale,
+							),
+							scaleY: clampScaleNonZero(
+								session.initialTransform.scaleY * snappedScale,
+							),
+						},
+					}),
 					...(session.shouldClearScaleAnimation && {
 						animations: session.animationsWithoutScale,
 					}),
@@ -699,17 +711,20 @@ export class TransformHandleController {
 				trackId: session.trackId,
 				elementId: session.elementId,
 				updates: {
-					transform: {
-						...session.initialTransform,
-						scaleX:
-							session.edge === "right" || session.edge === "left"
-								? xSnap.snappedScale
-								: session.initialTransform.scaleX,
-						scaleY:
-							session.edge === "bottom"
-								? ySnap.snappedScale
-								: session.initialTransform.scaleY,
-					},
+					params: buildParamsWithTransform({
+						params: session.initialParams,
+						transform: {
+							...session.initialTransform,
+							scaleX:
+								session.edge === "right" || session.edge === "left"
+									? xSnap.snappedScale
+									: session.initialTransform.scaleX,
+							scaleY:
+								session.edge === "bottom"
+									? ySnap.snappedScale
+									: session.initialTransform.scaleY,
+						},
+					}),
 					...(session.shouldClearScaleAnimation && {
 						animations: session.animationsWithoutScale,
 					}),
@@ -742,12 +757,32 @@ export class TransformHandleController {
 				trackId: session.trackId,
 				elementId: session.elementId,
 				updates: {
-					transform: {
-						...session.initialTransform,
-						rotate: snappedRotation,
-					},
+					params: buildParamsWithTransform({
+						params: session.initialParams,
+						transform: {
+							...session.initialTransform,
+							rotate: snappedRotation,
+						},
+					}),
 				},
 			},
 		]);
 	}
+}
+
+function buildParamsWithTransform({
+	params,
+	transform,
+}: {
+	params: ParamValues;
+	transform: Transform;
+}): ParamValues {
+	return {
+		...params,
+		"transform.positionX": transform.position.x,
+		"transform.positionY": transform.position.y,
+		"transform.scaleX": transform.scaleX,
+		"transform.scaleY": transform.scaleY,
+		"transform.rotate": transform.rotate,
+	};
 }

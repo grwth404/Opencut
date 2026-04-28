@@ -6,7 +6,13 @@ import {
 } from "@/text/layout";
 import { DEFAULTS } from "@/timeline/defaults";
 import { mediaTimeFromSeconds } from "@/wasm";
-import type { CreateTextElement } from "@/timeline";
+import type { CreateTextElement, TextBackground } from "@/timeline";
+import type {
+	TextAlign,
+	TextDecoration,
+	TextFontStyle,
+	TextFontWeight,
+} from "@/text/primitives";
 import type { SubtitleCue, SubtitleStyleOverrides } from "./types";
 
 const SUBTITLE_MAX_WIDTH_RATIO = 0.8;
@@ -89,8 +95,8 @@ function measureWrappedTextBlock({
 	ctx: CanvasRenderingContext2D;
 	content: string;
 	canvasHeight: number;
-	textAlign: CreateTextElement["textAlign"];
-	background: CreateTextElement["background"];
+	textAlign: TextAlign;
+	background: TextBackground;
 	fontSize: number;
 	lineHeight: number;
 }) {
@@ -107,7 +113,7 @@ function measureWrappedTextBlock({
 		textAlign,
 		block,
 		background,
-		fontSizeRatio: fontSize / DEFAULTS.text.element.fontSize,
+		fontSizeRatio: fontSize / 15,
 	});
 
 	return {
@@ -124,13 +130,13 @@ function resolveSubtitleStyle({
 	fontFamily: string;
 	fontSize: number;
 	color: string;
-	textAlign: CreateTextElement["textAlign"];
-	fontWeight: CreateTextElement["fontWeight"];
-	fontStyle: CreateTextElement["fontStyle"];
-	textDecoration: CreateTextElement["textDecoration"];
+	textAlign: TextAlign;
+	fontWeight: TextFontWeight;
+	fontStyle: TextFontStyle;
+	textDecoration: TextDecoration;
 	letterSpacing: number;
 	lineHeight: number;
-	background: CreateTextElement["background"];
+	background: TextBackground;
 	placement: NonNullable<SubtitleStyleOverrides["placement"]>;
 } {
 	const fontSize =
@@ -139,18 +145,17 @@ function resolveSubtitleStyle({
 			: (style?.fontSize ?? SUBTITLE_FONT_SIZE);
 
 	return {
-		fontFamily: style?.fontFamily ?? DEFAULTS.text.element.fontFamily,
+		fontFamily: style?.fontFamily ?? "Arial",
 		fontSize,
-		color: style?.color ?? DEFAULTS.text.element.color,
+		color: style?.color ?? "#ffffff",
 		textAlign: style?.textAlign ?? "center",
 		fontWeight: style?.fontWeight ?? "bold",
-		fontStyle: style?.fontStyle ?? DEFAULTS.text.element.fontStyle,
-		textDecoration:
-			style?.textDecoration ?? DEFAULTS.text.element.textDecoration,
+		fontStyle: style?.fontStyle ?? "normal",
+		textDecoration: style?.textDecoration ?? "none",
 		letterSpacing: style?.letterSpacing ?? DEFAULTS.text.letterSpacing,
 		lineHeight: style?.lineHeight ?? DEFAULTS.text.lineHeight,
 		background: {
-			...DEFAULTS.text.element.background,
+			...DEFAULTS.text.background,
 			enabled: false,
 			...(style?.background ?? {}),
 		},
@@ -188,7 +193,7 @@ function resolvePositionX({
 	visualRect,
 }: {
 	canvasWidth: number;
-	textAlign: CreateTextElement["textAlign"];
+	textAlign: TextAlign;
 	placement: ReturnType<typeof resolveSubtitleStyle>["placement"];
 	visualRect: { left: number; width: number };
 }): number {
@@ -309,25 +314,34 @@ export function buildSubtitleTextElement({
 	return {
 		...DEFAULTS.text.element,
 		name: `Caption ${index + 1}`,
-		content,
 		duration: mediaTimeFromSeconds({ seconds: caption.duration }),
 		startTime: mediaTimeFromSeconds({ seconds: caption.startTime }),
-		fontSize: style.fontSize,
-		fontFamily: style.fontFamily,
-		color: style.color,
-		textAlign: style.textAlign,
-		fontWeight: style.fontWeight,
-		fontStyle: style.fontStyle,
-		textDecoration: style.textDecoration,
-		letterSpacing: style.letterSpacing,
-		lineHeight: style.lineHeight,
-		background: style.background,
-		transform: {
-			...DEFAULTS.text.element.transform,
-			position: {
-				x: positionX,
-				y: positionY,
-			},
+		params: {
+			...DEFAULTS.text.element.params,
+			content,
+			fontSize: style.fontSize,
+			fontFamily: style.fontFamily,
+			color: style.color,
+			textAlign: style.textAlign,
+			fontWeight: style.fontWeight,
+			fontStyle: style.fontStyle,
+			textDecoration: style.textDecoration,
+			letterSpacing: style.letterSpacing,
+			lineHeight: style.lineHeight,
+			"background.enabled": style.background.enabled,
+			"background.color": style.background.color,
+			"background.cornerRadius":
+				style.background.cornerRadius ?? DEFAULTS.text.background.cornerRadius,
+			"background.paddingX":
+				style.background.paddingX ?? DEFAULTS.text.background.paddingX,
+			"background.paddingY":
+				style.background.paddingY ?? DEFAULTS.text.background.paddingY,
+			"background.offsetX":
+				style.background.offsetX ?? DEFAULTS.text.background.offsetX,
+			"background.offsetY":
+				style.background.offsetY ?? DEFAULTS.text.background.offsetY,
+			"transform.positionX": positionX,
+			"transform.positionY": positionY,
 		},
 	};
 }

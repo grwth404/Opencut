@@ -27,10 +27,11 @@ import { V24toV25Migration } from "./v24-to-v25";
 import { V25toV26Migration } from "./v25-to-v26";
 import { V26toV27Migration } from "./v26-to-v27";
 import { V27toV28Migration } from "./v27-to-v28";
+import { V28toV29Migration } from "./v28-to-v29";
 export { runStorageMigrations } from "./runner";
 export type { MigrationProgress } from "./runner";
 
-export const CURRENT_PROJECT_VERSION = 28;
+export const CURRENT_PROJECT_VERSION = 29;
 
 export const migrations = [
 	new V0toV1Migration(),
@@ -61,4 +62,5 @@ export const migrations = [
 	new V25toV26Migration(),
 	new V26toV27Migration(),
 	new V27toV28Migration(),
+	new V28toV29Migration(),
 ];

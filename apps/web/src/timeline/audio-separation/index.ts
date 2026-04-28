@@ -87,8 +87,13 @@ export function buildSeparatedAudioElement({
 		trimStart: sourceElement.trimStart,
 		trimEnd: sourceElement.trimEnd,
 		sourceDuration: sourceElement.sourceDuration,
-		volume: sourceElement.volume ?? DEFAULTS.element.volume,
-		muted: sourceElement.muted ?? false,
+		params: {
+			volume:
+				typeof sourceElement.params.volume === "number"
+					? sourceElement.params.volume
+					: DEFAULTS.element.volume,
+			muted: sourceElement.params.muted === true,
+		},
 		retime: sourceElement.retime
 			? {
 					rate: sourceElement.retime.rate,

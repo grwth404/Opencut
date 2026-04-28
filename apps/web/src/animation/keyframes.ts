@@ -4,7 +4,6 @@ import type {
 	AnimationChannel,
 	AnimationInterpolation,
 	AnimationPath,
-	AnimationPropertyPath,
 	AnimationValue,
 	DiscreteAnimationChannel,
 	DiscreteAnimationKey,
@@ -20,7 +19,6 @@ import {
 	decomposeAnimationValue,
 } from "./binding-values";
 import {
-	getBezierPoint,
 	getDefaultLeftHandle,
 	getDefaultRightHandle,
 	solveBezierProgressForTime,
@@ -30,10 +28,6 @@ import {
 	getScalarSegmentInterpolation,
 	normalizeChannel,
 } from "./interpolation";
-import {
-	coerceAnimationValueForProperty,
-	getAnimationPropertyDefinition,
-} from "./property-registry";
 import {
 	type MediaTime,
 	roundMediaTime,
@@ -530,47 +524,6 @@ export function upsertPathKeyframe({
 
 	return toAnimation({
 		animations: nextAnimations,
-	});
-}
-
-export function upsertElementKeyframe({
-	animations,
-	propertyPath,
-	time,
-	value,
-	interpolation,
-	keyframeId,
-}: {
-	animations: ElementAnimations | undefined;
-	propertyPath: AnimationPropertyPath;
-	time: MediaTime;
-	value: AnimationValue;
-	interpolation?: AnimationInterpolation;
-	keyframeId?: string;
-}): ElementAnimations | undefined {
-	const coercedValue = coerceAnimationValueForProperty({
-		propertyPath,
-		value,
-	});
-	if (coercedValue === null) {
-		return animations;
-	}
-
-	const propertyDefinition = getAnimationPropertyDefinition({ propertyPath });
-	return upsertPathKeyframe({
-		animations,
-		propertyPath,
-		time,
-		value: coercedValue,
-		interpolation,
-		keyframeId,
-		kind: propertyDefinition.kind,
-		defaultInterpolation: propertyDefinition.defaultInterpolation,
-		coerceValue: ({ value: nextValue }) =>
-			coerceAnimationValueForProperty({
-				propertyPath,
-				value: nextValue,
-			}),
 	});
 }
 

@@ -8,14 +8,15 @@ import {
 	upsertPathKeyframe,
 } from "@/animation";
 import type {
+	AnimationPath,
 	ElementAnimations,
 } from "@/animation/types";
 import {
-	coerceAnimationParamValue,
-	getAnimationParamDefaultInterpolation,
-	getAnimationParamValueKind,
-} from "@/animation/animated-params";
-import type { ParamDefinition } from "@/params";
+	coerceParamValue,
+	getParamDefaultInterpolation,
+	getParamValueKind,
+	type ParamDefinition,
+} from "@/params";
 import type { TimelineElement } from "@/timeline";
 import type { MediaTime } from "@/wasm";
 
@@ -33,6 +34,7 @@ export function useKeyframedParamProperty({
 	trackId,
 	elementId,
 	animations,
+	propertyPath,
 	localTime,
 	isPlayheadWithinElementRange,
 	resolvedValue,
@@ -42,6 +44,7 @@ export function useKeyframedParamProperty({
 	trackId: string;
 	elementId: string;
 	animations: ElementAnimations | undefined;
+	propertyPath?: AnimationPath;
 	localTime: MediaTime;
 	isPlayheadWithinElementRange: boolean;
 	resolvedValue: number | string | boolean;
@@ -52,15 +55,16 @@ export function useKeyframedParamProperty({
 	}) => Partial<TimelineElement>;
 }): KeyframedParamPropertyResult {
 	const editor = useEditor();
-	const propertyPath = buildGraphicParamPath({ paramKey: param.key });
+	const resolvedPropertyPath =
+		propertyPath ?? buildGraphicParamPath({ paramKey: param.key });
 	const hasAnimatedKeyframes = hasKeyframesForPath({
 		animations,
-		propertyPath,
+		propertyPath: resolvedPropertyPath,
 	});
 	const keyframeAtTime = isPlayheadWithinElementRange
 		? getKeyframeAtTime({
 				animations,
-				propertyPath,
+				propertyPath: resolvedPropertyPath,
 				time: localTime,
 			})
 		: null;
@@ -79,15 +83,15 @@ export function useKeyframedParamProperty({
 						updates: {
 							animations: upsertPathKeyframe({
 								animations,
-								propertyPath,
+								propertyPath: resolvedPropertyPath,
 								time: localTime,
 								value,
-								kind: getAnimationParamValueKind({ param }),
-								defaultInterpolation: getAnimationParamDefaultInterpolation({
+								kind: getParamValueKind({ param }),
+								defaultInterpolation: getParamDefaultInterpolation({
 									param,
 								}),
 								coerceValue: ({ value: nextValue }) =>
-									coerceAnimationParamValue({
+									coerceParamValue({
 										param,
 										value: nextValue,
 									}),
@@ -121,7 +125,7 @@ export function useKeyframedParamProperty({
 					{
 						trackId,
 						elementId,
-						propertyPath,
+						propertyPath: resolvedPropertyPath,
 						keyframeId: keyframeIdAtTime,
 					},
 				],
@@ -134,7 +138,7 @@ export function useKeyframedParamProperty({
 				{
 					trackId,
 					elementId,
-					propertyPath,
+					propertyPath: resolvedPropertyPath,
 					time: localTime,
 					value: resolvedValue,
 				},

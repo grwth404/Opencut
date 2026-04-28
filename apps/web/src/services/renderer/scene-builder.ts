@@ -12,6 +12,11 @@ import { EffectLayerNode } from "./nodes/effect-layer-node";
 import type { AnyBaseNode } from "./nodes/base-node";
 import type { TBackground, TCanvasSize } from "@/project/types";
 import { DEFAULT_BACKGROUND_BLUR_INTENSITY } from "@/background/blur";
+import {
+	buildTransformFromParams,
+	readBlendModeFromParams,
+	readOpacityFromParams,
+} from "@/rendering";
 
 const PREVIEW_MAX_IMAGE_SIZE = 2048;
 
@@ -71,10 +76,10 @@ function buildTrackNodes({
 							trimStart: element.trimStart,
 							trimEnd: element.trimEnd,
 							retime: element.retime,
-							transform: element.transform,
+							transform: buildTransformFromParams({ params: element.params }),
 							animations: element.animations,
-							opacity: element.opacity,
-							blendMode: element.blendMode,
+							opacity: readOpacityFromParams({ params: element.params }),
+							blendMode: readBlendModeFromParams({ params: element.params }),
 							effects: element.effects ?? [],
 							masks: element.masks ?? [],
 						}),
@@ -88,10 +93,10 @@ function buildTrackNodes({
 							timeOffset: element.startTime,
 							trimStart: element.trimStart,
 							trimEnd: element.trimEnd,
-							transform: element.transform,
+							transform: buildTransformFromParams({ params: element.params }),
 							animations: element.animations,
-							opacity: element.opacity,
-							blendMode: element.blendMode,
+							opacity: readOpacityFromParams({ params: element.params }),
+							blendMode: readBlendModeFromParams({ params: element.params }),
 							effects: element.effects ?? [],
 							masks: element.masks ?? [],
 							...(isPreview && {
@@ -106,6 +111,9 @@ function buildTrackNodes({
 				nodes.push(
 					new TextNode({
 						...element,
+						transform: buildTransformFromParams({ params: element.params }),
+						opacity: readOpacityFromParams({ params: element.params }),
+						blendMode: readBlendModeFromParams({ params: element.params }),
 						canvasCenter: { x: canvasSize.width / 2, y: canvasSize.height / 2 },
 						canvasHeight: canvasSize.height,
 						textBaseline: "middle",
@@ -124,10 +132,10 @@ function buildTrackNodes({
 						timeOffset: element.startTime,
 						trimStart: element.trimStart,
 						trimEnd: element.trimEnd,
-						transform: element.transform,
+						transform: buildTransformFromParams({ params: element.params }),
 						animations: element.animations,
-						opacity: element.opacity,
-						blendMode: element.blendMode,
+						opacity: readOpacityFromParams({ params: element.params }),
+						blendMode: readBlendModeFromParams({ params: element.params }),
 						effects: element.effects ?? [],
 					}),
 				);
@@ -142,10 +150,10 @@ function buildTrackNodes({
 						timeOffset: element.startTime,
 						trimStart: element.trimStart,
 						trimEnd: element.trimEnd,
-						transform: element.transform,
+						transform: buildTransformFromParams({ params: element.params }),
 						animations: element.animations,
-						opacity: element.opacity,
-						blendMode: element.blendMode,
+						opacity: readOpacityFromParams({ params: element.params }),
+						blendMode: readBlendModeFromParams({ params: element.params }),
 						effects: element.effects ?? [],
 						masks: element.masks ?? [],
 					}),

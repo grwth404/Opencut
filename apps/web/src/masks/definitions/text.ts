@@ -35,7 +35,7 @@ const PERCENTAGE_DISPLAY = {
 	step: 1,
 } as const;
 
-const TEXT_MASK_ALIGNMENT = DEFAULTS.text.element.textAlign;
+const TEXT_MASK_ALIGNMENT = "center";
 
 const TEXT_MASK_PARAMS: ParamDefinition<keyof TextMaskParams & string>[] = [
 	{
@@ -60,7 +60,7 @@ const TEXT_MASK_PARAMS: ParamDefinition<keyof TextMaskParams & string>[] = [
 		key: "fontSize",
 		label: "Size",
 		type: "number",
-		default: DEFAULTS.text.element.fontSize,
+		default: 15,
 		min: MIN_FONT_SIZE,
 		max: MAX_FONT_SIZE,
 		step: 1,
@@ -351,11 +351,11 @@ export const textMaskDefinition: MaskDefinition<TextMaskParams> = {
 				strokeWidth: 0,
 				strokeAlign: "center",
 				content: "Mask",
-				fontSize: DEFAULTS.text.element.fontSize,
-				fontFamily: DEFAULTS.text.element.fontFamily,
-				fontWeight: DEFAULTS.text.element.fontWeight,
-				fontStyle: DEFAULTS.text.element.fontStyle,
-				textDecoration: DEFAULTS.text.element.textDecoration,
+				fontSize: 15,
+				fontFamily: "Arial",
+				fontWeight: "normal",
+				fontStyle: "normal",
+				textDecoration: "none",
 				letterSpacing: DEFAULTS.text.letterSpacing,
 				lineHeight: DEFAULTS.text.lineHeight,
 				centerX: 0,
