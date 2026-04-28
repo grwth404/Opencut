@@ -1,4 +1,4 @@
-import type { TextBackground } from "@/timeline";
+import type { TextBackground } from "@/text/background";
 import { DEFAULTS } from "@/timeline/defaults";
 import type { TextAlign } from "@/text/primitives";
 

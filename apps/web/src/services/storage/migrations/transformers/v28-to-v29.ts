@@ -114,23 +114,6 @@ function migrateElement({ element }: { element: unknown }): unknown {
 	}
 
 	nextElement.params = params;
-	delete nextElement.transform;
-	delete nextElement.opacity;
-	delete nextElement.blendMode;
-	delete nextElement.volume;
-	delete nextElement.muted;
-	delete nextElement.content;
-	delete nextElement.fontSize;
-	delete nextElement.fontFamily;
-	delete nextElement.color;
-	delete nextElement.background;
-	delete nextElement.textAlign;
-	delete nextElement.fontWeight;
-	delete nextElement.fontStyle;
-	delete nextElement.textDecoration;
-	delete nextElement.letterSpacing;
-	delete nextElement.lineHeight;
-
 	return nextElement;
 }
 

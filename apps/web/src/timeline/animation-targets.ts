@@ -23,9 +23,6 @@ import {
 } from "@/params";
 import {
 	getElementParam,
-	readElementParamValue,
-	writeElementParamValue,
-	type ElementParamDefinition,
 } from "@/params/registry";
 import type { TimelineElement } from "@/timeline";
 import { isVisualElement } from "@/timeline/element-utils";
@@ -96,35 +93,14 @@ function buildElementParamDescriptor({
 		return null;
 	}
 
-	return buildTimelineElementParamDescriptor({ element, param });
-}
-
-function buildTimelineElementParamDescriptor({
-	element,
-	param,
-}: {
-	element: TimelineElement;
-	param: ElementParamDefinition;
-}): AnimationPathDescriptor | null {
-	if (param.keyframable === false) {
-		return null;
-	}
-
-	return {
-		kind: getParamValueKind({ param }),
-		defaultInterpolation: getParamDefaultInterpolation({ param }),
-		numericRanges: paramNumericRanges({ param }),
-		coerceValue: ({ value }) => coerceParamValue({ param, value }),
-		getBaseValue: () => readElementParamValue({ element, param }),
-		setBaseValue: ({ value }) => {
-			const coercedValue = coerceParamValue({ param, value });
-			if (coercedValue === null) {
-				return element;
-			}
-
-			return writeElementParamValue({ element, param, value: coercedValue });
-		},
-	};
+	return buildParamDescriptor({
+		param,
+		baseParams: element.params,
+		setParams: (params) => ({
+			...element,
+			params,
+		}),
+	});
 }
 
 function buildGraphicParamDescriptor({

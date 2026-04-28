@@ -3,7 +3,7 @@ import { transformProjectV28ToV29 } from "../transformers/v28-to-v29";
 import { asRecord, asRecordArray } from "./helpers";
 
 describe("V28 to V29 Migration", () => {
-	test("moves built-in element fields into params", () => {
+	test("copies built-in element fields into params without deleting source fields", () => {
 		const result = transformProjectV28ToV29({
 			project: {
 				id: "project-v28-builtins",
@@ -83,10 +83,15 @@ describe("V28 to V29 Migration", () => {
 		const tracks = asRecord(scene.tracks);
 		const main = asRecord(tracks.main);
 		const video = asRecordArray(main.elements)[0];
-		expect(video.transform).toBeUndefined();
-		expect(video.opacity).toBeUndefined();
-		expect(video.volume).toBeUndefined();
-		expect(video.muted).toBeUndefined();
+		expect(video.transform).toEqual({
+			position: { x: 12, y: -4 },
+			scaleX: 1.25,
+			scaleY: 0.75,
+			rotate: 9,
+		});
+		expect(video.opacity).toBe(0.5);
+		expect(video.volume).toBe(-6);
+		expect(video.muted).toBe(true);
 		expect(video.params).toEqual({
 			"transform.positionX": 12,
 			"transform.positionY": -4,
@@ -101,8 +106,13 @@ describe("V28 to V29 Migration", () => {
 
 		const overlay = asRecordArray(tracks.overlay)[0];
 		const text = asRecordArray(asRecord(overlay).elements)[0];
-		expect(text.content).toBeUndefined();
-		expect(text.background).toBeUndefined();
+		expect(text.content).toBe("Hello");
+		expect(text.background).toEqual({
+			enabled: true,
+			color: "#111111",
+			paddingX: 10,
+			paddingY: 12,
+		});
 		expect(text.params).toMatchObject({
 			content: "Hello",
 			fontSize: 20,

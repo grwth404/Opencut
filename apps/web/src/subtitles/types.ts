@@ -1,4 +1,4 @@
-import type { TextBackground } from "@/timeline";
+import type { TextBackground } from "@/text/background";
 import type {
 	TextAlign,
 	TextDecoration,

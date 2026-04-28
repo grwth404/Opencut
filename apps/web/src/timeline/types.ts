@@ -117,8 +117,6 @@ interface BaseTimelineElement {
 export interface VideoElement extends BaseTimelineElement {
 	type: "video";
 	mediaId: string;
-	volume?: number;
-	muted?: boolean;
 	isSourceAudioEnabled?: boolean;
 	hidden?: boolean;
 	retime?: RetimeConfig;
@@ -132,16 +130,6 @@ export interface ImageElement extends BaseTimelineElement {
 	hidden?: boolean;
 	effects?: Effect[];
 	masks?: Mask[];
-}
-
-export interface TextBackground {
-	enabled: boolean;
-	color: string;
-	cornerRadius?: number;
-	paddingX?: number;
-	paddingY?: number;
-	offsetX?: number;
-	offsetY?: number;
 }
 
 export interface TextElement extends BaseTimelineElement {
