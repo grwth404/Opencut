@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { transformProjectV5ToV6 } from "../transformers/v5-to-v6";
 import { v5Project } from "./fixtures";
+import { asRecordArray } from "./helpers";
 
 describe("V5 to V6 Migration", () => {
 	test("converts number bookmarks to Bookmark objects", async () => {
@@ -13,19 +14,13 @@ describe("V5 to V6 Migration", () => {
 		expect(result.skipped).toBe(false);
 		expect(result.project.version).toBe(6);
 
-		const mainScene = (
-			result.project.scenes as Array<{ bookmarks: unknown[] }>
-		)[0];
-		expect(mainScene.bookmarks).toEqual([
+		const scenes = asRecordArray(result.project.scenes);
+		expect(scenes[0].bookmarks).toEqual([
 			{ time: 2.0 },
 			{ time: 5.5 },
 			{ time: 12.0 },
 		]);
-
-		const introScene = (
-			result.project.scenes as Array<{ bookmarks: unknown[] }>
-		)[1];
-		expect(introScene.bookmarks).toEqual([]);
+		expect(scenes[1].bookmarks).toEqual([]);
 	});
 
 	test("skips projects that are already v6", () => {
@@ -83,9 +78,7 @@ describe("V5 to V6 Migration", () => {
 		});
 
 		expect(result.skipped).toBe(false);
-		const mainScene = (
-			result.project.scenes as Array<{ bookmarks: unknown[] }>
-		)[0];
+		const mainScene = asRecordArray(result.project.scenes)[0];
 		expect(mainScene.bookmarks).toEqual([
 			{ time: 1, note: "Intro", color: "#ef4444" },
 			{ time: 5.5, duration: 2 },

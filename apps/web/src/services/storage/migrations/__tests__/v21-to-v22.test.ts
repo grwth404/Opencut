@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { transformProjectV21ToV22 } from "../transformers/v21-to-v22";
+import { asRecord, asRecordArray } from "./helpers";
 
 describe("V21 to V22 Migration", () => {
 	test("migrates legacy animation channels to bindings and component channels", () => {
@@ -77,12 +78,12 @@ describe("V21 to V22 Migration", () => {
 		expect(result.skipped).toBe(false);
 		expect(result.project.version).toBe(22);
 
-		const scenes = result.project.scenes as Array<Record<string, unknown>>;
-		const tracks = scenes[0].tracks as Array<Record<string, unknown>>;
-		const elements = tracks[0].elements as Array<Record<string, unknown>>;
-		const animations = elements[0].animations as Record<string, unknown>;
-		const bindings = animations.bindings as Record<string, Record<string, unknown>>;
-		const channels = animations.channels as Record<string, Record<string, unknown>>;
+		const scenes = asRecordArray(result.project.scenes);
+		const tracks = asRecordArray(scenes[0].tracks);
+		const elements = asRecordArray(tracks[0].elements);
+		const animations = asRecord(elements[0].animations);
+		const bindings = asRecord(animations.bindings);
+		const channels = asRecord(animations.channels);
 
 		expect(bindings.opacity).toEqual({
 			path: "opacity",

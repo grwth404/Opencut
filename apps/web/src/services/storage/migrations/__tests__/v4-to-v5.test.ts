@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { transformProjectV4ToV5 } from "../transformers/v4-to-v5";
 import { v3Project } from "./fixtures";
+import { asRecordArray } from "./helpers";
 
 describe("V4 to V5 Migration", () => {
 	test("migrates sticker iconName to stickerId and removes legacy color", () => {
@@ -48,15 +49,9 @@ describe("V4 to V5 Migration", () => {
 		expect(result.skipped).toBe(false);
 		expect(result.project.version).toBe(5);
 
-		const migratedScene = (
-			result.project.scenes as Array<Record<string, unknown>>
-		)[0];
-		const migratedTrack = (
-			migratedScene.tracks as Array<Record<string, unknown>>
-		)[0];
-		const migratedElement = (
-			migratedTrack.elements as Array<Record<string, unknown>>
-		)[0];
+		const migratedScene = asRecordArray(result.project.scenes)[0];
+		const migratedTrack = asRecordArray(migratedScene.tracks)[0];
+		const migratedElement = asRecordArray(migratedTrack.elements)[0];
 
 		expect(migratedElement.stickerId).toBe("icons:mdi:home");
 		expect("iconName" in migratedElement).toBe(false);
@@ -101,15 +96,9 @@ describe("V4 to V5 Migration", () => {
 		};
 
 		const result = transformProjectV4ToV5({ project: projectWithStickerId });
-		const migratedScene = (
-			result.project.scenes as Array<Record<string, unknown>>
-		)[0];
-		const migratedTrack = (
-			migratedScene.tracks as Array<Record<string, unknown>>
-		)[0];
-		const migratedElement = (
-			migratedTrack.elements as Array<Record<string, unknown>>
-		)[0];
+		const migratedScene = asRecordArray(result.project.scenes)[0];
+		const migratedTrack = asRecordArray(migratedScene.tracks)[0];
+		const migratedElement = asRecordArray(migratedTrack.elements)[0];
 
 		expect(migratedElement.stickerId).toBe("flags:AD");
 	});

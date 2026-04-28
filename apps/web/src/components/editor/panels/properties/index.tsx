@@ -71,7 +71,12 @@ export function PropertiesPanel() {
 								<Button
 									variant={tab.id === activeTab.id ? "secondary" : "ghost"}
 									size="icon"
-									onClick={() => setActiveTab(element.type, tab.id)}
+									onClick={() =>
+										setActiveTab({
+											elementType: element.type,
+											tabId: tab.id,
+										})
+									}
 									aria-label={tab.label}
 									className={cn(
 										"shrink-0",

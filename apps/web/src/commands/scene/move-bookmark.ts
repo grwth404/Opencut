@@ -8,12 +8,20 @@ import type { MediaTime } from "@/wasm";
 export class MoveBookmarkCommand extends Command {
 	private savedScenes: TScene[] | null = null;
 
-	constructor(
-		private fromTime: MediaTime,
-		private toTime: MediaTime,
-	) {
+	constructor({
+		fromTime,
+		toTime,
+	}: {
+		fromTime: MediaTime;
+		toTime: MediaTime;
+	}) {
 		super();
+		this.fromTime = fromTime;
+		this.toTime = toTime;
 	}
+
+	private fromTime: MediaTime;
+	private toTime: MediaTime;
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();

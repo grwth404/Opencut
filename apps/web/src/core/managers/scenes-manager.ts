@@ -41,7 +41,7 @@ export class ScenesManager {
 			throw new Error("No active project");
 		}
 
-		const command = new CreateSceneCommand(name, isMain);
+		const command = new CreateSceneCommand({ name, isMain });
 		this.editor.command.execute({ command });
 		return command.getSceneId();
 	}
@@ -77,7 +77,10 @@ export class ScenesManager {
 			throw new Error("No active project");
 		}
 
-		const command = new RenameSceneCommand(sceneId, name);
+		const command = new RenameSceneCommand({
+			sceneId,
+			newName: name,
+		});
 		this.editor.command.execute({ command });
 	}
 
@@ -138,7 +141,7 @@ export class ScenesManager {
 		time: MediaTime;
 		updates: Partial<Omit<Bookmark, "time">>;
 	}): Promise<void> {
-		const command = new UpdateBookmarkCommand(time, updates);
+		const command = new UpdateBookmarkCommand({ time, updates });
 		this.editor.command.execute({ command });
 	}
 
@@ -149,7 +152,7 @@ export class ScenesManager {
 		fromTime: MediaTime;
 		toTime: MediaTime;
 	}): Promise<void> {
-		const command = new MoveBookmarkCommand(fromTime, toTime);
+		const command = new MoveBookmarkCommand({ fromTime, toTime });
 		this.editor.command.execute({ command });
 	}
 

@@ -13,12 +13,20 @@ export class RemoveMediaAssetCommand extends Command {
 	private savedTracks: SceneTracks | null = null;
 	private removedAsset: MediaAsset | null = null;
 
-	constructor(
-		private projectId: string,
-		private assetId: string,
-	) {
+	constructor({
+		projectId,
+		assetId,
+	}: {
+		projectId: string;
+		assetId: string;
+	}) {
 		super();
+		this.projectId = projectId;
+		this.assetId = assetId;
 	}
+
+	private projectId: string;
+	private assetId: string;
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();

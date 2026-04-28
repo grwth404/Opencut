@@ -1,12 +1,8 @@
-import type { KeybindingConfig } from "@/actions/keybinding";
-
-interface V4State {
-	keybindings: KeybindingConfig;
-	isCustomized: boolean;
-}
+import { getPersistedKeybindingsState } from "../persisted-state";
 
 export function v4ToV5({ state }: { state: unknown }): unknown {
-	const v4 = state as V4State;
+	const v4 = getPersistedKeybindingsState({ state });
+	if (!v4) return state;
 	const keybindings = { ...v4.keybindings };
 
 	if (!keybindings.escape) {

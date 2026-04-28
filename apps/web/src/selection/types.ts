@@ -8,6 +8,13 @@ export interface BoxSelectionSnapshot<TId = string> {
 	initialAnchorId: TId | null;
 }
 
+export interface SelectionBoxBounds {
+	left: number;
+	top: number;
+	width: number;
+	height: number;
+}
+
 export interface BoxSelectionChange<TId = string>
 	extends BoxSelectionSnapshot<TId> {
 	intersectedIds: TId[];

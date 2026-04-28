@@ -7,12 +7,20 @@ export class CreateSceneCommand extends Command {
 	private savedScenes: TScene[] | null = null;
 	private createdScene: TScene | null = null;
 
-	constructor(
-		private name: string,
-		private isMain: boolean = false,
-	) {
+	constructor({
+		name,
+		isMain = false,
+	}: {
+		name: string;
+		isMain?: boolean;
+	}) {
 		super();
+		this.name = name;
+		this.isMain = isMain;
 	}
+
+	private name: string;
+	private isMain: boolean;
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();

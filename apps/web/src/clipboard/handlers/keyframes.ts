@@ -156,7 +156,10 @@ export const KeyframesClipboardHandler = {
 		};
 	},
 
-	paste(entry, { selectedElements, time }) {
+	paste({
+		entry,
+		context: { selectedElements, time },
+	}) {
 		const targetElement = selectedElements[0];
 		if (!targetElement || entry.items.length === 0) {
 			return null;

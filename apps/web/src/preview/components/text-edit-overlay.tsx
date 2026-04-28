@@ -120,7 +120,6 @@ export function TextEditOverlay({
 				transformOrigin: "center center",
 			}}
 		>
-			{/* biome-ignore lint/a11y/useSemanticElements: contenteditable required for multiline, IME, paste */}
 			<div
 				ref={divRef}
 				contentEditable

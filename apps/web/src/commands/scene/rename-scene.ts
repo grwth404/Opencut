@@ -7,12 +7,20 @@ export class RenameSceneCommand extends Command {
 	private savedScenes: TScene[] | null = null;
 	private previousName: string | null = null;
 
-	constructor(
-		private sceneId: string,
-		private newName: string,
-	) {
+	constructor({
+		sceneId,
+		newName,
+	}: {
+		sceneId: string;
+		newName: string;
+	}) {
 		super();
+		this.sceneId = sceneId;
+		this.newName = newName;
 	}
+
+	private sceneId: string;
+	private newName: string;
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();

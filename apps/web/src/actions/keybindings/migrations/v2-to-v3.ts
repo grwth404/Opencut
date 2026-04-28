@@ -1,13 +1,8 @@
-import type { KeybindingConfig, ShortcutKey } from "@/actions/keybinding";
-import type { TActionWithOptionalArgs } from "@/actions";
-
-interface V2State {
-	keybindings: KeybindingConfig;
-	isCustomized: boolean;
-}
+import { getPersistedKeybindingsState } from "../persisted-state";
 
 export function v2ToV3({ state }: { state: unknown }): unknown {
-	const v2 = state as V2State;
+	const v2 = getPersistedKeybindingsState({ state });
+	if (!v2) return state;
 
 	const renames: Record<string, string> = {
 		"split-selected": "split",
@@ -17,8 +12,9 @@ export function v2ToV3({ state }: { state: unknown }): unknown {
 
 	const migrated = { ...v2.keybindings };
 	for (const [key, action] of Object.entries(migrated)) {
-		if (action && renames[action]) {
-			migrated[key as ShortcutKey] = renames[action] as TActionWithOptionalArgs;
+		const renamedAction = action ? renames[action] : undefined;
+		if (renamedAction) {
+			migrated[key] = renamedAction;
 		}
 	}
 

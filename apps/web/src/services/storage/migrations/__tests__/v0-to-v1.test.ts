@@ -8,6 +8,7 @@ import {
 	v0ProjectWithMetadata,
 	v1Project,
 } from "./fixtures";
+import { asArray, asRecord, asRecordArray } from "./helpers";
 
 describe("V0 to V1 Migration", () => {
 	const fixedDate = new Date("2024-06-01T12:00:00.000Z");
@@ -22,7 +23,7 @@ describe("V0 to V1 Migration", () => {
 			expect(result.skipped).toBe(false);
 			expect(result.project.version).toBe(1);
 			expect(Array.isArray(result.project.scenes)).toBe(true);
-			expect((result.project.scenes as unknown[]).length).toBe(1);
+			expect(asArray(result.project.scenes).length).toBe(1);
 			expect(result.project.currentSceneId).toBeDefined();
 		});
 
@@ -32,7 +33,7 @@ describe("V0 to V1 Migration", () => {
 				options: { now: fixedDate },
 			});
 
-			const scenes = result.project.scenes as Array<Record<string, unknown>>;
+			const scenes = asRecordArray(result.project.scenes);
 			const mainScene = scenes[0];
 
 			expect(mainScene.isMain).toBe(true);
@@ -48,7 +49,7 @@ describe("V0 to V1 Migration", () => {
 				options: { now: fixedDate },
 			});
 
-			const metadata = result.project.metadata as Record<string, unknown>;
+			const metadata = asRecord(result.project.metadata);
 			expect(metadata.updatedAt).toBe(fixedDate.toISOString());
 		});
 

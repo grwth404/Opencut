@@ -330,13 +330,27 @@ function clampUnit(value: number): number {
 	return Math.min(1, Math.max(0, value));
 }
 
-function getDistanceSquared(a: CanvasPoint, b: CanvasPoint): number {
+function getDistanceSquared({
+	a,
+	b,
+}: {
+	a: CanvasPoint;
+	b: CanvasPoint;
+}): number {
 	const dx = a.x - b.x;
 	const dy = a.y - b.y;
 	return dx * dx + dy * dy;
 }
 
-function lerpPoint(a: CanvasPoint, b: CanvasPoint, t: number): CanvasPoint {
+function lerpPoint({
+	a,
+	b,
+	t,
+}: {
+	a: CanvasPoint;
+	b: CanvasPoint;
+	t: number;
+}): CanvasPoint {
 	return {
 		x: a.x + (b.x - a.x) * t,
 		y: a.y + (b.y - a.y) * t,
@@ -483,7 +497,10 @@ export function findClosestPointOnCustomMaskSegment({
 
 	const sampleCount = 24;
 	let bestT = 0;
-	let bestDistanceSquared = getDistanceSquared(canvasPoint, segment.start);
+	let bestDistanceSquared = getDistanceSquared({
+		a: canvasPoint,
+		b: segment.start,
+	});
 
 	for (let step = 0; step <= sampleCount; step++) {
 		const t = step / sampleCount;
@@ -494,7 +511,7 @@ export function findClosestPointOnCustomMaskSegment({
 			p3: segment.end,
 			t,
 		});
-		const distanceSquared = getDistanceSquared(canvasPoint, point);
+		const distanceSquared = getDistanceSquared({ a: canvasPoint, b: point });
 		if (distanceSquared < bestDistanceSquared) {
 			bestDistanceSquared = distanceSquared;
 			bestT = t;
@@ -516,7 +533,10 @@ export function findClosestPointOnCustomMaskSegment({
 				}),
 			}));
 		for (const candidate of candidates) {
-			const distanceSquared = getDistanceSquared(canvasPoint, candidate.point);
+			const distanceSquared = getDistanceSquared({
+				a: canvasPoint,
+				b: candidate.point,
+			});
 			if (distanceSquared < bestDistanceSquared) {
 				bestDistanceSquared = distanceSquared;
 				bestT = candidate.t;
@@ -573,12 +593,12 @@ export function insertPointIntoCustomMaskSegment({
 		y: endPoint.y + endPoint.inY,
 	};
 	const p3 = { x: endPoint.x, y: endPoint.y };
-	const p01 = lerpPoint(p0, p1, clampedT);
-	const p12 = lerpPoint(p1, p2, clampedT);
-	const p23 = lerpPoint(p2, p3, clampedT);
-	const p012 = lerpPoint(p01, p12, clampedT);
-	const p123 = lerpPoint(p12, p23, clampedT);
-	const splitPoint = lerpPoint(p012, p123, clampedT);
+	const p01 = lerpPoint({ a: p0, b: p1, t: clampedT });
+	const p12 = lerpPoint({ a: p1, b: p2, t: clampedT });
+	const p23 = lerpPoint({ a: p2, b: p3, t: clampedT });
+	const p012 = lerpPoint({ a: p01, b: p12, t: clampedT });
+	const p123 = lerpPoint({ a: p12, b: p23, t: clampedT });
+	const splitPoint = lerpPoint({ a: p012, b: p123, t: clampedT });
 
 	const nextPoints = [...points];
 	nextPoints[indices.startIndex] = {

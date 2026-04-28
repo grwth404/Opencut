@@ -1,10 +1,10 @@
 import type { MigrationResult, ProjectRecord } from "./types";
 import { getProjectId, isRecord } from "./utils";
 
-const LEGACY_FONT_WEIGHT_MAP = {
-	normal: "400",
-	bold: "700",
-} as const;
+const LEGACY_FONT_WEIGHT_MAP = new Map<string, string>([
+	["normal", "400"],
+	["bold", "700"],
+]);
 
 const VALID_NUMERIC_FONT_WEIGHTS = new Set([
 	"100",
@@ -168,10 +168,9 @@ function normalizeFontWeight({ value }: { value: unknown }): unknown {
 	}
 
 	const normalized = value.trim().toLowerCase();
-	if (normalized in LEGACY_FONT_WEIGHT_MAP) {
-		return LEGACY_FONT_WEIGHT_MAP[
-			normalized as keyof typeof LEGACY_FONT_WEIGHT_MAP
-		];
+	const mapped = LEGACY_FONT_WEIGHT_MAP.get(normalized);
+	if (mapped !== undefined) {
+		return mapped;
 	}
 
 	if (VALID_NUMERIC_FONT_WEIGHTS.has(normalized)) {

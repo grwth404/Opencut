@@ -130,8 +130,14 @@ function EditorLayout() {
 			direction="vertical"
 			className="size-full gap-[0.18rem]"
 			onLayout={(sizes) => {
-				setPanel("mainContent", sizes[0] ?? panels.mainContent);
-				setPanel("timeline", sizes[1] ?? panels.timeline);
+				setPanel({
+					panel: "mainContent",
+					size: sizes[0] ?? panels.mainContent,
+				});
+				setPanel({
+					panel: "timeline",
+					size: sizes[1] ?? panels.timeline,
+				});
 			}}
 		>
 			<ResizablePanel
@@ -144,9 +150,12 @@ function EditorLayout() {
 					direction="horizontal"
 					className="size-full gap-[0.19rem] px-3"
 					onLayout={(sizes) => {
-						setPanel("tools", sizes[0] ?? panels.tools);
-						setPanel("preview", sizes[1] ?? panels.preview);
-						setPanel("properties", sizes[2] ?? panels.properties);
+						setPanel({ panel: "tools", size: sizes[0] ?? panels.tools });
+						setPanel({ panel: "preview", size: sizes[1] ?? panels.preview });
+						setPanel({
+							panel: "properties",
+							size: sizes[2] ?? panels.properties,
+						});
 					}}
 				>
 					<ResizablePanel

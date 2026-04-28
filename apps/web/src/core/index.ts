@@ -39,7 +39,7 @@ export class EditorCore {
 		this.project = new ProjectManager(this);
 		this.media = new MediaManager(this);
 		this.renderer = new RendererManager(this);
-		this.save = new SaveManager(this);
+		this.save = new SaveManager({ editor: this });
 		this.audio = new AudioManager(this);
 		this.selection = new SelectionManager(this);
 		this.clipboard = new ClipboardManager(this);

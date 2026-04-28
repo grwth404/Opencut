@@ -51,10 +51,10 @@ export function ShortcutsDialog({
 
 			const keyString = getKeybindingString(e);
 			if (keyString) {
-				const conflict = validateKeybinding(
-					keyString,
-					recordingShortcut.action,
-				);
+				const conflict = validateKeybinding({
+					key: keyString,
+					action: recordingShortcut.action,
+				});
 				if (conflict) {
 					toast.error(
 						`Key "${keyString}" is already bound to "${conflict.existingAction}"`,
@@ -68,7 +68,10 @@ export function ShortcutsDialog({
 					removeKeybinding(key);
 				}
 
-				updateKeybinding(keyString, recordingShortcut.action);
+				updateKeybinding({
+					key: keyString,
+					action: recordingShortcut.action,
+				});
 
 				setIsRecording(false);
 				setRecordingShortcut(null);

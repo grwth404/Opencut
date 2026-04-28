@@ -1,4 +1,4 @@
-import { createOffscreenCanvas } from "../canvas-utils";
+import { createCanvasSurface } from "../canvas-utils";
 import {
 	DEFAULT_GRAPHIC_SOURCE_SIZE,
 	getGraphicDefinition,
@@ -25,7 +25,7 @@ export class GraphicNode extends VisualNode<
 	ResolvedGraphicNodeState
 > {
 	private cachedKey: string | null = null;
-	private cachedSource: OffscreenCanvas | HTMLCanvasElement | null = null;
+	private cachedSource: OffscreenCanvas | null = null;
 
 	constructor(params: GraphicNodeParams) {
 		super(params);
@@ -36,7 +36,7 @@ export class GraphicNode extends VisualNode<
 		resolvedParams,
 	}: {
 		resolvedParams: ParamValues;
-	}): OffscreenCanvas | HTMLCanvasElement | null {
+	}): OffscreenCanvas {
 		const definition = getGraphicDefinition({
 			definitionId: this.params.definitionId,
 		});
@@ -48,20 +48,13 @@ export class GraphicNode extends VisualNode<
 			return this.cachedSource;
 		}
 
-		const canvas = createOffscreenCanvas({
+		const { canvas, context } = createCanvasSurface({
 			width: DEFAULT_GRAPHIC_SOURCE_SIZE,
 			height: DEFAULT_GRAPHIC_SOURCE_SIZE,
 		});
-		const ctx = canvas.getContext("2d") as
-			| CanvasRenderingContext2D
-			| OffscreenCanvasRenderingContext2D
-			| null;
-		if (!ctx) {
-			return null;
-		}
 
 		definition.render({
-			ctx,
+			ctx: context,
 			params: resolvedParams,
 			width: DEFAULT_GRAPHIC_SOURCE_SIZE,
 			height: DEFAULT_GRAPHIC_SOURCE_SIZE,

@@ -73,7 +73,7 @@ export class TimelineManager {
 	constructor(private editor: EditorCore) {}
 
 	addTrack({ type, index }: { type: TrackType; index?: number }): string {
-		const command = new AddTrackCommand(type, index);
+		const command = new AddTrackCommand({ type, index });
 		this.editor.command.execute({ command });
 		return command.getTrackId();
 	}
@@ -751,7 +751,10 @@ export class TimelineManager {
 		}
 		const afterTracks =
 			this.previewTracks ?? this.applyPreviewOverlay(committedTracks);
-		const command = new TracksSnapshotCommand(committedTracks, afterTracks);
+		const command = new TracksSnapshotCommand({
+			before: committedTracks,
+			after: afterTracks,
+		});
 		this.editor.command.push({ command });
 		this.previewOverlay.clear();
 		this.previewTracks = null;

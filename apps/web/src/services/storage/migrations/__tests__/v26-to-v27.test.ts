@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { transformProjectV26ToV27 } from "../transformers/v26-to-v27";
+import { asRecord, asRecordArray } from "./helpers";
 
 describe("V26 to V27 Migration", () => {
 	test("converts custom mask paths from JSON strings to typed point arrays", () => {
@@ -59,13 +60,13 @@ describe("V26 to V27 Migration", () => {
 		expect(result.skipped).toBe(false);
 		expect(result.project.version).toBe(27);
 
-		const scenes = result.project.scenes as Array<Record<string, unknown>>;
-		const tracks = scenes[0].tracks as Record<string, unknown>;
-		const mainTrack = tracks.main as Record<string, unknown>;
-		const elements = mainTrack.elements as Array<Record<string, unknown>>;
-		const masks = elements[0].masks as Array<Record<string, unknown>>;
-		const customParams = masks[0].params as Record<string, unknown>;
-		const rectangleParams = masks[1].params as Record<string, unknown>;
+		const scenes = asRecordArray(result.project.scenes);
+		const tracks = asRecord(scenes[0].tracks);
+		const mainTrack = asRecord(tracks.main);
+		const elements = asRecordArray(mainTrack.elements);
+		const masks = asRecordArray(elements[0].masks);
+		const customParams = asRecord(masks[0].params);
+		const rectangleParams = asRecord(masks[1].params);
 
 		expect(customParams.path).toEqual([
 			{

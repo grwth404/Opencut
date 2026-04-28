@@ -4,9 +4,10 @@ import {
 	useEffect,
 	useLayoutEffect,
 	useReducer,
-	useRef,
+	useState,
 } from "react";
 import { useEditor } from "@/editor/use-editor";
+import { useCommittedRef } from "@/hooks/use-committed-ref";
 import { TIMELINE_ZOOM_MIN } from "@/timeline/scale";
 import {
 	ZoomController,
@@ -57,21 +58,17 @@ export function useTimelineZoom({
 				},
 			}),
 	};
-	const configRef = useRef(config);
-	configRef.current = config;
-
-	const controllerRef = useRef<ZoomController | null>(null);
-	if (!controllerRef.current) {
-		controllerRef.current = new ZoomController({ configRef, initialZoom });
-	}
-	const controller = controllerRef.current;
+	const configRef = useCommittedRef(config);
+	const [controller] = useState(
+		() => new ZoomController({ configRef, initialZoom }),
+	);
 	const zoomLevel = controller.zoomLevel;
 
 	const [, rerender] = useReducer((n: number) => n + 1, 0);
 	useEffect(() => controller.subscribe(rerender), [controller]);
 
 	useEffect(() => {
-		controller.reconcileInitialAndMinZoom(minZoom, initialZoom);
+		controller.reconcileInitialAndMinZoom({ minZoom, initialZoom });
 	}, [controller, minZoom, initialZoom]);
 
 	useLayoutEffect(() => {

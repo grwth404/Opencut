@@ -68,9 +68,17 @@ export class MediaManager {
 
 		const command =
 			uniqueIds.length === 1
-				? new RemoveMediaAssetCommand(projectId, uniqueIds[0])
+				? new RemoveMediaAssetCommand({
+						projectId,
+						assetId: uniqueIds[0],
+					})
 				: new BatchCommand(
-						uniqueIds.map((id) => new RemoveMediaAssetCommand(projectId, id)),
+						uniqueIds.map((id) =>
+							new RemoveMediaAssetCommand({
+								projectId,
+								assetId: id,
+							}),
+						),
 					);
 
 		this.editor.command.execute({ command });

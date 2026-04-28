@@ -16,7 +16,10 @@ export function registerDefaultGraphics(): void {
 		if (graphicsRegistry.has(definition.id)) {
 			continue;
 		}
-		graphicsRegistry.register(definition.id, definition);
+		graphicsRegistry.register({
+			key: definition.id,
+			definition,
+		});
 	}
 }
 

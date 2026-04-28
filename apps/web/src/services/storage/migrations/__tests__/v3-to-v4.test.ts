@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { transformProjectV3ToV4 } from "../transformers/v3-to-v4";
 import { v3Project } from "./fixtures";
+import { asRecordArray } from "./helpers";
 
 describe("V3 to V4 Migration", () => {
 	test("normalizes legacy text fontWeight values", () => {
@@ -54,15 +55,9 @@ describe("V3 to V4 Migration", () => {
 		expect(result.skipped).toBe(false);
 		expect(result.project.version).toBe(4);
 
-		const migratedScene = (
-			result.project.scenes as Array<Record<string, unknown>>
-		)[0];
-		const migratedTrack = (
-			migratedScene.tracks as Array<Record<string, unknown>>
-		)[0];
-		const migratedElement = (
-			migratedTrack.elements as Array<Record<string, unknown>>
-		)[0];
+		const migratedScene = asRecordArray(result.project.scenes)[0];
+		const migratedTrack = asRecordArray(migratedScene.tracks)[0];
+		const migratedElement = asRecordArray(migratedTrack.elements)[0];
 
 		expect(migratedElement.fontWeight).toBe("700");
 	});
@@ -104,15 +99,9 @@ describe("V3 to V4 Migration", () => {
 		};
 
 		const result = transformProjectV3ToV4({ project: projectWithoutTextTrack });
-		const migratedScene = (
-			result.project.scenes as Array<Record<string, unknown>>
-		)[0];
-		const migratedTrack = (
-			migratedScene.tracks as Array<Record<string, unknown>>
-		)[0];
-		const migratedElement = (
-			migratedTrack.elements as Array<Record<string, unknown>>
-		)[0];
+		const migratedScene = asRecordArray(result.project.scenes)[0];
+		const migratedTrack = asRecordArray(migratedScene.tracks)[0];
+		const migratedElement = asRecordArray(migratedTrack.elements)[0];
 
 		expect(migratedElement.iconName).toBe("mdi:home");
 	});

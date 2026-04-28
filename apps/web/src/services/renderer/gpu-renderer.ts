@@ -34,23 +34,17 @@ export const gpuRenderer = {
 		height,
 		passes,
 	}: {
-		source: CanvasImageSource;
+		source: OffscreenCanvas;
 		width: number;
 		height: number;
 		passes: EffectPass[];
-	}): CanvasImageSource {
+	}): OffscreenCanvas {
 		if (passes.length === 0 || !gpuAvailable) {
 			return source;
 		}
 
-		const sourceCanvas = ensureOffscreenCanvas({
-			source,
-			width,
-			height,
-			label: "effect source",
-		});
 		return applyEffectPasses({
-			source: sourceCanvas,
+			source,
 			width,
 			height,
 			passes: serializeEffectPasses(passes),
@@ -63,58 +57,23 @@ export const gpuRenderer = {
 		height,
 		feather,
 	}: {
-		maskCanvas: CanvasImageSource;
+		maskCanvas: OffscreenCanvas;
 		width: number;
 		height: number;
 		feather: number;
-	}): CanvasImageSource {
+	}): OffscreenCanvas {
 		if (!gpuAvailable) {
 			return maskCanvas;
 		}
 
-		const sourceCanvas = ensureOffscreenCanvas({
-			source: maskCanvas,
-			width,
-			height,
-			label: "mask source",
-		});
 		return applyMaskFeatherWasm({
-			mask: sourceCanvas,
+			mask: maskCanvas,
 			width,
 			height,
 			feather,
 		});
 	},
 };
-
-function ensureOffscreenCanvas({
-	source,
-	width,
-	height,
-	label,
-}: {
-	source: CanvasImageSource;
-	width: number;
-	height: number;
-	label: string;
-}): OffscreenCanvas {
-	if (source instanceof OffscreenCanvas) {
-		return source;
-	}
-
-	if (typeof OffscreenCanvas === "undefined") {
-		throw new Error(`OffscreenCanvas is required for the GPU ${label}`);
-	}
-
-	const canvas = new OffscreenCanvas(width, height);
-	const context = canvas.getContext("2d");
-	if (!context) {
-		throw new Error(`Failed to get 2d context for the GPU ${label}`);
-	}
-	context.clearRect(0, 0, width, height);
-	context.drawImage(source, 0, 0, width, height);
-	return canvas;
-}
 
 function serializeEffectPasses(passes: EffectPass[]) {
 	return passes.map((pass) => ({

@@ -190,7 +190,7 @@ export default function BrandPage() {
 				</div>
 
 				<div className="flex flex-col gap-3">
-					<h2 className="font-semibold text-lg">What's not allowed</h2>
+					<h2 className="font-semibold text-lg">What&apos;s not allowed</h2>
 					<ul className="text-muted-foreground text-base flex flex-col gap-2 leading-relaxed">
 						{[
 							"Using OpenCut in the name of your product, service, or domain.",

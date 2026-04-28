@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { transformProjectV27ToV28 } from "../transformers/v27-to-v28";
+import { asRecord, asRecordArray } from "./helpers";
 
 describe("V27 to V28 Migration", () => {
 	test("rounds persisted media-time floats back to integer ticks", () => {
@@ -96,18 +97,15 @@ describe("V27 to V28 Migration", () => {
 		expect(result.skipped).toBe(false);
 		expect(result.project.version).toBe(28);
 
-		const metadata = result.project.metadata as Record<string, unknown>;
+		const metadata = asRecord(result.project.metadata);
 		expect(metadata.duration).toBe(2_152_466);
 
-		const timelineViewState = result.project.timelineViewState as Record<
-			string,
-			unknown
-		>;
+		const timelineViewState = asRecord(result.project.timelineViewState);
 		expect(timelineViewState.playheadTime).toBe(301_235);
 		expect(timelineViewState.zoomLevel).toBe(1.25);
 		expect(timelineViewState.scrollLeft).toBe(120);
 
-		const scenes = result.project.scenes as Array<Record<string, unknown>>;
+		const scenes = asRecordArray(result.project.scenes);
 		const scene = scenes[0];
 		expect(scene.bookmarks).toEqual([
 			{
@@ -118,9 +116,9 @@ describe("V27 to V28 Migration", () => {
 			},
 		]);
 
-		const tracks = scene.tracks as Record<string, unknown>;
-		const mainTrack = tracks.main as Record<string, unknown>;
-		const elements = mainTrack.elements as Array<Record<string, unknown>>;
+		const tracks = asRecord(scene.tracks);
+		const mainTrack = asRecord(tracks.main);
+		const elements = asRecordArray(mainTrack.elements);
 		const element = elements[0];
 		expect(element.startTime).toBe(300_000);
 		expect(element.duration).toBe(2_152_466);
@@ -128,9 +126,9 @@ describe("V27 to V28 Migration", () => {
 		expect(element.trimEnd).toBe(15_001);
 		expect(element.sourceDuration).toBe(2_197_468);
 
-		const animations = element.animations as Record<string, unknown>;
-		const channels = animations.channels as Record<string, Record<string, unknown>>;
-		const opacityChannel = channels.opacity;
+		const animations = asRecord(element.animations);
+		const channels = asRecord(animations.channels);
+		const opacityChannel = asRecord(channels.opacity);
 		expect(opacityChannel.keys).toEqual([
 			{
 				id: "key-1",
@@ -204,26 +202,23 @@ describe("V27 to V28 Migration", () => {
 		expect(result.skipped).toBe(false);
 		expect(result.project.version).toBe(28);
 
-		const metadata = result.project.metadata as Record<string, unknown>;
+		const metadata = asRecord(result.project.metadata);
 		expect(metadata.duration).toBe(120_000);
 
-		const timelineViewState = result.project.timelineViewState as Record<
-			string,
-			unknown
-		>;
+		const timelineViewState = asRecord(result.project.timelineViewState);
 		expect(timelineViewState).toEqual({
 			zoomLevel: 2,
 			scrollLeft: 300,
 			playheadTime: 30_000,
 		});
 
-		const scenes = result.project.scenes as Array<Record<string, unknown>>;
+		const scenes = asRecordArray(result.project.scenes);
 		const scene = scenes[0];
 		expect(scene.bookmarks).toEqual([{ time: 60_000, duration: 15_000 }]);
 
-		const tracks = scene.tracks as Record<string, unknown>;
-		const mainTrack = tracks.main as Record<string, unknown>;
-		const element = (mainTrack.elements as Array<Record<string, unknown>>)[0];
+		const tracks = asRecord(scene.tracks);
+		const mainTrack = asRecord(tracks.main);
+		const element = asRecordArray(mainTrack.elements)[0];
 		expect(element.startTime).toBe(10_000);
 		expect(element.duration).toBe(20_000);
 		expect(element.trimStart).toBe(1_000);

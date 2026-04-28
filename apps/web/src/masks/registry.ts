@@ -115,7 +115,10 @@ export class MasksRegistry extends DefinitionRegistry<
 			},
 			icon,
 		};
-		this.register(definition.type, withBaseParams);
+		this.register({
+			key: definition.type,
+			definition: withBaseParams,
+		});
 	}
 }
 

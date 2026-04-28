@@ -1,4 +1,4 @@
-import { type JSX, useLayoutEffect, useRef } from "react";
+import { type JSX } from "react";
 import { BASE_TIMELINE_PIXELS_PER_SECOND } from "@/timeline/scale";
 import { mediaTimeToSeconds } from "opencut-wasm";
 import { TICKS_PER_SECOND } from "@/wasm";
@@ -51,20 +51,9 @@ export function TimelineRuler({
 		scrollRef: tracksScrollRef,
 	});
 
-	/**
-	 * widens the virtualization buffer during zoom transitions.
-	 * useScrollPosition lags one frame behind the scroll adjustment
-	 * that useLayoutEffect applies after a zoom change.
-	 */
-	const prevZoomRef = useRef(zoomLevel);
-	const isZoomTransition = zoomLevel !== prevZoomRef.current;
-	const bufferPx = isZoomTransition
-		? Math.max(200, (scrollLeft + viewportWidth) * 0.15)
-		: 200;
-
-	useLayoutEffect(() => {
-		prevZoomRef.current = zoomLevel;
-	}, [zoomLevel]);
+	// Keep extra buffer because zoom layout and scroll position can briefly
+	// settle on different frames.
+	const bufferPx = Math.max(200, (scrollLeft + viewportWidth) * 0.15);
 
 	const visibleStartTimeSeconds = Math.max(
 		0,

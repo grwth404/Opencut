@@ -1,28 +1,25 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+import { useCommittedRef } from "@/hooks/use-committed-ref";
 import { useSelectionContext } from "@/selection/context";
 import { activateScope, type ScopeEntry } from "@/selection/scope";
 
 export function useSelectionScope() {
 	const { selectedIds, clearSelection } = useSelectionContext();
-	const hasSelectionRef = useRef(selectedIds.length > 0);
-	const clearSelectionRef = useRef(clearSelection);
 	const hasSelection = selectedIds.length > 0;
-
-	hasSelectionRef.current = hasSelection;
-	clearSelectionRef.current = clearSelection;
-
-	const entryRef = useRef<ScopeEntry>({
+	const hasSelectionRef = useCommittedRef(hasSelection);
+	const clearSelectionRef = useCommittedRef(clearSelection);
+	const [entry] = useState<ScopeEntry>(() => ({
 		hasSelection: () => hasSelectionRef.current,
 		clear: () => {
 			clearSelectionRef.current();
 		},
-	});
+	}));
 
 	useEffect(() => {
 		if (!hasSelection) {
 			return;
 		}
 
-		return activateScope({ entry: entryRef.current });
-	}, [hasSelection]);
+		return activateScope({ entry });
+	}, [entry, hasSelection]);
 }

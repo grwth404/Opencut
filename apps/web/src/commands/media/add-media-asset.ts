@@ -16,13 +16,21 @@ export class AddMediaAssetCommand extends Command {
 	private previousProjectFps: FrameRate | null = null;
 	private appliedProjectFps: FrameRate | null = null;
 
-	constructor(
-		private projectId: string,
-		private asset: Omit<MediaAsset, "id">,
-	) {
+	constructor({
+		projectId,
+		asset,
+	}: {
+		projectId: string;
+		asset: Omit<MediaAsset, "id">;
+	}) {
 		super();
+		this.projectId = projectId;
+		this.asset = asset;
 		this.assetId = generateUUID();
 	}
+
+	private projectId: string;
+	private asset: Omit<MediaAsset, "id">;
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();
@@ -117,7 +125,14 @@ export class AddMediaAssetCommand extends Command {
 
 		const activeProject = editor.project.getActiveOrNull();
 		if (!activeProject) return;
-		if (!this.appliedProjectFps || !frameRatesEqual(activeProject.settings.fps, this.appliedProjectFps)) return;
+		if (
+			!this.appliedProjectFps ||
+			!frameRatesEqual({
+				a: activeProject.settings.fps,
+				b: this.appliedProjectFps,
+			})
+		)
+			return;
 
 		const highestRemainingVideoFps = getHighestImportedVideoFps({
 			mediaAssets: editor.media.getAssets(),

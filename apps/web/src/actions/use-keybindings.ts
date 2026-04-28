@@ -33,7 +33,7 @@ export function useKeybindingsListener() {
 			const isTextInput =
 				activeElement instanceof HTMLElement &&
 				isTypableDOMElement({ element: activeElement });
-			const boundAction = binding ? keybindings[binding] : undefined;
+			const boundAction = binding ? keybindings.get(binding) : undefined;
 
 			if (normalizedKey === "escape" && isTextInput) {
 				activeElement.blur();

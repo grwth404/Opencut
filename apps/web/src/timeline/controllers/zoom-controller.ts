@@ -25,7 +25,13 @@ export interface ZoomConfigRef {
 	readonly current: ZoomConfig;
 }
 
-function clampZoom(zoomLevel: number, minZoom: number): number {
+function clampZoom({
+	zoomLevel,
+	minZoom,
+}: {
+	zoomLevel: number;
+	minZoom: number;
+}): number {
 	return Math.max(minZoom, Math.min(TIMELINE_ZOOM_MAX, zoomLevel));
 }
 
@@ -49,7 +55,7 @@ export class ZoomController {
 		const minZoom = this.config.minZoom;
 		this.zoomLevelValue =
 			deps.initialZoom !== undefined
-				? clampZoom(deps.initialZoom, minZoom)
+				? clampZoom({ zoomLevel: deps.initialZoom, minZoom })
 				: minZoom;
 		this.previousZoom = this.zoomLevelValue;
 		this.hasInitialized = deps.initialZoom !== undefined;
@@ -89,7 +95,10 @@ export class ZoomController {
 			typeof zoomLevelOrUpdater === "function"
 				? zoomLevelOrUpdater(this.zoomLevelValue)
 				: zoomLevelOrUpdater;
-		const nextZoom = clampZoom(nextZoomRaw, this.config.minZoom);
+		const nextZoom = clampZoom({
+			zoomLevel: nextZoomRaw,
+			minZoom: this.config.minZoom,
+		});
 		if (nextZoom === this.zoomLevelValue) return;
 
 		this.zoomLevelValue = nextZoom;
@@ -115,10 +124,16 @@ export class ZoomController {
 		}
 	}
 
-	reconcileInitialAndMinZoom(minZoom: number, initialZoom?: number): void {
+	reconcileInitialAndMinZoom({
+		minZoom,
+		initialZoom,
+	}: {
+		minZoom: number;
+		initialZoom?: number;
+	}): void {
 		if (initialZoom !== undefined && !this.hasInitialized) {
 			this.hasInitialized = true;
-			this.setZoomLevel(clampZoom(initialZoom, minZoom));
+			this.setZoomLevel(clampZoom({ zoomLevel: initialZoom, minZoom }));
 			return;
 		}
 

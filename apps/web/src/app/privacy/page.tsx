@@ -57,7 +57,10 @@ export default function PrivacyPage() {
 								content is tracked
 							</li>
 							<li>You can clear local data from your browser at any time</li>
-							<li>We don't sell or share your data with anyone (we don't even have it)</li>
+							<li>
+								We don&apos;t sell or share your data with anyone (we don&apos;t
+								even have it)
+							</li>
 						</ol>
 						<p className="mt-4">
 							Questions? Email us at{" "}
@@ -172,7 +175,7 @@ export default function PrivacyPage() {
 					<a
 						href={SOCIAL_LINKS.github}
 						target="_blank"
-						rel="noopener"
+						rel="noopener noreferrer"
 						className="text-primary hover:underline"
 					>
 						GitHub
@@ -189,7 +192,7 @@ export default function PrivacyPage() {
 					<a
 						href={`${SOCIAL_LINKS.github}/issues`}
 						target="_blank"
-						rel="noopener"
+						rel="noopener noreferrer"
 						className="text-primary hover:underline"
 					>
 						GitHub repository
@@ -205,7 +208,7 @@ export default function PrivacyPage() {
 					<a
 						href={SOCIAL_LINKS.x}
 						target="_blank"
-						rel="noopener"
+						rel="noopener noreferrer"
 						className="text-primary hover:underline"
 					>
 						X (Twitter)

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { transformProjectV18ToV19 } from "../transformers/v18-to-v19";
+import { asRecord } from "./helpers";
 
 describe("V18 to V19 Migration", () => {
 	test("adds canvas size mode and empty remembered custom size defaults", () => {
@@ -26,15 +27,13 @@ describe("V18 to V19 Migration", () => {
 
 		expect(result.skipped).toBe(false);
 		expect(result.project.version).toBe(19);
-		expect(
-			(result.project.settings as Record<string, unknown>).canvasSizeMode,
-		).toBe("preset");
-		expect(
-			(result.project.settings as Record<string, unknown>).lastCustomCanvasSize,
-		).toBeNull();
-		expect(
-			(result.project.settings as Record<string, unknown>).originalCanvasSize,
-		).toEqual({ width: 1920, height: 1080 });
+		const settings = asRecord(result.project.settings);
+		expect(settings.canvasSizeMode).toBe("preset");
+		expect(settings.lastCustomCanvasSize).toBeNull();
+		expect(settings.originalCanvasSize).toEqual({
+			width: 1920,
+			height: 1080,
+		});
 	});
 
 	test("skips projects already on v19", () => {

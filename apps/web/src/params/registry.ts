@@ -18,7 +18,13 @@ export class DefinitionRegistry<TKey extends string, TDefinition> {
 		this.entityName = entityName;
 	}
 
-	register(key: TKey, definition: TDefinition): void {
+	register({
+		key,
+		definition,
+	}: {
+		key: TKey;
+		definition: TDefinition;
+	}): void {
 		this.definitions.set(key, definition);
 	}
 

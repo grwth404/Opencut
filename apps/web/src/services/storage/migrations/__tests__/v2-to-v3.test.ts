@@ -8,6 +8,7 @@ import {
 	v2ProjectWithBlurBackground,
 	v3Project,
 } from "./fixtures";
+import { asRecord } from "./helpers";
 
 describe("V2 to V3 Migration", () => {
 	describe("transformProjectV2ToV3", () => {
@@ -17,14 +18,14 @@ describe("V2 to V3 Migration", () => {
 			expect(result.skipped).toBe(false);
 			expect(result.project.version).toBe(3);
 
-			const metadata = result.project.metadata as Record<string, unknown>;
+			const metadata = asRecord(result.project.metadata);
 			expect(typeof metadata.duration).toBe("number");
 		});
 
 		test("calculates duration from scene tracks", () => {
 			const result = transformProjectV2ToV3({ project: v2Project });
 
-			const metadata = result.project.metadata as Record<string, unknown>;
+			const metadata = asRecord(result.project.metadata);
 			// v2Project has a video element with duration 15.5 and a text element at startTime 2 with duration 5
 			// Total duration should be max(15.5, 2+5) = 15.5
 			expect(metadata.duration).toBe(15.5);
@@ -36,7 +37,7 @@ describe("V2 to V3 Migration", () => {
 			});
 
 			expect(result.skipped).toBe(false);
-			const metadata = result.project.metadata as Record<string, unknown>;
+			const metadata = asRecord(result.project.metadata);
 			// v2ProjectWithBlurBackground has a video with duration 30
 			expect(metadata.duration).toBe(30);
 		});
@@ -45,7 +46,7 @@ describe("V2 to V3 Migration", () => {
 			const result = transformProjectV2ToV3({ project: v2ProjectEmptyScenes });
 
 			expect(result.skipped).toBe(false);
-			const metadata = result.project.metadata as Record<string, unknown>;
+			const metadata = asRecord(result.project.metadata);
 			expect(metadata.duration).toBe(0);
 		});
 
@@ -55,7 +56,7 @@ describe("V2 to V3 Migration", () => {
 			});
 
 			expect(result.skipped).toBe(false);
-			const metadata = result.project.metadata as Record<string, unknown>;
+			const metadata = asRecord(result.project.metadata);
 			expect(metadata.duration).toBe(0);
 		});
 
@@ -91,7 +92,7 @@ describe("V2 to V3 Migration", () => {
 		test("preserves existing metadata fields", () => {
 			const result = transformProjectV2ToV3({ project: v2Project });
 
-			const metadata = result.project.metadata as Record<string, unknown>;
+			const metadata = asRecord(result.project.metadata);
 			expect(metadata.id).toBe(v2Project.metadata.id);
 			expect(metadata.name).toBe(v2Project.metadata.name);
 			expect(metadata.thumbnail).toBe(v2Project.metadata.thumbnail);
@@ -122,7 +123,7 @@ describe("V2 to V3 Migration", () => {
 			});
 
 			expect(result.skipped).toBe(false);
-			const metadata = result.project.metadata as Record<string, unknown>;
+			const metadata = asRecord(result.project.metadata);
 			expect(metadata.duration).toBe(0);
 		});
 
@@ -156,7 +157,7 @@ describe("V2 to V3 Migration", () => {
 			};
 			const result = transformProjectV2ToV3({ project: multiSceneProject });
 
-			const metadata = result.project.metadata as Record<string, unknown>;
+			const metadata = asRecord(result.project.metadata);
 			// Duration is from main scene only, not sum of all scenes
 			expect(metadata.duration).toBe(10);
 		});

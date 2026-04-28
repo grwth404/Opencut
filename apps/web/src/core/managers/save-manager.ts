@@ -12,12 +12,17 @@ export class SaveManager {
 	private saveTimer: ReturnType<typeof setTimeout> | null = null;
 	private unsubscribeHandlers: Array<() => void> = [];
 
-	constructor(
-		private editor: EditorCore,
-		{ debounceMs = 800 }: SaveManagerOptions = {},
-	) {
+	constructor({
+		editor,
+		debounceMs = 800,
+	}: {
+		editor: EditorCore;
+	} & SaveManagerOptions) {
+		this.editor = editor;
 		this.debounceMs = debounceMs;
 	}
+
+	private editor: EditorCore;
 
 	start(): void {
 		if (this.unsubscribeHandlers.length > 0) return;

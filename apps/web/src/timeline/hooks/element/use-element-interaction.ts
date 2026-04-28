@@ -1,5 +1,6 @@
-import { useEffect, useReducer, useRef, type RefObject } from "react";
+import { useEffect, useReducer, useState, type RefObject } from "react";
 import { useEditor } from "@/editor/use-editor";
+import { useCommittedRef } from "@/hooks/use-committed-ref";
 import { useShiftKey } from "@/hooks/use-shift-key";
 import { useElementSelection } from "@/timeline/hooks/element/use-element-selection";
 import { registerCanceller } from "@/editor/cancel-interaction";
@@ -63,17 +64,10 @@ export function useElementInteraction({
 			onChange: onSnapPointChange,
 		},
 	};
-
-	const depsRef = useRef<ElementInteractionDeps>(deps);
-	depsRef.current = deps;
-
-	const controllerRef = useRef<ElementInteractionController | null>(null);
-	if (!controllerRef.current) {
-		controllerRef.current = new ElementInteractionController({
-			depsRef: depsRef as ElementInteractionDepsRef,
-		});
-	}
-	const controller = controllerRef.current;
+	const depsRef = useCommittedRef(deps) as ElementInteractionDepsRef;
+	const [controller] = useState(
+		() => new ElementInteractionController({ depsRef }),
+	);
 
 	const [, rerender] = useReducer((n: number) => n + 1, 0);
 	useEffect(() => controller.subscribe(rerender), [controller]);

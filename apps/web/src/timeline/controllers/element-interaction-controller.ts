@@ -124,20 +124,27 @@ const IDLE_VIEW: ElementDragView = { kind: "idle" };
 
 // --- Pure helpers ---
 
-function pixelToClickOffsetTime(
-	clientX: number,
-	elementRect: DOMRect,
-	zoomLevel: number,
-): MediaTime {
+function pixelToClickOffsetTime({
+	clientX,
+	elementRect,
+	zoomLevel,
+}: {
+	clientX: number;
+	elementRect: DOMRect;
+	zoomLevel: number;
+}): MediaTime {
 	const clickOffsetX = clientX - elementRect.left;
 	const seconds = clickOffsetX / (BASE_TIMELINE_PIXELS_PER_SECOND * zoomLevel);
 	return mediaTime({ ticks: Math.round(seconds * TICKS_PER_SECOND) });
 }
 
-function verticalDirection(
-	startMouseY: number,
-	currentMouseY: number,
-): "up" | "down" | null {
+function verticalDirection({
+	startMouseY,
+	currentMouseY,
+}: {
+	startMouseY: number;
+	currentMouseY: number;
+}): "up" | "down" | null {
 	if (currentMouseY < startMouseY) return "up";
 	if (currentMouseY > startMouseY) return "down";
 	return null;
@@ -147,7 +154,13 @@ function orderedTracks(sceneTracks: SceneTracks): TimelineTrack[] {
 	return [...sceneTracks.overlay, sceneTracks.main, ...sceneTracks.audio];
 }
 
-function movedPastDragThreshold(current: Point, origin: Point): boolean {
+function movedPastDragThreshold({
+	current,
+	origin,
+}: {
+	current: Point;
+	origin: Point;
+}): boolean {
 	return (
 		Math.abs(current.x - origin.x) > TIMELINE_DRAG_THRESHOLD_PX ||
 		Math.abs(current.y - origin.y) > TIMELINE_DRAG_THRESHOLD_PX
@@ -374,11 +387,11 @@ export class ElementInteractionController {
 				elementId: element.id,
 				trackId: track.id,
 				startElementTime: element.startTime,
-				clickOffsetTime: pixelToClickOffsetTime(
-					event.clientX,
-					event.currentTarget.getBoundingClientRect(),
-					this.deps.viewport.getZoomLevel(),
-				),
+				clickOffsetTime: pixelToClickOffsetTime({
+					clientX: event.clientX,
+					elementRect: event.currentTarget.getBoundingClientRect(),
+					zoomLevel: this.deps.viewport.getZoomLevel(),
+				}),
 				selectedElements,
 			},
 		};
@@ -437,10 +450,13 @@ export class ElementInteractionController {
 		this.notify();
 	}
 
-	private snapResult(
-		frameSnappedTime: MediaTime,
-		group: MoveGroup,
-	): { snappedTime: MediaTime; snapPoint: SnapPoint | null } {
+	private snapResult({
+		frameSnappedTime,
+		group,
+	}: {
+		frameSnappedTime: MediaTime;
+		group: MoveGroup;
+	}): { snappedTime: MediaTime; snapPoint: SnapPoint | null } {
 		const { snap, input, scene, viewport, playback } = this.deps;
 
 		if (!snap.isEnabled() || input.isShiftHeld()) {
@@ -487,7 +503,10 @@ export class ElementInteractionController {
 			viewport,
 			zoomLevel,
 			snappedTime,
-			verticalDragDirection: verticalDirection(mousedown.origin.y, clientY),
+			verticalDragDirection: verticalDirection({
+				startMouseY: mousedown.origin.y,
+				currentMouseY: clientY,
+			}),
 		});
 
 		const nextGroupMoveResult = anchorDropTarget
@@ -543,7 +562,12 @@ export class ElementInteractionController {
 		clientY: number;
 		scrollContainer: HTMLDivElement;
 	}): void {
-		if (!movedPastDragThreshold({ x: clientX, y: clientY }, mousedown.origin)) {
+		if (
+			!movedPastDragThreshold({
+				current: { x: clientX, y: clientY },
+				origin: mousedown.origin,
+			})
+		) {
 			return;
 		}
 
@@ -568,10 +592,10 @@ export class ElementInteractionController {
 			clickOffsetTime: mousedown.clickOffsetTime,
 			fps,
 		});
-		const { snappedTime, snapPoint } = this.snapResult(
+		const { snappedTime, snapPoint } = this.snapResult({
 			frameSnappedTime,
-			moveGroup,
-		);
+			group: moveGroup,
+		});
 
 		// Ensure the anchor is selected before we render the drag — covers the
 		// case where the selection store hasn't committed the mousedown-time
@@ -632,10 +656,10 @@ export class ElementInteractionController {
 			clickOffsetTime: mousedown.clickOffsetTime,
 			fps,
 		});
-		const { snappedTime, snapPoint } = this.snapResult(
+		const { snappedTime, snapPoint } = this.snapResult({
 			frameSnappedTime,
-			drag.moveGroup,
-		);
+			group: drag.moveGroup,
+		});
 
 		drag.currentTime = snappedTime;
 		drag.currentMouseX = clientX;
@@ -666,7 +690,12 @@ export class ElementInteractionController {
 		// If the drag returned within the click threshold of its origin, treat
 		// this as a cancel rather than a commit — the user dragged then put the
 		// element back.
-		if (!movedPastDragThreshold({ x: clientX, y: clientY }, mousedown.origin)) {
+		if (
+			!movedPastDragThreshold({
+				current: { x: clientX, y: clientY },
+				origin: mousedown.origin,
+			})
+		) {
 			this.lastGestureWasDrag = false;
 			this.finishSession();
 			return;

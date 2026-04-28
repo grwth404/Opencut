@@ -1,4 +1,4 @@
-import { useReducer, useRef } from "react";
+import { useState } from "react";
 import { evaluateMathExpression } from "@/utils/math";
 
 function looksLikeExpression({ input }: { input: string }): boolean {
@@ -14,59 +14,56 @@ export function usePropertyDraft<T>({
 	parse,
 	onPreview,
 	onCommit,
+	onStartEditing,
 	supportsExpressions = true,
 }: {
 	displayValue: string;
 	parse: (input: string) => T | null;
 	onPreview: (value: T) => void;
 	onCommit: () => void;
+	onStartEditing?: () => void;
 	supportsExpressions?: boolean;
 }) {
-	const [, forceRender] = useReducer(
-		(renderVersion: number) => renderVersion + 1,
-		0,
-	);
-	const isEditing = useRef(false);
-	const draft = useRef("");
+	const [isEditing, setIsEditing] = useState(false);
+	const [draft, setDraft] = useState("");
 
 	return {
-		displayValue: isEditing.current ? draft.current : sourceDisplay,
+		displayValue: isEditing ? draft : sourceDisplay,
 		scrubTo: (value: number) => {
 			const parsed = parse(String(value));
 			if (parsed !== null) onPreview(parsed);
 		},
 		commitScrub: onCommit,
 		onFocus: () => {
-			isEditing.current = true;
-			draft.current = sourceDisplay;
-			forceRender();
+			setIsEditing(true);
+			setDraft(sourceDisplay);
+			onStartEditing?.();
 		},
 		onChange: (
 			event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
 		) => {
-			draft.current = event.target.value;
-			forceRender();
+			const nextDraft = event.target.value;
+			setDraft(nextDraft);
 
-			const parsed = parse(event.target.value);
+			const parsed = parse(nextDraft);
 			if (parsed !== null) {
 				onPreview(parsed);
 			}
 		},
-		onBlur: () => {
-			if (
-				supportsExpressions &&
-				looksLikeExpression({ input: draft.current })
-			) {
-				const evaluated = evaluateMathExpression({ input: draft.current });
+		onBlur: (
+			event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
+		) => {
+			const nextDraft = event.target.value;
+			if (supportsExpressions && looksLikeExpression({ input: nextDraft })) {
+				const evaluated = evaluateMathExpression({ input: nextDraft });
 				if (evaluated !== null) {
 					const parsed = parse(String(evaluated));
 					if (parsed !== null) onPreview(parsed);
 				}
 			}
 			onCommit();
-			isEditing.current = false;
-			draft.current = "";
-			forceRender();
+			setIsEditing(false);
+			setDraft("");
 		},
 	};
 }

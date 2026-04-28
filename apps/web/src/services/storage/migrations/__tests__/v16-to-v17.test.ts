@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { transformProjectV16ToV17 } from "../transformers/v16-to-v17";
+import { asRecord, asRecordArray } from "./helpers";
 
 describe("V16 to V17 Migration", () => {
 	test("adds center stroke alignment to masks that do not have it", () => {
@@ -97,13 +98,13 @@ describe("V16 to V17 Migration", () => {
 		expect(result.skipped).toBe(false);
 		expect(result.project.version).toBe(17);
 
-		const migratedMasks = (
-			((result.project.scenes as Array<{ tracks: Array<{ elements: Array<{ masks: Array<{ params: Record<string, unknown> }> }> }> }>)[0]
-				.tracks[0].elements[0].masks)
-		);
+		const firstScene = asRecordArray(result.project.scenes)[0];
+		const firstTrack = asRecordArray(firstScene.tracks)[0];
+		const firstElement = asRecordArray(firstTrack.elements)[0];
+		const migratedMasks = asRecordArray(firstElement.masks);
 
-		expect(migratedMasks[0].params.strokeAlign).toBe("center");
-		expect(migratedMasks[1].params.strokeAlign).toBe("outside");
+		expect(asRecord(migratedMasks[0].params).strokeAlign).toBe("center");
+		expect(asRecord(migratedMasks[1].params).strokeAlign).toBe("outside");
 	});
 
 	test("skips projects already on v17", () => {

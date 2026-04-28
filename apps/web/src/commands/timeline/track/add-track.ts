@@ -11,13 +11,21 @@ export class AddTrackCommand extends Command {
 	private trackId: string;
 	private savedState: SceneTracks | null = null;
 
-	constructor(
-		private type: TrackType,
-		private index?: number,
-	) {
+	constructor({
+		type,
+		index,
+	}: {
+		type: TrackType;
+		index?: number;
+	}) {
 		super();
+		this.type = type;
+		this.index = index;
 		this.trackId = generateUUID();
 	}
+
+	private type: TrackType;
+	private index?: number;
 
 	execute(): CommandResult | undefined {
 		const editor = EditorCore.getInstance();

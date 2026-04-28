@@ -6,11 +6,11 @@ import {
 	getFrameTime,
 	toggleBookmarkInArray,
 } from "@/timeline/bookmarks/index";
-import type { MediaTime } from "@/wasm";
+import { type MediaTime, ZERO_MEDIA_TIME } from "@/wasm";
 
 export class ToggleBookmarkCommand extends Command {
 	private savedScenes: TScene[] | null = null;
-	private frameTime: MediaTime = 0 as MediaTime;
+	private frameTime: MediaTime = ZERO_MEDIA_TIME;
 
 	constructor(private time: MediaTime) {
 		super();

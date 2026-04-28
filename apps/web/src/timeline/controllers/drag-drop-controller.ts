@@ -326,7 +326,10 @@ export class DragDropController {
 		trackType: TrackType;
 	}): void {
 		if (target.isNewTrack) {
-			const addTrackCmd = new AddTrackCommand(trackType, target.trackIndex);
+			const addTrackCmd = new AddTrackCommand({
+				type: trackType,
+				index: target.trackIndex,
+			});
 			this.config.executeCommand(
 				new BatchCommand([
 					addTrackCmd,

@@ -1,7 +1,15 @@
 import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import { EditorCore } from "@/core";
 
-function isShallowEqual(a: unknown, b: unknown): boolean {
+const SNAPSHOT_UNSET = Symbol("snapshotUnset");
+
+function isShallowEqual({
+	a,
+	b,
+}: {
+	a: unknown;
+	b: unknown;
+}): boolean {
 	if (Object.is(a, b)) return true;
 	if (!Array.isArray(a) || !Array.isArray(b)) return false;
 	if (a.length !== b.length) return false;
@@ -16,10 +24,7 @@ export function useEditor<T>(
 	selector?: (editor: EditorCore) => T,
 ): EditorCore | T {
 	const editor = useMemo(() => EditorCore.getInstance(), []);
-	const selectorRef = useRef(selector);
-	selectorRef.current = selector;
-
-	const snapshotCacheRef = useRef<unknown>(undefined);
+	const snapshotCacheRef = useRef<T | typeof SNAPSHOT_UNSET>(SNAPSHOT_UNSET);
 
 	const subscribeAll = useCallback(
 		(onChange: () => void) => {
@@ -43,18 +48,29 @@ export function useEditor<T>(
 		[editor],
 	);
 
-	const getSnapshot = useCallback(() => {
-		const next = selectorRef.current ? selectorRef.current(editor) : editor;
-		if (isShallowEqual(snapshotCacheRef.current, next)) {
+	const getSnapshot = useCallback((): EditorCore | T => {
+		if (!selector) {
+			return editor;
+		}
+
+		const next = selector(editor);
+		if (
+			snapshotCacheRef.current !== SNAPSHOT_UNSET &&
+			isShallowEqual({
+				a: snapshotCacheRef.current,
+				b: next,
+			})
+		) {
 			return snapshotCacheRef.current;
 		}
+
 		snapshotCacheRef.current = next;
 		return next;
-	}, [editor]);
+	}, [editor, selector]);
 
 	return useSyncExternalStore(
 		selector ? subscribeAll : subscribeNone,
 		getSnapshot,
 		getSnapshot,
-	) as EditorCore | T;
+	);
 }

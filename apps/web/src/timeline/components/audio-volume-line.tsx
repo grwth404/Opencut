@@ -242,8 +242,7 @@ export function AudioVolumeLine({
 					)}
 					style={{ top: lineTop }}
 				/>
-				{/* biome-ignore lint/a11y/noStaticElementInteractions: timeline volume line is a pointer-only editing surface */}
-				{/* biome-ignore lint/a11y/useKeyWithClickEvents: timeline volume line is a pointer-only editing surface */}
+				{/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- custom drag widget for clip volume; pointer events drive the interaction, the click/mousedown handlers are propagation-stoppers. The a11y-correct long-term shape is <input type="range"> with a custom thumb. */}
 				<div
 					className="absolute inset-x-0 -translate-y-1/2 touch-none cursor-ns-resize pointer-events-auto"
 					style={{ top: lineTop, height: `${HIT_AREA_HEIGHT_PX}px` }}

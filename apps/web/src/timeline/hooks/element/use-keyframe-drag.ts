@@ -1,5 +1,6 @@
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { useEditor } from "@/editor/use-editor";
+import { useCommittedRef } from "@/hooks/use-committed-ref";
 import { useKeyframeSelection } from "./use-keyframe-selection";
 import { registerCanceller } from "@/editor/cancel-interaction";
 import {
@@ -44,15 +45,10 @@ export function useKeyframeDrag({
 		seek: ({ time }) => editor.playback.seek({ time }),
 		getTotalDuration: () => editor.timeline.getTotalDuration(),
 	};
-
-	const configRef = useRef<KeyframeDragConfig>(config);
-	configRef.current = config;
-
-	const controllerRef = useRef<KeyframeDragController | null>(null);
-	if (!controllerRef.current) {
-		controllerRef.current = new KeyframeDragController({ configRef });
-	}
-	const controller = controllerRef.current;
+	const configRef = useCommittedRef(config);
+	const [controller] = useState(
+		() => new KeyframeDragController({ configRef }),
+	);
 
 	const [, rerender] = useReducer((n: number) => n + 1, 0);
 	useEffect(() => controller.subscribe(rerender), [controller]);

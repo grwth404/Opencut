@@ -9,6 +9,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { useCommittedRef } from "@/hooks/use-committed-ref";
 import {
 	canvasToOverlay,
 	getDisplayScale,
@@ -219,8 +220,7 @@ export function usePreviewViewportState({
 	}));
 	const [isPanning, setIsPanning] = useState(false);
 	const panSessionRef = useRef<PanSession | null>(null);
-	const centerRef = useRef(center);
-	centerRef.current = center;
+	const centerRef = useCommittedRef(center);
 
 	const fitScale = useMemo(
 		() =>
@@ -409,10 +409,10 @@ export function usePreviewViewportState({
 				pointerId: event.pointerId,
 			};
 			setIsPanning(true);
-			(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+			event.currentTarget.setPointerCapture(event.pointerId);
 			return true;
 		},
-		[zoom],
+		[centerRef, zoom],
 	);
 
 	const handlePanPointerMove = useCallback(
@@ -451,13 +451,9 @@ export function usePreviewViewportState({
 			}
 
 			if (
-				(event.currentTarget as HTMLElement).hasPointerCapture(
-					panSession.pointerId,
-				)
+				event.currentTarget.hasPointerCapture(panSession.pointerId)
 			) {
-				(event.currentTarget as HTMLElement).releasePointerCapture(
-					panSession.pointerId,
-				);
+				event.currentTarget.releasePointerCapture(panSession.pointerId);
 			}
 
 			panSessionRef.current = null;

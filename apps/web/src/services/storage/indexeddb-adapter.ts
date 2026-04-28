@@ -5,7 +5,15 @@ export class IndexedDBAdapter<T> implements StorageAdapter<T> {
 	private storeName: string;
 	private version: number;
 
-	constructor(dbName: string, storeName: string, version = 1) {
+	constructor({
+		dbName,
+		storeName,
+		version = 1,
+	}: {
+		dbName: string;
+		storeName: string;
+		version?: number;
+	}) {
 		this.dbName = dbName;
 		this.storeName = storeName;
 		this.version = version;
@@ -39,7 +47,13 @@ export class IndexedDBAdapter<T> implements StorageAdapter<T> {
 		});
 	}
 
-	async set(key: string, value: T): Promise<void> {
+	async set({
+		key,
+		value,
+	}: {
+		key: string;
+		value: T;
+	}): Promise<void> {
 		const db = await this.getDB();
 		const transaction = db.transaction([this.storeName], "readwrite");
 		const store = transaction.objectStore(this.storeName);

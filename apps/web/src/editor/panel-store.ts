@@ -14,7 +14,7 @@ export type PanelId = keyof PanelSizes;
 
 interface PanelState {
 	panels: PanelSizes;
-	setPanel: (panel: PanelId, size: number) => void;
+	setPanel: (args: { panel: PanelId; size: number }) => void;
 	setPanels: (sizes: Partial<PanelSizes>) => void;
 	resetPanels: () => void;
 }
@@ -23,7 +23,7 @@ export const usePanelStore = create<PanelState>()(
 	persist(
 		(set) => ({
 			...PANEL_CONFIG,
-			setPanel: (panel, size) =>
+			setPanel: ({ panel, size }) =>
 				set((state) => ({
 					panels: {
 						...state.panels,

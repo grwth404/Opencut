@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { transformProjectV8ToV9 } from "../transformers/v8-to-v9";
+import { asRecord, asRecordArray } from "./helpers";
 
 const v8ProjectWithText = {
 	id: "project-v8-text",
@@ -70,16 +71,16 @@ describe("V8 to V9 Migration", () => {
 		expect(result.skipped).toBe(false);
 		expect(result.project.version).toBe(9);
 
-		const track = (
-			result.project.scenes as Array<{ tracks: Array<{ elements: unknown[] }> }>
-		)[0].tracks[0];
-		const elements = track.elements as Array<{ background: { enabled: boolean; color: string } }>;
+		const track = asRecordArray(asRecordArray(result.project.scenes)[0].tracks)[0];
+		const elements = asRecordArray(track.elements);
+		const background0 = asRecord(elements[0].background);
+		const background1 = asRecord(elements[1].background);
 
-		expect(elements[0].background.enabled).toBe(true);
-		expect(elements[0].background.color).toBe("#ff0000");
+		expect(background0.enabled).toBe(true);
+		expect(background0.color).toBe("#ff0000");
 
-		expect(elements[1].background.enabled).toBe(false);
-		expect(elements[1].background.color).toBe("transparent");
+		expect(background1.enabled).toBe(false);
+		expect(background1.color).toBe("transparent");
 	});
 
 	test("preserves existing background.enabled if already present", () => {
@@ -87,7 +88,7 @@ describe("V8 to V9 Migration", () => {
 			...v8ProjectWithText,
 			scenes: [
 				{
-					...(v8ProjectWithText.scenes as Record<string, unknown>[])[0],
+					...asRecordArray(v8ProjectWithText.scenes)[0],
 					tracks: [
 						{
 							id: "track-text",
@@ -116,10 +117,9 @@ describe("V8 to V9 Migration", () => {
 		const result = transformProjectV8ToV9({ project: projectWithEnabled });
 
 		expect(result.skipped).toBe(false);
-		const elements = (
-			result.project.scenes as Array<{ tracks: Array<{ elements: unknown[] }> }>
-		)[0].tracks[0].elements as Array<{ background: { enabled: boolean } }>;
-		expect(elements[0].background.enabled).toBe(false);
+		const track = asRecordArray(asRecordArray(result.project.scenes)[0].tracks)[0];
+		const elements = asRecordArray(track.elements);
+		expect(asRecord(elements[0].background).enabled).toBe(false);
 	});
 
 	test("skips non-text elements and tracks", () => {

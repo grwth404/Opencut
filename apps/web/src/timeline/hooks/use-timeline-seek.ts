@@ -1,5 +1,6 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import { useEditor } from "@/editor/use-editor";
+import { useCommittedRef } from "@/hooks/use-committed-ref";
 import {
 	SeekController,
 	type SeekConfig,
@@ -50,15 +51,8 @@ export function useTimelineSeek({
 				},
 			}),
 	};
-
-	const configRef = useRef(config);
-	configRef.current = config;
-
-	const controllerRef = useRef<SeekController | null>(null);
-	if (!controllerRef.current) {
-		controllerRef.current = new SeekController({ configRef });
-	}
-	const controller = controllerRef.current;
+	const configRef = useCommittedRef(config);
+	const [controller] = useState(() => new SeekController({ configRef }));
 
 	useEffect(() => () => controller.destroy(), [controller]);
 

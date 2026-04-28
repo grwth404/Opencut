@@ -1,4 +1,4 @@
-import { createOffscreenCanvas } from "./canvas-utils";
+import { createCanvasSurface } from "./canvas-utils";
 import { effectsRegistry, resolveEffectPasses } from "@/effects";
 import { buildDefaultParamValues } from "@/params/registry";
 import type { ParamValues } from "@/params";
@@ -8,7 +8,7 @@ const PREVIEW_SIZE = 160;
 const PREVIEW_IMAGE_PATH = "/effects/preview.jpg";
 
 class EffectPreviewService {
-	private testSourceCanvas: OffscreenCanvas | HTMLCanvasElement | null = null;
+	private testSourceCanvas: OffscreenCanvas | null = null;
 	private previewImageElement: HTMLImageElement | null = null;
 	private onReadyCallbacks = new Set<() => void>();
 
@@ -98,7 +98,7 @@ class EffectPreviewService {
 	}: {
 		width: number;
 		height: number;
-	}): OffscreenCanvas | HTMLCanvasElement | null {
+	}): OffscreenCanvas | null {
 		const isImageReady =
 			this.previewImageElement?.complete &&
 			(this.previewImageElement.naturalWidth ?? 0) > 0;
@@ -106,15 +106,8 @@ class EffectPreviewService {
 			return null;
 		}
 
-		const canvas = createOffscreenCanvas({ width, height });
-		const ctx = canvas.getContext("2d") as
-			| CanvasRenderingContext2D
-			| OffscreenCanvasRenderingContext2D
-			| null;
-		if (!ctx) {
-			throw new Error("failed to get 2d context for test source");
-		}
-		ctx.drawImage(this.previewImageElement, 0, 0, width, height);
+		const { canvas, context } = createCanvasSurface({ width, height });
+		context.drawImage(this.previewImageElement, 0, 0, width, height);
 		return canvas;
 	}
 
@@ -124,7 +117,7 @@ class EffectPreviewService {
 	}: {
 		width: number;
 		height: number;
-	}): CanvasImageSource | null {
+	}): OffscreenCanvas | null {
 		if (
 			!this.testSourceCanvas ||
 			this.testSourceCanvas.width !== width ||
@@ -141,17 +134,17 @@ class EffectPreviewService {
 		height,
 		passes,
 	}: {
-		source: CanvasImageSource;
+		source: OffscreenCanvas;
 		width: number;
 		height: number;
 		passes: ReturnType<typeof resolveEffectPasses>;
-	}): OffscreenCanvas | HTMLCanvasElement {
+	}): OffscreenCanvas {
 		return gpuRenderer.applyEffect({
 			source,
 			width,
 			height,
 			passes,
-		}) as OffscreenCanvas | HTMLCanvasElement;
+		});
 	}
 }
 

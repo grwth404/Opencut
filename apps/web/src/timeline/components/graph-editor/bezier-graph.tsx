@@ -2,6 +2,7 @@
 
 import { useRef, useState, type PointerEvent } from "react";
 import { useShiftKey } from "@/hooks/use-shift-key";
+import { useCommittedRef } from "@/hooks/use-committed-ref";
 import { getBezierPoint } from "@/animation/bezier";
 import type { NormalizedCubicBezier } from "@/animation/types";
 import { cn } from "@/utils/ui";
@@ -87,9 +88,7 @@ export function BezierGraph({
 	const svgRef = useRef<SVGSVGElement>(null);
 	const [activeHandle, setActiveHandle] = useState<BezierHandle | null>(null);
 	const isShiftPressedRef = useShiftKey();
-	const latestValueRef = useRef(value);
-
-	latestValueRef.current = value;
+	const latestValueRef = useCommittedRef(value);
 
 	function getPointerPosition({
 		event,

@@ -35,7 +35,7 @@ export const ElementsClipboardHandler = {
 		};
 	},
 
-	paste(entry, context) {
+	paste({ entry, context }) {
 		if (entry.items.length === 0) {
 			return null;
 		}

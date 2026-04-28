@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { useEditor } from "@/editor/use-editor";
 import { useRafLoop } from "@/hooks/use-raf-loop";
@@ -68,15 +68,20 @@ export function PreviewPanel({
 	}) => void;
 }) {
 	const containerRef = useRef<HTMLDivElement>(null);
+	const [container, setContainer] = useState<HTMLDivElement | null>(null);
 	const { toggleFullscreen } = useFullscreen({ containerRef });
+	const handleContainerRef = useCallback((node: HTMLDivElement | null) => {
+		containerRef.current = node;
+		setContainer(node);
+	}, []);
 
 	return (
 		<div
-			ref={containerRef}
+			ref={handleContainerRef}
 			className="panel bg-background relative flex size-full min-h-0 min-w-0 flex-col rounded-sm border"
 		>
 			<PreviewCanvas
-				containerRef={containerRef}
+				container={container}
 				onToggleFullscreen={toggleFullscreen}
 				overlayControls={overlayControls}
 				overlayInstances={overlayInstances}
@@ -117,13 +122,13 @@ function RenderTreeController() {
 }
 
 function PreviewCanvas({
-	containerRef,
+	container,
 	onToggleFullscreen,
 	overlayControls,
 	overlayInstances,
 	onOverlayVisibilityChange,
 }: {
-	containerRef: React.RefObject<HTMLElement | null>;
+	container: HTMLElement | null;
 	onToggleFullscreen: () => void;
 	overlayControls: PreviewOverlayControl[];
 	overlayInstances: PreviewOverlayInstance[];
@@ -149,6 +154,7 @@ function PreviewCanvas({
 		viewportRef,
 		viewportWidth: viewportSize.width,
 	});
+	const { canPan, panByScreenDelta, scaleZoom } = viewport;
 
 	const renderer = useMemo(() => {
 		return new CanvasRenderer({
@@ -240,7 +246,7 @@ function PreviewCanvas({
 							Math.min(Math.abs(pendingZoomDelta), 30);
 						const zoomFactor = Math.exp(-cappedDelta / 300);
 
-						viewport.scaleZoom({ factor: zoomFactor });
+						scaleZoom({ factor: zoomFactor });
 						pendingZoomDelta = 0;
 						zoomRafId = null;
 					});
@@ -249,7 +255,7 @@ function PreviewCanvas({
 				return;
 			}
 
-			if (!viewport.canPan) {
+			if (!canPan) {
 				return;
 			}
 
@@ -263,7 +269,7 @@ function PreviewCanvas({
 
 			if (panRafId === null) {
 				panRafId = requestAnimationFrame(() => {
-					viewport.panByScreenDelta({
+					panByScreenDelta({
 						deltaX: pendingPanDeltaX,
 						deltaY: pendingPanDeltaY,
 					});
@@ -290,7 +296,7 @@ function PreviewCanvas({
 				cancelAnimationFrame(panRafId);
 			}
 		};
-	}, [viewport.canPan, viewport.panByScreenDelta, viewport.scaleZoom]);
+	}, [canPan, panByScreenDelta, scaleZoom]);
 
 	return (
 		<PreviewViewportProvider value={viewport}>
@@ -329,7 +335,7 @@ function PreviewCanvas({
 						</ContextMenuTrigger>
 						<PreviewContextMenu
 							onToggleFullscreen={onToggleFullscreen}
-							containerRef={containerRef}
+							container={container}
 							overlayControls={overlayControls}
 							onOverlayVisibilityChange={onOverlayVisibilityChange}
 						/>

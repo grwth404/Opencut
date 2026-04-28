@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { transformProjectV19ToV20 } from "../transformers/v19-to-v20";
+import { asRecordArray } from "./helpers";
 
 describe("V19 to V20 Migration", () => {
 	test("backfills source audio enabled state on video elements", () => {
@@ -82,19 +83,16 @@ describe("V19 to V20 Migration", () => {
 
 		expect(result.skipped).toBe(false);
 		expect(result.project.version).toBe(20);
-		expect(
-			((result.project.scenes as Array<Record<string, unknown>>)[0]
-				.tracks as Array<Record<string, unknown>>)[0].elements,
-		).toEqual([
+		const scene = asRecordArray(result.project.scenes)[0];
+		const tracks = asRecordArray(scene.tracks);
+		expect(tracks[0].elements).toEqual([
 			expect.objectContaining({
 				id: "video-1",
 				isSourceAudioEnabled: true,
 			}),
 		]);
 		expect(
-			(((result.project.scenes as Array<Record<string, unknown>>)[0]
-				.tracks as Array<Record<string, unknown>>)[1]
-				.elements as Array<Record<string, unknown>>)[0].isSourceAudioEnabled,
+			asRecordArray(tracks[1].elements)[0].isSourceAudioEnabled,
 		).toBeUndefined();
 	});
 
@@ -120,11 +118,10 @@ describe("V19 to V20 Migration", () => {
 			},
 		});
 
-		expect(
-			(((result.project.scenes as Array<Record<string, unknown>>)[0]
-				.tracks as Array<Record<string, unknown>>)[0]
-				.elements as Array<Record<string, unknown>>)[0].isSourceAudioEnabled,
-		).toBe(false);
+		const scene = asRecordArray(result.project.scenes)[0];
+		const track = asRecordArray(scene.tracks)[0];
+		const element = asRecordArray(track.elements)[0];
+		expect(element.isSourceAudioEnabled).toBe(false);
 	});
 
 	test("skips projects already on v20", () => {

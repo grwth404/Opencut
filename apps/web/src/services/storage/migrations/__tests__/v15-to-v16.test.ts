@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { transformProjectV15ToV16 } from "../transformers/v15-to-v16";
+import { asRecordArray } from "./helpers";
 
 describe("V15 to V16 Migration", () => {
 	test("renames sticker tracks to graphic tracks", () => {
@@ -61,10 +62,10 @@ describe("V15 to V16 Migration", () => {
 
 		expect(result.skipped).toBe(false);
 		expect(result.project.version).toBe(16);
-		expect(
-			(result.project.scenes as Array<{ tracks: Array<{ type: string }> }>)[0]
-				.tracks[0].type,
-		).toBe("graphic");
+		const firstTrack = asRecordArray(
+			asRecordArray(result.project.scenes)[0].tracks,
+		)[0];
+		expect(firstTrack.type).toBe("graphic");
 	});
 
 	test("skips projects already on v16", () => {

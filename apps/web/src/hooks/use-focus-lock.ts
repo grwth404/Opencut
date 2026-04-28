@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useCommittedRef } from "@/hooks/use-committed-ref";
 
 type FocusLockCursor = "text" | "default" | "pointer" | "crosshair";
 
@@ -37,8 +38,7 @@ export function useFocusLock<T extends HTMLElement = HTMLElement>({
 	allowSelector?: string;
 }) {
 	const containerRef = useRef<T>(null);
-	const onDismissRef = useRef(onDismiss);
-	onDismissRef.current = onDismiss;
+	const onDismissRef = useCommittedRef(onDismiss);
 
 	useEffect(() => {
 		if (!isActive) return;
@@ -53,10 +53,13 @@ export function useFocusLock<T extends HTMLElement = HTMLElement>({
 
 		const handleOutsidePointerDown = (event: PointerEvent) => {
 			if (event.button !== 0) return;
-			if (container.contains(event.target as Node)) return;
+			const target = event.target;
+			if (target instanceof Node && container.contains(target)) return;
 
-			const target = event.target as Element | null;
-			const isAllowedTarget = allowSelector && target?.closest(allowSelector);
+			const isAllowedTarget =
+				allowSelector &&
+				target instanceof Element &&
+				target.closest(allowSelector);
 			if (isAllowedTarget) return;
 
 			onDismissRef.current();
@@ -73,7 +76,7 @@ export function useFocusLock<T extends HTMLElement = HTMLElement>({
 			container.removeAttribute(DATA_ATTR);
 			focusLockStyle.remove();
 		};
-	}, [isActive, cursor, allowSelector]);
+	}, [isActive, cursor, allowSelector, onDismissRef]);
 
 	return { containerRef };
 }

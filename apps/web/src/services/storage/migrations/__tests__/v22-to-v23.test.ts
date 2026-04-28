@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { transformProjectV22ToV23 } from "../transformers/v22-to-v23";
+import { asRecord, asRecordArray } from "./helpers";
 
 describe("V22 to V23 Migration", () => {
 	test("converts project time values from seconds to ticks and fps to a frame-rate object", () => {
@@ -101,20 +102,17 @@ describe("V22 to V23 Migration", () => {
 		expect(result.skipped).toBe(false);
 		expect(result.project.version).toBe(23);
 
-		const metadata = result.project.metadata as Record<string, unknown>;
+		const metadata = asRecord(result.project.metadata);
 		expect(metadata.duration).toBe(1_860_000);
 
-		const settings = result.project.settings as Record<string, unknown>;
+		const settings = asRecord(result.project.settings);
 		expect(settings.fps).toEqual({ numerator: 30_000, denominator: 1_001 });
 
-		const timelineViewState = result.project.timelineViewState as Record<
-			string,
-			unknown
-		>;
+		const timelineViewState = asRecord(result.project.timelineViewState);
 		expect(timelineViewState.playheadTime).toBe(150_000);
 		expect(timelineViewState.scrollLeft).toBe(120);
 
-		const scenes = result.project.scenes as Array<Record<string, unknown>>;
+		const scenes = asRecordArray(result.project.scenes);
 		const scene = scenes[0];
 		expect(scene.bookmarks).toEqual([
 			{
@@ -126,8 +124,8 @@ describe("V22 to V23 Migration", () => {
 			{ time: 540_000 },
 		]);
 
-		const tracks = scene.tracks as Array<Record<string, unknown>>;
-		const elements = tracks[0].elements as Array<Record<string, unknown>>;
+		const tracks = asRecordArray(scene.tracks);
+		const elements = asRecordArray(tracks[0].elements);
 		const element = elements[0];
 		expect(element.startTime).toBe(150_000);
 		expect(element.duration).toBe(660_000);
@@ -135,8 +133,8 @@ describe("V22 to V23 Migration", () => {
 		expect(element.trimEnd).toBe(60_000);
 		expect(element.sourceDuration).toBe(750_000);
 
-		const animations = element.animations as Record<string, unknown>;
-		const channels = animations.channels as Record<string, Record<string, unknown>>;
+		const animations = asRecord(element.animations);
+		const channels = asRecord(animations.channels);
 		expect(channels["opacity:value"]).toEqual({
 			kind: "scalar",
 			keys: [

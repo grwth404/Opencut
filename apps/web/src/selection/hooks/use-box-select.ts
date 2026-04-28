@@ -4,13 +4,38 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type {
 	BoxSelectionSnapshot,
 	ResolveIntersections,
+	SelectionBoxBounds,
 } from "@/selection/types";
 
 interface SelectionBoxState<TId> extends BoxSelectionSnapshot<TId> {
 	startPos: { x: number; y: number };
 	currentPos: { x: number; y: number };
+	bounds: SelectionBoxBounds | null;
 	isActive: boolean;
 	isAdditive: boolean;
+}
+
+function getSelectionBoxBounds({
+	container,
+	startPos,
+	currentPos,
+}: {
+	container: HTMLElement;
+	startPos: { x: number; y: number };
+	currentPos: { x: number; y: number };
+}): SelectionBoxBounds {
+	const containerRect = container.getBoundingClientRect();
+	const startX = startPos.x - containerRect.left;
+	const startY = startPos.y - containerRect.top;
+	const currentX = currentPos.x - containerRect.left;
+	const currentY = currentPos.y - containerRect.top;
+
+	return {
+		left: Math.min(startX, currentX),
+		top: Math.min(startY, currentY),
+		width: Math.abs(currentX - startX),
+		height: Math.abs(currentY - startY),
+	};
 }
 
 export function useBoxSelect<TId>({
@@ -40,33 +65,43 @@ export function useBoxSelect<TId>({
 	const [selectionBox, setSelectionBox] =
 		useState<SelectionBoxState<TId> | null>(null);
 	const justFinishedSelectingRef = useRef(false);
-	const shouldStartSelectionCheck = shouldStartSelection ?? (() => true);
-	const getIsAdditiveSelectionCheck =
-		getIsAdditiveSelection ??
-		((event: React.MouseEvent<Element>) => event.ctrlKey || event.metaKey);
 
 	const handleMouseDown = useCallback(
 		(event: React.MouseEvent<Element>) => {
-			const canStartSelection = shouldStartSelectionCheck(event);
+			const canStartSelection = shouldStartSelection
+				? shouldStartSelection(event)
+				: true;
 			if (!isEnabled || event.button !== 0 || !canStartSelection) {
 				return;
 			}
 
+			const startPos = { x: event.clientX, y: event.clientY };
+			const container = containerRef.current;
 			setSelectionBox({
-				startPos: { x: event.clientX, y: event.clientY },
-				currentPos: { x: event.clientX, y: event.clientY },
+				startPos,
+				currentPos: startPos,
+				bounds: container
+					? getSelectionBoxBounds({
+							container,
+							startPos,
+							currentPos: startPos,
+						})
+					: null,
 				isActive: false,
-				isAdditive: getIsAdditiveSelectionCheck(event),
+				isAdditive: getIsAdditiveSelection
+					? getIsAdditiveSelection(event)
+					: event.ctrlKey || event.metaKey,
 				initialSelectedIds: selectedIds,
 				initialAnchorId: anchorId,
 			});
 		},
 		[
 			anchorId,
-			getIsAdditiveSelectionCheck,
+			containerRef,
+			getIsAdditiveSelection,
 			isEnabled,
 			selectedIds,
-			shouldStartSelectionCheck,
+			shouldStartSelection,
 		],
 	);
 
@@ -98,11 +133,20 @@ export function useBoxSelect<TId>({
 		}
 
 		const handleMouseMove = ({ clientX, clientY }: MouseEvent) => {
+			const currentPos = { x: clientX, y: clientY };
 			const deltaX = Math.abs(clientX - selectionBox.startPos.x);
 			const deltaY = Math.abs(clientY - selectionBox.startPos.y);
+			const container = containerRef.current;
 			const nextSelectionBox = {
 				...selectionBox,
-				currentPos: { x: clientX, y: clientY },
+				currentPos,
+				bounds: container
+					? getSelectionBoxBounds({
+							container,
+							startPos: selectionBox.startPos,
+							currentPos,
+						})
+					: null,
 				isActive: deltaX > 5 || deltaY > 5 || selectionBox.isActive,
 			};
 
@@ -133,26 +177,26 @@ export function useBoxSelect<TId>({
 			window.removeEventListener("mousemove", handleMouseMove);
 			window.removeEventListener("mouseup", handleMouseUp);
 		};
-	}, [selectionBox, updateSelection]);
+	}, [containerRef, selectionBox, updateSelection]);
 
 	useEffect(() => {
 		if (!selectionBox) {
 			return;
 		}
 
+		const container = containerRef.current;
 		const previousBodyUserSelect = document.body.style.userSelect;
-		const previousContainerUserSelect =
-			containerRef.current?.style.userSelect ?? "";
+		const previousContainerUserSelect = container?.style.userSelect ?? "";
 
 		document.body.style.userSelect = "none";
-		if (containerRef.current) {
-			containerRef.current.style.userSelect = "none";
+		if (container) {
+			container.style.userSelect = "none";
 		}
 
 		return () => {
 			document.body.style.userSelect = previousBodyUserSelect;
-			if (containerRef.current) {
-				containerRef.current.style.userSelect = previousContainerUserSelect;
+			if (container) {
+				container.style.userSelect = previousContainerUserSelect;
 			}
 		};
 	}, [containerRef, selectionBox]);
@@ -162,7 +206,10 @@ export function useBoxSelect<TId>({
 	}, []);
 
 	return {
-		selectionBox,
+		selectionBox:
+			selectionBox?.isActive && selectionBox.bounds
+				? { bounds: selectionBox.bounds }
+				: null,
 		handleMouseDown,
 		isSelecting: selectionBox?.isActive ?? false,
 		shouldIgnoreClick,

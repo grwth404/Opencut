@@ -69,10 +69,10 @@ export interface ClipboardHandler<TType extends ClipboardEntryType> {
 	type: TType;
 	canCopy(context: CopyContext): boolean;
 	copy(context: CopyContext): ClipboardEntryByType[TType] | null;
-	paste(
-		entry: ClipboardEntryByType[TType],
-		context: PasteContext,
-	): Command | null;
+	paste(args: {
+		entry: ClipboardEntryByType[TType];
+		context: PasteContext;
+	}): Command | null;
 }
 
 export type ClipboardHandlerMap = {

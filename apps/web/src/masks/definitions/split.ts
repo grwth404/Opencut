@@ -53,10 +53,13 @@ function splitLineGeometry({
 	return { normalX, normalY, lineX, lineY };
 }
 
-function pointsEqual(
-	a: { x: number; y: number },
-	b: { x: number; y: number },
-): boolean {
+function pointsEqual({
+	a,
+	b,
+}: {
+	a: { x: number; y: number };
+	b: { x: number; y: number };
+}): boolean {
 	return (
 		Math.abs(a.x - b.x) <= INTERSECTION_EPSILON &&
 		Math.abs(a.y - b.y) <= INTERSECTION_EPSILON
@@ -101,7 +104,7 @@ export function getSplitMaskStrokeSegment({
 			y2,
 		});
 
-		if (!hit || intersections.some((point) => pointsEqual(point, hit))) {
+		if (!hit || intersections.some((point) => pointsEqual({ a: point, b: hit }))) {
 			continue;
 		}
 
@@ -307,13 +310,18 @@ export const splitMaskDefinition: MaskDefinition<SplitMaskParams> = {
 				[0, height, 0, 0],
 			];
 
-			const isInsideHalfPlane = (x: number, y: number) =>
-				halfPlaneSign({ lineX, lineY, normalX, normalY, x, y }) >= 0;
+			const isInsideHalfPlane = ({
+				x,
+				y,
+			}: {
+				x: number;
+				y: number;
+			}) => halfPlaneSign({ lineX, lineY, normalX, normalY, x, y }) >= 0;
 
 			const vertices: [number, number][] = [];
 			for (const [x1, y1, x2, y2] of edges) {
-				const isVertex1Inside = isInsideHalfPlane(x1, y1);
-				const isVertex2Inside = isInsideHalfPlane(x2, y2);
+				const isVertex1Inside = isInsideHalfPlane({ x: x1, y: y1 });
+				const isVertex2Inside = isInsideHalfPlane({ x: x2, y: y2 });
 
 				if (isVertex1Inside && isVertex2Inside) {
 					vertices.push([x2, y2]);

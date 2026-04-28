@@ -1,5 +1,6 @@
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { useEditor } from "@/editor/use-editor";
+import { useCommittedRef } from "@/hooks/use-committed-ref";
 import { useShiftKey } from "@/hooks/use-shift-key";
 import { usePreviewViewport } from "@/preview/components/preview-viewport";
 import type { SnapLine } from "@/preview/preview-snap";
@@ -59,17 +60,10 @@ export function usePreviewInteraction({
 			onSnapLinesChange,
 		},
 	};
-
-	const depsRef = useRef<PreviewInteractionDeps>(deps);
-	depsRef.current = deps;
-
-	const controllerRef = useRef<PreviewInteractionController | null>(null);
-	if (!controllerRef.current) {
-		controllerRef.current = new PreviewInteractionController({
-			depsRef: depsRef as PreviewInteractionDepsRef,
-		});
-	}
-	const controller = controllerRef.current;
+	const depsRef = useCommittedRef(deps) as PreviewInteractionDepsRef;
+	const [controller] = useState(
+		() => new PreviewInteractionController({ depsRef }),
+	);
 
 	const [, rerender] = useReducer((n: number) => n + 1, 0);
 	useEffect(

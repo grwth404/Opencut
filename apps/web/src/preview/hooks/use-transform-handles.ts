@@ -1,7 +1,8 @@
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { usePreviewViewport } from "@/preview/components/preview-viewport";
 import type { OnSnapLinesChange } from "@/preview/hooks/use-preview-interaction";
 import { useEditor } from "@/editor/use-editor";
+import { useCommittedRef } from "@/hooks/use-committed-ref";
 import { useShiftKey } from "@/hooks/use-shift-key";
 import { registerCanceller } from "@/editor/cancel-interaction";
 import {
@@ -48,15 +49,10 @@ export function useTransformHandles({
 			onSnapLinesChange,
 		},
 	};
-
-	const depsRef = useRef<TransformHandleDeps>(deps);
-	depsRef.current = deps;
-
-	const controllerRef = useRef<TransformHandleController | null>(null);
-	if (!controllerRef.current) {
-		controllerRef.current = new TransformHandleController({ depsRef });
-	}
-	const controller = controllerRef.current;
+	const depsRef = useCommittedRef(deps);
+	const [controller] = useState(
+		() => new TransformHandleController({ depsRef }),
+	);
 
 	const [, rerender] = useReducer((n: number) => n + 1, 0);
 	useEffect(() => controller.subscribe(rerender), [controller]);

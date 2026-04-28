@@ -62,7 +62,7 @@ export function TimelineTrackContent({
 					onTrackMouseDown?.(event);
 				}}
 			/>
-			{/* biome-ignore lint/a11y/noStaticElementInteractions: empty track area is a pointer-only seek surface */}
+			{/* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- spatial gesture surface; the wrapping <button> handles keyboard track selection, this <div> only forwards background clicks for box-select / deselect. */}
 			<div
 				className="relative h-full min-w-full"
 				style={{ zIndex: TIMELINE_LAYERS.trackContent }}
@@ -96,10 +96,10 @@ export function TimelineTrackContent({
 								onResizeStart={({ event, element, side }) =>
 									onResizeStart({ event, element, track, side })
 								}
-								onElementMouseDown={(event, element) =>
+								onElementMouseDown={({ event, element }) =>
 									onElementMouseDown({ event, element, track })
 								}
-								onElementClick={(event, element) =>
+								onElementClick={({ event, element }) =>
 									onElementClick({ event, element, track })
 								}
 								dragView={dragView}

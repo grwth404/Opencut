@@ -65,17 +65,17 @@ class StorageService {
 			version: 1,
 		};
 
-		this.projectsAdapter = new IndexedDBAdapter<SerializedProject>(
-			this.config.projectsDb,
-			"projects",
-			this.config.version,
-		);
+		this.projectsAdapter = new IndexedDBAdapter<SerializedProject>({
+			dbName: this.config.projectsDb,
+			storeName: "projects",
+			version: this.config.version,
+		});
 
-		this.savedSoundsAdapter = new IndexedDBAdapter<SavedSoundsData>(
-			this.config.savedSoundsDb,
-			"saved-sounds",
-			this.config.version,
-		);
+		this.savedSoundsAdapter = new IndexedDBAdapter<SavedSoundsData>({
+			dbName: this.config.savedSoundsDb,
+			storeName: "saved-sounds",
+			version: this.config.version,
+		});
 	}
 
 	private async ensureMigrations(): Promise<void> {
@@ -91,11 +91,11 @@ class StorageService {
 	}
 
 	private getProjectMediaAdapters({ projectId }: { projectId: string }) {
-		const mediaMetadataAdapter = new IndexedDBAdapter<MediaAssetData>(
-			`${this.config.mediaDb}-${projectId}`,
-			"media-metadata",
-			this.config.version,
-		);
+		const mediaMetadataAdapter = new IndexedDBAdapter<MediaAssetData>({
+			dbName: `${this.config.mediaDb}-${projectId}`,
+			storeName: "media-metadata",
+			version: this.config.version,
+		});
 
 		const mediaAssetsAdapter = new OPFSAdapter(`media-files-${projectId}`);
 
@@ -161,7 +161,10 @@ class StorageService {
 			timelineViewState: project.timelineViewState,
 		};
 
-		await this.projectsAdapter.set(project.metadata.id, serializedProject);
+		await this.projectsAdapter.set({
+			key: project.metadata.id,
+			value: serializedProject,
+		});
 	}
 
 	async loadProject({
@@ -305,8 +308,14 @@ class StorageService {
 		};
 
 		try {
-			await mediaAssetsAdapter.set(mediaAsset.id, mediaAsset.file);
-			await mediaMetadataAdapter.set(mediaAsset.id, metadata);
+			await mediaAssetsAdapter.set({
+				key: mediaAsset.id,
+				value: mediaAsset.file,
+			});
+			await mediaMetadataAdapter.set({
+				key: mediaAsset.id,
+				value: metadata,
+			});
 		} catch (error) {
 			try {
 				await mediaAssetsAdapter.remove(mediaAsset.id);
@@ -501,7 +510,10 @@ class StorageService {
 				lastModified: new Date().toISOString(),
 			};
 
-			await this.savedSoundsAdapter.set("user-sounds", updatedData);
+			await this.savedSoundsAdapter.set({
+				key: "user-sounds",
+				value: updatedData,
+			});
 		} catch (error) {
 			console.error("Failed to save sound effect:", error);
 			throw error;
@@ -517,7 +529,10 @@ class StorageService {
 				lastModified: new Date().toISOString(),
 			};
 
-			await this.savedSoundsAdapter.set("user-sounds", updatedData);
+			await this.savedSoundsAdapter.set({
+				key: "user-sounds",
+				value: updatedData,
+			});
 		} catch (error) {
 			console.error("Failed to remove saved sound:", error);
 			throw error;

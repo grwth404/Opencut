@@ -22,7 +22,13 @@ export function frameRateToFloat(rate: FrameRate): number {
 	return rate.numerator / rate.denominator;
 }
 
-export function frameRatesEqual(a: FrameRate, b: FrameRate): boolean {
+export function frameRatesEqual({
+	a,
+	b,
+}: {
+	a: FrameRate;
+	b: FrameRate;
+}): boolean {
 	return a.numerator === b.numerator && a.denominator === b.denominator;
 }
 
@@ -38,14 +44,17 @@ export function floatToFrameRate(fps: number): FrameRate {
 
 	const ARBITRARY_DENOMINATOR = 1_000_000;
 	const scaledNumerator = Math.round(fps * ARBITRARY_DENOMINATOR);
-	const divisor = gcd(scaledNumerator, ARBITRARY_DENOMINATOR);
+	const divisor = gcd({
+		left: scaledNumerator,
+		right: ARBITRARY_DENOMINATOR,
+	});
 	return {
 		numerator: scaledNumerator / divisor,
 		denominator: ARBITRARY_DENOMINATOR / divisor,
 	};
 }
 
-function gcd(left: number, right: number): number {
+function gcd({ left, right }: { left: number; right: number }): number {
 	let a = Math.abs(left);
 	let b = Math.abs(right);
 	while (b !== 0) {

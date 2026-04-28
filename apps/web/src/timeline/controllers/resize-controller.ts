@@ -263,10 +263,13 @@ export class ResizeController {
 		this.notify();
 	}
 
-	private snappedDelta(
-		session: ResizeSession,
-		rawDeltaTime: MediaTime,
-	): MediaTime {
+	private snappedDelta({
+		session,
+		rawDeltaTime,
+	}: {
+		session: ResizeSession;
+		rawDeltaTime: MediaTime;
+	}): MediaTime {
 		const { snappingEnabled, isShiftHeld, zoomLevel } = this.config;
 
 		if (!snappingEnabled || isShiftHeld()) {
@@ -330,7 +333,7 @@ export class ResizeController {
 					TICKS_PER_SECOND,
 			),
 		});
-		const deltaTime = this.snappedDelta(session, rawDeltaTime);
+		const deltaTime = this.snappedDelta({ session, rawDeltaTime });
 		const result = computeGroupResize({
 			members: session.members,
 			side: session.side,

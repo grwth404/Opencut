@@ -28,7 +28,7 @@ import {
 	getAnimationPropertyDefinition,
 	getElementBaseValueForProperty,
 	withElementBaseValueForProperty,
-} from "./animation-properties";
+} from "@/animation";
 
 export interface AnimationPathDescriptor {
 	kind: AnimationBindingKind;

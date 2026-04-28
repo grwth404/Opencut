@@ -11,6 +11,7 @@ import {
 	v1ProjectWithMultipleScenes,
 	v2Project,
 } from "./fixtures";
+import { asRecord, asRecordArray } from "./helpers";
 
 const DEFAULT_FPS = 30;
 const DEFAULT_BACKGROUND_BLUR_INTENSITY = 10;
@@ -25,7 +26,7 @@ describe("V1 to V2 Migration", () => {
 			expect(result.skipped).toBe(false);
 			expect(result.project.version).toBe(2);
 
-			const metadata = result.project.metadata as Record<string, unknown>;
+			const metadata = asRecord(result.project.metadata);
 			expect(metadata.id).toBe(v1Project.id);
 			expect(metadata.name).toBe(v1Project.name);
 			expect(typeof metadata.createdAt).toBe("string");
@@ -35,7 +36,7 @@ describe("V1 to V2 Migration", () => {
 		test("creates settings object from flat properties", () => {
 			const result = transformProjectV1ToV2({ project: v1Project });
 
-			const settings = result.project.settings as Record<string, unknown>;
+			const settings = asRecord(result.project.settings);
 			expect(settings.fps).toBe(v1Project.fps);
 			expect(settings.canvasSize).toEqual(v1Project.canvasSize);
 			expect(settings.originalCanvasSize).toBe(null);
@@ -44,8 +45,8 @@ describe("V1 to V2 Migration", () => {
 		test("converts color background correctly", () => {
 			const result = transformProjectV1ToV2({ project: v1Project });
 
-			const settings = result.project.settings as Record<string, unknown>;
-			const background = settings.background as Record<string, unknown>;
+			const settings = asRecord(result.project.settings);
+			const background = asRecord(settings.background);
 			expect(background.type).toBe("color");
 			expect(background.color).toBe(v1Project.backgroundColor);
 		});
@@ -58,8 +59,8 @@ describe("V1 to V2 Migration", () => {
 			};
 			const result = transformProjectV1ToV2({ project: projectWithBlur });
 
-			const settings = result.project.settings as Record<string, unknown>;
-			const background = settings.background as Record<string, unknown>;
+			const settings = asRecord(result.project.settings);
+			const background = asRecord(settings.background);
 			expect(background.type).toBe("blur");
 			expect(background.blurIntensity).toBe(30);
 		});
@@ -67,7 +68,7 @@ describe("V1 to V2 Migration", () => {
 		test("applies legacy bookmarks to main scene", () => {
 			const result = transformProjectV1ToV2({ project: v1Project });
 
-			const scenes = result.project.scenes as Array<Record<string, unknown>>;
+			const scenes = asRecordArray(result.project.scenes);
 			const mainScene = scenes.find((s) => s.isMain === true);
 			expect(mainScene?.bookmarks).toEqual(v1Project.bookmarks);
 		});
@@ -77,7 +78,7 @@ describe("V1 to V2 Migration", () => {
 				project: v1ProjectWithMultipleScenes,
 			});
 
-			const scenes = result.project.scenes as Array<Record<string, unknown>>;
+			const scenes = asRecordArray(result.project.scenes);
 			const introScene = scenes.find((s) => s.name === "Intro");
 			expect(introScene?.bookmarks).toEqual([1.0]);
 		});
@@ -102,7 +103,7 @@ describe("V1 to V2 Migration", () => {
 			});
 
 			expect(result.skipped).toBe(false);
-			const settings = result.project.settings as Record<string, unknown>;
+			const settings = asRecord(result.project.settings);
 			expect(settings.fps).toBe(DEFAULT_FPS);
 			expect(settings.canvasSize).toEqual(DEFAULT_CANVAS_SIZE);
 		});
@@ -115,11 +116,11 @@ describe("V1 to V2 Migration", () => {
 			};
 			const result = transformProjectV1ToV2({ project: minimalProject });
 
-			const settings = result.project.settings as Record<string, unknown>;
+			const settings = asRecord(result.project.settings);
 			expect(settings.fps).toBe(DEFAULT_FPS);
 			expect(settings.canvasSize).toEqual(DEFAULT_CANVAS_SIZE);
 
-			const background = settings.background as Record<string, unknown>;
+			const background = asRecord(settings.background);
 			expect(background.type).toBe("color");
 			expect(background.color).toBe(DEFAULT_BACKGROUND_COLOR);
 		});
@@ -135,8 +136,8 @@ describe("V1 to V2 Migration", () => {
 				project: projectWithBlurNoIntensity,
 			});
 
-			const settings = result.project.settings as Record<string, unknown>;
-			const background = settings.background as Record<string, unknown>;
+			const settings = asRecord(result.project.settings);
+			const background = asRecord(settings.background);
 			expect(background.blurIntensity).toBe(DEFAULT_BACKGROUND_BLUR_INTENSITY);
 		});
 
@@ -183,9 +184,9 @@ describe("V1 to V2 Migration", () => {
 				project: projectWithTracks,
 			});
 
-			const scenes = result.project.scenes as Array<Record<string, unknown>>;
+			const scenes = asRecordArray(result.project.scenes);
 			const mainScene = scenes[0];
-			const tracks = mainScene.tracks as Array<Record<string, unknown>>;
+			const tracks = asRecordArray(mainScene.tracks);
 			expect(tracks.length).toBe(1);
 			expect(tracks[0].name).toBe("Existing Track");
 		});
@@ -240,9 +241,9 @@ describe("V1 to V2 Migration", () => {
 				context,
 			});
 
-			const scenes = result.project.scenes as Array<Record<string, unknown>>;
+			const scenes = asRecordArray(result.project.scenes);
 			const mainScene = scenes[0];
-			const tracks = mainScene.tracks as Array<Record<string, unknown>>;
+			const tracks = asRecordArray(mainScene.tracks);
 			expect(Array.isArray(tracks)).toBe(true);
 			expect(tracks).toHaveLength(1);
 			expect(tracks[0].type).toBe("video");
@@ -302,9 +303,9 @@ describe("V1 to V2 Migration", () => {
 			});
 
 			expect(result.skipped).toBe(false);
-			const scenes = result.project.scenes as Array<Record<string, unknown>>;
-			const tracks = scenes[0].tracks as Array<Record<string, unknown>>;
-			const elements = tracks[0].elements as Array<Record<string, unknown>>;
+			const scenes = asRecordArray(result.project.scenes);
+			const tracks = asRecordArray(scenes[0].tracks);
+			const elements = asRecordArray(tracks[0].elements);
 			const textElement = elements[0];
 			expect(textElement.opacity).toBe(0.5);
 			expect(textElement.transform).toEqual({

@@ -3,12 +3,20 @@ import type { SceneTracks } from "@/timeline";
 import { EditorCore } from "@/core";
 
 export class TracksSnapshotCommand extends Command {
-	constructor(
-		private before: SceneTracks,
-		private after: SceneTracks,
-	) {
+	constructor({
+		before,
+		after,
+	}: {
+		before: SceneTracks;
+		after: SceneTracks;
+	}) {
 		super();
+		this.before = before;
+		this.after = after;
 	}
+
+	private before: SceneTracks;
+	private after: SceneTracks;
 
 	execute(): CommandResult | undefined {
 		EditorCore.getInstance().timeline.updateTracks(this.after);

@@ -1,14 +1,8 @@
-import type { TActionWithOptionalArgs } from "@/actions";
-import type { ShortcutKey } from "@/actions/keybinding";
-import type { KeybindingConfig } from "@/actions/keybinding";
-
-interface V3State {
-	keybindings: KeybindingConfig;
-	isCustomized: boolean;
-}
+import { getPersistedKeybindingsState } from "../persisted-state";
 
 export function v3ToV4({ state }: { state: unknown }): unknown {
-	const v3 = state as V3State;
+	const v3 = getPersistedKeybindingsState({ state });
+	if (!v3) return state;
 
 	const renames: Record<string, string> = {
 		"paste-selected": "paste-copied",
@@ -16,8 +10,9 @@ export function v3ToV4({ state }: { state: unknown }): unknown {
 
 	const migrated = { ...v3.keybindings };
 	for (const [key, action] of Object.entries(migrated)) {
-		if (action && renames[action]) {
-			migrated[key as ShortcutKey] = renames[action] as TActionWithOptionalArgs;
+		const renamedAction = action ? renames[action] : undefined;
+		if (renamedAction) {
+			migrated[key] = renamedAction;
 		}
 	}
 

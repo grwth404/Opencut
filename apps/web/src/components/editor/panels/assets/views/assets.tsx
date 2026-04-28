@@ -139,9 +139,12 @@ export function MediaView() {
 
 	const handleSort = ({ key }: { key: MediaSortKey }) => {
 		if (mediaSortBy === key) {
-			setMediaSort(key, mediaSortOrder === "asc" ? "desc" : "asc");
+			setMediaSort({
+				key,
+				order: mediaSortOrder === "asc" ? "desc" : "asc",
+			});
 		} else {
-			setMediaSort(key, "asc");
+			setMediaSort({ key, order: "asc" });
 		}
 	};
 

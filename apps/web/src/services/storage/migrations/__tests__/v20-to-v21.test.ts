@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { transformProjectV20ToV21 } from "../transformers/v20-to-v21";
+import { asRecord } from "./helpers";
 
 const LEGACY_DEFAULT_BACKGROUND_BLUR_INTENSITY = 50;
 
@@ -27,8 +28,8 @@ describe("V20 to V21 Migration", () => {
 
 		expect(result.skipped).toBe(false);
 		expect(result.project.version).toBe(21);
-		const settings = result.project.settings as Record<string, unknown>;
-		const background = settings.background as Record<string, unknown>;
+		const settings = asRecord(result.project.settings);
+		const background = asRecord(settings.background);
 		expect(background.blurIntensity).toBe(500);
 	});
 
@@ -45,8 +46,8 @@ describe("V20 to V21 Migration", () => {
 		});
 
 		expect(result.skipped).toBe(false);
-		const settings = result.project.settings as Record<string, unknown>;
-		const background = settings.background as Record<string, unknown>;
+		const settings = asRecord(result.project.settings);
+		const background = asRecord(settings.background);
 		expect(background.blurIntensity).toBe(
 			LEGACY_DEFAULT_BACKGROUND_BLUR_INTENSITY,
 		);
@@ -65,7 +66,7 @@ describe("V20 to V21 Migration", () => {
 		});
 
 		expect(result.skipped).toBe(false);
-		const settings = result.project.settings as Record<string, unknown>;
+		const settings = asRecord(result.project.settings);
 		expect(settings.background).toEqual({ type: "color", color: "#000000" });
 	});
 

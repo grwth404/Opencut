@@ -1,12 +1,8 @@
-import type { KeybindingConfig } from "@/actions/keybinding";
-
-interface V5State {
-	keybindings: KeybindingConfig;
-	isCustomized: boolean;
-}
+import { getPersistedKeybindingsState } from "../persisted-state";
 
 export function v5ToV6({ state }: { state: unknown }): unknown {
-	const v5 = state as V5State;
+	const v5 = getPersistedKeybindingsState({ state });
+	if (!v5) return state;
 	const keybindings = { ...v5.keybindings };
 
 	if (keybindings.escape === "deselect-all") {

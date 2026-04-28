@@ -93,7 +93,7 @@ interface AssetsPanelStore {
 	setMediaViewMode: (mode: MediaViewMode) => void;
 	mediaSortBy: MediaSortKey;
 	mediaSortOrder: MediaSortOrder;
-	setMediaSort: (key: MediaSortKey, order: MediaSortOrder) => void;
+	setMediaSort: (args: { key: MediaSortKey; order: MediaSortOrder }) => void;
 }
 
 export const useAssetsPanelStore = create<AssetsPanelStore>()(
@@ -109,7 +109,7 @@ export const useAssetsPanelStore = create<AssetsPanelStore>()(
 			setMediaViewMode: (mode) => set({ mediaViewMode: mode }),
 			mediaSortBy: "name",
 			mediaSortOrder: "asc",
-			setMediaSort: (key, order) =>
+			setMediaSort: ({ key, order }) =>
 				set({ mediaSortBy: key, mediaSortOrder: order }),
 		}),
 		{

@@ -68,10 +68,10 @@ export function usePasteMedia() {
 						const startTime = editor.playback.getCurrentTime();
 
 						for (const asset of processedAssets) {
-							const addMediaCmd = new AddMediaAssetCommand(
-								activeProject.metadata.id,
+							const addMediaCmd = new AddMediaAssetCommand({
+								projectId: activeProject.metadata.id,
 								asset,
-							);
+							});
 							const assetId = addMediaCmd.getAssetId();
 							const duration =
 								asset.duration != null

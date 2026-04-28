@@ -12,19 +12,18 @@ interface CustomMaskPathPoint {
 }
 
 function isCustomMaskPathPoint(value: unknown): value is CustomMaskPathPoint {
-	if (!value || typeof value !== "object") {
+	if (!isRecord(value)) {
 		return false;
 	}
 
-	const candidate = value as Record<string, unknown>;
 	return (
-		typeof candidate.id === "string" &&
-		typeof candidate.x === "number" &&
-		typeof candidate.y === "number" &&
-		typeof candidate.inX === "number" &&
-		typeof candidate.inY === "number" &&
-		typeof candidate.outX === "number" &&
-		typeof candidate.outY === "number"
+		typeof value.id === "string" &&
+		typeof value.x === "number" &&
+		typeof value.y === "number" &&
+		typeof value.inX === "number" &&
+		typeof value.inY === "number" &&
+		typeof value.outX === "number" &&
+		typeof value.outY === "number"
 	);
 }
 

@@ -32,7 +32,11 @@ export interface AnimationPropertyDefinition {
 	supportsElement: ({ element }: { element: TimelineElement }) => boolean;
 	getValue: ({ element }: { element: TimelineElement }) => AnimationValue | null;
 	coerceValue: ({ value }: { value: AnimationValue }) => AnimationValue | null;
-	setValue: ({
+	// Apply `value` to `element` for this property. Coerces the value through
+	// `coerceValue` and verifies element support; returns `element` unchanged
+	// if either fails. Cannot be bypassed — there is no kind-narrow `setValue`
+	// on the public surface, so callers can't apply an unvalidated value.
+	applyValue: ({
 		element,
 		value,
 	}: {
@@ -94,7 +98,13 @@ function createNumberPropertyDefinition({
 	numericRange?: NumericSpec;
 	supportsElement: AnimationPropertyDefinition["supportsElement"];
 	getValue: AnimationPropertyDefinition["getValue"];
-	setValue: AnimationPropertyDefinition["setValue"];
+	setValue: ({
+		element,
+		value,
+	}: {
+		element: TimelineElement;
+		value: number;
+	}) => TimelineElement;
 }): AnimationPropertyDefinition {
 	return {
 		kind: "number",
@@ -102,12 +112,51 @@ function createNumberPropertyDefinition({
 		numericRanges: numericRange ? { value: numericRange } : undefined,
 		supportsElement,
 		getValue,
-		coerceValue: ({ value }) =>
-			coerceNumberValue({
-				value,
-				numericRange,
-			}),
-		setValue,
+		coerceValue: ({ value }) => coerceNumberValue({ value, numericRange }),
+		applyValue: ({ element, value }) => {
+			if (!supportsElement({ element })) {
+				return element;
+			}
+			const coerced = coerceNumberValue({ value, numericRange });
+			if (coerced === null) {
+				return element;
+			}
+			return setValue({ element, value: coerced });
+		},
+	};
+}
+
+function createColorPropertyDefinition({
+	supportsElement,
+	getValue,
+	setValue,
+}: {
+	supportsElement: AnimationPropertyDefinition["supportsElement"];
+	getValue: AnimationPropertyDefinition["getValue"];
+	setValue: ({
+		element,
+		value,
+	}: {
+		element: TimelineElement;
+		value: string;
+	}) => TimelineElement;
+}): AnimationPropertyDefinition {
+	return {
+		kind: "color",
+		defaultInterpolation: "linear",
+		supportsElement,
+		getValue,
+		coerceValue: ({ value }) => coerceColorValue({ value }),
+		applyValue: ({ element, value }) => {
+			if (!supportsElement({ element })) {
+				return element;
+			}
+			const coerced = coerceColorValue({ value });
+			if (coerced === null) {
+				return element;
+			}
+			return setValue({ element, value: coerced });
+		},
 	};
 }
 
@@ -126,7 +175,7 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 						...element,
 						transform: {
 							...element.transform,
-							position: { ...element.transform.position, x: value as number },
+							position: { ...element.transform.position, x: value },
 						},
 					}
 				: element,
@@ -142,7 +191,7 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 						...element,
 						transform: {
 							...element.transform,
-							position: { ...element.transform.position, y: value as number },
+							position: { ...element.transform.position, y: value },
 						},
 					}
 				: element,
@@ -156,7 +205,7 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 			isVisualElement(element)
 				? {
 						...element,
-						transform: { ...element.transform, scaleX: value as number },
+						transform: { ...element.transform, scaleX: value },
 					}
 				: element,
 	}),
@@ -169,7 +218,7 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 			isVisualElement(element)
 				? {
 						...element,
-						transform: { ...element.transform, scaleY: value as number },
+						transform: { ...element.transform, scaleY: value },
 					}
 				: element,
 	}),
@@ -182,7 +231,7 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 			isVisualElement(element)
 				? {
 						...element,
-						transform: { ...element.transform, rotate: value as number },
+						transform: { ...element.transform, rotate: value },
 					}
 				: element,
 	}),
@@ -192,9 +241,7 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 		getValue: ({ element }) =>
 			isVisualElement(element) ? element.opacity : null,
 		setValue: ({ element, value }) =>
-			isVisualElement(element)
-				? { ...element, opacity: value as number }
-				: element,
+			isVisualElement(element) ? { ...element, opacity: value } : element,
 	}),
 	volume: createNumberPropertyDefinition({
 		numericRange: { min: VOLUME_DB_MIN, max: VOLUME_DB_MAX, step: 0.01 },
@@ -202,36 +249,26 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 		getValue: ({ element }) =>
 			canElementHaveAudio(element) ? element.volume ?? 0 : null,
 		setValue: ({ element, value }) =>
-			canElementHaveAudio(element)
-				? { ...element, volume: value as number }
-				: element,
+			canElementHaveAudio(element) ? { ...element, volume: value } : element,
 	}),
-	color: {
-		kind: "color",
-		defaultInterpolation: "linear",
+	color: createColorPropertyDefinition({
 		supportsElement: ({ element }) => element.type === "text",
 		getValue: ({ element }) => (element.type === "text" ? element.color : null),
-		coerceValue: ({ value }) => coerceColorValue({ value }),
 		setValue: ({ element, value }) =>
-			element.type === "text"
-				? { ...element, color: value as string }
-				: element,
-	},
-	"background.color": {
-		kind: "color",
-		defaultInterpolation: "linear",
+			element.type === "text" ? { ...element, color: value } : element,
+	}),
+	"background.color": createColorPropertyDefinition({
 		supportsElement: ({ element }) => element.type === "text",
 		getValue: ({ element }) =>
 			element.type === "text" ? element.background.color : null,
-		coerceValue: ({ value }) => coerceColorValue({ value }),
 		setValue: ({ element, value }) =>
 			element.type === "text"
 				? {
 						...element,
-						background: { ...element.background, color: value as string },
+						background: { ...element.background, color: value },
 					}
 				: element,
-	},
+	}),
 	"background.paddingX": createNumberPropertyDefinition({
 		numericRange: { min: 0, step: 1 },
 		supportsElement: ({ element }) => element.type === "text",
@@ -243,7 +280,7 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 			element.type === "text"
 				? {
 						...element,
-						background: { ...element.background, paddingX: value as number },
+						background: { ...element.background, paddingX: value },
 					}
 				: element,
 	}),
@@ -258,7 +295,7 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 			element.type === "text"
 				? {
 						...element,
-						background: { ...element.background, paddingY: value as number },
+						background: { ...element.background, paddingY: value },
 					}
 				: element,
 	}),
@@ -273,7 +310,7 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 			element.type === "text"
 				? {
 						...element,
-						background: { ...element.background, offsetX: value as number },
+						background: { ...element.background, offsetX: value },
 					}
 				: element,
 	}),
@@ -288,7 +325,7 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 			element.type === "text"
 				? {
 						...element,
-						background: { ...element.background, offsetY: value as number },
+						background: { ...element.background, offsetY: value },
 					}
 				: element,
 	}),
@@ -307,7 +344,7 @@ const ANIMATION_PROPERTY_REGISTRY: Record<
 			element.type === "text"
 				? {
 						...element,
-						background: { ...element.background, cornerRadius: value as number },
+						background: { ...element.background, cornerRadius: value },
 					}
 				: element,
 	}),
@@ -362,11 +399,7 @@ export function withElementBaseValueForProperty({
 	value: AnimationValue;
 }): TimelineElement {
 	const definition = getAnimationPropertyDefinition({ propertyPath });
-	const coercedValue = definition.coerceValue({ value });
-	if (coercedValue === null || !definition.supportsElement({ element })) {
-		return element;
-	}
-	return definition.setValue({ element, value: coercedValue });
+	return definition.applyValue({ element, value });
 }
 
 export function getDefaultInterpolationForProperty({

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useContainerSize } from "@/hooks/use-container-size";
 import { timelineTimeToSnappedPixels } from "@/timeline";
 import { TIMELINE_TRACK_LABELS_COLUMN_WIDTH_PX } from "@/timeline/components/layout";
+import { useScrollPosition } from "./use-scroll-position";
 interface UseSnapIndicatorPositionParams {
 	snapPoint: { time: number } | null;
 	zoomLevel: number;
@@ -20,24 +21,9 @@ export function useSnapIndicatorPosition({
 	timelineRef,
 	tracksScrollRef,
 }: UseSnapIndicatorPositionParams): SnapIndicatorPosition {
-	const [scrollLeft, setScrollLeft] = useState(0);
-
-	useEffect(() => {
-		const tracksViewport = tracksScrollRef.current;
-
-		if (!tracksViewport) return;
-
-		const handleScroll = () => {
-			setScrollLeft(tracksViewport.scrollLeft);
-		};
-
-		setScrollLeft(tracksViewport.scrollLeft);
-
-		tracksViewport.addEventListener("scroll", handleScroll);
-		return () => tracksViewport.removeEventListener("scroll", handleScroll);
-	}, [tracksScrollRef]);
-
-	const timelineContainerHeight = timelineRef.current?.offsetHeight || 400;
+	const { height: timelineHeight } = useContainerSize({ containerRef: timelineRef });
+	const { scrollLeft } = useScrollPosition({ scrollRef: tracksScrollRef });
+	const timelineContainerHeight = timelineHeight || 400;
 	const totalHeight = timelineContainerHeight - 8; // 8px padding from edges
 
 	const timelinePosition = timelineTimeToSnappedPixels({

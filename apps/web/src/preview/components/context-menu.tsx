@@ -13,12 +13,12 @@ import { toast } from "sonner";
 
 export function PreviewContextMenu({
 	onToggleFullscreen,
-	containerRef,
+	container,
 	overlayControls,
 	onOverlayVisibilityChange,
 }: {
 	onToggleFullscreen: () => void;
-	containerRef: React.RefObject<HTMLElement | null>;
+	container: HTMLElement | null;
 	overlayControls: PreviewOverlayControl[];
 	onOverlayVisibilityChange: (params: {
 		overlayId: string;
@@ -51,7 +51,7 @@ export function PreviewContextMenu({
 	};
 
 	return (
-		<ContextMenuContent className="w-56" container={containerRef.current}>
+		<ContextMenuContent className="w-56" container={container}>
 			<ContextMenuItem onClick={viewport.fitToScreen} inset>
 				Fit to screen
 			</ContextMenuItem>

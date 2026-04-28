@@ -3,7 +3,7 @@ import { masksRegistry } from "@/masks";
 import { incrementCounter } from "@/diagnostics/render-perf";
 import type { AnyBaseNode } from "../nodes/base-node";
 import type { CanvasRenderer } from "../canvas-renderer";
-import { createOffscreenCanvas } from "../canvas-utils";
+import { createCanvasSurface } from "../canvas-utils";
 import { BlurBackgroundNode } from "../nodes/blur-background-node";
 import { ColorNode } from "../nodes/color-node";
 import { EffectLayerNode } from "../nodes/effect-layer-node";
@@ -414,15 +414,11 @@ function buildMaskArtifacts({
 	const { width: canvasWidth, height: canvasHeight } = renderer;
 	const maskContentHash = `mask:${mask.type}:${JSON.stringify(mask.params)}:${transformHash(transform)}:${canvasWidth}x${canvasHeight}:direct=${shouldRenderMaskDirectly}`;
 	const drawMask: TextureCanvasDrawFn = (ctx) => {
-		const elementMaskCanvas = createOffscreenCanvas({
-			width: Math.round(transform.width),
-			height: Math.round(transform.height),
-		});
-		const elementMaskCtx = elementMaskCanvas.getContext("2d") as
-			| CanvasRenderingContext2D
-			| OffscreenCanvasRenderingContext2D
-			| null;
-		if (!elementMaskCtx) return;
+		const { canvas: elementMaskCanvas, context: elementMaskCtx } =
+			createCanvasSurface({
+				width: Math.round(transform.width),
+				height: Math.round(transform.height),
+			});
 
 		if (shouldRenderMaskDirectly && definition.renderer.renderMask) {
 			definition.renderer.renderMask({
@@ -465,15 +461,10 @@ function buildMaskArtifacts({
 		const strokeTextureId = `${path}:mask-stroke`;
 		const strokeContentHash = `stroke:${mask.type}:${JSON.stringify(mask.params)}:${transformHash(transform)}:${canvasWidth}x${canvasHeight}`;
 		const drawStroke: TextureCanvasDrawFn = (ctx) => {
-			const strokeCanvas = createOffscreenCanvas({
+			const { canvas: strokeCanvas, context: strokeCtx } = createCanvasSurface({
 				width: Math.round(transform.width),
 				height: Math.round(transform.height),
 			});
-			const strokeCtx = strokeCanvas.getContext("2d") as
-				| CanvasRenderingContext2D
-				| OffscreenCanvasRenderingContext2D
-				| null;
-			if (!strokeCtx) return;
 
 			if (definition.renderer.renderStroke) {
 				definition.renderer.renderStroke({

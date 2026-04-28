@@ -1,5 +1,6 @@
-import { useEffect, useReducer, useRef, type RefObject } from "react";
+import { useEffect, useReducer, useState, type RefObject } from "react";
 import { useEditor } from "@/editor/use-editor";
+import { useCommittedRef } from "@/hooks/use-committed-ref";
 import {
 	DragDropController,
 	type DragDropConfig,
@@ -37,15 +38,8 @@ export function useTimelineDragDrop({
 		insertElement: (args) => editor.timeline.insertElement(args),
 		addClipEffect: (args) => editor.timeline.addClipEffect(args),
 	};
-
-	const configRef = useRef<DragDropConfig>(config);
-	configRef.current = config;
-
-	const controllerRef = useRef<DragDropController | null>(null);
-	if (!controllerRef.current) {
-		controllerRef.current = new DragDropController({ configRef });
-	}
-	const controller = controllerRef.current;
+	const configRef = useCommittedRef(config);
+	const [controller] = useState(() => new DragDropController({ configRef }));
 
 	const [, rerender] = useReducer((n: number) => n + 1, 0);
 	useEffect(() => controller.subscribe(rerender), [controller]);

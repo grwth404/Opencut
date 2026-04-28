@@ -1,5 +1,6 @@
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { useEditor } from "@/editor/use-editor";
+import { useCommittedRef } from "@/hooks/use-committed-ref";
 import { useShiftKey } from "@/hooks/use-shift-key";
 import { useElementSelection } from "@/timeline/hooks/element/use-element-selection";
 import { useTimelineStore } from "@/timeline/timeline-store";
@@ -55,15 +56,8 @@ export function useTimelineResize({
 			}),
 		onSnapPointChange,
 	};
-
-	const configRef = useRef(config);
-	configRef.current = config;
-
-	const controllerRef = useRef<ResizeController | null>(null);
-	if (!controllerRef.current) {
-		controllerRef.current = new ResizeController({ configRef });
-	}
-	const controller = controllerRef.current;
+	const configRef = useCommittedRef(config);
+	const [controller] = useState(() => new ResizeController({ configRef }));
 
 	const [, rerender] = useReducer((n: number) => n + 1, 0);
 	useEffect(() => controller.subscribe(rerender), [controller]);

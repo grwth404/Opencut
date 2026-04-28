@@ -29,6 +29,7 @@ import {
 	useState,
 	type ReactNode,
 } from "react";
+import { useContainerSize } from "@/hooks/use-container-size";
 import type { MediaTime } from "@/wasm";
 import type { ElementDragView, DropTarget } from "@/timeline";
 import { TimelineTrackContent } from "./timeline-track";
@@ -80,6 +81,7 @@ import { useInitialScrollBottom } from "@/timeline/hooks/use-initial-scroll-bott
 import { useTimelineResize } from "@/timeline/hooks/use-timeline-resize";
 import { useTimelineStore } from "@/timeline/timeline-store";
 import { useEditor } from "@/editor/use-editor";
+import { useScrollPosition } from "@/timeline/hooks/use-scroll-position";
 import { useTimelinePlayhead } from "@/timeline/hooks/use-timeline-playhead";
 import { DragLine } from "./drag-line";
 import { invokeAction } from "@/actions";
@@ -148,15 +150,25 @@ export function Timeline() {
 	const [currentSnapPoint, setCurrentSnapPoint] = useState<SnapPoint | null>(
 		null,
 	);
+	const { width: tracksContainerWidth } = useContainerSize({
+		containerRef: tracksContainerRef,
+	});
+	const { height: timelineHeaderHeightValue } = useContainerSize({
+		containerRef: timelineHeaderRef,
+	});
+	const { viewportWidth: tracksViewportWidth } = useScrollPosition({
+		scrollRef: tracksScrollRef,
+	});
 
 	const handleSnapPointChange = useCallback((snapPoint: SnapPoint | null) => {
 		setCurrentSnapPoint(snapPoint);
 	}, []);
 
 	const timelineDuration = timeline.getTotalDuration() || 0;
+	const containerWidth = tracksContainerWidth || FALLBACK_CONTAINER_WIDTH;
 	const minZoomLevel = getTimelineZoomMin({
 		duration: timelineDuration,
-		containerWidth: tracksContainerRef.current?.clientWidth,
+		containerWidth,
 	});
 
 	const savedViewState = editor.project.getTimelineViewState();
@@ -358,8 +370,6 @@ export function Timeline() {
 		},
 	});
 
-	const containerWidth =
-		tracksContainerRef.current?.clientWidth || FALLBACK_CONTAINER_WIDTH;
 	const contentWidth = timelineTimeToPixels({
 		time: timelineDuration,
 		zoomLevel,
@@ -373,11 +383,8 @@ export function Timeline() {
 		contentWidth + paddingPx,
 		containerWidth,
 	);
-	const tracksViewportWidth =
-		tracksScrollRef.current?.clientWidth ??
-		tracksContainerRef.current?.clientWidth ??
-		containerWidth;
-	const hasHorizontalScrollbar = dynamicTimelineWidth > tracksViewportWidth;
+	const hasHorizontalScrollbar =
+		dynamicTimelineWidth > (tracksViewportWidth || containerWidth);
 
 	useEdgeAutoScroll({
 		isActive: bookmarkDragState.isDragging,
@@ -419,8 +426,7 @@ export function Timeline() {
 	});
 
 	const timelineHeaderHeight =
-		(timelineHeaderRef.current?.getBoundingClientRect().height ?? 0) +
-			TIMELINE_CONTENT_TOP_PADDING_PX || 0;
+		timelineHeaderHeightValue + TIMELINE_CONTENT_TOP_PADDING_PX;
 
 	return (
 		<section
@@ -450,10 +456,7 @@ export function Timeline() {
 					ref={tracksContainerRef}
 				>
 					<SelectionBox
-						startPos={selectionBox?.startPos || null}
-						currentPos={selectionBox?.currentPos || null}
-						containerRef={tracksContainerRef}
-						isActive={selectionBox?.isActive || false}
+						bounds={selectionBox?.bounds ?? null}
 					/>
 					<DragLine
 						dropTarget={dropTarget}
@@ -509,8 +512,7 @@ export function Timeline() {
 							className="flex min-h-full flex-col"
 							style={{ width: `${dynamicTimelineWidth}px` }}
 						>
-							{/* biome-ignore lint/a11y/noStaticElementInteractions: canvas seek surface; keyboard seeking is handled by the global keybindings system */}
-							{/* biome-ignore lint/a11y/useKeyWithClickEvents: canvas seek surface; keyboard seeking is handled by the global keybindings system */}
+							{/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- spatial gesture surface (tracks container background); direct-target clicks here originate box-select or clear selection. Keyboard control is global timeline shortcuts. */}
 							<div
 								className="relative shrink-0"
 								style={{
@@ -891,9 +893,10 @@ function TimelineGutter({
 	onMouseDown: (event: React.MouseEvent) => void;
 	onClick: (event: React.MouseEvent) => void;
 }) {
-	// biome-ignore lint/a11y/noStaticElementInteractions: canvas seek surface; keyboard seeking is handled by the global keybindings system
-	// biome-ignore lint/a11y/useKeyWithClickEvents: canvas seek surface; keyboard seeking is handled by the global keybindings system
-	return <div className="flex-1" onMouseDown={onMouseDown} onClick={onClick} />;
+	return (
+		// eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- spatial gesture surface (empty space below tracks); clicks here clear selection. Keyboard control is global timeline shortcuts.
+		<div className="flex-1" onMouseDown={onMouseDown} onClick={onClick} />
+	);
 }
 
 function TrackIcon({ track }: { track: TimelineTrack }) {

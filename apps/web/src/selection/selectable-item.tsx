@@ -6,7 +6,13 @@ import { SELECTABLE_ITEM_ATTRIBUTE } from "@/selection/attributes";
 import type { SelectableItemProps } from "@/selection/types";
 import { cn } from "@/utils/ui";
 
-function setForwardedRef<T>(ref: React.ForwardedRef<T>, value: T | null) {
+function setForwardedRef<T>({
+	ref,
+	value,
+}: {
+	ref: React.ForwardedRef<T>;
+	value: T | null;
+}) {
 	if (typeof ref === "function") {
 		ref(value);
 		return;
@@ -55,7 +61,7 @@ export const SelectableItem = forwardRef<HTMLDivElement, SelectableItemProps>(
 		const handleRef = useCallback(
 			(element: HTMLDivElement | null) => {
 				registerItem(id, element);
-				setForwardedRef(forwardedRef, element);
+				setForwardedRef({ ref: forwardedRef, value: element });
 			},
 			[forwardedRef, id, registerItem],
 		);

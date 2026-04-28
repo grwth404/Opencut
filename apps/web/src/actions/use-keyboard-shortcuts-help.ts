@@ -39,27 +39,21 @@ export function useKeyboardShortcutsHelp() {
 	const { keybindings } = useKeybindingsStore();
 
 	const shortcuts = useMemo(() => {
-		const result: KeyboardShortcut[] = [];
-		const actionToKeys: Partial<Record<TActionWithOptionalArgs, string[]>> = {};
+		const actionToKeys = new Map<TActionWithOptionalArgs, string[]>();
 
-		for (const [key, action] of Object.entries(keybindings) as Array<
-			[string, TActionWithOptionalArgs | undefined]
-		>) {
-			if (action) {
-				if (!actionToKeys[action]) {
-					actionToKeys[action] = [];
-				}
-				actionToKeys[action].push(formatKey({ key }));
+		for (const [key, action] of keybindings) {
+			const existing = actionToKeys.get(action);
+			if (existing) {
+				existing.push(formatKey({ key }));
+			} else {
+				actionToKeys.set(action, [formatKey({ key })]);
 			}
 		}
 
-		for (const [action, keys] of Object.entries(actionToKeys) as Array<
-			[TActionWithOptionalArgs, string[]]
-		>) {
+		const result: KeyboardShortcut[] = [];
+		for (const [action, keys] of actionToKeys) {
 			const actionDef = ACTIONS[action];
-			if (!actionDef) {
-				continue;
-			}
+			if (!actionDef) continue;
 			result.push({
 				id: action,
 				keys,

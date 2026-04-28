@@ -168,7 +168,7 @@ Working on `apps/desktop`? See [`apps/desktop/README.md`](../apps/desktop/README
 2. Make your changes
 3. Run the relevant checks for the area you touched:
 
-   - Web changes: from `apps/web`, run `bun run lint` and `bunx biome format --write .`
+   - Web changes: from `apps/web`, run `bun run lint` and `bun run format`
    - Desktop changes: run `./apps/desktop/script/setup` if your environment isn't set up yet
 
 4. Commit your changes with a descriptive message
@@ -176,8 +176,8 @@ Working on `apps/desktop`? See [`apps/desktop/README.md`](../apps/desktop/README
 
 ## Code Style
 
-- We use Biome for code formatting and linting
-- Run `bunx biome format --write .` from the `apps/web` directory to format code
+- We use ESLint for linting and Prettier for formatting
+- Run `bun run format` from the `apps/web` directory to format code
 - Run `bun run lint` from the `apps/web` directory to check for linting issues
 - Follow the existing code patterns
 

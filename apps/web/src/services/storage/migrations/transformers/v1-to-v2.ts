@@ -19,34 +19,6 @@ const EMPTY_V1_TO_V2_CONTEXT: V1ToV2Context = {
 	mediaTypesById: {},
 };
 
-interface LegacyMediaElement {
-	type: "media";
-	mediaId: string;
-	muted?: boolean;
-	[key: string]: unknown;
-}
-
-interface LegacyTextElement {
-	type: "text";
-	x: number;
-	y: number;
-	rotation: number;
-	opacity: number;
-	[key: string]: unknown;
-}
-
-interface LegacyAudioElement {
-	type: "audio";
-	mediaId: string;
-	[key: string]: unknown;
-}
-
-interface LegacyMediaTrack {
-	type: "media";
-	elements: unknown[];
-	[key: string]: unknown;
-}
-
 interface V2Transform {
 	scale: number;
 	position: { x: number; y: number };
@@ -315,7 +287,7 @@ function transformTracks({
 			const isMain = !isFirstVideoTrackFound;
 			isFirstVideoTrackFound = true;
 			const videoTrack = transformMediaTrack({
-				track: track as LegacyMediaTrack,
+				track,
 				context,
 				isMain,
 			});
@@ -343,7 +315,7 @@ function transformMediaTrack({
 	context,
 	isMain,
 }: {
-	track: LegacyMediaTrack;
+	track: Record<string, unknown>;
 	context: V1ToV2Context;
 	isMain: boolean;
 }): V2VideoTrack {
@@ -354,8 +326,7 @@ function transformMediaTrack({
 			return null;
 		}
 
-		const mediaElement = element as LegacyMediaElement;
-		const mediaId = getStringValue({ value: mediaElement.mediaId });
+		const mediaId = getStringValue({ value: element.mediaId });
 		if (!mediaId) {
 			return null;
 		}
@@ -372,7 +343,7 @@ function transformMediaTrack({
 			rotate: 0,
 		};
 
-		const muted = mediaElement.muted === true;
+		const muted = element.muted === true;
 
 		if (mediaType === "image") {
 			const imageElement: V2ImageElement = {
@@ -442,15 +413,14 @@ function transformTextTrack({
 				return null;
 			}
 
-			const textElement = element as LegacyTextElement;
-			const x = getNumberValue({ value: textElement.x, fallback: 0 });
-			const y = getNumberValue({ value: textElement.y, fallback: 0 });
+			const x = getNumberValue({ value: element.x, fallback: 0 });
+			const y = getNumberValue({ value: element.y, fallback: 0 });
 			const rotation = getNumberValue({
-				value: textElement.rotation,
+				value: element.rotation,
 				fallback: 0,
 			});
 			const opacity = getNumberValue({
-				value: textElement.opacity,
+				value: element.opacity,
 				fallback: 1,
 			});
 
@@ -464,23 +434,23 @@ function transformTextTrack({
 				id: getStringValue({ value: element.id, fallback: "" }),
 				name: getStringValue({ value: element.name, fallback: "" }),
 				type: "text",
-				content: getStringValue({ value: textElement.content, fallback: "" }),
+				content: getStringValue({ value: element.content, fallback: "" }),
 				fontSize: getNumberValue({
-					value: textElement.fontSize,
+					value: element.fontSize,
 					fallback: 16,
 				}),
 				fontFamily: getStringValue({
-					value: textElement.fontFamily,
+					value: element.fontFamily,
 					fallback: "Arial",
 				}),
 				color: getStringValue({
-					value: textElement.color,
+					value: element.color,
 					fallback: "#000000",
 				}),
 				background: {
 					enabled: false,
 					color: getStringValue({
-						value: textElement.backgroundColor,
+						value: element.backgroundColor,
 						fallback: "transparent",
 					}),
 					cornerRadius: 0,
@@ -489,22 +459,26 @@ function transformTextTrack({
 					offsetX: 0,
 					offsetY: 0,
 				},
-				textAlign: (getStringValue({
-					value: textElement.textAlign,
+				textAlign: parseEnum({
+					value: element.textAlign,
+					allowed: ["left", "center", "right"] as const,
 					fallback: "left",
-				}) || "left") as "left" | "center" | "right",
-				fontWeight: (getStringValue({
-					value: textElement.fontWeight,
+				}),
+				fontWeight: parseEnum({
+					value: element.fontWeight,
+					allowed: ["normal", "bold"] as const,
 					fallback: "normal",
-				}) || "normal") as "normal" | "bold",
-				fontStyle: (getStringValue({
-					value: textElement.fontStyle,
+				}),
+				fontStyle: parseEnum({
+					value: element.fontStyle,
+					allowed: ["normal", "italic"] as const,
 					fallback: "normal",
-				}) || "normal") as "normal" | "italic",
-				textDecoration: (getStringValue({
-					value: textElement.textDecoration,
+				}),
+				textDecoration: parseEnum({
+					value: element.textDecoration,
+					allowed: ["none", "underline", "line-through"] as const,
 					fallback: "none",
-				}) || "none") as "none" | "underline" | "line-through",
+				}),
 				hidden: false,
 				transform,
 				opacity,
@@ -538,8 +512,7 @@ function transformAudioTrack({
 				return null;
 			}
 
-			const audioElement = element as LegacyAudioElement;
-			const mediaId = getStringValue({ value: audioElement.mediaId });
+			const mediaId = getStringValue({ value: element.mediaId });
 			if (!mediaId) {
 				return null;
 			}
@@ -759,6 +732,23 @@ function getStringValue({
 		return value;
 	}
 
+	return fallback;
+}
+
+function parseEnum<T extends string>({
+	value,
+	allowed,
+	fallback,
+}: {
+	value: unknown;
+	allowed: readonly T[];
+	fallback: T;
+}): T {
+	for (const candidate of allowed) {
+		if (value === candidate) {
+			return candidate;
+		}
+	}
 	return fallback;
 }
 

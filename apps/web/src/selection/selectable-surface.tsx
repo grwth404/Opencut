@@ -167,14 +167,15 @@ export function SelectableSurface({
 		[],
 	);
 
-	const { selectionBox, handleMouseDown, shouldIgnoreClick } = useBoxSelect({
-		containerRef,
-		resolveIntersections,
-		selectedIds: selectionState.selectedIds,
-		anchorId: selectionState.anchorId,
-		onSelectionChange: handleBoxSelectionChange,
-		shouldStartSelection,
-	});
+	const { selectionBox, handleMouseDown, isSelecting, shouldIgnoreClick } =
+		useBoxSelect({
+			containerRef,
+			resolveIntersections,
+			selectedIds: selectionState.selectedIds,
+			anchorId: selectionState.anchorId,
+			onSelectionChange: handleBoxSelectionChange,
+			shouldStartSelection,
+		});
 
 	const handleBackgroundClick = useCallback(
 		(event: React.MouseEvent<HTMLDivElement>) => {
@@ -236,7 +237,7 @@ export function SelectableSurface({
 		return () => clearTimeout(timer);
 	}, [getItemElement, onRevealComplete, revealId]);
 
-	const isBoxSelecting = selectionBox?.isActive ?? false;
+	const isBoxSelecting = isSelecting;
 
 	const contextValue = useMemo(() => {
 		return {
@@ -276,12 +277,7 @@ export function SelectableSurface({
 				onKeyDown={handleBackgroundKeyDown}
 			>
 				{children}
-				<SelectionBox
-					startPos={selectionBox?.startPos ?? null}
-					currentPos={selectionBox?.currentPos ?? null}
-					containerRef={containerRef}
-					isActive={selectionBox?.isActive ?? false}
-				/>
+				<SelectionBox bounds={selectionBox?.bounds ?? null} />
 			</div>
 		</SelectionContext.Provider>
 	);

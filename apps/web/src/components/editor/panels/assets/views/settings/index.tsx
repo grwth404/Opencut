@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { PanelView } from "@/components/editor/panels/assets/views/base-panel";
 import {
 	Select,
@@ -33,6 +33,10 @@ import { OcSquarePlusIcon } from "@/components/icons";
 import type { TCanvasSize } from "@/project/types";
 
 type SettingsView = "project-info" | "background";
+
+function isSettingsView(value: string): value is SettingsView {
+	return value === "project-info" || value === "background";
+}
 
 const PRESET_LABELS: Record<string, string> = {
 	"1:1": "1:1",
@@ -73,23 +77,20 @@ function useCanvasDimensionDraft({
 	value: number;
 	onCommit: (value: number) => void;
 }) {
-	const pendingValueRef = useRef(value);
-	const syncedValueRef = useRef(value);
-
-	if (syncedValueRef.current !== value) {
-		syncedValueRef.current = value;
-		pendingValueRef.current = value;
-	}
+	const [pendingValue, setPendingValue] = useState(value);
 
 	return usePropertyDraft({
 		displayValue: formatCanvasDimension({ value }),
 		parse: (input) => parseCanvasDimension({ input }),
+		onStartEditing: () => {
+			setPendingValue(value);
+		},
 		onPreview: (nextValue) => {
-			pendingValueRef.current = nextValue;
+			setPendingValue(nextValue);
 		},
 		onCommit: () => {
-			if (pendingValueRef.current !== value) {
-				onCommit(pendingValueRef.current);
+			if (pendingValue !== value) {
+				onCommit(pendingValue);
 			}
 		},
 	});
@@ -212,7 +213,14 @@ export function SettingsView() {
 			contentClassName="px-0"
 			scrollClassName="pt-0"
 			actions={
-				<Tabs value={view} onValueChange={(v) => setView(v as SettingsView)}>
+				<Tabs
+					value={view}
+					onValueChange={(value) => {
+						if (isSettingsView(value)) {
+							setView(value);
+						}
+					}}
+				>
 					<TabsList>
 						<TabsTrigger value="project-info">Project info</TabsTrigger>
 						<TabsTrigger value="background">Background</TabsTrigger>

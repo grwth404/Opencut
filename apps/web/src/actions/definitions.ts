@@ -1,7 +1,4 @@
-import type {
-	KeybindingConfig,
-	ShortcutKey,
-} from "@/actions/keybinding";
+import type { ShortcutKey } from "@/actions/keybinding";
 import type { TActionWithOptionalArgs } from "./types";
 
 export type TActionCategory =
@@ -155,33 +152,36 @@ export const ACTIONS = {
 
 export type TAction = keyof typeof ACTIONS;
 
-const ACTION_DEFAULT_SHORTCUTS = {
-	"toggle-play": ["space", "k"],
-	"seek-forward": ["l"],
-	"seek-backward": ["j"],
-	"frame-step-forward": ["right"],
-	"frame-step-backward": ["left"],
-	"jump-forward": ["shift+right"],
-	"jump-backward": ["shift+left"],
-	"goto-start": ["home", "enter"],
-	"goto-end": ["end"],
-	split: ["s"],
-	"split-left": ["q"],
-	"split-right": ["w"],
-	"delete-selected": ["backspace", "delete"],
-	"copy-selected": ["ctrl+c"],
-	"paste-copied": ["ctrl+v"],
-	"toggle-snapping": ["n"],
-	"select-all": ["ctrl+a"],
-	"cancel-interaction": ["escape"],
-	"duplicate-selected": ["ctrl+d"],
-	undo: ["ctrl+z"],
-	redo: ["ctrl+shift+z", "ctrl+y"],
-} as const satisfies Partial<Record<TActionWithOptionalArgs, readonly ShortcutKey[]>>;
+const ACTION_DEFAULT_SHORTCUTS = [
+	["toggle-play", ["space", "k"]],
+	["seek-forward", ["l"]],
+	["seek-backward", ["j"]],
+	["frame-step-forward", ["right"]],
+	["frame-step-backward", ["left"]],
+	["jump-forward", ["shift+right"]],
+	["jump-backward", ["shift+left"]],
+	["goto-start", ["home", "enter"]],
+	["goto-end", ["end"]],
+	["split", ["s"]],
+	["split-left", ["q"]],
+	["split-right", ["w"]],
+	["delete-selected", ["backspace", "delete"]],
+	["copy-selected", ["ctrl+c"]],
+	["paste-copied", ["ctrl+v"]],
+	["toggle-snapping", ["n"]],
+	["select-all", ["ctrl+a"]],
+	["cancel-interaction", ["escape"]],
+	["duplicate-selected", ["ctrl+d"]],
+	["undo", ["ctrl+z"]],
+	["redo", ["ctrl+shift+z", "ctrl+y"]],
+] as const satisfies ReadonlyArray<
+	readonly [TActionWithOptionalArgs, readonly ShortcutKey[]]
+>;
 
-const ACTION_DEFAULT_SHORTCUTS_BY_ACTION: Partial<
-	Record<TAction, readonly ShortcutKey[]>
-> = ACTION_DEFAULT_SHORTCUTS;
+const ACTION_DEFAULT_SHORTCUTS_BY_ACTION = new Map<
+	TAction,
+	readonly ShortcutKey[]
+>(ACTION_DEFAULT_SHORTCUTS);
 
 export function getActionDefinition({
 	action,
@@ -190,18 +190,19 @@ export function getActionDefinition({
 }): TActionDefinition {
 	return {
 		...ACTIONS[action],
-		defaultShortcuts: ACTION_DEFAULT_SHORTCUTS_BY_ACTION[action],
+		defaultShortcuts: ACTION_DEFAULT_SHORTCUTS_BY_ACTION.get(action),
 	};
 }
 
-export function getDefaultShortcuts(): KeybindingConfig {
-	const shortcuts: KeybindingConfig = {};
+export function getDefaultShortcuts(): Map<
+	ShortcutKey,
+	TActionWithOptionalArgs
+> {
+	const shortcuts = new Map<ShortcutKey, TActionWithOptionalArgs>();
 
-	for (const [action, defaultShortcuts] of Object.entries(
-		ACTION_DEFAULT_SHORTCUTS,
-	) as Array<[TActionWithOptionalArgs, readonly ShortcutKey[]]>) {
+	for (const [action, defaultShortcuts] of ACTION_DEFAULT_SHORTCUTS) {
 		for (const shortcut of defaultShortcuts) {
-			shortcuts[shortcut] = action;
+			shortcuts.set(shortcut, action);
 		}
 	}
 

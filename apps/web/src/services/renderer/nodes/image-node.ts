@@ -17,10 +17,13 @@ export interface CachedImageSource {
 
 const imageSourceCache = new Map<string, Promise<CachedImageSource>>();
 
-export function loadImageSource(
-	url: string,
-	maxSourceSize?: number,
-): Promise<CachedImageSource> {
+export function loadImageSource({
+	url,
+	maxSourceSize,
+}: {
+	url: string;
+	maxSourceSize?: number;
+}): Promise<CachedImageSource> {
 	const cacheKey = `${url}::${maxSourceSize ?? "full"}`;
 
 	const cached = imageSourceCache.get(cacheKey);

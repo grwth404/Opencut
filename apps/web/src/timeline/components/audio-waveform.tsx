@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCommittedRef } from "@/hooks/use-committed-ref";
 import { useResizeObserver } from "@/hooks/use-resize-observer";
 import { TIMELINE_AUDIO_WAVEFORM_COLOR } from "./theme";
 import {
@@ -72,20 +73,18 @@ export function AudioWaveform({
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const summaryRef = useRef<SourceWaveformSummary | null>(null);
-	const gainSamplesRef = useRef<number[] | undefined>(gainSamples);
-	const pixelsPerSecondRef = useRef<number>(pixelsPerSecond);
-	const clipDurationSecRef = useRef<number>(clipDurationSec);
-	const retimeRef = useRef<RetimeConfig | undefined>(retime);
-	const sourceStartSecRef = useRef<number>(sourceStartSec);
+	const waveformConfigRef = useCommittedRef({
+		gainSamples,
+		pixelsPerSecond,
+		clipDurationSec,
+		retime,
+		sourceStartSec,
+		color,
+		burnColor,
+	});
 	const scrollParentRef = useRef<HTMLElement | null>(null);
 	const heightRef = useRef<number>(0);
 	const lastRenderSignatureRef = useRef<string | null>(null);
-
-	gainSamplesRef.current = gainSamples;
-	pixelsPerSecondRef.current = pixelsPerSecond;
-	clipDurationSecRef.current = clipDurationSec;
-	retimeRef.current = retime;
-	sourceStartSecRef.current = sourceStartSec;
 
 	const clearCanvas = useCallback(() => {
 		const canvas = canvasRef.current;
@@ -142,13 +141,19 @@ export function AudioWaveform({
 			return;
 		}
 
+		const {
+			gainSamples: gainSamplesValue,
+			pixelsPerSecond: pixelsPerSecondValue,
+			clipDurationSec: clipDurationSecValue,
+			retime: retimeValue,
+			sourceStartSec: sourceStartSecValue,
+			color: colorValue,
+			burnColor: burnColorValue,
+		} = waveformConfigRef.current;
 		const dpr = window.devicePixelRatio || 1;
 		const canvasW = Math.max(1, Math.ceil(visibleWidth * dpr));
 		const canvasH = Math.max(1, Math.round(height * dpr));
 		const barCount = Math.max(1, Math.floor(visibleWidth / BAR_STEP));
-		const pixelsPerSecondValue = pixelsPerSecondRef.current;
-		const clipDurationSecValue = clipDurationSecRef.current;
-		const samples = gainSamplesRef.current;
 		const renderSignature = JSON.stringify({
 			elementWidth,
 			clipLeft,
@@ -159,16 +164,16 @@ export function AudioWaveform({
 			barCount,
 			dpr,
 			clipDurationSec: clipDurationSecValue,
-			sourceStartSec: sourceStartSecRef.current,
+			sourceStartSec: sourceStartSecValue,
 			pixelsPerSecond: pixelsPerSecondValue,
-			retime: retimeRef.current ?? null,
+			retime: retimeValue ?? null,
 			summarySourceKey: summary.sourceKey,
 			summarySampleRate: summary.sampleRate,
 			summaryTotalSamples: summary.totalSamples,
 			summaryBucketSize: summary.bucketSize,
-			gainSamples: samples ?? null,
-			color,
-			burnColor,
+			gainSamples: gainSamplesValue ?? null,
+			color: colorValue,
+			burnColor: burnColorValue,
 		});
 		if (lastRenderSignatureRef.current === renderSignature) {
 			return;
@@ -190,8 +195,8 @@ export function AudioWaveform({
 			barCount,
 			pixelsPerSecond: pixelsPerSecondValue,
 			clipDurationSec: clipDurationSecValue,
-			sourceStartSec: sourceStartSecRef.current,
-			retime: retimeRef.current,
+			sourceStartSec: sourceStartSecValue,
+			retime: retimeValue,
 			sampleRate: summary.sampleRate,
 			maxSampleExclusive: summary.totalSamples,
 			barStepPx: BAR_STEP,
@@ -218,9 +223,9 @@ export function AudioWaveform({
 				Math.min(clipDurationSecValue, barCenterPx / pixelsPerSecondValue),
 			);
 			const gain =
-				samples != null
+				gainSamplesValue != null
 					? sampleGainAtClipTime({
-							samples,
+							samples: gainSamplesValue,
 							clipTimeSec: clipCenterSec,
 							clipDurationSec: clipDurationSecValue,
 						})
@@ -243,7 +248,7 @@ export function AudioWaveform({
 			const deviceTop = Math.round((height - barH) * backingScaleY);
 			const deviceHeight = Math.max(1, clipBottom - deviceTop);
 
-			ctx.fillStyle = color;
+			ctx.fillStyle = colorValue;
 			ctx.fillRect(
 				deviceLeft,
 				deviceTop,
@@ -253,7 +258,7 @@ export function AudioWaveform({
 
 			if (outputAmplitude > 1) {
 				const burnHeight = Math.max(1, Math.round(BAR_WIDTH * backingScaleY));
-				ctx.fillStyle = burnColor;
+				ctx.fillStyle = burnColorValue;
 				ctx.fillRect(
 					deviceLeft,
 					deviceTop,
@@ -262,7 +267,7 @@ export function AudioWaveform({
 				);
 			}
 		}
-	}, [burnColor, clearCanvas, color]);
+	}, [clearCanvas, waveformConfigRef]);
 
 	useEffect(() => {
 		let isCancelled = false;
@@ -296,7 +301,6 @@ export function AudioWaveform({
 		};
 	}, [audioBuffer, audioUrl, clearCanvas, drawVisible, sourceFile, sourceKey]);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: these props are mirrored into refs during render, but the effect must still re-run to redraw when they change.
 	useLayoutEffect(() => {
 		drawVisible();
 	}, [
@@ -306,6 +310,8 @@ export function AudioWaveform({
 		clipDurationSec,
 		retime,
 		sourceStartSec,
+		color,
+		burnColor,
 	]);
 
 	useEffect(() => {

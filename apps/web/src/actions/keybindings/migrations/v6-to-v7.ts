@@ -1,16 +1,12 @@
-import type { KeybindingConfig } from "@/actions/keybinding";
-
-interface V6State {
-	keybindings: KeybindingConfig;
-	isCustomized: boolean;
-}
+import { getPersistedKeybindingsState } from "../persisted-state";
 
 export function v6ToV7({ state }: { state: unknown }): unknown {
-	const v6 = state as V6State;
+	const v6 = getPersistedKeybindingsState({ state });
+	if (!v6) return state;
 	const keybindings = { ...v6.keybindings };
 
-	for (const key of Object.keys(keybindings) as Array<keyof KeybindingConfig>) {
-		if (keybindings[key] === ("split-element" as never)) {
+	for (const [key, action] of Object.entries(keybindings)) {
+		if (action === "split-element") {
 			keybindings[key] = "split";
 		}
 	}

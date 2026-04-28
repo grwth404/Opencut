@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useEditor } from "@/editor/use-editor";
+import { useCommittedRef } from "@/hooks/use-committed-ref";
 import { useShiftKey } from "@/hooks/use-shift-key";
 import { useEdgeAutoScroll } from "@/timeline/hooks/use-edge-auto-scroll";
 import { timelineTimeToPixels } from "@/timeline";
@@ -54,14 +55,8 @@ export function useTimelinePlayhead({
 				},
 			}),
 	};
-	const configRef = useRef(config);
-	configRef.current = config;
-
-	const ctrlRef = useRef<PlayheadController | null>(null);
-	if (!ctrlRef.current) {
-		ctrlRef.current = new PlayheadController({ configRef });
-	}
-	const ctrl = ctrlRef.current;
+	const configRef = useCommittedRef(config);
+	const [ctrl] = useState(() => new PlayheadController({ configRef }));
 
 	// Scroll → keep playhead position in sync with scroll offset.
 	useEffect(() => {

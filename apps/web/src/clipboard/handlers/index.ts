@@ -45,5 +45,5 @@ export function buildPasteClipboardCommand({
 	const handler = clipboardHandlers[entry.type] as ClipboardHandler<
 		typeof entry.type
 	>;
-	return handler.paste(entry as never, context);
+	return handler.paste({ entry: entry as never, context });
 }

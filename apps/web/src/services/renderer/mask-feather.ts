@@ -6,15 +6,15 @@ export function applyMaskFeather({
 	height,
 	feather,
 }: {
-	maskCanvas: CanvasImageSource;
+	maskCanvas: OffscreenCanvas;
 	width: number;
 	height: number;
 	feather: number;
-}): OffscreenCanvas | HTMLCanvasElement {
+}): OffscreenCanvas {
 	return gpuRenderer.applyMaskFeather({
 		maskCanvas,
 		width,
 		height,
 		feather,
-	}) as OffscreenCanvas | HTMLCanvasElement;
+	});
 }

@@ -51,9 +51,13 @@ export default function TermsPage() {
 								Free for personal and commercial use with no watermarks or
 								restrictions
 							</li>
-							<li>You're responsible for how you use it - don't break the law</li>
 							<li>
-								Service provided "as is" - we can't guarantee perfect uptime
+								You&apos;re responsible for how you use it - don&apos;t break
+								the law
+							</li>
+							<li>
+								Service provided &quot;as is&quot; - we can&apos;t guarantee
+								perfect uptime
 							</li>
 							<li>
 								Open source means you can review our code and self-host if
@@ -109,8 +113,8 @@ export default function TermsPage() {
 					</li>
 				</ul>
 				<p>
-					You're responsible for how you use OpenCut and the content you create.
-					Don't use it for anything illegal in your jurisdiction.
+					You&apos;re responsible for how you use OpenCut and the content you
+					create. Don&apos;t use it for anything illegal in your jurisdiction.
 				</p>
 			</section>
 
@@ -127,8 +131,8 @@ export default function TermsPage() {
 				<h2 className="text-2xl font-semibold">Service</h2>
 				<p>
 					OpenCut does not currently require an account. The service is provided
-					"as is" without warranties. While we strive for reliability, we can't
-					guarantee uninterrupted service.
+					&quot;as is&quot; without warranties. While we strive for
+					reliability, we can&apos;t guarantee uninterrupted service.
 				</p>
 			</section>
 
@@ -146,7 +150,7 @@ export default function TermsPage() {
 					<a
 						href={SOCIAL_LINKS.github}
 						target="_blank"
-						rel="noopener"
+						rel="noopener noreferrer"
 						className="text-primary hover:underline"
 					>
 						GitHub
@@ -161,12 +165,12 @@ export default function TermsPage() {
 					OpenCut is provided free of charge. To the extent permitted by law:
 				</p>
 				<ul className="list-disc space-y-2 pl-6">
-					<li>We're not liable for any loss of data or content</li>
+					<li>We&apos;re not liable for any loss of data or content</li>
 					<li>
 						Projects are stored in your browser and may be lost if you clear
 						browser data
 					</li>
-					<li>We're not responsible for how you use the service</li>
+					<li>We&apos;re not responsible for how you use the service</li>
 					<li>Our liability is limited to the maximum extent allowed by law</li>
 				</ul>
 				<p>
@@ -180,7 +184,7 @@ export default function TermsPage() {
 				<h2 className="text-2xl font-semibold">Service Changes</h2>
 				<p>We may update OpenCut and these terms:</p>
 				<ul className="list-disc space-y-2 pl-6">
-					<li>We'll notify you of significant changes to these terms</li>
+					<li>We&apos;ll notify you of significant changes to these terms</li>
 					<li>Continued use means you accept any updates</li>
 					<li>You can always self-host an older version if you prefer</li>
 					<li>Major changes will be discussed with the community on GitHub</li>
@@ -203,7 +207,7 @@ export default function TermsPage() {
 					<a
 						href={`${SOCIAL_LINKS.github}/issues`}
 						target="_blank"
-						rel="noopener"
+						rel="noopener noreferrer"
 						className="text-primary hover:underline"
 					>
 						GitHub repository
@@ -219,7 +223,7 @@ export default function TermsPage() {
 					<a
 						href={SOCIAL_LINKS.x}
 						target="_blank"
-						rel="noopener"
+						rel="noopener noreferrer"
 						className="text-primary hover:underline"
 					>
 						X (Twitter)

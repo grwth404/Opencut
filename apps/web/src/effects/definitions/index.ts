@@ -8,6 +8,9 @@ export function registerDefaultEffects(): void {
 		if (effectsRegistry.has(definition.type)) {
 			continue;
 		}
-		effectsRegistry.register(definition.type, definition);
+		effectsRegistry.register({
+			key: definition.type,
+			definition,
+		});
 	}
 }

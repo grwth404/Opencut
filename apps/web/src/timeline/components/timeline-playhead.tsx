@@ -1,11 +1,13 @@
 "use client";
 
 import { useRef } from "react";
+import { useContainerSize } from "@/hooks/use-container-size";
 import {
 	getCenteredLineLeft,
 	TIMELINE_INDICATOR_LINE_WIDTH_PX,
 	timelineTimeToSnappedPixels,
 } from "@/timeline";
+import { useScrollPosition } from "@/timeline/hooks/use-scroll-position";
 import { useTimelinePlayhead } from "@/timeline/hooks/use-timeline-playhead";
 import {
 	addMediaTime,
@@ -52,11 +54,14 @@ export function TimelinePlayhead({
 		tracksScrollRef,
 		playheadRef,
 	});
+	const { height: timelineHeight } = useContainerSize({ containerRef: timelineRef });
+	const { height: tracksHeight } = useContainerSize({
+		containerRef: tracksScrollRef,
+	});
+	const { scrollLeft } = useScrollPosition({ scrollRef: tracksScrollRef });
 
 	const timelineContainerHeight =
-		timelineRef.current?.clientHeight ??
-		tracksScrollRef.current?.clientHeight ??
-		400;
+		timelineHeight || tracksHeight || 400;
 	const totalHeight = Math.max(
 		0,
 		timelineContainerHeight -
@@ -68,7 +73,6 @@ export function TimelinePlayhead({
 		time: currentTime,
 		zoomLevel,
 	});
-	const scrollLeft = tracksScrollRef.current?.scrollLeft ?? 0;
 	const leftPosition =
 		getCenteredLineLeft({ centerPixel: centerPosition }) - scrollLeft;
 

@@ -31,6 +31,7 @@ import {
 	ContextMenuSeparator,
 	ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import type { SelectionBoxBounds } from "@/selection/types";
 import type {
 	TimelineElement as TimelineElementType,
 	TimelineTrack,
@@ -51,7 +52,7 @@ import { getTimelinePixelsPerSecond } from "@/timeline";
 import { buildWaveformSourceKey } from "@/media/waveform-summary";
 import { addMediaTime, type MediaTime, TICKS_PER_SECOND } from "@/wasm";
 import {
-	getActionDefinition,
+	getActionDefaultShortcuts,
 	type TAction,
 	type TActionWithOptionalArgs,
 	invokeAction,
@@ -185,7 +186,7 @@ export function getKeyframeIndicators({
 }
 
 export function getDisplayShortcut({ action }: { action: TAction }) {
-	const { defaultShortcuts } = getActionDefinition({ action });
+	const defaultShortcuts = getActionDefaultShortcuts({ action });
 	if (!defaultShortcuts?.length) {
 		return "";
 	}
@@ -206,14 +207,14 @@ interface TimelineElementProps {
 		track: TimelineTrack;
 		side: "left" | "right";
 	}) => void;
-	onElementMouseDown: (
-		event: React.MouseEvent,
-		element: TimelineElementType,
-	) => void;
-	onElementClick: (
-		event: React.MouseEvent,
-		element: TimelineElementType,
-	) => void;
+	onElementMouseDown: (params: {
+		event: React.MouseEvent;
+		element: TimelineElementType;
+	}) => void;
+	onElementClick: (params: {
+		event: React.MouseEvent;
+		element: TimelineElementType;
+	}) => void;
 	dragView: ElementDragView;
 	isDropTarget?: boolean;
 }
@@ -530,14 +531,14 @@ function ElementInner({
 	isExpanded: boolean;
 	baseTrackHeight: number;
 	expandedContent: React.ReactNode;
-	onElementClick: (
-		event: React.MouseEvent,
-		element: TimelineElementType,
-	) => void;
-	onElementMouseDown: (
-		event: React.MouseEvent,
-		element: TimelineElementType,
-	) => void;
+	onElementClick: (params: {
+		event: React.MouseEvent;
+		element: TimelineElementType;
+	}) => void;
+	onElementMouseDown: (params: {
+		event: React.MouseEvent;
+		element: TimelineElementType;
+	}) => void;
 	onResizeStart: (params: {
 		event: React.MouseEvent;
 		element: TimelineElementType;
@@ -578,8 +579,8 @@ function ElementInner({
 						type="button"
 						tabIndex={-1}
 						className="absolute inset-0 size-full flex flex-col"
-						onClick={(event) => onElementClick(event, element)}
-						onMouseDown={(event) => onElementMouseDown(event, element)}
+						onClick={(event) => onElementClick({ event, element })}
+						onMouseDown={(event) => onElementMouseDown({ event, element })}
 					>
 						<div
 							className={cn(
@@ -770,9 +771,7 @@ function ExpandedKeyframeLanes({
 	onLaneMouseDown: (event: React.MouseEvent) => void;
 	onLaneClick: (event: React.MouseEvent) => void;
 	selectionBox: {
-		startPos: { x: number; y: number };
-		currentPos: { x: number; y: number };
-		isActive: boolean;
+		bounds: SelectionBoxBounds;
 	} | null;
 	isBoxSelecting: boolean;
 	onKeyframeClick: (params: {
@@ -808,8 +807,7 @@ function ExpandedKeyframeLanes({
 	);
 
 	return (
-		// biome-ignore lint/a11y/noStaticElementInteractions: expanded keyframe lanes are a pointer-only editing surface
-		// biome-ignore lint/a11y/useKeyWithClickEvents: expanded keyframe lanes are a pointer-only editing surface
+		// eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- spatial gesture surface (keyframe lanes); keyboard control over keyframes is via global timeline shortcuts, not per-element focus.
 		<div
 			ref={containerRef}
 			className="relative flex flex-col"
@@ -893,14 +891,7 @@ function ExpandedKeyframeLanes({
 					</div>
 				);
 			})}
-			{selectionBox && (
-				<SelectionBox
-					startPos={selectionBox.startPos}
-					currentPos={selectionBox.currentPos}
-					containerRef={containerRef}
-					isActive={selectionBox.isActive}
-				/>
-			)}
+			{selectionBox && <SelectionBox bounds={selectionBox.bounds} />}
 		</div>
 	);
 }
@@ -1073,7 +1064,7 @@ function EffectsButton({
 		editor.selection.setSelectedElements({
 			elements: [{ trackId: track.id, elementId: element.id }],
 		});
-		setActiveTab(element.type, "effects");
+		setActiveTab({ elementType: element.type, tabId: "effects" });
 	};
 
 	return (
