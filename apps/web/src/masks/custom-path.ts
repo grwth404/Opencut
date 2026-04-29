@@ -10,54 +10,27 @@ export interface CustomMaskPathPoint {
 	outY: number;
 }
 
-export type CustomMaskHandlePart = "anchor" | "in" | "out";
-
 function isCustomMaskPathPoint(value: unknown): value is CustomMaskPathPoint {
 	if (!value || typeof value !== "object") {
 		return false;
 	}
 
-	const candidate = value as Record<string, unknown>;
 	return (
-		typeof candidate.id === "string" &&
-		typeof candidate.x === "number" &&
-		typeof candidate.y === "number" &&
-		typeof candidate.inX === "number" &&
-		typeof candidate.inY === "number" &&
-		typeof candidate.outX === "number" &&
-		typeof candidate.outY === "number"
+		"id" in value &&
+		typeof value.id === "string" &&
+		"x" in value &&
+		typeof value.x === "number" &&
+		"y" in value &&
+		typeof value.y === "number" &&
+		"inX" in value &&
+		typeof value.inX === "number" &&
+		"inY" in value &&
+		typeof value.inY === "number" &&
+		"outX" in value &&
+		typeof value.outX === "number" &&
+		"outY" in value &&
+		typeof value.outY === "number"
 	);
-}
-
-export function parseCustomMaskHandleId({
-	handleId,
-}: {
-	handleId: string;
-}): { pointId: string; part: CustomMaskHandlePart } | null {
-	const match = /^point:(.+):(anchor|in|out)$/.exec(handleId);
-	if (!match) {
-		return null;
-	}
-
-	return {
-		pointId: match[1],
-		part: match[2] as CustomMaskHandlePart,
-	};
-}
-
-export function parseCustomMaskSegmentHandleId({
-	handleId,
-}: {
-	handleId: string;
-}): { segmentIndex: number } | null {
-	const match = /^segment:(\d+)$/.exec(handleId);
-	if (!match) {
-		return null;
-	}
-
-	return {
-		segmentIndex: Number.parseInt(match[1], 10),
-	};
 }
 
 export function parseCustomMaskPath({

@@ -187,8 +187,43 @@ export type MaskHandleIcon = "rotate" | "feather";
 
 export type MaskHandleKind = "corner" | "edge" | "icon" | "point" | "tangent";
 
+type Side = "left" | "right" | "top" | "bottom";
+type CornerXY = { x: "left" | "right"; y: "top" | "bottom" };
+type CustomTangent = "in" | "out";
+
+export type MaskHandleId =
+	| { kind: "position" }
+	| { kind: "rotation" }
+	| { kind: "feather" }
+	| { kind: "scale" }
+	| { kind: "edge"; side: Side }
+	| { kind: "corner"; corner: CornerXY }
+	| { kind: "anchor"; pointId: string }
+	| { kind: "tangent"; pointId: string; side: CustomTangent }
+	| { kind: "segment"; index: number };
+
+export function maskHandleIdKey({ id }: { id: MaskHandleId }): string {
+	switch (id.kind) {
+		case "position":
+		case "rotation":
+		case "feather":
+		case "scale":
+			return id.kind;
+		case "edge":
+			return id.side;
+		case "corner":
+			return `${id.corner.y}-${id.corner.x}`;
+		case "anchor":
+			return `point:${id.pointId}:anchor`;
+		case "tangent":
+			return `point:${id.pointId}:${id.side}`;
+		case "segment":
+			return `segment:${id.index}`;
+	}
+}
+
 export interface MaskHandlePosition {
-	id: string;
+	id: MaskHandleId;
 	x: number;
 	y: number;
 	cursor: string;
@@ -205,7 +240,7 @@ export interface MaskLineOverlay {
 	start: { x: number; y: number };
 	end: { x: number; y: number };
 	cursor?: string;
-	handleId?: string;
+	handleId?: MaskHandleId;
 }
 
 export interface MaskRectOverlay {
@@ -217,7 +252,7 @@ export interface MaskRectOverlay {
 	rotation: number;
 	dashed?: boolean;
 	cursor?: string;
-	handleId?: string;
+	handleId?: MaskHandleId;
 }
 
 export interface MaskShapeOverlay {
@@ -229,7 +264,7 @@ export interface MaskShapeOverlay {
 	rotation: number;
 	pathData: string;
 	cursor?: string;
-	handleId?: string;
+	handleId?: MaskHandleId;
 }
 
 export interface MaskCanvasPathOverlay {
@@ -238,7 +273,7 @@ export interface MaskCanvasPathOverlay {
 	pathData: string;
 	coordinateSpace?: "canvas" | "overlay";
 	cursor?: string;
-	handleId?: string;
+	handleId?: MaskHandleId;
 	strokeWidth?: number;
 	strokeOpacity?: number;
 }
@@ -256,7 +291,7 @@ export interface MaskDefaultContext {
 export interface MaskParamUpdateArgs<
 	TParams extends BaseMaskParams = BaseMaskParams,
 > {
-	handleId: string;
+	handleId: MaskHandleId;
 	startParams: TParams;
 	deltaX: number;
 	deltaY: number;
@@ -267,7 +302,7 @@ export interface MaskParamUpdateArgs<
 }
 
 export interface MaskSnapArgs<TParams extends BaseMaskParams = BaseMaskParams> {
-	handleId: string;
+	handleId: MaskHandleId;
 	startParams: TParams;
 	proposedParams: TParams;
 	bounds: ElementBounds;

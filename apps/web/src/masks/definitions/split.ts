@@ -128,7 +128,7 @@ function computeSplitMaskParamUpdate({
 	bounds,
 	canvasSize,
 }: MaskParamUpdateArgs<SplitMaskParams>): Partial<SplitMaskParams> {
-	if (handleId === "position") {
+	if (handleId.kind === "position") {
 		const rawX = startParams.centerX + deltaX / bounds.width;
 		const rawY = startParams.centerY + deltaY / bounds.height;
 
@@ -143,7 +143,7 @@ function computeSplitMaskParamUpdate({
 		};
 	}
 
-	if (handleId === "feather") {
+	if (handleId.kind === "feather") {
 		const angleRad = (startParams.rotation * Math.PI) / 180;
 		return computeFeatherUpdate({
 			startFeather: startParams.feather,
@@ -154,7 +154,7 @@ function computeSplitMaskParamUpdate({
 		});
 	}
 
-	if (handleId === "rotation") {
+	if (handleId.kind === "rotation") {
 		const pivotX = bounds.cx + startParams.centerX * bounds.width;
 		const pivotY = bounds.cy + startParams.centerY * bounds.height;
 		const startAngle =

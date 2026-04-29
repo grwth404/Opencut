@@ -4,6 +4,7 @@ import type {
 	MaskParamUpdateArgs,
 	TextMask,
 	TextMaskParams,
+	MaskHandleId,
 } from "@/masks/types";
 import { DEFAULTS } from "@/timeline/defaults";
 import { MIN_FONT_SIZE, MAX_FONT_SIZE } from "@/text/typography";
@@ -124,9 +125,9 @@ function measureTextMask({
 function getScalePreferredEdges({
 	handleId,
 }: {
-	handleId: string;
+	handleId: MaskHandleId;
 }): ScaleEdgePreference | undefined {
-	if (handleId !== "scale") {
+	if (handleId.kind !== "scale") {
 		return undefined;
 	}
 
@@ -145,7 +146,7 @@ function computeTextMaskParamUpdate({
 	startCanvasY,
 	bounds,
 }: MaskParamUpdateArgs<TextMaskParams>): Partial<TextMaskParams> {
-	if (handleId === "position") {
+	if (handleId.kind === "position") {
 		return {
 			centerX: startParams.centerX + deltaX / bounds.width,
 			centerY: startParams.centerY + deltaY / bounds.height,
@@ -155,7 +156,7 @@ function computeTextMaskParamUpdate({
 	const pivotX = bounds.cx + startParams.centerX * bounds.width;
 	const pivotY = bounds.cy + startParams.centerY * bounds.height;
 
-	if (handleId === "rotation") {
+	if (handleId.kind === "rotation") {
 		const startAngle =
 			(Math.atan2(startCanvasY - pivotY, startCanvasX - pivotX) * 180) /
 			Math.PI;
@@ -176,7 +177,7 @@ function computeTextMaskParamUpdate({
 		};
 	}
 
-	if (handleId === "feather") {
+	if (handleId.kind === "feather") {
 		const angleRad = (startParams.rotation * Math.PI) / 180;
 		return computeFeatherUpdate({
 			startFeather: startParams.feather,
@@ -187,7 +188,7 @@ function computeTextMaskParamUpdate({
 		});
 	}
 
-	if (handleId === "scale") {
+	if (handleId.kind === "scale") {
 		const startDistance = Math.hypot(
 			startCanvasX - pivotX,
 			startCanvasY - pivotY,
@@ -269,7 +270,7 @@ export const textMaskDefinition: MaskDefinition<"text"> = {
 				y: proposedParams.centerY * bounds.height,
 			};
 
-			if (handleId === "position") {
+			if (handleId.kind === "position") {
 				const { snappedPosition, activeLines } = snapPosition({
 					proposedPosition: position,
 					canvasSize: bounds,
@@ -297,7 +298,7 @@ export const textMaskDefinition: MaskDefinition<"text"> = {
 				};
 			}
 
-			if (handleId === "rotation") {
+			if (handleId.kind === "rotation") {
 				const { snappedRotation } = snapRotation({
 					proposedRotation: proposedParams.rotation,
 				});
@@ -310,7 +311,7 @@ export const textMaskDefinition: MaskDefinition<"text"> = {
 				};
 			}
 
-			if (handleId === "scale") {
+			if (handleId.kind === "scale") {
 				const { snappedScale, activeLines } = snapScale({
 					proposedScale: proposedParams.scale,
 					position,

@@ -3,6 +3,7 @@
 import { PEN_CURSOR } from "@/preview/components/cursors";
 import { usePreviewViewport } from "@/preview/components/preview-viewport";
 import { useMaskHandles } from "@/masks/use-mask-handles";
+import { maskHandleIdKey, type MaskHandleId } from "@/masks/types";
 import type { SnapLine } from "@/preview/preview-snap";
 import {
 	CornerHandle,
@@ -72,7 +73,7 @@ export function MaskHandles({
 		handleId,
 	}: {
 		event: React.PointerEvent;
-		handleId: string;
+		handleId: MaskHandleId;
 	}) => {
 		if (viewport.handlePanPointerDown({ event })) {
 			return;
@@ -193,11 +194,12 @@ export function MaskHandles({
 			})}
 			{handlePositions.map((handle) => {
 				const screen = toOverlay({ canvasX: handle.x, canvasY: handle.y });
+				const key = maskHandleIdKey({ id: handle.id });
 
 				if (handle.kind === "icon" && handle.icon === "rotate") {
 					return (
 						<IconHandle
-							key={handle.id}
+							key={key}
 							icon={Rotate01Icon}
 							screen={screen}
 							onPointerDown={(event) =>
@@ -212,7 +214,7 @@ export function MaskHandles({
 				if (handle.kind === "icon" && handle.icon === "feather") {
 					return (
 						<IconHandle
-							key={handle.id}
+							key={key}
 							icon={FeatherIcon}
 							screen={screen}
 							onPointerDown={(event) =>
@@ -227,7 +229,7 @@ export function MaskHandles({
 				if (handle.kind === "edge" && handle.edgeAxis === "horizontal") {
 					return (
 						<EdgeHandle
-							key={handle.id}
+							key={key}
 							edge="right"
 							screen={screen}
 							rotation={handle.rotation ?? 0}
@@ -243,7 +245,7 @@ export function MaskHandles({
 				if (handle.kind === "edge" && handle.edgeAxis === "vertical") {
 					return (
 						<EdgeHandle
-							key={handle.id}
+							key={key}
 							edge="bottom"
 							screen={screen}
 							rotation={handle.rotation ?? 0}
@@ -259,7 +261,7 @@ export function MaskHandles({
 				if (handle.kind === "point" || handle.kind === "tangent") {
 					return (
 						<CircleHandle
-							key={handle.id}
+							key={key}
 							screen={screen}
 							size={
 								handle.kind === "tangent"
@@ -279,7 +281,7 @@ export function MaskHandles({
 				if (handle.kind === "corner") {
 					return (
 						<CornerHandle
-							key={handle.id}
+							key={key}
 							screen={screen}
 							onPointerDown={(event) =>
 								handleMaskPointerDown({ event, handleId: handle.id })
@@ -292,7 +294,7 @@ export function MaskHandles({
 
 				return (
 					<CornerHandle
-						key={handle.id}
+						key={key}
 						cursor={handle.cursor}
 						screen={screen}
 						onPointerDown={(event) =>

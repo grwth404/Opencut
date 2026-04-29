@@ -8,6 +8,7 @@ import {
 	type ScaleEdgePreference,
 } from "@/preview/preview-snap";
 import type {
+	MaskHandleId,
 	MaskSnapArgs,
 	MaskSnapResult,
 	RectangleMaskParams,
@@ -18,13 +19,6 @@ import {
 	setMaskLocalCenter,
 	toGlobalMaskSnapLines,
 } from "./geometry";
-
-const CORNER_SIZE_HANDLES = new Set([
-	"top-left",
-	"top-right",
-	"bottom-left",
-	"bottom-right",
-]);
 
 function getClampedRatio({
 	next,
@@ -41,23 +35,31 @@ function getClampedRatio({
 function getPreferredEdges({
 	handleId,
 }: {
-	handleId: string;
+	handleId: MaskHandleId;
 }): ScaleEdgePreference | undefined {
+	if (handleId.kind === "edge") {
+		return {
+			left: handleId.side === "left",
+			right: handleId.side === "right",
+			top: handleId.side === "top",
+			bottom: handleId.side === "bottom",
+		};
+	}
+
+	if (handleId.kind === "corner") {
+		return {
+			left: handleId.corner.x === "left",
+			right: handleId.corner.x === "right",
+			top: handleId.corner.y === "top",
+			bottom: handleId.corner.y === "bottom",
+		};
+	}
+
 	const preferredEdges = {
-		left:
-			handleId === "left" ||
-			handleId === "top-left" ||
-			handleId === "bottom-left",
-		right:
-			handleId === "right" ||
-			handleId === "top-right" ||
-			handleId === "bottom-right",
-		top:
-			handleId === "top" || handleId === "top-left" || handleId === "top-right",
-		bottom:
-			handleId === "bottom" ||
-			handleId === "bottom-left" ||
-			handleId === "bottom-right",
+		left: false,
+		right: false,
+		top: false,
+		bottom: false,
 	} satisfies ScaleEdgePreference;
 
 	return Object.values(preferredEdges).some(Boolean)
@@ -166,7 +168,7 @@ function snapBoxMaskSize({
 	canvasSize,
 	snapThreshold,
 }: {
-	handleId: string;
+	handleId: MaskHandleId;
 	startParams: RectangleMaskParams;
 	proposedParams: RectangleMaskParams;
 	bounds: ElementBounds;
@@ -188,7 +190,10 @@ function snapBoxMaskSize({
 		Math.max(startParams.height, MIN_MASK_DIMENSION) * bounds.height;
 	const preferredEdges = getPreferredEdges({ handleId });
 
-	if (handleId === "right" || handleId === "left") {
+	if (
+		handleId.kind === "edge" &&
+		(handleId.side === "right" || handleId.side === "left")
+	) {
 		const proposedScaleX = getClampedRatio({
 			next: proposedParams.width,
 			base: startParams.width,
@@ -218,7 +223,10 @@ function snapBoxMaskSize({
 		};
 	}
 
-	if (handleId === "top" || handleId === "bottom") {
+	if (
+		handleId.kind === "edge" &&
+		(handleId.side === "top" || handleId.side === "bottom")
+	) {
 		const proposedScaleY = getClampedRatio({
 			next: proposedParams.height,
 			base: startParams.height,
@@ -251,7 +259,7 @@ function snapBoxMaskSize({
 		};
 	}
 
-	if (handleId === "scale") {
+	if (handleId.kind === "scale") {
 		const baseScale = Math.max(startParams.scale, MIN_MASK_DIMENSION);
 		const proposedScale = getClampedRatio({
 			next: proposedParams.scale,
@@ -281,7 +289,7 @@ function snapBoxMaskSize({
 		};
 	}
 
-	if (CORNER_SIZE_HANDLES.has(handleId)) {
+	if (handleId.kind === "corner") {
 		const proposedScale = getClampedRatio({
 			next: proposedParams.width,
 			base: startParams.width,
@@ -322,14 +330,14 @@ export function snapBoxMaskInteraction({
 	canvasSize,
 	snapThreshold,
 }: {
-	handleId: string;
+	handleId: MaskHandleId;
 	startParams: RectangleMaskParams;
 	proposedParams: RectangleMaskParams;
 	bounds: ElementBounds;
 	canvasSize: { width: number; height: number };
 	snapThreshold: { x: number; y: number };
 }): MaskSnapResult<RectangleMaskParams> {
-	if (handleId === "position") {
+	if (handleId.kind === "position") {
 		return snapMaskPosition({
 			proposedParams,
 			bounds,
@@ -338,7 +346,7 @@ export function snapBoxMaskInteraction({
 		});
 	}
 
-	if (handleId === "rotation") {
+	if (handleId.kind === "rotation") {
 		return snapMaskRotation({ proposedParams });
 	}
 
@@ -359,7 +367,7 @@ export function snapSplitMaskInteraction({
 	canvasSize,
 	snapThreshold,
 }: MaskSnapArgs<SplitMaskParams>): MaskSnapResult<SplitMaskParams> {
-	if (handleId === "position") {
+	if (handleId.kind === "position") {
 		return snapMaskPosition({
 			proposedParams,
 			bounds,
@@ -368,7 +376,7 @@ export function snapSplitMaskInteraction({
 		});
 	}
 
-	if (handleId === "rotation") {
+	if (handleId.kind === "rotation") {
 		return snapMaskRotation({ proposedParams });
 	}
 

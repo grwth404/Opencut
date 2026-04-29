@@ -20,7 +20,6 @@ import {
 	getCustomMaskLocalBounds,
 	getCustomMaskSegmentCount,
 	insertPointIntoCustomMaskSegment,
-	parseCustomMaskHandleId,
 	recenterCustomMaskPath,
 	type CustomMaskPathPoint,
 } from "@/masks/custom-path";
@@ -133,12 +132,12 @@ function getCustomMaskDisplayHandles({
 				scale: params.scale,
 				bounds,
 				closed: true,
-			}).map((segment) => ({
+			}).map((segment): MaskOverlay => ({
 				id: `segment:${segment.index}`,
 				type: "canvas-path" as const,
 				pathData: segment.pathData,
 				coordinateSpace: "canvas" as const,
-				handleId: `segment:${segment.index}`,
+				handleId: { kind: "segment", index: segment.index },
 				cursor: PEN_CURSOR,
 				strokeOpacity: 0,
 				strokeWidth: segmentStrokeWidth,
@@ -166,7 +165,7 @@ function getCustomMaskDisplayHandles({
 
 	geometry.anchors.forEach((point) => {
 		handles.push({
-			id: `point:${point.id}:anchor`,
+			id: { kind: "anchor", pointId: point.id },
 			x: point.anchor.x,
 			y: point.anchor.y,
 			cursor: params.closed ? "move" : "pointer",
@@ -201,7 +200,7 @@ function computeCustomMaskParamUpdate({
 	startCanvasY,
 	bounds,
 }: MaskParamUpdateArgs<CustomMaskParams>): Partial<CustomMaskParams> {
-	if (handleId === "position") {
+	if (handleId.kind === "position") {
 		return {
 			centerX: startParams.centerX + deltaX / bounds.width,
 			centerY: startParams.centerY + deltaY / bounds.height,
@@ -211,7 +210,7 @@ function computeCustomMaskParamUpdate({
 	const pivotX = bounds.cx + startParams.centerX * bounds.width;
 	const pivotY = bounds.cy + startParams.centerY * bounds.height;
 
-	if (handleId === "rotation") {
+	if (handleId.kind === "rotation") {
 		const startAngle =
 			(Math.atan2(startCanvasY - pivotY, startCanvasX - pivotX) * 180) /
 			Math.PI;
@@ -232,7 +231,7 @@ function computeCustomMaskParamUpdate({
 		};
 	}
 
-	if (handleId === "feather") {
+	if (handleId.kind === "feather") {
 		const angleRad = (startParams.rotation * Math.PI) / 180;
 		return computeFeatherUpdate({
 			startFeather: startParams.feather,
@@ -243,7 +242,7 @@ function computeCustomMaskParamUpdate({
 		});
 	}
 
-	if (handleId === "scale") {
+	if (handleId.kind === "scale") {
 		const startDistance = Math.hypot(
 			startCanvasX - pivotX,
 			startCanvasY - pivotY,
@@ -258,8 +257,7 @@ function computeCustomMaskParamUpdate({
 		};
 	}
 
-	const parsedHandle = parseCustomMaskHandleId({ handleId });
-	if (!parsedHandle) {
+	if (handleId.kind !== "anchor" && handleId.kind !== "tangent") {
 		return {};
 	}
 
@@ -280,9 +278,9 @@ function computeCustomMaskParamUpdate({
 	return {
 		path: updateCustomMaskPoint({
 			points,
-			pointId: parsedHandle.pointId,
+			pointId: handleId.pointId,
 			updater: (point) => {
-				if (parsedHandle.part === "anchor") {
+				if (handleId.kind === "anchor") {
 					return {
 						...point,
 						x: localPoint.x,
@@ -290,7 +288,7 @@ function computeCustomMaskParamUpdate({
 					};
 				}
 
-				if (parsedHandle.part === "in") {
+				if (handleId.side === "in") {
 					return {
 						...point,
 						inX: localPoint.x - point.x,
@@ -349,7 +347,7 @@ export const customMaskDefinition: MaskDefinition<"custom"> = {
 				y: proposedParams.centerY * bounds.height,
 			};
 
-			if (handleId === "position") {
+			if (handleId.kind === "position") {
 				const { snappedPosition, activeLines } = snapPosition({
 					proposedPosition: position,
 					canvasSize: bounds,
@@ -377,7 +375,7 @@ export const customMaskDefinition: MaskDefinition<"custom"> = {
 				};
 			}
 
-			if (handleId === "rotation") {
+			if (handleId.kind === "rotation") {
 				const { snappedRotation } = snapRotation({
 					proposedRotation: proposedParams.rotation,
 				});
@@ -390,7 +388,7 @@ export const customMaskDefinition: MaskDefinition<"custom"> = {
 				};
 			}
 
-			if (handleId === "scale") {
+			if (handleId.kind === "scale") {
 				const { snappedScale, activeLines } = snapScale({
 					proposedScale: proposedParams.scale,
 					position,

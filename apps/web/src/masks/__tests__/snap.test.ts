@@ -150,10 +150,10 @@ function buildCustomMaskParams(
 function sortSegment(
 	segment: [{ x: number; y: number }, { x: number; y: number }],
 ): [{ x: number; y: number }, { x: number; y: number }] {
-	return [...segment].sort((a, b) => (a.x === b.x ? a.y - b.y : a.x - b.x)) as [
-		{ x: number; y: number },
-		{ x: number; y: number },
-	];
+	const [first, second] = segment;
+	return first.x < second.x || (first.x === second.x && first.y <= second.y)
+		? [first, second]
+		: [second, first];
 }
 
 describe("mask geometry", () => {
@@ -231,7 +231,7 @@ describe("mask geometry", () => {
 describe("mask snapping", () => {
 	test("snaps split mask movement using the shared position pipeline", () => {
 		const result = snapSplitMaskInteraction({
-			handleId: "position",
+			handleId: { kind: "position" },
 			startParams: buildSplitParams({
 				centerX: 0.03,
 				centerY: -0.04,
@@ -255,7 +255,7 @@ describe("mask snapping", () => {
 
 	test("snaps box mask movement against element center and edges", () => {
 		const result = snapBoxMaskInteraction({
-			handleId: "position",
+			handleId: { kind: "position" },
 			startParams: buildRectangleParams(),
 			proposedParams: buildRectangleParams({
 				centerX: 0.29,
@@ -276,7 +276,7 @@ describe("mask snapping", () => {
 
 	test("snaps mask rotation through the shared rotation path", () => {
 		const result = snapBoxMaskInteraction({
-			handleId: "rotation",
+			handleId: { kind: "rotation" },
 			startParams: buildRectangleParams(),
 			proposedParams: buildRectangleParams({
 				rotation: 88,
@@ -292,7 +292,7 @@ describe("mask snapping", () => {
 
 	test("snaps edge resize for box masks", () => {
 		const result = snapBoxMaskInteraction({
-			handleId: "right",
+			handleId: { kind: "edge", side: "right" },
 			startParams: buildRectangleParams(),
 			proposedParams: buildRectangleParams({
 				width: 0.98,
@@ -308,7 +308,7 @@ describe("mask snapping", () => {
 
 	test("snaps corner resize for box masks", () => {
 		const result = snapBoxMaskInteraction({
-			handleId: "bottom-right",
+			handleId: { kind: "corner", corner: { x: "right", y: "bottom" } },
 			startParams: buildRectangleParams(),
 			proposedParams: buildRectangleParams({
 				width: 0.99,
@@ -330,7 +330,7 @@ describe("mask snapping", () => {
 			centerY: -0.04,
 		});
 		const result = textMaskDefinition.interaction.snap?.({
-			handleId: "position",
+			handleId: { kind: "position" },
 			startParams: params,
 			proposedParams: params,
 			bounds,
@@ -352,7 +352,7 @@ describe("mask snapping", () => {
 			centerY: -0.04,
 		});
 		const result = customMaskDefinition.interaction.snap?.({
-			handleId: "position",
+			handleId: { kind: "position" },
 			startParams: params,
 			proposedParams: params,
 			bounds,

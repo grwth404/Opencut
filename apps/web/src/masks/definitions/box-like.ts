@@ -210,20 +210,20 @@ export function computeBoxMaskParamUpdate({
 	deltaY,
 	bounds,
 }: MaskParamUpdateArgs<RectangleMaskParams>): Partial<RectangleMaskParams> {
-	if (handleId === "position") {
+	if (handleId.kind === "position") {
 		return {
 			centerX: startParams.centerX + deltaX / bounds.width,
 			centerY: startParams.centerY + deltaY / bounds.height,
 		};
 	}
 
-	if (handleId === "rotation") {
+	if (handleId.kind === "rotation") {
 		const currentAngle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
 		const newRotation = (startParams.rotation + currentAngle) % 360;
 		return { rotation: newRotation < 0 ? newRotation + 360 : newRotation };
 	}
 
-	if (handleId === "feather") {
+	if (handleId.kind === "feather") {
 		const angleRad = (startParams.rotation * Math.PI) / 180;
 		return computeFeatherUpdate({
 			startFeather: startParams.feather,
@@ -237,8 +237,11 @@ export function computeBoxMaskParamUpdate({
 	const halfWidth = startParams.width * bounds.width;
 	const halfHeight = startParams.height * bounds.height;
 
-	if (handleId === "right" || handleId === "left") {
-		const sign = handleId === "right" ? 1 : -1;
+	if (
+		handleId.kind === "edge" &&
+		(handleId.side === "right" || handleId.side === "left")
+	) {
+		const sign = handleId.side === "right" ? 1 : -1;
 		return {
 			width: Math.max(
 				MIN_MASK_DIMENSION,
@@ -247,8 +250,11 @@ export function computeBoxMaskParamUpdate({
 		};
 	}
 
-	if (handleId === "bottom" || handleId === "top") {
-		const sign = handleId === "bottom" ? 1 : -1;
+	if (
+		handleId.kind === "edge" &&
+		(handleId.side === "bottom" || handleId.side === "top")
+	) {
+		const sign = handleId.side === "bottom" ? 1 : -1;
 		return {
 			height: Math.max(
 				MIN_MASK_DIMENSION,
@@ -257,14 +263,9 @@ export function computeBoxMaskParamUpdate({
 		};
 	}
 
-	if (
-		handleId === "top-left" ||
-		handleId === "top-right" ||
-		handleId === "bottom-left" ||
-		handleId === "bottom-right"
-	) {
-		const signX = handleId.includes("right") ? 1 : -1;
-		const signY = handleId.includes("bottom") ? 1 : -1;
+	if (handleId.kind === "corner") {
+		const signX = handleId.corner.x === "right" ? 1 : -1;
+		const signY = handleId.corner.y === "bottom" ? 1 : -1;
 		const distance = Math.sqrt(
 			(signX * deltaX + halfWidth) ** 2 + (signY * deltaY + halfHeight) ** 2,
 		);
@@ -276,7 +277,7 @@ export function computeBoxMaskParamUpdate({
 		};
 	}
 
-	if (handleId === "scale") {
+	if (handleId.kind === "scale") {
 		const distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
 		const originalDistance = Math.sqrt(halfWidth ** 2 + halfHeight ** 2);
 		const scale = originalDistance > 0 ? 1 + distance / originalDistance : 1;

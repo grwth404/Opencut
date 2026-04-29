@@ -2,6 +2,7 @@ import { FEATHER_HANDLE_SCALE } from "@/masks/feather";
 import type { ElementBounds } from "@/preview/element-bounds";
 import type {
 	MaskFeatures,
+	MaskHandleId,
 	MaskHandlePosition,
 	MaskLineOverlay,
 	MaskOverlay,
@@ -68,14 +69,14 @@ export function getLineMaskOverlay({
 	centerY,
 	rotation,
 	bounds,
-	handleId = "position",
+	handleId = { kind: "position" },
 	cursor = "move",
 }: {
 	centerX: number;
 	centerY: number;
 	rotation: number;
 	bounds: ElementBounds;
-	handleId?: string;
+	handleId?: MaskHandleId;
 	cursor?: string;
 }): MaskLineOverlay {
 	const { start, end } = getLineMaskLinePoints({
@@ -122,7 +123,7 @@ export function getLineMaskHandlePositions({
 
 	return [
 		{
-			id: "rotation",
+			id: { kind: "rotation" },
 			x: cx + normalX * iconOffsetCanvas,
 			y: cy + normalY * iconOffsetCanvas,
 			cursor: CURSOR.rotate,
@@ -130,7 +131,7 @@ export function getLineMaskHandlePositions({
 			icon: "rotate",
 		},
 		{
-			id: "feather",
+			id: { kind: "feather" },
 			x: cx - normalX * featherOffset,
 			y: cy - normalY * featherOffset,
 			cursor: CURSOR.resizeHorizontal,
@@ -201,7 +202,7 @@ export function getBoxMaskHandlePositions({
 		angleRad,
 	});
 	handles.push({
-		id: "rotation",
+		id: { kind: "rotation" },
 		x: rotHandle.x,
 		y: rotHandle.y,
 		cursor: CURSOR.rotate,
@@ -217,7 +218,7 @@ export function getBoxMaskHandlePositions({
 		angleRad,
 	});
 	handles.push({
-		id: "feather",
+		id: { kind: "feather" },
 		x: featherHandle.x,
 		y: featherHandle.y,
 		cursor: CURSOR.resizeVertical,
@@ -226,16 +227,36 @@ export function getBoxMaskHandlePositions({
 	});
 
 	if (sizeMode === "width-height") {
-		const corners = [
-			{ localX: -halfWidth, localY: -halfHeight, id: "top-left" },
-			{ localX: halfWidth, localY: -halfHeight, id: "top-right" },
-			{ localX: halfWidth, localY: halfHeight, id: "bottom-right" },
-			{ localX: -halfWidth, localY: halfHeight, id: "bottom-left" },
+		const corners: {
+			localX: number;
+			localY: number;
+			corner: Extract<MaskHandleId, { kind: "corner" }>["corner"];
+		}[] = [
+			{
+				localX: -halfWidth,
+				localY: -halfHeight,
+				corner: { x: "left", y: "top" },
+			},
+			{
+				localX: halfWidth,
+				localY: -halfHeight,
+				corner: { x: "right", y: "top" },
+			},
+			{
+				localX: halfWidth,
+				localY: halfHeight,
+				corner: { x: "right", y: "bottom" },
+			},
+			{
+				localX: -halfWidth,
+				localY: halfHeight,
+				corner: { x: "left", y: "bottom" },
+			},
 		];
-		for (const { localX, localY, id } of corners) {
+		for (const { localX, localY, corner } of corners) {
 			const point = rotatePoint({ localX, localY, cx, cy, angleRad });
 			handles.push({
-				id,
+				id: { kind: "corner", corner },
 				x: point.x,
 				y: point.y,
 				cursor: CURSOR.resizeDiagonal,
@@ -264,7 +285,7 @@ export function getBoxMaskHandlePositions({
 			angleRad,
 		});
 		handles.push({
-			id: "left",
+			id: { kind: "edge", side: "left" },
 			x: left.x,
 			y: left.y,
 			cursor: CURSOR.resizeHorizontal,
@@ -273,7 +294,7 @@ export function getBoxMaskHandlePositions({
 			rotation,
 		});
 		handles.push({
-			id: "right",
+			id: { kind: "edge", side: "right" },
 			x: right.x,
 			y: right.y,
 			cursor: CURSOR.resizeHorizontal,
@@ -282,7 +303,7 @@ export function getBoxMaskHandlePositions({
 			rotation,
 		});
 		handles.push({
-			id: "bottom",
+			id: { kind: "edge", side: "bottom" },
 			x: bottom.x,
 			y: bottom.y,
 			cursor: CURSOR.resizeVertical,
@@ -306,7 +327,7 @@ export function getBoxMaskHandlePositions({
 			angleRad,
 		});
 		handles.push({
-			id: "top",
+			id: { kind: "edge", side: "top" },
 			x: top.x,
 			y: top.y,
 			cursor: CURSOR.resizeVertical,
@@ -315,7 +336,7 @@ export function getBoxMaskHandlePositions({
 			rotation,
 		});
 		handles.push({
-			id: "bottom",
+			id: { kind: "edge", side: "bottom" },
 			x: bottom.x,
 			y: bottom.y,
 			cursor: CURSOR.resizeVertical,
@@ -339,7 +360,7 @@ export function getBoxMaskHandlePositions({
 			angleRad,
 		});
 		handles.push({
-			id: "left",
+			id: { kind: "edge", side: "left" },
 			x: left.x,
 			y: left.y,
 			cursor: CURSOR.resizeHorizontal,
@@ -348,7 +369,7 @@ export function getBoxMaskHandlePositions({
 			rotation,
 		});
 		handles.push({
-			id: "right",
+			id: { kind: "edge", side: "right" },
 			x: right.x,
 			y: right.y,
 			cursor: CURSOR.resizeHorizontal,
@@ -365,7 +386,7 @@ export function getBoxMaskHandlePositions({
 			angleRad,
 		});
 		handles.push({
-			id: "scale",
+			id: { kind: "scale" },
 			x: point.x,
 			y: point.y,
 			cursor: CURSOR.resizeDiagonal,
@@ -383,7 +404,7 @@ export function getBoxMaskRectOverlay({
 	height,
 	rotation,
 	bounds,
-	handleId = "position",
+	handleId = { kind: "position" },
 	cursor = "move",
 	dashed = false,
 }: {
@@ -393,7 +414,7 @@ export function getBoxMaskRectOverlay({
 	height: number;
 	rotation: number;
 	bounds: ElementBounds;
-	handleId?: string;
+	handleId?: MaskHandleId;
 	cursor?: string;
 	dashed?: boolean;
 }): MaskRectOverlay {
@@ -421,7 +442,7 @@ export function getBoxMaskShapeOverlay({
 	rotation,
 	bounds,
 	pathData,
-	handleId = "position",
+	handleId = { kind: "position" },
 	cursor = "move",
 }: {
 	centerX: number;
@@ -431,7 +452,7 @@ export function getBoxMaskShapeOverlay({
 	rotation: number;
 	bounds: ElementBounds;
 	pathData: string;
-	handleId?: string;
+	handleId?: MaskHandleId;
 	cursor?: string;
 }): MaskShapeOverlay {
 	return {
