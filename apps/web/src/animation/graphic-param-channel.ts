@@ -49,7 +49,7 @@ export function resolveGraphicParamsAtTime({
 
 	for (const param of definitions) {
 		const path = buildGraphicParamPath({ paramKey: param.key });
-		if (!animations?.bindings[path]) {
+		if (!animations?.[path]) {
 			continue;
 		}
 

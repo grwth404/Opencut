@@ -7,8 +7,8 @@ import { resolveAnimationTarget } from "@/timeline/animation-targets";
 import type {
 	AnimationPath,
 	AnimationInterpolation,
-	AnimationValue,
 } from "@/animation/types";
+import type { ParamValue } from "@/params";
 import {
 	type MediaTime,
 	maxMediaTime,
@@ -22,7 +22,7 @@ export class UpsertKeyframeCommand extends Command {
 	private readonly elementId: string;
 	private readonly propertyPath: AnimationPath;
 	private readonly time: MediaTime;
-	private readonly value: AnimationValue;
+	private readonly value: ParamValue;
 	private readonly interpolation: AnimationInterpolation | undefined;
 	private readonly keyframeId: string | undefined;
 
@@ -39,7 +39,7 @@ export class UpsertKeyframeCommand extends Command {
 		elementId: string;
 		propertyPath: AnimationPath;
 		time: MediaTime;
-		value: AnimationValue;
+		value: ParamValue;
 		interpolation?: AnimationInterpolation;
 		keyframeId?: string;
 	}) {
@@ -83,8 +83,7 @@ export class UpsertKeyframeCommand extends Command {
 						value: this.value,
 						interpolation: this.interpolation,
 						keyframeId: this.keyframeId,
-						kind: target.kind,
-						defaultInterpolation: target.defaultInterpolation,
+						channelLayout: target.channelLayout,
 						coerceValue: target.coerceValue,
 					}),
 				};

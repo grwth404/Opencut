@@ -52,7 +52,7 @@ import { getTimelinePixelsPerSecond } from "@/timeline";
 import { buildWaveformSourceKey } from "@/media/waveform-summary";
 import { addMediaTime, type MediaTime, TICKS_PER_SECOND } from "@/wasm";
 import {
-	getActionDefaultShortcuts,
+	getActionDefinition,
 	type TAction,
 	type TActionWithOptionalArgs,
 	invokeAction,
@@ -186,7 +186,7 @@ export function getKeyframeIndicators({
 }
 
 export function getDisplayShortcut({ action }: { action: TAction }) {
-	const defaultShortcuts = getActionDefaultShortcuts({ action });
+	const defaultShortcuts = getActionDefinition({ action }).defaultShortcuts;
 	if (!defaultShortcuts?.length) {
 		return "";
 	}

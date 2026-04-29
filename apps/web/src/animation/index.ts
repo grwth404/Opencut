@@ -65,11 +65,6 @@ export {
 } from "./property-groups";
 
 export {
-	type EasingMode,
-	getEasingModeForKind,
-} from "./binding-values";
-
-export {
 	isAnimationPath,
 	isAnimationPropertyPath,
 } from "./path";

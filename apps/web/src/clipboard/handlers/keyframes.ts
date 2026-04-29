@@ -1,4 +1,6 @@
 import { getKeyframeById } from "@/animation";
+import { getChannelEntriesFromData } from "@/animation/channel-data";
+import { isScalarChannel } from "@/animation/interpolation";
 import type { SelectedKeyframeRef } from "@/animation/types";
 import type { TimelineElement } from "@/timeline";
 import { PasteKeyframesCommand } from "@/commands/timeline";
@@ -41,14 +43,13 @@ function getCurvePatches({
 	propertyPath: KeyframeClipboardItem["propertyPath"];
 	keyframeId: string;
 }): KeyframeClipboardCurvePatch[] {
-	const binding = element.animations?.bindings[propertyPath];
-	if (!binding) {
+	const data = element.animations?.[propertyPath];
+	if (!data) {
 		return [];
 	}
 
-	return binding.components.flatMap((component) => {
-		const channel = element.animations?.channels[component.channelId];
-		if (channel?.kind !== "scalar") {
+	return getChannelEntriesFromData({ data }).flatMap(([componentKey, channel]) => {
+		if (!channel || !isScalarChannel(channel)) {
 			return [];
 		}
 
@@ -61,7 +62,7 @@ function getCurvePatches({
 
 		return [
 			{
-				componentKey: component.key,
+				componentKey,
 				patch: {
 					leftHandle: keyframe.leftHandle ?? null,
 					rightHandle: keyframe.rightHandle ?? null,

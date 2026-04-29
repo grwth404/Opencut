@@ -1,8 +1,6 @@
 import type {
-	AnimationBindingKind,
 	AnimationInterpolation,
 	AnimationPath,
-	AnimationValue,
 	NumericSpec,
 } from "@/animation/types";
 import {
@@ -16,9 +14,11 @@ import { getGraphicDefinition } from "@/graphics";
 import {
 	coerceParamValue,
 	getParamDefaultInterpolation,
+	getParamChannelLayout,
 	getParamNumericRange,
-	getParamValueKind,
+	type ParamChannelLayout,
 	type ParamDefinition,
+	type ParamValue,
 	type ParamValues,
 } from "@/params";
 import {
@@ -28,17 +28,16 @@ import type { TimelineElement } from "@/timeline";
 import { isVisualElement } from "@/timeline/element-utils";
 
 export interface AnimationPathDescriptor {
-	kind: AnimationBindingKind;
+	channelLayout: ParamChannelLayout;
 	defaultInterpolation: AnimationInterpolation;
 	numericRanges?: Partial<Record<string, NumericSpec>>;
-	coerceValue: ({ value }: { value: AnimationValue }) => AnimationValue | null;
-	getBaseValue: () => AnimationValue | null;
-	setBaseValue: ({ value }: { value: AnimationValue }) => TimelineElement;
+	coerceValue: ({ value }: { value: ParamValue }) => ParamValue | null;
+	getBaseValue: () => ParamValue | null;
+	setBaseValue: ({ value }: { value: ParamValue }) => TimelineElement;
 }
 
-// Number/discrete bindings expose a single component named "value"
-// (see binding-values.ts). Multi-component kinds (vector2, color) don't carry
-// numeric ranges yet — revisit when one does.
+// Leaf params expose a single component named "value". Composite params don't
+// carry numeric ranges yet — revisit when one does.
 function paramNumericRanges({
 	param,
 }: {
@@ -62,7 +61,7 @@ function buildParamDescriptor({
 	}
 
 	return {
-		kind: getParamValueKind({ param }),
+		channelLayout: getParamChannelLayout({ param }),
 		defaultInterpolation: getParamDefaultInterpolation({ param }),
 		numericRanges: paramNumericRanges({ param }),
 		coerceValue: ({ value }) => coerceParamValue({ param, value }),

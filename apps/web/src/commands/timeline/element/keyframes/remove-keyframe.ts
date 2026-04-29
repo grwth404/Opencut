@@ -5,7 +5,8 @@ import {
 } from "@/animation";
 import { Command, type CommandResult } from "@/commands/base-command";
 import { updateElementInSceneTracks } from "@/timeline";
-import type { AnimationPath, AnimationValue } from "@/animation/types";
+import type { AnimationPath } from "@/animation/types";
+import type { ParamValue } from "@/params";
 import type { SceneTracks, TimelineElement } from "@/timeline";
 import { resolveAnimationTarget } from "@/timeline/animation-targets";
 
@@ -18,7 +19,7 @@ function removeKeyframeAndPersist({
 	element: TimelineElement;
 	propertyPath: AnimationPath;
 	keyframeId: string;
-	valueAtPlayhead: AnimationValue | null;
+	valueAtPlayhead: ParamValue | null;
 }): TimelineElement {
 	const target = resolveAnimationTarget({ element, path: propertyPath });
 	if (!target) {
@@ -52,7 +53,7 @@ export class RemoveKeyframeCommand extends Command {
 	private readonly elementId: string;
 	private readonly propertyPath: AnimationPath;
 	private readonly keyframeId: string;
-	private readonly valueAtPlayhead: AnimationValue | null;
+	private readonly valueAtPlayhead: ParamValue | null;
 
 	constructor({
 		trackId,
@@ -65,7 +66,7 @@ export class RemoveKeyframeCommand extends Command {
 		elementId: string;
 		propertyPath: AnimationPath;
 		keyframeId: string;
-		valueAtPlayhead: AnimationValue | null;
+		valueAtPlayhead: ParamValue | null;
 	}) {
 		super();
 		this.trackId = trackId;

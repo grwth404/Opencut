@@ -90,8 +90,7 @@ export class UpsertEffectParamKeyframeCommand extends Command {
 					value: this.value,
 					interpolation: this.interpolation,
 					keyframeId: this.keyframeId,
-					kind: target.kind,
-					defaultInterpolation: target.defaultInterpolation,
+					channelLayout: target.channelLayout,
 					coerceValue: target.coerceValue,
 				});
 				return { ...element, animations };

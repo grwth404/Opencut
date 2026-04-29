@@ -1,75 +1,75 @@
 import type {
-	AnimationBindingInstance,
 	AnimationChannel,
 	AnimationPath,
+	ChannelData,
 	ElementAnimations,
 	ElementKeyframe,
 } from "@/animation/types";
+import { formatLinearRgba } from "@/params";
 import {
-	type AnimationComponentValue,
-	composeAnimationValue,
-} from "./binding-values";
+	getChannelEntriesFromData,
+	isAnimationStorageKey,
+} from "./channel-data";
 import {
 	getChannelValueAtTime,
 	getScalarSegmentInterpolation,
+	isScalarChannel,
 } from "./interpolation";
 import { isAnimationPath } from "./path";
 
-function getBindingFallbackValue({
+function getChannelFallbackValue({
 	channel,
 }: {
-	channel: ElementAnimations["channels"][string];
+	channel: AnimationChannel;
 }) {
-	if (!channel || channel.keys.length === 0) {
-		return channel?.kind === "discrete" ? false : 0;
+	if (channel.keys.length === 0) {
+		return isScalarChannel(channel) ? 0 : false;
 	}
 
 	return channel.keys[0].value;
 }
 
-interface BindingKeyframeMatch {
+interface ChannelKeyframeMatch {
+	componentKey: string;
 	componentIndex: number;
 	channel: AnimationChannel;
 	keyframe: AnimationChannel["keys"][number];
 }
 
-function getBindingKeyframeMatches({
-	animations,
-	binding,
+function getChannelKeyframeMatches({
+	data,
 }: {
-	animations: ElementAnimations;
-	binding: AnimationBindingInstance;
-}): BindingKeyframeMatch[] {
-	return binding.components.flatMap((component, componentIndex) => {
-		const channel = animations.channels[component.channelId];
-		if (!channel || channel.keys.length === 0) {
-			return [];
-		}
+	data: ChannelData | undefined;
+}): ChannelKeyframeMatch[] {
+	return getChannelEntriesFromData({ data }).flatMap(
+		([componentKey, channel], componentIndex) => {
+			if (channel.keys.length === 0) {
+				return [];
+			}
 
-		return channel.keys.map((keyframe) => ({
-			componentIndex,
-			channel,
-			keyframe,
-		}));
-	});
+			return channel.keys.map((keyframe) => ({
+				componentKey,
+				componentIndex,
+				channel,
+				keyframe,
+			}));
+		},
+	);
 }
 
-function getUniqueBindingKeyframeMatches({
-	animations,
-	binding,
+function getUniqueChannelKeyframeMatches({
+	data,
 }: {
-	animations: ElementAnimations;
-	binding: AnimationBindingInstance;
-}): BindingKeyframeMatch[] {
-	const sortedMatches = getBindingKeyframeMatches({
-		animations,
-		binding,
+	data: ChannelData | undefined;
+}): ChannelKeyframeMatch[] {
+	const sortedMatches = getChannelKeyframeMatches({
+		data,
 	}).sort(
 		(leftMatch, rightMatch) =>
 			leftMatch.keyframe.time - rightMatch.keyframe.time ||
 			leftMatch.componentIndex - rightMatch.componentIndex,
 	);
-	const uniqueMatches: BindingKeyframeMatch[] = [];
+	const uniqueMatches: ChannelKeyframeMatch[] = [];
 
 	for (const match of sortedMatches) {
 		const previousMatch = uniqueMatches[uniqueMatches.length - 1];
@@ -92,11 +92,11 @@ function getUniqueBindingKeyframeMatches({
 	return uniqueMatches;
 }
 
-function getPreferredBindingKeyframeMatch({
+function getPreferredChannelKeyframeMatch({
 	matches,
 }: {
-	matches: BindingKeyframeMatch[];
-}): BindingKeyframeMatch | null {
+	matches: ChannelKeyframeMatch[];
+}): ChannelKeyframeMatch | null {
 	return (
 		matches.find((match) => match.componentIndex === 0) ??
 		matches[0] ??
@@ -104,33 +104,65 @@ function getPreferredBindingKeyframeMatch({
 	);
 }
 
-function getComposedBindingValueAtTime({
-	animations,
-	binding,
+function getChannelValue({
+	channel,
 	time,
 }: {
-	animations: ElementAnimations;
-	binding: AnimationBindingInstance;
+	channel: AnimationChannel;
 	time: number;
 }) {
-	const componentValues = Object.fromEntries(
-		binding.components.map((component) => {
-			const channel = animations.channels[component.channelId];
-			return [
-				component.key,
-				getChannelValueAtTime({
-					channel,
-					time,
-					fallbackValue: getBindingFallbackValue({ channel }),
-				}),
-			];
-		}),
-	) as Record<string, AnimationComponentValue | undefined>;
-
-	return composeAnimationValue({
-		binding,
-		componentValues,
+	const fallbackValue = getChannelFallbackValue({ channel });
+	if (typeof fallbackValue === "number") {
+		return getChannelValueAtTime({
+			channel: isScalarChannel(channel) ? channel : undefined,
+			time,
+			fallbackValue,
+		});
+	}
+	return getChannelValueAtTime({
+		channel: !isScalarChannel(channel) ? channel : undefined,
+		time,
+		fallbackValue,
 	});
+}
+
+function getComposedChannelDataValueAtTime({
+	data,
+	time,
+}: {
+	data: ChannelData | undefined;
+	time: number;
+}) {
+	const entries = getChannelEntriesFromData({ data });
+	if (entries.length === 0) {
+		return null;
+	}
+	if (entries.length === 1 && entries[0]?.[0] === "value") {
+		return getChannelValue({ channel: entries[0][1], time });
+	}
+
+	const componentValues = Object.fromEntries(
+		entries.map(([componentKey, channel]) => [
+			componentKey,
+			getChannelValue({ channel, time }),
+		]),
+	);
+	if (
+		typeof componentValues.r === "number" &&
+		typeof componentValues.g === "number" &&
+		typeof componentValues.b === "number" &&
+		typeof componentValues.a === "number"
+	) {
+		return formatLinearRgba({
+			color: {
+				r: componentValues.r,
+				g: componentValues.g,
+				b: componentValues.b,
+				a: componentValues.a,
+			},
+		});
+	}
+	return null;
 }
 
 function getKeyframeInterpolation({
@@ -140,25 +172,22 @@ function getKeyframeInterpolation({
 	channel: AnimationChannel;
 	keyframe: AnimationChannel["keys"][number];
 }) {
-	return channel.kind === "scalar" && "segmentToNext" in keyframe
+	return isScalarChannel(channel) && "segmentToNext" in keyframe
 		? getScalarSegmentInterpolation({ segment: keyframe.segmentToNext })
 		: "hold";
 }
 
 function toElementKeyframe({
-	animations,
-	binding,
+	data,
 	propertyPath,
 	keyframeMatch,
 }: {
-	animations: ElementAnimations;
-	binding: AnimationBindingInstance;
+	data: ChannelData | undefined;
 	propertyPath: AnimationPath;
-	keyframeMatch: BindingKeyframeMatch;
+	keyframeMatch: ChannelKeyframeMatch;
 }): ElementKeyframe | null {
-	const value = getComposedBindingValueAtTime({
-		animations,
-		binding,
+	const value = getComposedChannelDataValueAtTime({
+		data,
 		time: keyframeMatch.keyframe.time,
 	});
 	if (value === null) {
@@ -186,19 +215,19 @@ export function getElementKeyframes({
 		return [];
 	}
 
-	return Object.entries(animations.bindings).flatMap(
-		([propertyPath, binding]) => {
-			if (!binding || !isAnimationPath(propertyPath)) {
+	return Object.entries(animations).filter(([key]) =>
+		isAnimationStorageKey({ key }),
+	).flatMap(
+		([propertyPath, data]) => {
+			if (!data || !isAnimationPath(propertyPath)) {
 				return [];
 			}
 
-			return getUniqueBindingKeyframeMatches({
-				animations,
-				binding,
+			return getUniqueChannelKeyframeMatches({
+				data,
 			}).flatMap((keyframeMatch) => {
 				const keyframe = toElementKeyframe({
-					animations,
-					binding,
+					data,
 					propertyPath,
 					keyframeMatch,
 				});
@@ -219,13 +248,8 @@ export function hasKeyframesForPath({
 	animations: ElementAnimations | undefined;
 	propertyPath: AnimationPath;
 }): boolean {
-	const binding = animations?.bindings[propertyPath];
-	if (!binding) {
-		return false;
-	}
-
-	return binding.components.some((component) =>
-		Boolean(animations?.channels[component.channelId]?.keys.length),
+	return getChannelEntriesFromData({ data: animations?.[propertyPath] }).some(
+		([, channel]) => channel.keys.length > 0,
 	);
 }
 
@@ -238,24 +262,22 @@ export function getKeyframeAtTime({
 	propertyPath: AnimationPath;
 	time: number;
 }): ElementKeyframe | null {
-	const binding = animations?.bindings[propertyPath];
-	if (!binding) {
+	const data = animations?.[propertyPath];
+	if (!data) {
 		return null;
 	}
 
-	const keyframeMatch = getPreferredBindingKeyframeMatch({
-		matches: getBindingKeyframeMatches({
-			animations,
-			binding,
-		}).filter(({ keyframe }) => keyframe.time === time),
+	const keyframeMatch = getPreferredChannelKeyframeMatch({
+		matches: getChannelKeyframeMatches({ data }).filter(
+			({ keyframe }) => keyframe.time === time,
+		),
 	});
 	if (!keyframeMatch) {
 		return null;
 	}
 
 	return toElementKeyframe({
-		animations,
-		binding,
+		data,
 		propertyPath,
 		keyframeMatch,
 	});
@@ -270,24 +292,22 @@ export function getKeyframeById({
 	propertyPath: AnimationPath;
 	keyframeId: string;
 }): ElementKeyframe | null {
-	const binding = animations?.bindings[propertyPath];
-	if (!binding) {
+	const data = animations?.[propertyPath];
+	if (!data) {
 		return null;
 	}
 
-	const keyframeMatch = getPreferredBindingKeyframeMatch({
-		matches: getBindingKeyframeMatches({
-			animations,
-			binding,
-		}).filter(({ keyframe }) => keyframe.id === keyframeId),
+	const keyframeMatch = getPreferredChannelKeyframeMatch({
+		matches: getChannelKeyframeMatches({ data }).filter(
+			({ keyframe }) => keyframe.id === keyframeId,
+		),
 	});
 	if (!keyframeMatch) {
 		return null;
 	}
 
 	return toElementKeyframe({
-		animations,
-		binding,
+		data,
 		propertyPath,
 		keyframeMatch,
 	});

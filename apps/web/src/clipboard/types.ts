@@ -2,10 +2,10 @@ import type { EditorCore } from "@/core";
 import type {
 	AnimationInterpolation,
 	AnimationPath,
-	AnimationValue,
 	ScalarCurveKeyframePatch,
 	SelectedKeyframeRef,
 } from "@/animation/types";
+import type { ParamValue } from "@/params";
 import type { Command } from "@/commands/base-command";
 import type {
 	CreateTimelineElement,
@@ -28,7 +28,7 @@ export interface KeyframeClipboardCurvePatch {
 export interface KeyframeClipboardItem {
 	propertyPath: AnimationPath;
 	timeOffset: MediaTime;
-	value: AnimationValue;
+	value: ParamValue;
 	interpolation: AnimationInterpolation;
 	curvePatches: KeyframeClipboardCurvePatch[];
 }

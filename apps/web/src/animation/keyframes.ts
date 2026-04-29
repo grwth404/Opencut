@@ -1,10 +1,8 @@
 import type {
-	AnimationBindingInstance,
-	AnimationBindingKind,
 	AnimationChannel,
+	ChannelData,
 	AnimationInterpolation,
 	AnimationPath,
-	AnimationValue,
 	DiscreteAnimationChannel,
 	DiscreteAnimationKey,
 	ElementAnimations,
@@ -13,11 +11,17 @@ import type {
 	ScalarCurveKeyframePatch,
 	ScalarSegmentType,
 } from "@/animation/types";
+import type {
+	ChannelComponentDefinition,
+	ParamChannelLayout,
+	ParamValue,
+} from "@/params";
 import {
-	cloneAnimationBinding,
-	createAnimationBinding,
-	decomposeAnimationValue,
-} from "./binding-values";
+	getChannelsFromData,
+	isCompositeChannelData,
+	isAnimationStorageKey,
+	isLeafChannelData,
+} from "./channel-data";
 import {
 	getDefaultLeftHandle,
 	getDefaultRightHandle,
@@ -26,7 +30,10 @@ import {
 import {
 	getChannelValueAtTime,
 	getScalarSegmentInterpolation,
+	isScalarChannel,
 	normalizeChannel,
+	normalizeDiscreteChannel,
+	normalizeScalarChannel,
 } from "./interpolation";
 import {
 	type MediaTime,
@@ -54,27 +61,27 @@ function hasChannelKeys({
 	return Boolean(channel && channel.keys.length > 0);
 }
 
+function hasChannelData({ data }: { data: ChannelData | undefined }): boolean {
+	return getChannelsFromData({ data }).some((channel) =>
+		hasChannelKeys({ channel }),
+	);
+}
+
 function toAnimation({
 	animations,
 }: {
 	animations: ElementAnimations;
 }): ElementAnimations | undefined {
-	const nextBindings = Object.fromEntries(
-		Object.entries(animations.bindings).filter(([, binding]) => binding),
-	);
-	const nextChannels = Object.fromEntries(
-		Object.entries(animations.channels).filter(([, channel]) =>
-			hasChannelKeys({ channel }),
+	const nextAnimations = Object.fromEntries(
+		Object.entries(animations).filter(
+			([key, data]) => isAnimationStorageKey({ key }) && hasChannelData({ data }),
 		),
 	);
-	if (Object.keys(nextBindings).length === 0 || Object.keys(nextChannels).length === 0) {
+	if (Object.keys(nextAnimations).length === 0) {
 		return undefined;
 	}
 
-	return {
-		bindings: nextBindings,
-		channels: nextChannels,
-	};
+	return nextAnimations;
 }
 
 function cloneAnimationsState({
@@ -82,34 +89,88 @@ function cloneAnimationsState({
 }: {
 	animations: ElementAnimations | undefined;
 }): ElementAnimations {
-	return {
-		bindings: { ...(animations?.bindings ?? {}) },
-		channels: { ...(animations?.channels ?? {}) },
-	};
+	return { ...(animations ?? {}) };
 }
 
-function getBindingChannelKind({
-	kind,
+function getChannelFromData({
+	data,
+	componentKey,
 }: {
-	kind: AnimationBindingKind;
-}): AnimationChannel["kind"] {
-	return kind === "discrete" ? "discrete" : "scalar";
+	data: ChannelData | undefined;
+	componentKey: string;
+}): AnimationChannel | undefined {
+	if (isLeafChannelData(data)) {
+		return componentKey === "value" ? data : undefined;
+	}
+	if (isCompositeChannelData(data)) {
+		return data[componentKey];
+	}
+	return undefined;
 }
 
-function getPrimaryComponent({
-	binding,
+type LayoutComponent = ChannelComponentDefinition<string>;
+
+function getLayoutComponents({
+	channelLayout,
 }: {
-	binding: AnimationBindingInstance;
-}) {
-	return binding.components[0] ?? null;
+	channelLayout: ParamChannelLayout;
+}): LayoutComponent[] {
+	return channelLayout.kind === "leaf"
+		? [channelLayout.component]
+		: channelLayout.components;
 }
 
-function getPrimaryChannelId({
-	binding,
+function getPrimaryComponentKey({
+	channelLayout,
 }: {
-	binding: AnimationBindingInstance;
-}) {
-	return getPrimaryComponent({ binding })?.channelId ?? null;
+	channelLayout: ParamChannelLayout;
+}): string {
+	return getLayoutComponents({ channelLayout })[0]?.key ?? "value";
+}
+
+function getPrimaryChannelFromData({
+	data,
+	channelLayout,
+}: {
+	data: ChannelData | undefined;
+	channelLayout: ParamChannelLayout;
+}): AnimationChannel | undefined {
+	return getChannelFromData({
+		data,
+		componentKey: getPrimaryComponentKey({ channelLayout }),
+	});
+}
+
+function setChannelInData({
+	data,
+	componentKey,
+	channel,
+}: {
+	data: ChannelData | undefined;
+	componentKey: string;
+	channel: AnimationChannel | undefined;
+}): ChannelData | undefined {
+	if (componentKey === "value") {
+		return channel;
+	}
+	const components = isCompositeChannelData(data) ? { ...data } : {};
+	if (channel && hasChannelKeys({ channel })) {
+		components[componentKey] = channel;
+	} else {
+		delete components[componentKey];
+	}
+	return Object.keys(components).length > 0 ? components : undefined;
+}
+
+function getChannelDataEntries({
+	data,
+}: {
+	data: ChannelData | undefined;
+}): Array<[string, AnimationChannel | undefined]> {
+	if (isLeafChannelData(data)) {
+		return [["value", data]];
+	}
+	return isCompositeChannelData(data) ? Object.entries(data) : [];
 }
 
 function getScalarSegmentType({
@@ -123,14 +184,14 @@ function getScalarSegmentType({
 	return interpolation === "bezier" ? "bezier" : "linear";
 }
 
-function getInterpolationForBinding({
-	kind,
+function getInterpolationForComponent({
+	component,
 	interpolation,
 }: {
-	kind: AnimationBindingKind;
+	component: LayoutComponent;
 	interpolation: AnimationInterpolation | undefined;
 }): AnimationInterpolation {
-	if (kind === "discrete") {
+	if (component.valueKind === "discrete") {
 		return "hold";
 	}
 
@@ -142,25 +203,25 @@ function getInterpolationForBinding({
 		return interpolation;
 	}
 
-	return "linear";
+	return component.defaultInterpolation;
 }
 
-function createEmptyChannelForBindingKind({
-	kind,
+function decomposeChannelLayoutValue({
+	channelLayout,
+	value,
 }: {
-	kind: AnimationBindingKind;
-}): AnimationChannel {
-	if (kind === "discrete") {
-		return {
-			kind: "discrete",
-			keys: [],
-		} satisfies DiscreteAnimationChannel;
+	channelLayout: ParamChannelLayout;
+	value: ParamValue;
+}): Record<string, ParamValue> | null {
+	if (channelLayout.kind === "leaf") {
+		return { [channelLayout.component.key]: value };
+	}
+	if (typeof value !== "string") {
+		return null;
 	}
 
-	return {
-		kind: "scalar",
-		keys: [],
-	} satisfies ScalarAnimationChannel;
+	const components = channelLayout.decompose(value);
+	return components ? { ...components } : null;
 }
 
 function createScalarKey({
@@ -205,34 +266,20 @@ function createDiscreteKey({
 	};
 }
 
-function getBinding({
+function isDiscreteChannel(
+	channel: AnimationChannel | undefined,
+): channel is DiscreteAnimationChannel {
+	return channel != null && !isScalarChannel(channel);
+}
+
+function getChannelData({
 	animations,
 	propertyPath,
 }: {
 	animations: ElementAnimations | undefined;
 	propertyPath: AnimationPath;
-}): AnimationBindingInstance | undefined {
-	return animations?.bindings[propertyPath];
-}
-
-function getChannelById({
-	animations,
-	channelId,
-}: {
-	animations: ElementAnimations | undefined;
-	channelId: string;
-}): AnimationChannel | undefined {
-	return animations?.channels[channelId];
-}
-
-function getBindingComponent({
-	binding,
-	componentKey,
-}: {
-	binding: AnimationBindingInstance;
-	componentKey: string;
-}) {
-	return binding.components.find((component) => component.key === componentKey) ?? null;
+}): ChannelData | undefined {
+	return animations?.[propertyPath];
 }
 
 function getTargetKeyMetadata({
@@ -284,8 +331,8 @@ function upsertDiscreteChannelKey({
 	value: string | boolean;
 	keyframeId?: string;
 }): DiscreteAnimationChannel {
-	const normalizedChannel = normalizeChannel({
-		channel: channel ?? { kind: "discrete", keys: [] },
+	const normalizedChannel = normalizeDiscreteChannel({
+		channel: channel ?? { keys: [] },
 	});
 	const keys = [...normalizedChannel.keys];
 	if (keyframeId) {
@@ -296,8 +343,8 @@ function upsertDiscreteChannelKey({
 				time,
 				value,
 			});
-			return normalizeChannel({
-				channel: { kind: "discrete", keys },
+			return normalizeDiscreteChannel({
+				channel: { keys },
 			});
 		}
 	}
@@ -311,8 +358,8 @@ function upsertDiscreteChannelKey({
 			time: keys[existingAtTimeIndex].time,
 			value,
 		});
-		return normalizeChannel({
-			channel: { kind: "discrete", keys },
+		return normalizeDiscreteChannel({
+			channel: { keys },
 		});
 	}
 
@@ -323,8 +370,8 @@ function upsertDiscreteChannelKey({
 			value,
 		}),
 	);
-	return normalizeChannel({
-		channel: { kind: "discrete", keys },
+	return normalizeDiscreteChannel({
+		channel: { keys },
 	});
 }
 
@@ -343,8 +390,8 @@ function upsertScalarChannelKey({
 	defaultInterpolation?: AnimationInterpolation;
 	keyframeId?: string;
 }): ScalarAnimationChannel {
-	const normalizedChannel = normalizeChannel({
-		channel: channel ?? { kind: "scalar", keys: [] },
+	const normalizedChannel = normalizeScalarChannel({
+		channel: channel ?? { keys: [] },
 	});
 	const keys = [...normalizedChannel.keys];
 	if (keyframeId) {
@@ -363,9 +410,8 @@ function upsertScalarChannelKey({
 							}
 						: keys[existingIndex],
 			});
-			return normalizeChannel({
+			return normalizeScalarChannel({
 				channel: {
-					kind: "scalar",
 					keys,
 					extrapolation: normalizedChannel.extrapolation,
 				},
@@ -390,9 +436,8 @@ function upsertScalarChannelKey({
 						}
 					: keys[existingAtTimeIndex],
 		});
-		return normalizeChannel({
+		return normalizeScalarChannel({
 			channel: {
-				kind: "scalar",
 				keys,
 				extrapolation: normalizedChannel.extrapolation,
 			},
@@ -407,9 +452,8 @@ function upsertScalarChannelKey({
 			interpolation: interpolation ?? defaultInterpolation,
 		}),
 	);
-	return normalizeChannel({
+	return normalizeScalarChannel({
 		channel: {
-			kind: "scalar",
 			keys,
 			extrapolation: normalizedChannel.extrapolation,
 		},
@@ -423,10 +467,11 @@ export function getChannel({
 	animations: ElementAnimations | undefined;
 	propertyPath: AnimationPath;
 }): AnimationChannel | undefined {
-	const binding = getBinding({ animations, propertyPath });
-	const primaryChannelId =
-		binding != null ? getPrimaryChannelId({ binding }) : null;
-	return primaryChannelId ? animations?.channels[primaryChannelId] : undefined;
+	const data = getChannelData({ animations, propertyPath });
+	if (isLeafChannelData(data)) {
+		return data;
+	}
+	return getChannelsFromData({ data })[0];
 }
 
 export function upsertPathKeyframe({
@@ -436,19 +481,17 @@ export function upsertPathKeyframe({
 	value,
 	interpolation,
 	keyframeId,
-	kind,
-	defaultInterpolation,
+	channelLayout,
 	coerceValue,
 }: {
 	animations: ElementAnimations | undefined;
 	propertyPath: AnimationPath;
 	time: MediaTime;
-	value: AnimationValue;
+	value: ParamValue;
 	interpolation?: AnimationInterpolation;
 	keyframeId?: string;
-	kind: AnimationBindingKind;
-	defaultInterpolation: AnimationInterpolation;
-	coerceValue: ({ value }: { value: AnimationValue }) => AnimationValue | null;
+	channelLayout: ParamChannelLayout;
+	coerceValue: ({ value }: { value: ParamValue }) => ParamValue | null;
 }): ElementAnimations | undefined {
 	const coercedValue = coerceValue({ value });
 	if (coercedValue === null) {
@@ -456,71 +499,78 @@ export function upsertPathKeyframe({
 	}
 
 	const nextAnimations = cloneAnimationsState({ animations });
-	const existingBinding = getBinding({
-		animations,
-		propertyPath,
-	});
-	const binding =
-		existingBinding && existingBinding.kind === kind
-			? cloneAnimationBinding({ binding: existingBinding })
-			: createAnimationBinding({ path: propertyPath, kind });
-	const primaryChannel = getChannel({
-		animations,
-		propertyPath,
+	const currentData = getChannelData({ animations, propertyPath });
+	const primaryChannel = getPrimaryChannelFromData({
+		data: currentData,
+		channelLayout,
 	});
 	const targetKey = getTargetKeyMetadata({
 		channel: primaryChannel,
 		time,
 		keyframeId,
 	});
-	const componentValues = decomposeAnimationValue({
-		kind,
+	const componentValues = decomposeChannelLayoutValue({
+		channelLayout,
 		value: coercedValue,
 	});
 	if (!componentValues) {
 		return animations;
 	}
 
-	const explicitInterpolation =
-		interpolation != null
-			? getInterpolationForBinding({ kind, interpolation })
-			: undefined;
-	const validatedDefaultInterpolation = getInterpolationForBinding({
-		kind,
-		interpolation: defaultInterpolation,
-	});
-	nextAnimations.bindings[propertyPath] = binding;
-	for (const component of binding.components) {
-		const nextValue = componentValues[component.key];
+	let nextData: ChannelData | undefined = currentData;
+	for (const component of getLayoutComponents({ channelLayout })) {
+		const componentKey = component.key;
+		const nextValue = componentValues[componentKey];
 		if (nextValue == null) {
 			continue;
 		}
 
-		const currentChannel = getChannelById({
-			animations,
-			channelId: component.channelId,
+		const currentChannel = getChannelFromData({
+			data: currentData,
+			componentKey,
 		});
-		const targetChannel =
-			currentChannel?.kind === getBindingChannelKind({ kind })
-				? currentChannel
-				: createEmptyChannelForBindingKind({ kind });
-		nextAnimations.channels[component.channelId] =
-			targetChannel.kind === "discrete"
-				? upsertDiscreteChannelKey({
-						channel: targetChannel,
-						time: targetKey.time,
-						value: nextValue as string | boolean,
-						keyframeId: targetKey.id,
-					})
-				: upsertScalarChannelKey({
-						channel: targetChannel,
-						time: targetKey.time,
-						value: nextValue as number,
-						interpolation: explicitInterpolation,
-						defaultInterpolation: validatedDefaultInterpolation,
-						keyframeId: targetKey.id,
-					});
+		if (component.valueKind === "discrete") {
+			if (typeof nextValue !== "string" && typeof nextValue !== "boolean") {
+				continue;
+			}
+			const nextChannel = upsertDiscreteChannelKey({
+				channel: isDiscreteChannel(currentChannel) ? currentChannel : undefined,
+				time: targetKey.time,
+				value: nextValue,
+				keyframeId: targetKey.id,
+			});
+			nextData = setChannelInData({
+				data: nextData,
+				componentKey,
+				channel: nextChannel,
+			});
+			continue;
+		}
+
+		if (typeof nextValue !== "number") {
+			continue;
+		}
+		const nextChannel = upsertScalarChannelKey({
+			channel:
+				currentChannel != null && isScalarChannel(currentChannel)
+					? currentChannel
+					: undefined,
+			time: targetKey.time,
+			value: nextValue,
+			interpolation:
+				interpolation != null
+					? getInterpolationForComponent({ component, interpolation })
+					: undefined,
+			defaultInterpolation: component.defaultInterpolation,
+			keyframeId: targetKey.id,
+		});
+		nextData = setChannelInData({
+			data: nextData,
+			componentKey,
+			channel: nextChannel,
+		});
 	}
+	nextAnimations[propertyPath] = nextData;
 
 	return toAnimation({
 		animations: nextAnimations,
@@ -536,7 +586,7 @@ export function upsertKeyframe({
 }: {
 	channel: AnimationChannel | undefined;
 	time: MediaTime;
-	value: AnimationValue;
+	value: ParamValue;
 	interpolation?: AnimationInterpolation;
 	keyframeId?: string;
 }): AnimationChannel | undefined {
@@ -544,13 +594,9 @@ export function upsertKeyframe({
 		return undefined;
 	}
 
-	if (channel.kind === "discrete") {
-		if (typeof value !== "string" && typeof value !== "boolean") {
-			return channel;
-		}
-
+	if (typeof value === "string" || typeof value === "boolean") {
 		return upsertDiscreteChannelKey({
-			channel,
+			channel: isDiscreteChannel(channel) ? channel : undefined,
 			time,
 			value,
 			keyframeId,
@@ -562,7 +608,7 @@ export function upsertKeyframe({
 	}
 
 	return upsertScalarChannelKey({
-		channel,
+		channel: isScalarChannel(channel) ? channel : undefined,
 		time,
 		value,
 		interpolation,
@@ -581,16 +627,30 @@ export function removeKeyframe({
 		return undefined;
 	}
 
+	if (isScalarChannel(channel)) {
+		const nextKeys = channel.keys.filter((keyframe) => keyframe.id !== keyframeId);
+		if (nextKeys.length === 0) {
+			return undefined;
+		}
+
+		return normalizeScalarChannel({
+			channel: {
+				...channel,
+				keys: nextKeys,
+			},
+		});
+	}
+
 	const nextKeys = channel.keys.filter((keyframe) => keyframe.id !== keyframeId);
 	if (nextKeys.length === 0) {
 		return undefined;
 	}
 
-	return normalizeChannel({
+	return normalizeDiscreteChannel({
 		channel: {
 			...channel,
 			keys: nextKeys,
-		} as AnimationChannel,
+		},
 	});
 }
 
@@ -607,6 +667,28 @@ export function retimeKeyframe({
 		return undefined;
 	}
 
+	if (isScalarChannel(channel)) {
+		const keyframeByIdIndex = channel.keys.findIndex(
+			(keyframe) => keyframe.id === keyframeId,
+		);
+		if (keyframeByIdIndex < 0) {
+			return channel;
+		}
+
+		const nextKeys = [...channel.keys];
+		nextKeys[keyframeByIdIndex] = {
+			...nextKeys[keyframeByIdIndex],
+			time,
+		};
+
+		return normalizeScalarChannel({
+			channel: {
+				...channel,
+				keys: nextKeys,
+			},
+		});
+	}
+
 	const keyframeByIdIndex = channel.keys.findIndex(
 		(keyframe) => keyframe.id === keyframeId,
 	);
@@ -620,11 +702,11 @@ export function retimeKeyframe({
 		time,
 	};
 
-	return normalizeChannel({
+	return normalizeDiscreteChannel({
 		channel: {
 			...channel,
 			keys: nextKeys,
-		} as AnimationChannel,
+		},
 	});
 }
 
@@ -637,26 +719,10 @@ export function setChannel({
 	propertyPath: AnimationPath;
 	channel: AnimationChannel | undefined;
 }): ElementAnimations | undefined {
-	const binding = getBinding({ animations, propertyPath });
-	if (!binding) {
-		return animations;
-	}
-
-	if (binding.components.length !== 1) {
-		throw new Error(
-			`setChannel only supports single-component bindings. Received "${propertyPath}" with ${binding.components.length} components.`,
-		);
-	}
-
-	const primaryComponent = getPrimaryComponent({ binding });
-	if (!primaryComponent) {
-		return animations;
-	}
-
 	return setBindingComponentChannel({
 		animations,
 		propertyPath,
-		componentKey: primaryComponent.key,
+		componentKey: "value",
 		channel,
 	});
 }
@@ -672,37 +738,14 @@ export function setBindingComponentChannel({
 	componentKey: string;
 	channel: AnimationChannel | undefined;
 }): ElementAnimations | undefined {
-	const binding = getBinding({ animations, propertyPath });
-	if (!binding) {
-		return animations;
-	}
-
-	const component = getBindingComponent({
-		binding,
-		componentKey,
-	});
-	if (!component) {
-		return animations;
-	}
-
 	const nextAnimations = cloneAnimationsState({ animations });
-	if (!channel || !hasChannelKeys({ channel })) {
-		delete nextAnimations.channels[component.channelId];
-		const hasRemainingKeys = binding.components.some((candidate) =>
-			hasChannelKeys({
-				channel: nextAnimations.channels[candidate.channelId],
-			}),
-		);
-		if (!hasRemainingKeys) {
-			delete nextAnimations.bindings[propertyPath];
-		}
-		return toAnimation({
-			animations: nextAnimations,
-		});
-	}
-
-	nextAnimations.channels[component.channelId] = normalizeChannel({
-		channel,
+	nextAnimations[propertyPath] = setChannelInData({
+		data: nextAnimations[propertyPath],
+		componentKey,
+		channel:
+			channel && hasChannelKeys({ channel })
+				? normalizeChannel({ channel })
+				: undefined,
 	});
 	return toAnimation({
 		animations: nextAnimations,
@@ -722,24 +765,11 @@ export function updateScalarKeyframeCurve({
 	keyframeId: string;
 	patch: ScalarCurveKeyframePatch;
 }): ElementAnimations | undefined {
-	const binding = getBinding({ animations, propertyPath });
-	if (!binding) {
-		return animations;
-	}
-
-	const component = getBindingComponent({
-		binding,
+	const channel = getChannelFromData({
+		data: getChannelData({ animations, propertyPath }),
 		componentKey,
 	});
-	if (!component) {
-		return animations;
-	}
-
-	const channel = getChannelById({
-		animations,
-		channelId: component.channelId,
-	});
-	if (channel?.kind !== "scalar") {
+	if (!channel || !isScalarChannel(channel)) {
 		return animations;
 	}
 
@@ -769,11 +799,38 @@ export function updateScalarKeyframeCurve({
 		propertyPath,
 		componentKey,
 		channel: {
-			kind: "scalar",
 			keys: nextKeys,
 			extrapolation: channel.extrapolation,
 		},
 	});
+}
+
+function cloneChannelWithKeyIds({
+	channel,
+	keyIdMap,
+}: {
+	channel: AnimationChannel;
+	keyIdMap: Map<string, string>;
+}): AnimationChannel {
+	return isScalarChannel(channel)
+		? normalizeScalarChannel({
+				channel: {
+					...channel,
+					keys: channel.keys.map((key) => ({
+						...key,
+						id: keyIdMap.get(key.id) ?? key.id,
+					})),
+				},
+			})
+		: normalizeDiscreteChannel({
+				channel: {
+					...channel,
+					keys: channel.keys.map((key) => ({
+						...key,
+						id: keyIdMap.get(key.id) ?? key.id,
+					})),
+				},
+			});
 }
 
 export function cloneAnimations({
@@ -788,23 +845,11 @@ export function cloneAnimations({
 	}
 
 	const nextAnimations = cloneAnimationsState({ animations });
-	nextAnimations.bindings = Object.fromEntries(
-		Object.entries(animations.bindings).map(([path, binding]) => [
-			path,
-			binding ? cloneAnimationBinding({ binding }) : binding,
-		]),
-	);
-	nextAnimations.channels = {};
-
-	for (const binding of Object.values(nextAnimations.bindings)) {
-		if (!binding) {
-			continue;
-		}
-
-		const primaryChannel = getChannelById({
-			animations,
-			channelId: getPrimaryChannelId({ binding }) ?? "",
-		});
+	for (const [propertyPath, data] of Object.entries(animations).filter(([key]) =>
+		isAnimationStorageKey({ key }),
+	)) {
+		const channels = getChannelsFromData({ data });
+		const primaryChannel = channels[0];
 		const keyIdMap = new Map<string, string>();
 		if (primaryChannel) {
 			for (const key of primaryChannel.keys) {
@@ -815,24 +860,22 @@ export function cloneAnimations({
 			}
 		}
 
-		for (const component of binding.components) {
-			const currentChannel = getChannelById({
-				animations,
-				channelId: component.channelId,
+		if (isLeafChannelData(data)) {
+			nextAnimations[propertyPath] = cloneChannelWithKeyIds({
+				channel: data,
+				keyIdMap,
 			});
-			if (!currentChannel) {
-				continue;
-			}
-
-			nextAnimations.channels[component.channelId] = normalizeChannel({
-				channel: {
-					...currentChannel,
-					keys: currentChannel.keys.map((key) => ({
-						...key,
-						id: keyIdMap.get(key.id) ?? key.id,
-					})),
-				} as AnimationChannel,
-			});
+			continue;
+		}
+		if (isCompositeChannelData(data)) {
+			nextAnimations[propertyPath] = Object.fromEntries(
+				Object.entries(data).map(([componentKey, channel]) => [
+					componentKey,
+					channel
+						? cloneChannelWithKeyIds({ channel, keyIdMap })
+						: undefined,
+				]),
+			);
 		}
 	}
 
@@ -921,7 +964,7 @@ function splitDiscreteChannelAtTime({
 				createDiscreteKey({
 					id: leftBoundaryId,
 					time: splitTime,
-					value: boundaryValue as string | boolean,
+					value: boundaryValue,
 				}),
 			];
 		}
@@ -930,7 +973,7 @@ function splitDiscreteChannelAtTime({
 				createDiscreteKey({
 					id: rightBoundaryId,
 					time: ZERO_MEDIA_TIME,
-					value: boundaryValue as string | boolean,
+					value: boundaryValue,
 				}),
 				...rightKeys,
 			];
@@ -939,10 +982,10 @@ function splitDiscreteChannelAtTime({
 
 	return {
 		leftChannel: leftKeys.length
-			? normalizeChannel({ channel: { kind: "discrete", keys: leftKeys } })
+			? normalizeChannel({ channel: { keys: leftKeys } })
 			: undefined,
 		rightChannel: rightKeys.length
-			? normalizeChannel({ channel: { kind: "discrete", keys: rightKeys } })
+			? normalizeChannel({ channel: { keys: rightKeys } })
 			: undefined,
 	};
 }
@@ -987,7 +1030,6 @@ function splitScalarChannelAtTime({
 			leftChannel: leftKeys.length
 				? normalizeChannel({
 						channel: {
-							kind: "scalar",
 							keys: leftKeys,
 							extrapolation: normalizedChannel.extrapolation,
 						},
@@ -996,7 +1038,6 @@ function splitScalarChannelAtTime({
 			rightChannel: rightKeys.length
 				? normalizeChannel({
 						channel: {
-							kind: "scalar",
 							keys: rightKeys,
 							extrapolation: normalizedChannel.extrapolation,
 						},
@@ -1021,7 +1062,7 @@ function splitScalarChannelAtTime({
 			channel: normalizedChannel,
 			time: splitTime,
 			fallbackValue: leftKey.value,
-		}) as number;
+		});
 
 		if (leftKey.segmentToNext === "bezier") {
 			const rightHandle =
@@ -1123,14 +1164,12 @@ function splitScalarChannelAtTime({
 		return {
 			leftChannel: normalizeChannel({
 				channel: {
-					kind: "scalar",
 					keys: leftKeys,
 					extrapolation: normalizedChannel.extrapolation,
 				},
 			}),
 			rightChannel: normalizeChannel({
 				channel: {
-					kind: "scalar",
 					keys: rightKeys,
 					extrapolation: normalizedChannel.extrapolation,
 				},
@@ -1142,7 +1181,6 @@ function splitScalarChannelAtTime({
 		leftChannel: leftKeys.length
 			? normalizeChannel({
 					channel: {
-						kind: "scalar",
 						keys: leftKeys,
 						extrapolation: normalizedChannel.extrapolation,
 					},
@@ -1151,13 +1189,43 @@ function splitScalarChannelAtTime({
 		rightChannel: rightKeys.length
 			? normalizeChannel({
 					channel: {
-						kind: "scalar",
 						keys: rightKeys,
 						extrapolation: normalizedChannel.extrapolation,
 					},
 				})
 			: undefined,
 	};
+}
+
+function splitChannelAtTime({
+	channel,
+	splitTime,
+	leftBoundaryId,
+	rightBoundaryId,
+	shouldIncludeSplitBoundary,
+}: {
+	channel: AnimationChannel | undefined;
+	splitTime: MediaTime;
+	leftBoundaryId: string;
+	rightBoundaryId: string;
+	shouldIncludeSplitBoundary: boolean;
+}) {
+	return channel != null && !isScalarChannel(channel)
+		? splitDiscreteChannelAtTime({
+				channel,
+				splitTime,
+				leftBoundaryId,
+				rightBoundaryId,
+				shouldIncludeSplitBoundary,
+			})
+		: splitScalarChannelAtTime({
+				channel:
+					channel != null && isScalarChannel(channel) ? channel : undefined,
+				splitTime,
+				leftBoundaryId,
+				rightBoundaryId,
+				shouldIncludeSplitBoundary,
+			});
 }
 
 export function splitAnimationsAtTime({
@@ -1179,54 +1247,38 @@ export function splitAnimationsAtTime({
 	const leftAnimations = cloneAnimationsState({ animations: undefined });
 	const rightAnimations = cloneAnimationsState({ animations: undefined });
 
-	for (const [propertyPath, binding] of Object.entries(animations.bindings)) {
-		if (!binding) {
+	for (const [propertyPath, data] of Object.entries(animations).filter(([key]) =>
+		isAnimationStorageKey({ key }),
+	)) {
+		if (!data) {
 			continue;
 		}
 
-		const leftBinding = cloneAnimationBinding({ binding });
-		const rightBinding = cloneAnimationBinding({ binding });
 		const leftBoundaryId = generateUUID();
 		const rightBoundaryId = generateUUID();
-		let hasLeftKeys = false;
-		let hasRightKeys = false;
 
-		for (const component of binding.components) {
-			const channel = getChannelById({
-				animations,
-				channelId: component.channelId,
+		for (const [componentKey, channel] of getChannelDataEntries({ data })) {
+			const splitResult = splitChannelAtTime({
+				channel,
+				splitTime,
+				leftBoundaryId,
+				rightBoundaryId,
+				shouldIncludeSplitBoundary,
 			});
-			const splitResult =
-				channel?.kind === "discrete"
-					? splitDiscreteChannelAtTime({
-							channel,
-							splitTime,
-							leftBoundaryId,
-							rightBoundaryId,
-							shouldIncludeSplitBoundary,
-						})
-					: splitScalarChannelAtTime({
-							channel: channel as ScalarAnimationChannel | undefined,
-							splitTime,
-							leftBoundaryId,
-							rightBoundaryId,
-							shouldIncludeSplitBoundary,
-						});
 			if (splitResult.leftChannel) {
-				leftAnimations.channels[component.channelId] = splitResult.leftChannel;
-				hasLeftKeys = true;
+				leftAnimations[propertyPath] = setChannelInData({
+					data: leftAnimations[propertyPath],
+					componentKey,
+					channel: splitResult.leftChannel,
+				});
 			}
 			if (splitResult.rightChannel) {
-				rightAnimations.channels[component.channelId] = splitResult.rightChannel;
-				hasRightKeys = true;
+				rightAnimations[propertyPath] = setChannelInData({
+					data: rightAnimations[propertyPath],
+					componentKey,
+					channel: splitResult.rightChannel,
+				});
 			}
-		}
-
-		if (hasLeftKeys) {
-			leftAnimations.bindings[propertyPath] = leftBinding;
-		}
-		if (hasRightKeys) {
-			rightAnimations.bindings[propertyPath] = rightBinding;
 		}
 	}
 
@@ -1245,28 +1297,24 @@ export function removeElementKeyframe({
 	propertyPath: AnimationPath;
 	keyframeId: string;
 }): ElementAnimations | undefined {
-	const binding = getBinding({ animations, propertyPath });
-	if (!binding) {
+	const data = getChannelData({ animations, propertyPath });
+	if (!data) {
 		return animations;
 	}
 
 	const nextAnimations = cloneAnimationsState({ animations });
-	for (const component of binding.components) {
-		nextAnimations.channels[component.channelId] = removeKeyframe({
-			channel: nextAnimations.channels[component.channelId],
-			keyframeId,
-		});
-	}
-	const hasRemainingKeys = binding.components.some((component) =>
-		hasChannelKeys({
-			channel: nextAnimations.channels[component.channelId],
-		}),
-	);
-	if (!hasRemainingKeys) {
-		delete nextAnimations.bindings[propertyPath];
-		for (const component of binding.components) {
-			delete nextAnimations.channels[component.channelId];
+	if (isLeafChannelData(data)) {
+		nextAnimations[propertyPath] = removeKeyframe({ channel: data, keyframeId });
+	} else if (isCompositeChannelData(data)) {
+		let nextData: ChannelData | undefined = data;
+		for (const [componentKey, channel] of Object.entries(data)) {
+			nextData = setChannelInData({
+				data: nextData,
+				componentKey,
+				channel: removeKeyframe({ channel, keyframeId }),
+			});
 		}
+		nextAnimations[propertyPath] = nextData;
 	}
 	return toAnimation({
 		animations: nextAnimations,
@@ -1284,18 +1332,28 @@ export function retimeElementKeyframe({
 	keyframeId: string;
 	time: MediaTime;
 }): ElementAnimations | undefined {
-	const binding = getBinding({ animations, propertyPath });
-	if (!binding) {
+	const data = getChannelData({ animations, propertyPath });
+	if (!data) {
 		return animations;
 	}
 
 	const nextAnimations = cloneAnimationsState({ animations });
-	for (const component of binding.components) {
-		nextAnimations.channels[component.channelId] = retimeKeyframe({
-			channel: nextAnimations.channels[component.channelId],
+	if (isLeafChannelData(data)) {
+		nextAnimations[propertyPath] = retimeKeyframe({
+			channel: data,
 			keyframeId,
 			time,
 		});
+	} else if (isCompositeChannelData(data)) {
+		let nextData: ChannelData | undefined = data;
+		for (const [componentKey, channel] of Object.entries(data)) {
+			nextData = setChannelInData({
+				data: nextData,
+				componentKey,
+				channel: retimeKeyframe({ channel, keyframeId, time }),
+			});
+		}
+		nextAnimations[propertyPath] = nextData;
 	}
 	return toAnimation({
 		animations: nextAnimations,

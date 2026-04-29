@@ -13,8 +13,7 @@ import type {
 } from "@/animation/types";
 import {
 	coerceParamValue,
-	getParamDefaultInterpolation,
-	getParamValueKind,
+	getParamChannelLayout,
 	type ParamDefinition,
 } from "@/params";
 import type { TimelineElement } from "@/timeline";
@@ -86,10 +85,7 @@ export function useKeyframedParamProperty({
 								propertyPath: resolvedPropertyPath,
 								time: localTime,
 								value,
-								kind: getParamValueKind({ param }),
-								defaultInterpolation: getParamDefaultInterpolation({
-									param,
-								}),
+								channelLayout: getParamChannelLayout({ param }),
 								coerceValue: ({ value: nextValue }) =>
 									coerceParamValue({
 										param,

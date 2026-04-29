@@ -52,8 +52,7 @@ function pasteKeyframesIntoElement({
 			value: item.value,
 			interpolation: item.interpolation,
 			keyframeId: generateUUID(),
-			kind: target.kind,
-			defaultInterpolation: target.defaultInterpolation,
+			channelLayout: target.channelLayout,
 			coerceValue: target.coerceValue,
 		});
 		const pastedKeyframe = getKeyframeAtTime({

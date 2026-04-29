@@ -1,4 +1,5 @@
 import type { MediaTime } from "@/wasm";
+import type { ParamValue } from "@/params";
 
 export const ANIMATION_PROPERTY_PATHS = [
 	"transform.positionX",
@@ -28,44 +29,21 @@ export const ANIMATION_PROPERTY_GROUPS = {
 
 export type AnimationPropertyGroup = keyof typeof ANIMATION_PROPERTY_GROUPS;
 
-export type VectorValue = { x: number; y: number };
 export type DiscreteValue = boolean | string;
-export type AnimationValue = number | string | boolean | VectorValue;
-export interface AnimationPropertyValueMap {
-	"transform.positionX": number;
-	"transform.positionY": number;
-	"transform.scaleX": number;
-	"transform.scaleY": number;
-	"transform.rotate": number;
-	opacity: number;
-	volume: number;
-	color: string;
-	"background.color": string;
-	"background.paddingX": number;
-	"background.paddingY": number;
-	"background.offsetX": number;
-	"background.offsetY": number;
-	"background.cornerRadius": number;
-}
-export type DynamicAnimationPathValue = number | string | boolean;
 
 export interface NumericSpec {
 	min?: number;
 	max?: number;
 	step?: number;
 }
-export type AnimationValueForPath<TPath extends AnimationPath> =
-	TPath extends AnimationPropertyPath
-		? AnimationPropertyValueMap[TPath]
-		: TPath extends GraphicParamPath | EffectParamPath
-			? DynamicAnimationPathValue
-			: DynamicAnimationPathValue;
-export type AnimationNumericPropertyPath = {
-	[K in AnimationPropertyPath]: AnimationValueForPath<K> extends number ? K : never;
-}[AnimationPropertyPath];
-export type AnimationColorPropertyPath = {
-	[K in AnimationPropertyPath]: AnimationValueForPath<K> extends string ? K : never;
-}[AnimationPropertyPath];
+export type AnimationColorPropertyPath = Extract<
+	AnimationPropertyPath,
+	"color" | "background.color"
+>;
+export type AnimationNumericPropertyPath = Exclude<
+	AnimationPropertyPath,
+	AnimationColorPropertyPath
+>;
 
 export type ContinuousKeyframeInterpolation = "linear" | "hold" | "bezier";
 export type DiscreteKeyframeInterpolation = "hold";
@@ -73,8 +51,6 @@ export type AnimationInterpolation =
 	| ContinuousKeyframeInterpolation
 	| DiscreteKeyframeInterpolation;
 
-export type PrimitiveAnimationChannelKind = "scalar" | "discrete";
-export type AnimationBindingKind = "number" | "vector2" | "color" | "discrete";
 export type ScalarSegmentType = "step" | "linear" | "bezier";
 export type TangentMode = "auto" | "aligned" | "broken" | "flat";
 export type ChannelExtrapolationMode = "hold" | "linear";
@@ -84,7 +60,7 @@ export interface CurveHandle {
 	dv: number;
 }
 
-interface BaseAnimationKeyframe<TValue extends number | DiscreteValue> {
+interface BaseAnimationKeyframe<TValue extends ParamValue> {
 	id: string;
 	time: MediaTime; // relative to element start time
 	value: TValue;
@@ -97,13 +73,16 @@ export interface ScalarAnimationKey extends BaseAnimationKeyframe<number> {
 	tangentMode: TangentMode;
 }
 
-export interface DiscreteAnimationKey
-	extends BaseAnimationKeyframe<DiscreteValue> {}
+export type DiscreteAnimationKey = BaseAnimationKeyframe<DiscreteValue>;
 
-export type AnimationKeyframe = ScalarAnimationKey | DiscreteAnimationKey;
+export type Keyframe<TValue extends ParamValue = ParamValue> =
+	TValue extends number
+		? ScalarAnimationKey
+		: TValue extends DiscreteValue
+			? DiscreteAnimationKey
+			: never;
 
-export interface ScalarAnimationChannel {
-	kind: "scalar";
+export interface ScalarChannel {
 	keys: ScalarAnimationKey[];
 	extrapolation?: {
 		before: ChannelExtrapolationMode;
@@ -111,72 +90,26 @@ export interface ScalarAnimationChannel {
 	};
 }
 
-export interface DiscreteAnimationChannel {
-	kind: "discrete";
+export interface DiscreteChannel {
 	keys: DiscreteAnimationKey[];
 }
 
-export type AnimationChannel =
-	| ScalarAnimationChannel
-	| DiscreteAnimationChannel;
+export type Channel<TValue extends ParamValue = ParamValue> =
+	TValue extends number
+		? ScalarChannel
+		: TValue extends DiscreteValue
+			? DiscreteChannel
+			: never;
 
-export type ElementAnimationChannelMap = Record<
-	string,
-	AnimationChannel | undefined
->;
+export type ScalarAnimationChannel = Channel<number>;
+export type DiscreteAnimationChannel = Channel<DiscreteValue>;
+export type AnimationChannel = Channel;
 
-export interface AnimationBindingComponent<TKey extends string = string> {
-	key: TKey;
-	channelId: string;
-}
-
-interface BaseAnimationBinding<
-	TKind extends AnimationBindingKind,
-	TComponentKey extends string,
-> {
-	path: AnimationPath;
-	kind: TKind;
-	components: AnimationBindingComponent<TComponentKey>[];
-}
-
-export interface NumberAnimationBinding
-	extends BaseAnimationBinding<"number", "value"> {}
-
-export interface Vector2AnimationBinding
-	extends BaseAnimationBinding<"vector2", "x" | "y"> {}
-
-export interface ColorAnimationBinding
-	extends BaseAnimationBinding<"color", "r" | "g" | "b" | "a"> {
-	colorSpace: "srgb-linear";
-}
-
-export interface DiscreteAnimationBinding
-	extends BaseAnimationBinding<"discrete", "value"> {}
-
-export type AnimationBindingInstance =
-	| NumberAnimationBinding
-	| Vector2AnimationBinding
-	| ColorAnimationBinding
-	| DiscreteAnimationBinding;
-
-export interface AnimationBindingByKind {
-	number: NumberAnimationBinding;
-	vector2: Vector2AnimationBinding;
-	color: ColorAnimationBinding;
-	discrete: DiscreteAnimationBinding;
-}
-
-export type AnimationBindingOfKind<TKind extends AnimationBindingKind> =
-	AnimationBindingByKind[TKind];
-
-export type ElementAnimationBindingMap = Record<
-	string,
-	AnimationBindingInstance | undefined
->;
+export type CompositeChannelData = Record<string, AnimationChannel | undefined>;
+export type ChannelData = AnimationChannel | CompositeChannelData;
 
 export interface ElementAnimations {
-	bindings: ElementAnimationBindingMap;
-	channels: ElementAnimationChannelMap;
+	[propertyPath: AnimationPath]: ChannelData | undefined;
 }
 
 export type NormalizedCubicBezier = [number, number, number, number];
@@ -184,7 +117,6 @@ export type NormalizedCubicBezier = [number, number, number, number];
 export interface ScalarGraphChannelTarget {
 	propertyPath: AnimationPath;
 	componentKey: string;
-	channelId: string;
 }
 
 export interface ScalarGraphChannel extends ScalarGraphChannelTarget {
@@ -213,7 +145,7 @@ export interface ElementKeyframe {
 	propertyPath: AnimationPath;
 	id: string;
 	time: MediaTime;
-	value: AnimationValue;
+	value: ParamValue;
 	interpolation: AnimationInterpolation;
 }
 

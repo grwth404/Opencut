@@ -1,11 +1,12 @@
 import {
 	getCurveHandlesForNormalizedCubicBezier,
 	getEditableScalarChannels,
-	getEasingModeForKind,
 	getNormalizedCubicBezierForScalarSegment,
 	getScalarKeyframeContext,
 	updateScalarKeyframeCurve,
 } from "@/animation";
+import { getChannelsFromData } from "@/animation/channel-data";
+import { isScalarChannel } from "@/animation/interpolation";
 import type {
 	AnimationPath,
 	ElementAnimations,
@@ -143,12 +144,9 @@ function findKeyframeTime({
 	propertyPath: AnimationPath;
 	keyframeId: string;
 }): number | null {
-	const binding = animations.bindings[propertyPath];
-	if (!binding) return null;
-
-	for (const component of binding.components) {
-		const channel = animations.channels[component.channelId];
-		if (channel?.kind !== "scalar") continue;
+	const data = animations[propertyPath];
+	for (const channel of getChannelsFromData({ data })) {
+		if (!channel || !isScalarChannel(channel)) continue;
 		const key = channel.keys.find((k) => k.id === keyframeId);
 		if (key !== undefined) return key.time;
 	}
@@ -300,8 +298,7 @@ function resolvePropertySelection({
 		}
 	}
 
-	const { binding: resolvedBinding, channels: scalarChannels } = scalarResult;
-	const easingMode = getEasingModeForKind(resolvedBinding.kind);
+	const { easingMode, channels: scalarChannels } = scalarResult;
 	const contexts = scalarChannels.flatMap((channel) => {
 		const context = getScalarKeyframeContext({
 			animations: element.animations,

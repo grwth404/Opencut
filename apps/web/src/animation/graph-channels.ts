@@ -1,21 +1,35 @@
 import type {
-	AnimationBindingInstance,
 	AnimationPath,
 	ElementAnimations,
+	ChannelData,
 	ScalarAnimationChannel,
 	ScalarGraphChannel,
 	ScalarGraphKeyframeContext,
 } from "@/animation/types";
+import type { ChannelEasingMode } from "@/params";
+import { isCompositeChannelData, isLeafChannelData } from "./channel-data";
+import { isScalarChannel } from "./interpolation";
 
 export interface EditableScalarChannels {
-	binding: AnimationBindingInstance;
+	easingMode: ChannelEasingMode;
 	channels: ScalarGraphChannel[];
 }
 
 function isScalarAnimationChannel(
-	channel: ElementAnimations["channels"][string],
+	channel: ChannelData | undefined,
 ): channel is ScalarAnimationChannel {
-	return channel?.kind === "scalar";
+	return isLeafChannelData(channel) && isScalarChannel(channel);
+}
+
+function getEasingModeForChannelData({
+	data,
+}: {
+	data: ChannelData | undefined;
+}): ChannelEasingMode {
+	return isCompositeChannelData(data) &&
+		["r", "g", "b", "a"].every((componentKey) => componentKey in data)
+		? "shared"
+		: "independent";
 }
 
 export function getEditableScalarChannels({
@@ -25,13 +39,15 @@ export function getEditableScalarChannels({
 	animations: ElementAnimations | undefined;
 	propertyPath: AnimationPath;
 }): EditableScalarChannels | null {
-	const binding = animations?.bindings[propertyPath];
-	if (!binding) {
+	const data = animations?.[propertyPath];
+	if (!data) {
 		return null;
 	}
 
-	const channels = binding.components.flatMap((component) => {
-		const channel = animations?.channels[component.channelId];
+	const channelEntries = isLeafChannelData(data)
+		? [["value", data] as const]
+		: Object.entries(data);
+	const channels = channelEntries.flatMap(([componentKey, channel]) => {
 		if (!isScalarAnimationChannel(channel)) {
 			return [];
 		}
@@ -39,14 +55,13 @@ export function getEditableScalarChannels({
 		return [
 			{
 				propertyPath,
-				componentKey: component.key,
-				channelId: component.channelId,
+				componentKey,
 				channel,
 			} satisfies ScalarGraphChannel,
 		];
 	});
 
-	return { binding, channels };
+	return { easingMode: getEasingModeForChannelData({ data }), channels };
 }
 
 export function getEditableScalarChannel({

@@ -20,10 +20,9 @@ import { isElementMuted } from "@/timeline/audio-state";
 import type {
 	AnimationPath,
 	AnimationInterpolation,
-	AnimationValue,
-	AnimationValueForPath,
 	ScalarCurveKeyframePatch,
 } from "@/animation/types";
+import type { ParamValue } from "@/params";
 import {
 	getElementLocalTime,
 	resolveAnimationPathValueAtTime,
@@ -487,7 +486,7 @@ export class TimelineManager {
 			elementId: string;
 			propertyPath: AnimationPath;
 			time: MediaTime;
-			value: AnimationValue;
+			value: ParamValue;
 			interpolation?: AnimationInterpolation;
 			keyframeId?: string;
 		}>;
@@ -538,7 +537,7 @@ export class TimelineManager {
 		// Pre-sample values at playhead for each (element, property) pair.
 		// This preserves "what you see is what you get" when all keyframes are deleted.
 		const playheadTime = this.editor.playback.getCurrentTime();
-		const valueAtPlayheadMap = new Map<string, AnimationValue | null>();
+		const valueAtPlayheadMap = new Map<string, ParamValue | null>();
 
 		for (const { trackId, elementId, propertyPath } of keyframes) {
 			const key = `${elementId}:${propertyPath}`;
@@ -559,9 +558,7 @@ export class TimelineManager {
 			});
 
 			const target = resolveAnimationTarget({ element, path: propertyPath });
-			const baseValue =
-				(target?.getBaseValue() as AnimationValueForPath<AnimationPath> | null) ??
-				null;
+			const baseValue = target?.getBaseValue() ?? null;
 			if (baseValue === null) {
 				valueAtPlayheadMap.set(key, null);
 				continue;

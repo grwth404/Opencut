@@ -121,28 +121,13 @@ function cloneVolumeAnimations({
 }: {
 	animations: ElementAnimations | undefined;
 }): ElementAnimations | undefined {
-	const volumeBinding = animations?.bindings.volume;
-	if (!volumeBinding) {
-		return undefined;
-	}
-
-	const subsetChannels = Object.fromEntries(
-		volumeBinding.components.flatMap((component) => {
-			const channel = animations?.channels[component.channelId];
-			return channel ? [[component.channelId, channel] as const] : [];
-		}),
-	);
-	if (Object.keys(subsetChannels).length === 0) {
+	const volumeData = animations?.volume;
+	if (!volumeData) {
 		return undefined;
 	}
 
 	return cloneAnimations({
-		animations: {
-			bindings: {
-				volume: volumeBinding,
-			},
-			channels: subsetChannels,
-		},
+		animations: { volume: volumeData },
 		shouldRegenerateKeyframeIds: true,
 	});
 }

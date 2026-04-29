@@ -70,7 +70,7 @@ export function resolveEffectParamsAtTime({
 
 	for (const [paramKey, staticValue] of Object.entries(params)) {
 		const path = buildEffectParamPath({ effectId, paramKey });
-		resolved[paramKey] = animations?.bindings[path]
+		resolved[paramKey] = animations?.[path]
 			? resolveAnimationPathValueAtTime({
 					animations,
 					propertyPath: path,
