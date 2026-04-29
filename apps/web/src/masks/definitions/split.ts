@@ -71,11 +71,11 @@ export function getSplitMaskStrokeSegment({
 	width,
 	height,
 }: {
-	resolvedParams: unknown;
+	resolvedParams: SplitMaskParams;
 	width: number;
 	height: number;
 }): [{ x: number; y: number }, { x: number; y: number }] | null {
-	const { centerX, centerY, rotation } = resolvedParams as SplitMaskParams;
+	const { centerX, centerY, rotation } = resolvedParams;
 	const { normalX, normalY, lineX, lineY } = splitLineGeometry({
 		centerX,
 		centerY,
@@ -180,7 +180,7 @@ function computeSplitMaskParamUpdate({
 	return {};
 }
 
-export const splitMaskDefinition: MaskDefinition<SplitMaskParams> = {
+export const splitMaskDefinition: MaskDefinition<"split"> = {
 	type: "split",
 	name: "Split",
 	features: {
@@ -267,124 +267,131 @@ export const splitMaskDefinition: MaskDefinition<SplitMaskParams> = {
 		},
 	],
 	renderer: {
-		renderMaskHandlesFeather: true,
-		renderMask({ resolvedParams, ctx, width, height, feather }) {
-			const { centerX, centerY, rotation } = resolvedParams as SplitMaskParams;
-			const { normalX, normalY, lineX, lineY } = splitLineGeometry({
-				centerX,
-				centerY,
-				rotation,
-				width,
-				height,
-			});
+		body: {
+			kind: "drawWithFeather",
+			drawWithFeather({ resolvedParams, ctx, width, height, feather }) {
+				const { centerX, centerY, rotation } = resolvedParams;
+				const { normalX, normalY, lineX, lineY } = splitLineGeometry({
+					centerX,
+					centerY,
+					rotation,
+					width,
+					height,
+				});
 
-			// Analytical gradient avoids JFA's two-sided distance artifact near canvas edges.
-			const featherHalf = feather / 2;
-			const gradient = ctx.createLinearGradient(
-				lineX - normalX * featherHalf,
-				lineY - normalY * featherHalf,
-				lineX + normalX * featherHalf,
-				lineY + normalY * featherHalf,
-			);
-			gradient.addColorStop(0, "rgba(255,255,255,0)");
-			gradient.addColorStop(1, "white");
+				// Analytical gradient avoids JFA's two-sided distance artifact near canvas edges.
+				const featherHalf = feather / 2;
+				const gradient = ctx.createLinearGradient(
+					lineX - normalX * featherHalf,
+					lineY - normalY * featherHalf,
+					lineX + normalX * featherHalf,
+					lineY + normalY * featherHalf,
+				);
+				gradient.addColorStop(0, "rgba(255,255,255,0)");
+				gradient.addColorStop(1, "white");
 
-			ctx.fillStyle = gradient;
-			ctx.fillRect(0, 0, width, height);
-		},
+				ctx.fillStyle = gradient;
+				ctx.fillRect(0, 0, width, height);
+			},
 
-		buildPath({ resolvedParams, width, height }) {
-			const { centerX, centerY, rotation } = resolvedParams as SplitMaskParams;
-			const { normalX, normalY, lineX, lineY } = splitLineGeometry({
-				centerX,
-				centerY,
-				rotation,
-				width,
-				height,
-			});
-
-			const edges: [number, number, number, number][] = [
-				[0, 0, width, 0],
-				[width, 0, width, height],
-				[width, height, 0, height],
-				[0, height, 0, 0],
-			];
-
-			const isInsideHalfPlane = ({
-				x,
-				y,
-			}: {
-				x: number;
-				y: number;
-			}) => halfPlaneSign({ lineX, lineY, normalX, normalY, x, y }) >= 0;
-
-			const vertices: [number, number][] = [];
-			for (const [x1, y1, x2, y2] of edges) {
-				const isVertex1Inside = isInsideHalfPlane({ x: x1, y: y1 });
-				const isVertex2Inside = isInsideHalfPlane({ x: x2, y: y2 });
-
-				if (isVertex1Inside && isVertex2Inside) {
-					vertices.push([x2, y2]);
-				} else if (isVertex1Inside && !isVertex2Inside) {
-					const hit = lineEdgeIntersection({
-						lineX,
-						lineY,
-						normalX,
-						normalY,
-						x1,
-						y1,
-						x2,
-						y2,
+			opaqueFastPath: {
+				buildPath({ resolvedParams, width, height }) {
+					const { centerX, centerY, rotation } = resolvedParams;
+					const { normalX, normalY, lineX, lineY } = splitLineGeometry({
+						centerX,
+						centerY,
+						rotation,
+						width,
+						height,
 					});
-					if (hit) vertices.push([hit.x, hit.y]);
-				} else if (!isVertex1Inside && isVertex2Inside) {
-					const hit = lineEdgeIntersection({
-						lineX,
-						lineY,
-						normalX,
-						normalY,
-						x1,
-						y1,
-						x2,
-						y2,
-					});
-					if (hit) {
-						vertices.push([hit.x, hit.y]);
-						vertices.push([x2, y2]);
+
+					const edges: [number, number, number, number][] = [
+						[0, 0, width, 0],
+						[width, 0, width, height],
+						[width, height, 0, height],
+						[0, height, 0, 0],
+					];
+
+					const isInsideHalfPlane = ({
+						x,
+						y,
+					}: {
+						x: number;
+						y: number;
+					}) => halfPlaneSign({ lineX, lineY, normalX, normalY, x, y }) >= 0;
+
+					const vertices: [number, number][] = [];
+					for (const [x1, y1, x2, y2] of edges) {
+						const isVertex1Inside = isInsideHalfPlane({ x: x1, y: y1 });
+						const isVertex2Inside = isInsideHalfPlane({ x: x2, y: y2 });
+
+						if (isVertex1Inside && isVertex2Inside) {
+							vertices.push([x2, y2]);
+						} else if (isVertex1Inside && !isVertex2Inside) {
+							const hit = lineEdgeIntersection({
+								lineX,
+								lineY,
+								normalX,
+								normalY,
+								x1,
+								y1,
+								x2,
+								y2,
+							});
+							if (hit) vertices.push([hit.x, hit.y]);
+						} else if (!isVertex1Inside && isVertex2Inside) {
+							const hit = lineEdgeIntersection({
+								lineX,
+								lineY,
+								normalX,
+								normalY,
+								x1,
+								y1,
+								x2,
+								y2,
+							});
+							if (hit) {
+								vertices.push([hit.x, hit.y]);
+								vertices.push([x2, y2]);
+							}
+						}
 					}
-				}
-			}
 
-			if (
-				vertices.length < 3 ||
-				polygonArea({ vertices }) < MIN_POLYGON_AREA_PX
-			) {
-				return new Path2D();
-			}
+					if (
+						vertices.length < 3 ||
+						polygonArea({ vertices }) < MIN_POLYGON_AREA_PX
+					) {
+						return new Path2D();
+					}
 
-			const path = new Path2D();
-			path.moveTo(vertices[0][0], vertices[0][1]);
-			for (let i = 1; i < vertices.length; i++) {
-				path.lineTo(vertices[i][0], vertices[i][1]);
-			}
-			path.closePath();
-			return path;
+					const path = new Path2D();
+					path.moveTo(vertices[0][0], vertices[0][1]);
+					for (let i = 1; i < vertices.length; i++) {
+						path.lineTo(vertices[i][0], vertices[i][1]);
+					}
+					path.closePath();
+					return path;
+				},
+			},
 		},
-		buildStrokePath({ resolvedParams, width, height }) {
-			const segment = getSplitMaskStrokeSegment({
-				resolvedParams,
-				width,
-				height,
-			});
-			const path = new Path2D();
+		stroke: {
+			kind: "strokeFromPath",
+			buildStrokePath({ resolvedParams, width, height }) {
+				const segment = getSplitMaskStrokeSegment({
+					resolvedParams,
+					width,
+					height,
+				});
+				const path = new Path2D();
 
-			if (!segment) {
+				if (!segment) {
+					return path;
+				}
+
+				path.moveTo(segment[0].x, segment[0].y);
+				path.lineTo(segment[1].x, segment[1].y);
 				return path;
-			}
-
-			path.moveTo(segment[0].x, segment[0].y);
-			path.lineTo(segment[1].x, segment[1].y);
-			return path;
+			},
 		},
 	},
 };

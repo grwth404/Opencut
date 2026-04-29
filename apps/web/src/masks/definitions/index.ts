@@ -1,5 +1,8 @@
-import type { BaseMaskParams, MaskDefinition } from "@/masks/types";
-import { masksRegistry, type MaskIconProps } from "../registry";
+import {
+	masksRegistry,
+	type MaskDefinitionForRegistration,
+	type MaskIconProps,
+} from "../registry";
 import { cinematicBarsMaskDefinition } from "./cinematic-bars";
 import { customMaskDefinition } from "./custom";
 import { diamondMaskDefinition } from "./diamond";
@@ -20,11 +23,11 @@ import {
 	TextFontIcon,
 } from "@hugeicons/core-free-icons";
 
-function registerDefaultMask<TParams extends BaseMaskParams>({
+function registerDefaultMask({
 	definition,
 	icon,
 }: {
-	definition: MaskDefinition<TParams>;
+	definition: MaskDefinitionForRegistration;
 	icon: MaskIconProps;
 }) {
 	if (masksRegistry.has(definition.type)) {

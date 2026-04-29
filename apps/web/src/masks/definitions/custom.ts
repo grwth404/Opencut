@@ -308,7 +308,7 @@ function computeCustomMaskParamUpdate({
 	};
 }
 
-export const customMaskDefinition: MaskDefinition<CustomMaskParams> = {
+export const customMaskDefinition: MaskDefinition<"custom"> = {
 	type: "custom",
 	name: "Custom",
 	features: {
@@ -447,71 +447,77 @@ export const customMaskDefinition: MaskDefinition<CustomMaskParams> = {
 		return params.closed;
 	},
 	renderer: {
-		buildPath({ resolvedParams, width, height }) {
-			const params = resolvedParams as CustomMaskParams;
-			const points = params.path;
-			if (!params.closed) {
-				return new Path2D();
-			}
+		body: {
+			kind: "fillPath",
+			buildPath({ resolvedParams, width, height }) {
+				const params = resolvedParams;
+				const points = params.path;
+				if (!params.closed) {
+					return new Path2D();
+				}
 
-			return buildCustomMaskPath2D({
-				points,
-				centerX: params.centerX,
-				centerY: params.centerY,
-				rotation: params.rotation,
-				scale: params.scale,
-				bounds: {
-					cx: width / 2,
-					cy: height / 2,
-					width,
-					height,
-					rotation: 0,
-				},
-				closed: true,
-			});
+				return buildCustomMaskPath2D({
+					points,
+					centerX: params.centerX,
+					centerY: params.centerY,
+					rotation: params.rotation,
+					scale: params.scale,
+					bounds: {
+						cx: width / 2,
+						cy: height / 2,
+						width,
+						height,
+						rotation: 0,
+					},
+					closed: true,
+				});
+			},
 		},
-		renderStroke({ resolvedParams, ctx, width, height }) {
-			const params = resolvedParams as CustomMaskParams;
-			if (!params.closed) {
-				return;
-			}
+		stroke: {
+			kind: "renderStroke",
+			renderStroke({ resolvedParams, ctx, width, height }) {
+				const params = resolvedParams;
+				if (!params.closed) {
+					return;
+				}
 
-			const points = params.path;
-			const path = buildCustomMaskPath2D({
-				points,
-				centerX: params.centerX,
-				centerY: params.centerY,
-				rotation: params.rotation,
-				scale: params.scale,
-				bounds: {
-					cx: width / 2,
-					cy: height / 2,
-					width,
-					height,
-					rotation: 0,
-				},
-				closed: true,
-			});
+				const points = params.path;
+				const path = buildCustomMaskPath2D({
+					points,
+					centerX: params.centerX,
+					centerY: params.centerY,
+					rotation: params.rotation,
+					scale: params.scale,
+					bounds: {
+						cx: width / 2,
+						cy: height / 2,
+						width,
+						height,
+						rotation: 0,
+					},
+					closed: true,
+				});
 
-			ctx.save();
-			ctx.strokeStyle = params.strokeColor;
-			ctx.lineWidth = params.strokeWidth;
-			ctx.lineJoin = "round";
-			ctx.lineCap = "round";
-			ctx.stroke(path);
+				ctx.save();
+				ctx.strokeStyle = params.strokeColor;
+				ctx.lineWidth = params.strokeWidth;
+				ctx.lineJoin = "round";
+				ctx.lineCap = "round";
+				ctx.stroke(path);
 
-			if (params.strokeAlign === "inside") {
-				ctx.globalCompositeOperation = "destination-in";
-				ctx.fillStyle = "#ffffff";
-				ctx.fill(path);
-			}
+				if (params.strokeAlign === "inside") {
+					ctx.globalCompositeOperation = "destination-in";
+					ctx.fillStyle = "#ffffff";
+					ctx.fill(path);
+				}
 
-			if (params.strokeAlign === "outside") {
-				ctx.globalCompositeOperation = "destination-out";
-				ctx.fillStyle = "#ffffff";
-				ctx.fill(path);
-			}
-			ctx.restore();
+				if (params.strokeAlign === "outside") {
+					ctx.globalCompositeOperation = "destination-out";
+					ctx.fillStyle = "#ffffff";
+					ctx.fill(path);
+				}
+				ctx.restore();
+			},
 		},
 	},
 };

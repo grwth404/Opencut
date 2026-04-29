@@ -71,7 +71,7 @@ function buildBandPath({
 	return path;
 }
 
-export const cinematicBarsMaskDefinition: MaskDefinition<RectangleMaskParams> = {
+export const cinematicBarsMaskDefinition: MaskDefinition<"cinematic-bars"> = {
 	type: "cinematic-bars",
 	name: "Cinematic Bars",
 	features: {
@@ -94,42 +94,51 @@ export const cinematicBarsMaskDefinition: MaskDefinition<RectangleMaskParams> = 
 	},
 	computeParamUpdate: computeBoxMaskParamUpdate,
 	renderer: {
-		buildPath({ resolvedParams, width, height }) {
-			const params = resolvedParams as RectangleMaskParams;
-			const centerX = width / 2 + params.centerX * width;
-			const centerY = height / 2 + params.centerY * height;
-			const maskWidth = Math.max(params.width * width, width);
-			const maskHeight = Math.max(params.height, 0.01) * height;
-			const rotationRad = (params.rotation * Math.PI) / 180;
+		body: {
+			kind: "fillPath",
+			buildPath({ resolvedParams, width, height }) {
+				const params = resolvedParams;
+				const centerX = width / 2 + params.centerX * width;
+				const centerY = height / 2 + params.centerY * height;
+				const maskWidth = Math.max(params.width * width, width);
+				const maskHeight = Math.max(params.height, 0.01) * height;
+				const rotationRad = (params.rotation * Math.PI) / 180;
 
-			return buildBandPath({
-				centerX,
-				centerY,
-				halfWidth: maskWidth / 2,
-				halfHeight: maskHeight / 2,
-				rotationRad,
-			});
+				return buildBandPath({
+					centerX,
+					centerY,
+					halfWidth: maskWidth / 2,
+					halfHeight: maskHeight / 2,
+					rotationRad,
+				});
+			},
 		},
-		buildStrokePath({ resolvedParams, width, height }) {
-			const params = resolvedParams as RectangleMaskParams;
-			const centerX = width / 2 + params.centerX * width;
-			const centerY = height / 2 + params.centerY * height;
-			const rotationRad = (params.rotation * Math.PI) / 180;
-			const offset = getStrokeOffset({
-				strokeAlign: params.strokeAlign,
-				strokeWidth: params.strokeWidth,
-			});
+		stroke: {
+			kind: "strokeFromPath",
+			buildStrokePath({ resolvedParams, width, height }) {
+				const params = resolvedParams;
+				const centerX = width / 2 + params.centerX * width;
+				const centerY = height / 2 + params.centerY * height;
+				const rotationRad = (params.rotation * Math.PI) / 180;
+				const offset = getStrokeOffset({
+					strokeAlign: params.strokeAlign,
+					strokeWidth: params.strokeWidth,
+				});
 
-			return buildBandPath({
-				centerX,
-				centerY,
-				halfWidth: Math.max((Math.max(params.width * width, width) / 2) + offset, 1),
-				halfHeight: Math.max(
-					(Math.max(params.height, 0.01) * height) / 2 + offset,
-					1,
-				),
-				rotationRad,
-			});
+				return buildBandPath({
+					centerX,
+					centerY,
+					halfWidth: Math.max(
+						Math.max(params.width * width, width) / 2 + offset,
+						1,
+					),
+					halfHeight: Math.max(
+						(Math.max(params.height, 0.01) * height) / 2 + offset,
+						1,
+					),
+					rotationRad,
+				});
+			},
 		},
 	},
 };

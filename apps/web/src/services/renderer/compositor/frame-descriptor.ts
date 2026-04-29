@@ -396,23 +396,16 @@ function buildMaskArtifacts({
 		return { mask: null, strokeLayer: null };
 	}
 
-	let feather = mask.params.feather;
-	const canRenderMaskDirectly = Boolean(definition.renderer.renderMask);
-	const shouldRenderMaskDirectly =
-		canRenderMaskDirectly &&
-		(!definition.renderer.buildPath ||
-			(mask.params.feather > 0 &&
-				definition.renderer.renderMaskHandlesFeather));
-	if (
-		shouldRenderMaskDirectly &&
-		definition.renderer.renderMaskHandlesFeather
-	) {
-		feather = 0;
-	}
+	const { body } = definition.renderer;
+	const usesOpaqueFastPath =
+		body.kind === "drawWithFeather" &&
+		mask.params.feather === 0 &&
+		Boolean(body.opaqueFastPath);
+	const feather = body.kind === "drawWithFeather" ? 0 : mask.params.feather;
 
 	const maskTextureId = `${path}:mask`;
 	const { width: canvasWidth, height: canvasHeight } = renderer;
-	const maskContentHash = `mask:${mask.type}:${JSON.stringify(mask.params)}:${transformHash(transform)}:${canvasWidth}x${canvasHeight}:direct=${shouldRenderMaskDirectly}`;
+	const maskContentHash = `mask:${mask.type}:${JSON.stringify(mask.params)}:${transformHash(transform)}:${canvasWidth}x${canvasHeight}:body=${body.kind}:fastPath=${usesOpaqueFastPath}`;
 	const drawMask: TextureCanvasDrawFn = (ctx) => {
 		const { canvas: elementMaskCanvas, context: elementMaskCtx } =
 			createCanvasSurface({
@@ -420,24 +413,44 @@ function buildMaskArtifacts({
 				height: Math.round(transform.height),
 			});
 
-		if (shouldRenderMaskDirectly && definition.renderer.renderMask) {
-			definition.renderer.renderMask({
-				resolvedParams: mask.params,
-				ctx: elementMaskCtx,
-				width: Math.round(transform.width),
-				height: Math.round(transform.height),
-				feather: mask.params.feather,
-			});
-		} else if (definition.renderer.buildPath) {
-			const path2d = definition.renderer.buildPath({
-				resolvedParams: mask.params,
-				width: transform.width,
-				height: transform.height,
-			});
-			elementMaskCtx.fillStyle = "white";
-			elementMaskCtx.fill(path2d);
-		} else {
-			return;
+		switch (body.kind) {
+			case "fillPath": {
+				const path2d = body.buildPath({
+					resolvedParams: mask.params,
+					width: transform.width,
+					height: transform.height,
+				});
+				elementMaskCtx.fillStyle = "white";
+				elementMaskCtx.fill(path2d);
+				break;
+			}
+			case "drawOpaque":
+				body.drawOpaque({
+					resolvedParams: mask.params,
+					ctx: elementMaskCtx,
+					width: Math.round(transform.width),
+					height: Math.round(transform.height),
+				});
+				break;
+			case "drawWithFeather":
+				if (usesOpaqueFastPath && body.opaqueFastPath) {
+					const path2d = body.opaqueFastPath.buildPath({
+						resolvedParams: mask.params,
+						width: transform.width,
+						height: transform.height,
+					});
+					elementMaskCtx.fillStyle = "white";
+					elementMaskCtx.fill(path2d);
+				} else {
+					body.drawWithFeather({
+						resolvedParams: mask.params,
+						ctx: elementMaskCtx,
+						width: Math.round(transform.width),
+						height: Math.round(transform.height),
+						feather: mask.params.feather,
+					});
+				}
+				break;
 		}
 
 		drawTransformedCanvas({ ctx, source: elementMaskCanvas, transform });
@@ -451,45 +464,38 @@ function buildMaskArtifacts({
 		draw: drawMask,
 	});
 
-	const hasStroke =
-		mask.params.strokeWidth > 0 &&
-		(definition.renderer.renderStroke ||
-			definition.renderer.buildStrokePath ||
-			definition.renderer.buildPath);
+	const stroke = definition.renderer.stroke;
+	const hasStroke = mask.params.strokeWidth > 0 && Boolean(stroke);
 	let strokeLayer: FrameItemDescriptor | null = null;
-	if (hasStroke) {
+	if (hasStroke && stroke) {
 		const strokeTextureId = `${path}:mask-stroke`;
-		const strokeContentHash = `stroke:${mask.type}:${JSON.stringify(mask.params)}:${transformHash(transform)}:${canvasWidth}x${canvasHeight}`;
+		const strokeContentHash = `stroke:${mask.type}:${JSON.stringify(mask.params)}:${transformHash(transform)}:${canvasWidth}x${canvasHeight}:stroke=${stroke.kind}`;
 		const drawStroke: TextureCanvasDrawFn = (ctx) => {
 			const { canvas: strokeCanvas, context: strokeCtx } = createCanvasSurface({
 				width: Math.round(transform.width),
 				height: Math.round(transform.height),
 			});
 
-			if (definition.renderer.renderStroke) {
-				definition.renderer.renderStroke({
-					resolvedParams: mask.params,
-					ctx: strokeCtx,
-					width: transform.width,
-					height: transform.height,
-				});
-			} else {
-				const strokePath =
-					definition.renderer.buildStrokePath?.({
+			switch (stroke.kind) {
+				case "renderStroke":
+					stroke.renderStroke({
+						resolvedParams: mask.params,
+						ctx: strokeCtx,
+						width: transform.width,
+						height: transform.height,
+					});
+					break;
+				case "strokeFromPath": {
+					const strokePath = stroke.buildStrokePath({
 						resolvedParams: mask.params,
 						width: transform.width,
 						height: transform.height,
-					}) ??
-					definition.renderer.buildPath?.({
-						resolvedParams: mask.params,
-						width: transform.width,
-						height: transform.height,
-					}) ??
-					null;
-				if (!strokePath) return;
-				strokeCtx.strokeStyle = mask.params.strokeColor;
-				strokeCtx.lineWidth = mask.params.strokeWidth;
-				strokeCtx.stroke(strokePath);
+					});
+					strokeCtx.strokeStyle = mask.params.strokeColor;
+					strokeCtx.lineWidth = mask.params.strokeWidth;
+					strokeCtx.stroke(strokePath);
+					break;
+				}
 			}
 
 			drawTransformedCanvas({ ctx, source: strokeCanvas, transform });

@@ -131,32 +131,50 @@ export type Mask =
 	| TextMask
 	| CustomMask;
 
-export interface MaskRenderer {
-	buildPath?: (params: {
-		resolvedParams: unknown;
-		width: number;
-		height: number;
-	}) => Path2D;
-	buildStrokePath?: (params: {
-		resolvedParams: unknown;
-		width: number;
-		height: number;
-	}) => Path2D;
-	/** Renders the feathered mask directly onto ctx, bypassing JFA. */
-	renderMask?: (params: {
-		resolvedParams: unknown;
-		ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
-		width: number;
-		height: number;
-		feather: number;
-	}) => void;
-	renderMaskHandlesFeather?: boolean;
-	renderStroke?: (params: {
-		resolvedParams: unknown;
-		ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
-		width: number;
-		height: number;
-	}) => void;
+export type MaskByType<TType extends MaskType> = Extract<Mask, { type: TType }>;
+export type MaskParamsByType<TType extends MaskType> =
+	MaskByType<TType>["params"];
+
+type MaskPathArgs<TParams extends BaseMaskParams> = {
+	resolvedParams: TParams;
+	width: number;
+	height: number;
+};
+
+type MaskDrawArgs<TParams extends BaseMaskParams> = MaskPathArgs<TParams> & {
+	ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+};
+
+export type MaskBody<TParams extends BaseMaskParams = BaseMaskParams> =
+	| {
+			kind: "fillPath";
+			buildPath(args: MaskPathArgs<TParams>): Path2D;
+	  }
+	| {
+			kind: "drawOpaque";
+			drawOpaque(args: MaskDrawArgs<TParams>): void;
+	  }
+	| {
+			kind: "drawWithFeather";
+			drawWithFeather(args: MaskDrawArgs<TParams> & { feather: number }): void;
+			opaqueFastPath?: {
+				buildPath(args: MaskPathArgs<TParams>): Path2D;
+			};
+	  };
+
+export type MaskStroke<TParams extends BaseMaskParams = BaseMaskParams> =
+	| {
+			kind: "strokeFromPath";
+			buildStrokePath(args: MaskPathArgs<TParams>): Path2D;
+	  }
+	| {
+			kind: "renderStroke";
+			renderStroke(args: MaskDrawArgs<TParams>): void;
+	  };
+
+export interface MaskRenderer<TParams extends BaseMaskParams = BaseMaskParams> {
+	body: MaskBody<TParams>;
+	stroke?: MaskStroke<TParams>;
 }
 
 export interface MaskFeatures {
@@ -282,17 +300,17 @@ export interface MaskInteractionDefinition<
 	snap?(args: MaskSnapArgs<TParams>): MaskSnapResult<TParams>;
 }
 
-export interface MaskDefinition<
-	TParams extends BaseMaskParams = BaseMaskParams,
-> {
-	type: MaskType;
+export interface MaskDefinition<TType extends MaskType = MaskType> {
+	type: TType;
 	name: string;
 	features: MaskFeatures;
-	params: ParamDefinition<keyof TParams & string>[];
-	renderer: MaskRenderer;
-	interaction: MaskInteractionDefinition<TParams>;
+	params: ParamDefinition<keyof MaskParamsByType<TType> & string>[];
+	renderer: MaskRenderer<MaskParamsByType<TType>>;
+	interaction: MaskInteractionDefinition<MaskParamsByType<TType>>;
 	/** When defined and returning false, the mask is not applied and the element renders fully visible. */
-	isActive?: (params: TParams) => boolean;
-	buildDefault(context: MaskDefaultContext): Omit<Mask, "id">;
-	computeParamUpdate(args: MaskParamUpdateArgs<TParams>): Partial<TParams>;
+	isActive?(params: MaskParamsByType<TType>): boolean;
+	buildDefault(context: MaskDefaultContext): Omit<MaskByType<TType>, "id">;
+	computeParamUpdate(
+		args: MaskParamUpdateArgs<MaskParamsByType<TType>>,
+	): Partial<MaskParamsByType<TType>>;
 }

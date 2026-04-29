@@ -1,4 +1,4 @@
-import type { MaskDefinition, RectangleMaskParams } from "@/masks/types";
+import type { MaskDefinition } from "@/masks/types";
 import {
 	BOX_LIKE_MASK_PARAMS,
 	buildBoxMaskInteraction,
@@ -78,7 +78,7 @@ function buildHeartPath({
 	return path;
 }
 
-export const heartMaskDefinition: MaskDefinition<RectangleMaskParams> = {
+export const heartMaskDefinition: MaskDefinition<"heart"> = {
 	type: "heart",
 	name: "Heart",
 	features: {
@@ -110,33 +110,39 @@ export const heartMaskDefinition: MaskDefinition<RectangleMaskParams> = {
 	},
 	computeParamUpdate: computeBoxMaskParamUpdate,
 	renderer: {
-		buildPath({ resolvedParams, width, height }) {
-			const params = resolvedParams as RectangleMaskParams;
-			const { centerX, centerY, maskWidth, maskHeight, rotationRad } =
-				getBoxLikeGeometry({ params, width, height });
-			return buildHeartPath({
-				centerX,
-				centerY,
-				halfWidth: maskWidth / 2,
-				halfHeight: maskHeight / 2,
-				rotationRad,
-			});
+		body: {
+			kind: "fillPath",
+			buildPath({ resolvedParams, width, height }) {
+				const params = resolvedParams;
+				const { centerX, centerY, maskWidth, maskHeight, rotationRad } =
+					getBoxLikeGeometry({ params, width, height });
+				return buildHeartPath({
+					centerX,
+					centerY,
+					halfWidth: maskWidth / 2,
+					halfHeight: maskHeight / 2,
+					rotationRad,
+				});
+			},
 		},
-		buildStrokePath({ resolvedParams, width, height }) {
-			const params = resolvedParams as RectangleMaskParams;
-			const { centerX, centerY, maskWidth, maskHeight, rotationRad } =
-				getBoxLikeGeometry({ params, width, height });
-			const offset = getStrokeOffset({
-				strokeAlign: params.strokeAlign,
-				strokeWidth: params.strokeWidth,
-			});
-			return buildHeartPath({
-				centerX,
-				centerY,
-				halfWidth: Math.max(maskWidth / 2 + offset, 1),
-				halfHeight: Math.max(maskHeight / 2 + offset, 1),
-				rotationRad,
-			});
+		stroke: {
+			kind: "strokeFromPath",
+			buildStrokePath({ resolvedParams, width, height }) {
+				const params = resolvedParams;
+				const { centerX, centerY, maskWidth, maskHeight, rotationRad } =
+					getBoxLikeGeometry({ params, width, height });
+				const offset = getStrokeOffset({
+					strokeAlign: params.strokeAlign,
+					strokeWidth: params.strokeWidth,
+				});
+				return buildHeartPath({
+					centerX,
+					centerY,
+					halfWidth: Math.max(maskWidth / 2 + offset, 1),
+					halfHeight: Math.max(maskHeight / 2 + offset, 1),
+					rotationRad,
+				});
+			},
 		},
 	},
 };

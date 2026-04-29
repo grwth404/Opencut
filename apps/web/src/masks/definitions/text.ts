@@ -205,7 +205,7 @@ function computeTextMaskParamUpdate({
 	return {};
 }
 
-export const textMaskDefinition: MaskDefinition<TextMaskParams> = {
+export const textMaskDefinition: MaskDefinition<"text"> = {
 	type: "text",
 	name: "Text",
 	features: {
@@ -370,69 +370,75 @@ export const textMaskDefinition: MaskDefinition<TextMaskParams> = {
 		return params.content.trim().length > 0;
 	},
 	renderer: {
-		renderMask({ resolvedParams, ctx, width, height }) {
-			const params = resolvedParams as TextMaskParams;
-			const { layout } = measureTextMask({ params, height });
+		body: {
+			kind: "drawOpaque",
+			drawOpaque({ resolvedParams, ctx, width, height }) {
+				const params = resolvedParams;
+				const { layout } = measureTextMask({ params, height });
 
-			ctx.save();
-			ctx.translate(
-				width / 2 + params.centerX * width,
-				height / 2 + params.centerY * height,
-			);
-			ctx.scale(params.scale, params.scale);
-			if (params.rotation) {
-				ctx.rotate((params.rotation * Math.PI) / 180);
-			}
-			drawMeasuredTextLayout({
-				ctx,
-				layout,
-				textColor: "#ffffff",
-				background: null,
-			});
-			ctx.restore();
+				ctx.save();
+				ctx.translate(
+					width / 2 + params.centerX * width,
+					height / 2 + params.centerY * height,
+				);
+				ctx.scale(params.scale, params.scale);
+				if (params.rotation) {
+					ctx.rotate((params.rotation * Math.PI) / 180);
+				}
+				drawMeasuredTextLayout({
+					ctx,
+					layout,
+					textColor: "#ffffff",
+					background: null,
+				});
+				ctx.restore();
+			},
 		},
-		renderStroke({ resolvedParams, ctx, width, height }) {
-			const params = resolvedParams as TextMaskParams;
-			const { layout } = measureTextMask({ params, height });
+		stroke: {
+			kind: "renderStroke",
+			renderStroke({ resolvedParams, ctx, width, height }) {
+				const params = resolvedParams;
+				const { layout } = measureTextMask({ params, height });
 
-			ctx.save();
-			ctx.translate(
-				width / 2 + params.centerX * width,
-				height / 2 + params.centerY * height,
-			);
-			ctx.scale(params.scale, params.scale);
-			if (params.rotation) {
-				ctx.rotate((params.rotation * Math.PI) / 180);
-			}
+				ctx.save();
+				ctx.translate(
+					width / 2 + params.centerX * width,
+					height / 2 + params.centerY * height,
+				);
+				ctx.scale(params.scale, params.scale);
+				if (params.rotation) {
+					ctx.rotate((params.rotation * Math.PI) / 180);
+				}
 
-			strokeMeasuredTextLayout({
-				ctx,
-				layout,
-				strokeColor: params.strokeColor,
-				strokeWidth: params.strokeWidth,
-			});
-
-			if (params.strokeAlign === "inside") {
-				ctx.globalCompositeOperation = "destination-in";
-				drawMeasuredTextLayout({
+				strokeMeasuredTextLayout({
 					ctx,
 					layout,
-					textColor: "#ffffff",
-					background: null,
+					strokeColor: params.strokeColor,
+					strokeWidth: params.strokeWidth,
 				});
-			}
 
-			if (params.strokeAlign === "outside") {
-				ctx.globalCompositeOperation = "destination-out";
-				drawMeasuredTextLayout({
-					ctx,
-					layout,
-					textColor: "#ffffff",
-					background: null,
-				});
-			}
+				if (params.strokeAlign === "inside") {
+					ctx.globalCompositeOperation = "destination-in";
+					drawMeasuredTextLayout({
+						ctx,
+						layout,
+						textColor: "#ffffff",
+						background: null,
+					});
+				}
 
-			ctx.restore();
+				if (params.strokeAlign === "outside") {
+					ctx.globalCompositeOperation = "destination-out";
+					drawMeasuredTextLayout({
+						ctx,
+						layout,
+						textColor: "#ffffff",
+						background: null,
+					});
+				}
+
+				ctx.restore();
+			},
 		},
 	},
 };

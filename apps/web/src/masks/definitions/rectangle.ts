@@ -1,4 +1,4 @@
-import type { MaskDefinition, RectangleMaskParams } from "@/masks/types";
+import type { MaskDefinition } from "@/masks/types";
 import {
 	BOX_LIKE_MASK_PARAMS,
 	buildBoxMaskInteraction,
@@ -45,7 +45,7 @@ function buildRectanglePath({
 	return path;
 }
 
-export const rectangleMaskDefinition: MaskDefinition<RectangleMaskParams> = {
+export const rectangleMaskDefinition: MaskDefinition<"rectangle"> = {
 	type: "rectangle",
 	name: "Rectangle",
 	features: {
@@ -65,33 +65,39 @@ export const rectangleMaskDefinition: MaskDefinition<RectangleMaskParams> = {
 	},
 	computeParamUpdate: computeBoxMaskParamUpdate,
 	renderer: {
-		buildPath({ resolvedParams, width, height }) {
-			const params = resolvedParams as RectangleMaskParams;
-			const { centerX, centerY, maskWidth, maskHeight, rotationRad } =
-				getBoxLikeGeometry({ params, width, height });
-			return buildRectanglePath({
-				centerX,
-				centerY,
-				halfWidth: maskWidth / 2,
-				halfHeight: maskHeight / 2,
-				rotationRad,
-			});
+		body: {
+			kind: "fillPath",
+			buildPath({ resolvedParams, width, height }) {
+				const params = resolvedParams;
+				const { centerX, centerY, maskWidth, maskHeight, rotationRad } =
+					getBoxLikeGeometry({ params, width, height });
+				return buildRectanglePath({
+					centerX,
+					centerY,
+					halfWidth: maskWidth / 2,
+					halfHeight: maskHeight / 2,
+					rotationRad,
+				});
+			},
 		},
-		buildStrokePath({ resolvedParams, width, height }) {
-			const params = resolvedParams as RectangleMaskParams;
-			const { centerX, centerY, maskWidth, maskHeight, rotationRad } =
-				getBoxLikeGeometry({ params, width, height });
-			const offset = getStrokeOffset({
-				strokeAlign: params.strokeAlign,
-				strokeWidth: params.strokeWidth,
-			});
-			return buildRectanglePath({
-				centerX,
-				centerY,
-				halfWidth: Math.max(1, maskWidth / 2 + offset),
-				halfHeight: Math.max(1, maskHeight / 2 + offset),
-				rotationRad,
-			});
+		stroke: {
+			kind: "strokeFromPath",
+			buildStrokePath({ resolvedParams, width, height }) {
+				const params = resolvedParams;
+				const { centerX, centerY, maskWidth, maskHeight, rotationRad } =
+					getBoxLikeGeometry({ params, width, height });
+				const offset = getStrokeOffset({
+					strokeAlign: params.strokeAlign,
+					strokeWidth: params.strokeWidth,
+				});
+				return buildRectanglePath({
+					centerX,
+					centerY,
+					halfWidth: Math.max(1, maskWidth / 2 + offset),
+					halfHeight: Math.max(1, maskHeight / 2 + offset),
+					rotationRad,
+				});
+			},
 		},
 	},
 };

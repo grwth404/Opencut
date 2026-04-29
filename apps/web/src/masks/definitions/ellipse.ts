@@ -1,4 +1,4 @@
-import type { MaskDefinition, RectangleMaskParams } from "@/masks/types";
+import type { MaskDefinition } from "@/masks/types";
 import {
 	BOX_LIKE_MASK_PARAMS,
 	buildBoxMaskInteraction,
@@ -8,7 +8,7 @@ import {
 	getStrokeOffset,
 } from "./box-like";
 
-export const ellipseMaskDefinition: MaskDefinition<RectangleMaskParams> = {
+export const ellipseMaskDefinition: MaskDefinition<"ellipse"> = {
 	type: "ellipse",
 	name: "Ellipse",
 	features: {
@@ -35,41 +35,47 @@ export const ellipseMaskDefinition: MaskDefinition<RectangleMaskParams> = {
 	},
 	computeParamUpdate: computeBoxMaskParamUpdate,
 	renderer: {
-		buildPath({ resolvedParams, width, height }) {
-			const params = resolvedParams as RectangleMaskParams;
-			const { centerX, centerY, maskWidth, maskHeight, rotationRad } =
-				getBoxLikeGeometry({ params, width, height });
-			const path = new Path2D();
-			path.ellipse(
-				centerX,
-				centerY,
-				maskWidth / 2,
-				maskHeight / 2,
-				rotationRad,
-				0,
-				Math.PI * 2,
-			);
-			return path;
+		body: {
+			kind: "fillPath",
+			buildPath({ resolvedParams, width, height }) {
+				const params = resolvedParams;
+				const { centerX, centerY, maskWidth, maskHeight, rotationRad } =
+					getBoxLikeGeometry({ params, width, height });
+				const path = new Path2D();
+				path.ellipse(
+					centerX,
+					centerY,
+					maskWidth / 2,
+					maskHeight / 2,
+					rotationRad,
+					0,
+					Math.PI * 2,
+				);
+				return path;
+			},
 		},
-		buildStrokePath({ resolvedParams, width, height }) {
-			const params = resolvedParams as RectangleMaskParams;
-			const { centerX, centerY, maskWidth, maskHeight, rotationRad } =
-				getBoxLikeGeometry({ params, width, height });
-			const offset = getStrokeOffset({
-				strokeAlign: params.strokeAlign,
-				strokeWidth: params.strokeWidth,
-			});
-			const path = new Path2D();
-			path.ellipse(
-				centerX,
-				centerY,
-				Math.max(1, maskWidth / 2 + offset),
-				Math.max(1, maskHeight / 2 + offset),
-				rotationRad,
-				0,
-				Math.PI * 2,
-			);
-			return path;
+		stroke: {
+			kind: "strokeFromPath",
+			buildStrokePath({ resolvedParams, width, height }) {
+				const params = resolvedParams;
+				const { centerX, centerY, maskWidth, maskHeight, rotationRad } =
+					getBoxLikeGeometry({ params, width, height });
+				const offset = getStrokeOffset({
+					strokeAlign: params.strokeAlign,
+					strokeWidth: params.strokeWidth,
+				});
+				const path = new Path2D();
+				path.ellipse(
+					centerX,
+					centerY,
+					Math.max(1, maskWidth / 2 + offset),
+					Math.max(1, maskHeight / 2 + offset),
+					rotationRad,
+					0,
+					Math.PI * 2,
+				);
+				return path;
+			},
 		},
 	},
 };

@@ -2,11 +2,11 @@ import { MAX_FEATHER } from "@/masks/feather";
 import type { ParamDefinition } from "@/params";
 import type {
 	BaseMaskParams,
+	Mask,
 	MaskDefaultContext,
 	MaskDefinition,
-	MaskInteractionResult,
-	MaskSnapArgs,
-	MaskSnapResult,
+	MaskParamUpdateArgs,
+	MaskRenderer,
 	MaskType,
 } from "@/masks/types";
 import type { HugeiconsIconProps } from "@hugeicons/react";
@@ -16,6 +16,16 @@ export type MaskIconProps = {
 	icon: HugeiconsIconProps["icon"];
 	strokeWidth?: number;
 };
+
+type RegisteredMaskWithoutId = Mask extends infer TMask
+	? TMask extends Mask
+		? Omit<TMask, "id">
+		: never
+	: never;
+
+export type MaskDefinitionForRegistration = {
+	[TType in MaskType]: MaskDefinition<TType>;
+}[MaskType];
 
 const BASE_MASK_PARAM_DEFINITIONS: ParamDefinition<
 	keyof BaseMaskParams & string
@@ -50,28 +60,15 @@ const BASE_MASK_PARAM_DEFINITIONS: ParamDefinition<
 export interface RegisteredMaskDefinition {
 	type: MaskType;
 	name: string;
-	features: MaskDefinition<BaseMaskParams>["features"];
+	features: MaskDefinition["features"];
 	params: ParamDefinition<string>[];
-	renderer: MaskDefinition<BaseMaskParams>["renderer"];
-	interaction: {
-		getInteraction(args: {
-			params: BaseMaskParams;
-			bounds: Parameters<
-				MaskDefinition<BaseMaskParams>["interaction"]["getInteraction"]
-			>[0]["bounds"];
-			displayScale: number;
-			scaleX: number;
-			scaleY: number;
-		}): MaskInteractionResult;
-		snap?(args: MaskSnapArgs<BaseMaskParams>): MaskSnapResult<BaseMaskParams>;
-	};
-	isActive?: (params: BaseMaskParams) => boolean;
-	buildDefault(
-		context: MaskDefaultContext,
-	): ReturnType<MaskDefinition<BaseMaskParams>["buildDefault"]>;
+	renderer: MaskRenderer<BaseMaskParams>;
+	interaction: MaskDefinition["interaction"];
+	isActive?(params: BaseMaskParams): boolean;
+	buildDefault(context: MaskDefaultContext): RegisteredMaskWithoutId;
 	computeParamUpdate(
-		args: Parameters<MaskDefinition<BaseMaskParams>["computeParamUpdate"]>[0],
-	): ReturnType<MaskDefinition<BaseMaskParams>["computeParamUpdate"]>;
+		args: MaskParamUpdateArgs<BaseMaskParams>,
+	): ReturnType<MaskDefinition["computeParamUpdate"]>;
 	icon: MaskIconProps;
 }
 
@@ -83,11 +80,11 @@ export class MasksRegistry extends DefinitionRegistry<
 		super("mask");
 	}
 
-	registerMask<TParams extends BaseMaskParams>({
+	registerMask({
 		definition,
 		icon,
 	}: {
-		definition: MaskDefinition<TParams>;
+		definition: MaskDefinitionForRegistration;
 		icon: MaskIconProps;
 	}): void {
 		const withBaseParams: RegisteredMaskDefinition = {
@@ -96,23 +93,10 @@ export class MasksRegistry extends DefinitionRegistry<
 			features: definition.features,
 			params: [...definition.params, ...BASE_MASK_PARAM_DEFINITIONS],
 			renderer: definition.renderer,
-			interaction: {
-				getInteraction(args) {
-					return definition.interaction.getInteraction(args as never);
-				},
-				snap: definition.interaction.snap
-					? (args) => definition.interaction.snap?.(args as never) as never
-					: undefined,
-			},
-			isActive: definition.isActive
-				? (params) => definition.isActive?.(params as TParams) ?? true
-				: undefined,
-			buildDefault(context) {
-				return definition.buildDefault(context);
-			},
-			computeParamUpdate(args) {
-				return definition.computeParamUpdate(args as never);
-			},
+			interaction: definition.interaction,
+			isActive: definition.isActive,
+			buildDefault: definition.buildDefault,
+			computeParamUpdate: definition.computeParamUpdate,
 			icon,
 		};
 		this.register({
