@@ -16,7 +16,7 @@ import {
 	getBoxMaskHandlePositions,
 	getBoxMaskOverlays,
 } from "@/masks/handle-positions";
-import { snapMaskInteraction } from "@/masks/snap";
+import { snapBoxMaskInteraction } from "@/masks/snap";
 
 const PERCENTAGE_DISPLAY: Pick<
 	NumberParamDefinition,
@@ -198,7 +198,7 @@ export function buildBoxMaskInteraction({
 			};
 		},
 		snap(args) {
-			return snapMaskInteraction(args);
+			return snapBoxMaskInteraction(args);
 		},
 	};
 }

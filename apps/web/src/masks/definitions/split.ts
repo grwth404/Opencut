@@ -9,7 +9,7 @@ import {
 	getLineMaskHandlePositions,
 	getLineMaskOverlay,
 } from "@/masks/handle-positions";
-import { snapMaskInteraction } from "@/masks/snap";
+import { snapSplitMaskInteraction } from "@/masks/snap";
 
 // cos(π/2) returns ~6e-17 in JS, not 0. Values below this threshold are snapped
 // to exactly 0 to prevent opposite-sign float noise on canvas corners that lie
@@ -216,7 +216,7 @@ export const splitMaskDefinition: MaskDefinition<SplitMaskParams> = {
 			};
 		},
 		snap(args) {
-			return snapMaskInteraction(args);
+			return snapSplitMaskInteraction(args);
 		},
 	},
 	buildDefault() {

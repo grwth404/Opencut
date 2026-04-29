@@ -13,7 +13,7 @@ import {
 import { getSplitMaskStrokeSegment } from "@/masks/definitions/split";
 import { textMaskDefinition } from "@/masks/definitions/text";
 import { getMaskSnapGeometry } from "@/masks/geometry";
-import { snapMaskInteraction } from "@/masks/snap";
+import { snapBoxMaskInteraction, snapSplitMaskInteraction } from "@/masks/snap";
 import type { ElementBounds } from "@/preview/element-bounds";
 import type {
 	CustomMaskParams,
@@ -230,7 +230,7 @@ describe("mask geometry", () => {
 
 describe("mask snapping", () => {
 	test("snaps split mask movement using the shared position pipeline", () => {
-		const result = snapMaskInteraction({
+		const result = snapSplitMaskInteraction({
 			handleId: "position",
 			startParams: buildSplitParams({
 				centerX: 0.03,
@@ -254,7 +254,7 @@ describe("mask snapping", () => {
 	});
 
 	test("snaps box mask movement against element center and edges", () => {
-		const result = snapMaskInteraction({
+		const result = snapBoxMaskInteraction({
 			handleId: "position",
 			startParams: buildRectangleParams(),
 			proposedParams: buildRectangleParams({
@@ -275,7 +275,7 @@ describe("mask snapping", () => {
 	});
 
 	test("snaps mask rotation through the shared rotation path", () => {
-		const result = snapMaskInteraction({
+		const result = snapBoxMaskInteraction({
 			handleId: "rotation",
 			startParams: buildRectangleParams(),
 			proposedParams: buildRectangleParams({
@@ -291,7 +291,7 @@ describe("mask snapping", () => {
 	});
 
 	test("snaps edge resize for box masks", () => {
-		const result = snapMaskInteraction({
+		const result = snapBoxMaskInteraction({
 			handleId: "right",
 			startParams: buildRectangleParams(),
 			proposedParams: buildRectangleParams({
@@ -307,7 +307,7 @@ describe("mask snapping", () => {
 	});
 
 	test("snaps corner resize for box masks", () => {
-		const result = snapMaskInteraction({
+		const result = snapBoxMaskInteraction({
 			handleId: "bottom-right",
 			startParams: buildRectangleParams(),
 			proposedParams: buildRectangleParams({
