@@ -56,11 +56,13 @@ export class ToggleMaskInvertedCommand extends Command {
 			trackId: this.trackId,
 			elementId: this.elementId,
 			elementPredicate: isMaskableElement,
-			update: (element) =>
-				toggleMaskInvertedOnElement({
-					element: element as MaskableElement,
+			update: (element) => {
+				if (!isMaskableElement(element)) return element;
+				return toggleMaskInvertedOnElement({
+					element,
 					maskId: this.maskId,
-				}),
+				});
+			},
 		});
 
 		editor.timeline.updateTracks(updatedTracks);

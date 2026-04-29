@@ -1,10 +1,10 @@
-import { computeFeatherUpdate } from "../param-update";
+import { computeFeatherUpdate } from "@/masks/param-update";
 import type {
 	MaskDefinition,
 	MaskParamUpdateArgs,
 	SplitMaskParams,
 } from "@/masks/types";
-import { halfPlaneSign, lineEdgeIntersection } from "../utils";
+import { halfPlaneSign, lineEdgeIntersection } from "@/masks/utils";
 import {
 	getLineMaskHandlePositions,
 	getLineMaskOverlay,

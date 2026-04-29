@@ -10,7 +10,7 @@ import {
 	getDefaultBaseMaskParams,
 	getStrokeOffset,
 	rotatePoint,
-} from "./box-like";
+} from "../box-like";
 
 function getDefaultCinematicBarsMaskParams({
 	elementSize,

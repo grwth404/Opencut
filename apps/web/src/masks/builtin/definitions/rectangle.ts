@@ -7,7 +7,7 @@ import {
 	getDefaultSquareMaskParams,
 	getStrokeOffset,
 	rotatePoint,
-} from "./box-like";
+} from "../box-like";
 
 function buildRectanglePath({
 	centerX,

@@ -1,23 +1,23 @@
 import { EditorCore } from "@/core";
 import { Command, type CommandResult } from "@/commands/base-command";
-import { insertPointOnCustomMaskSegment } from "@/masks/definitions/custom";
+import { insertPointOnFreeformSegment } from "@/masks/freeform/definition";
 import type { ElementBounds } from "@/preview/element-bounds";
-import type { CustomMask } from "@/masks/types";
+import type { FreeformPathMask } from "@/masks/types";
 import { isMaskableElement, updateElementInSceneTracks } from "@/timeline";
 import type { MaskableElement, SceneTracks } from "@/timeline";
 
-function insertPointIntoCustomMask({
+function insertPointIntoFreeformPathMask({
 	mask,
 	segmentIndex,
 	canvasPoint,
 	bounds,
 }: {
-	mask: CustomMask;
+	mask: FreeformPathMask;
 	segmentIndex: number;
 	canvasPoint: { x: number; y: number };
 	bounds: ElementBounds;
-}): { mask: CustomMask; insertedPointId: string | null } {
-	const result = insertPointOnCustomMaskSegment({
+}): { mask: FreeformPathMask; insertedPointId: string | null } {
+	const result = insertPointOnFreeformSegment({
 		params: mask.params,
 		segmentIndex,
 		canvasPoint,
@@ -61,11 +61,11 @@ function insertPointIntoElementMask({
 	let didInsertPoint = false;
 
 	const nextMasks = currentMasks.map((mask) => {
-		if (mask.id !== maskId || mask.type !== "custom") {
+		if (mask.id !== maskId || mask.type !== "freeform") {
 			return mask;
 		}
 
-		const result = insertPointIntoCustomMask({
+		const result = insertPointIntoFreeformPathMask({
 			mask,
 			segmentIndex,
 			canvasPoint,
@@ -85,7 +85,7 @@ function insertPointIntoElementMask({
 	};
 }
 
-export class InsertCustomMaskPointCommand extends Command {
+export class InsertFreeformPathMaskPointCommand extends Command {
 	private savedState: SceneTracks | null = null;
 	private readonly trackId: string;
 	private readonly elementId: string;
@@ -130,8 +130,9 @@ export class InsertCustomMaskPointCommand extends Command {
 			elementId: this.elementId,
 			elementPredicate: isMaskableElement,
 			update: (element) => {
+				if (!isMaskableElement(element)) return element;
 				const result = insertPointIntoElementMask({
-					element: element as MaskableElement,
+					element,
 					maskId: this.maskId,
 					segmentIndex: this.segmentIndex,
 					canvasPoint: this.canvasPoint,

@@ -30,7 +30,7 @@ export function MaskHandles({
 		selectedWithMask,
 		handlePositions,
 		overlays,
-		isCreatingCustomMask,
+		isCreatingFreeformPathMask,
 		handleCanvasPointerDown,
 		handlePointerDown,
 		handlePointerMove,
@@ -94,7 +94,7 @@ export function MaskHandles({
 			className="pointer-events-none absolute inset-0 overflow-hidden"
 			aria-hidden
 		>
-			{isCreatingCustomMask ? (
+			{isCreatingFreeformPathMask ? (
 				<div
 					className="absolute inset-0 pointer-events-auto"
 					style={{ cursor: PEN_CURSOR }}

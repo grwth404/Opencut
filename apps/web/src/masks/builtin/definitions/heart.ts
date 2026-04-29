@@ -7,9 +7,9 @@ import {
 	getDefaultSquareMaskParams,
 	getStrokeOffset,
 	rotatePoint,
-} from "./box-like";
+} from "../box-like";
 
-function buildDiamondPath({
+function buildHeartPath({
 	centerX,
 	centerY,
 	halfWidth,
@@ -22,32 +22,65 @@ function buildDiamondPath({
 	halfHeight: number;
 	rotationRad: number;
 }): Path2D {
-	const points = [
-		{ x: centerX, y: centerY - halfHeight },
-		{ x: centerX + halfWidth, y: centerY },
-		{ x: centerX, y: centerY + halfHeight },
-		{ x: centerX - halfWidth, y: centerY },
-	].map((point) =>
+	const toPoint = ({
+		localX,
+		localY,
+	}: {
+		localX: number;
+		localY: number;
+	}) =>
 		rotatePoint({
-			...point,
+			x: centerX + localX,
+			y: centerY + localY,
 			centerX,
 			centerY,
 			rotationRad,
-		}),
-	);
+		});
+
+	const start = toPoint({ localX: 0, localY: -halfHeight * 0.475 });
+	const rightControl1 = toPoint({
+		localX: halfWidth,
+		localY: -halfHeight * 1.225,
+	});
+	const rightControl2 = toPoint({
+		localX: halfWidth,
+		localY: -halfHeight * 0.125,
+	});
+	const bottom = toPoint({ localX: 0, localY: halfHeight * 0.725 });
+	const leftControl1 = toPoint({
+		localX: -halfWidth,
+		localY: -halfHeight * 0.125,
+	});
+	const leftControl2 = toPoint({
+		localX: -halfWidth,
+		localY: -halfHeight * 1.225,
+	});
 
 	const path = new Path2D();
-	path.moveTo(points[0].x, points[0].y);
-	for (const point of points.slice(1)) {
-		path.lineTo(point.x, point.y);
-	}
+	path.moveTo(start.x, start.y);
+	path.bezierCurveTo(
+		rightControl1.x,
+		rightControl1.y,
+		rightControl2.x,
+		rightControl2.y,
+		bottom.x,
+		bottom.y,
+	);
+	path.bezierCurveTo(
+		leftControl1.x,
+		leftControl1.y,
+		leftControl2.x,
+		leftControl2.y,
+		start.x,
+		start.y,
+	);
 	path.closePath();
 	return path;
 }
 
-export const diamondMaskDefinition: MaskDefinition<"diamond"> = {
-	type: "diamond",
-	name: "Diamond",
+export const heartMaskDefinition: MaskDefinition<"heart"> = {
+	type: "heart",
+	name: "Heart",
 	features: {
 		hasPosition: true,
 		hasRotation: true,
@@ -57,12 +90,21 @@ export const diamondMaskDefinition: MaskDefinition<"diamond"> = {
 	interaction: buildBoxMaskInteraction({
 		sizeMode: "width-height",
 		buildOverlayPath({ width, height }) {
-			return `M ${width / 2},0 L ${width},${height / 2} L ${width / 2},${height} L 0,${height / 2} Z`;
+			const cx = width / 2;
+			const cy = height / 2;
+			const halfWidth = width / 2;
+			const halfHeight = height / 2;
+			return [
+				`M ${cx},${cy - halfHeight * 0.475}`,
+				`C ${cx + halfWidth},${cy - halfHeight * 1.225} ${cx + halfWidth},${cy - halfHeight * 0.125} ${cx},${cy + halfHeight * 0.725}`,
+				`C ${cx - halfWidth},${cy - halfHeight * 0.125} ${cx - halfWidth},${cy - halfHeight * 1.225} ${cx},${cy - halfHeight * 0.475}`,
+				"Z",
+			].join(" ");
 		},
 	}),
 	buildDefault(context) {
 		return {
-			type: "diamond",
+			type: "heart",
 			params: getDefaultSquareMaskParams(context),
 		};
 	},
@@ -74,7 +116,7 @@ export const diamondMaskDefinition: MaskDefinition<"diamond"> = {
 				const params = resolvedParams;
 				const { centerX, centerY, maskWidth, maskHeight, rotationRad } =
 					getBoxLikeGeometry({ params, width, height });
-				return buildDiamondPath({
+				return buildHeartPath({
 					centerX,
 					centerY,
 					halfWidth: maskWidth / 2,
@@ -93,7 +135,7 @@ export const diamondMaskDefinition: MaskDefinition<"diamond"> = {
 					strokeAlign: params.strokeAlign,
 					strokeWidth: params.strokeWidth,
 				});
-				return buildDiamondPath({
+				return buildHeartPath({
 					centerX,
 					centerY,
 					halfWidth: Math.max(maskWidth / 2 + offset, 1),

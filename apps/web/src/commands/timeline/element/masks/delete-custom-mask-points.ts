@@ -1,22 +1,22 @@
 import { EditorCore } from "@/core";
 import { Command, type CommandResult } from "@/commands/base-command";
 import {
-	getCustomMaskClosedStateAfterPointRemoval,
-	removeCustomMaskPoints,
-} from "@/masks/custom-path";
-import type { CustomMask } from "@/masks/types";
+	getFreeformPathClosedStateAfterPointRemoval,
+	removeFreeformPathPoints,
+} from "@/masks/freeform/path";
+import type { FreeformPathMask } from "@/masks/types";
 import { isMaskableElement, updateElementInSceneTracks } from "@/timeline";
 import type { MaskableElement, SceneTracks } from "@/timeline";
 
-function deletePointsFromCustomMask({
+function deletePointsFromFreeformPathMask({
 	mask,
 	pointIds,
 }: {
-	mask: CustomMask;
+	mask: FreeformPathMask;
 	pointIds: string[];
-}): CustomMask {
+}): FreeformPathMask {
 	const points = mask.params.path;
-	const nextPoints = removeCustomMaskPoints({ points, pointIds });
+	const nextPoints = removeFreeformPathPoints({ points, pointIds });
 	if (nextPoints.length === points.length) {
 		return mask;
 	}
@@ -26,7 +26,7 @@ function deletePointsFromCustomMask({
 		params: {
 			...mask.params,
 			path: nextPoints,
-			closed: getCustomMaskClosedStateAfterPointRemoval({
+			closed: getFreeformPathClosedStateAfterPointRemoval({
 				wasClosed: mask.params.closed,
 				remainingPointCount: nextPoints.length,
 			}),
@@ -46,11 +46,11 @@ function deletePointsFromElementMask({
 	const currentMasks = element.masks ?? [];
 	let didDeletePoints = false;
 	const nextMasks = currentMasks.map((mask) => {
-		if (mask.id !== maskId || mask.type !== "custom") {
+		if (mask.id !== maskId || mask.type !== "freeform") {
 			return mask;
 		}
 
-		const nextMask = deletePointsFromCustomMask({
+		const nextMask = deletePointsFromFreeformPathMask({
 			mask,
 			pointIds,
 		});
@@ -64,7 +64,7 @@ function deletePointsFromElementMask({
 	};
 }
 
-export class DeleteCustomMaskPointsCommand extends Command {
+export class DeleteFreeformPathMaskPointsCommand extends Command {
 	private savedState: SceneTracks | null = null;
 	private readonly trackId: string;
 	private readonly elementId: string;
@@ -100,8 +100,9 @@ export class DeleteCustomMaskPointsCommand extends Command {
 			elementId: this.elementId,
 			elementPredicate: isMaskableElement,
 			update: (element) => {
+				if (!isMaskableElement(element)) return element;
 				const result = deletePointsFromElementMask({
-					element: element as MaskableElement,
+					element,
 					maskId: this.maskId,
 					pointIds: this.pointIds,
 				});

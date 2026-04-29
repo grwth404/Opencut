@@ -3,26 +3,26 @@ import type { ParamDefinition } from "@/params";
 import { PEN_CURSOR } from "@/preview/components/cursors";
 import type { ElementBounds } from "@/preview/element-bounds";
 import type {
-	CustomMask,
-	CustomMaskParams,
+	FreeformPathMask,
+	FreeformPathMaskParams,
 	MaskDefinition,
 	MaskHandlePosition,
 	MaskOverlay,
 	MaskParamUpdateArgs,
 } from "@/masks/types";
 import {
-	buildCustomMaskPath2D,
-	buildCustomMaskSvgPath,
-	customMaskCanvasPointToLocal,
-	findClosestPointOnCustomMaskSegment,
-	getCustomMaskCanvasSegments,
-	getCustomMaskCanvasGeometry,
-	getCustomMaskLocalBounds,
-	getCustomMaskSegmentCount,
-	insertPointIntoCustomMaskSegment,
-	recenterCustomMaskPath,
-	type CustomMaskPathPoint,
-} from "@/masks/custom-path";
+	buildFreeformPath2D,
+	buildFreeformSvgPath,
+	freeformCanvasPointToLocal,
+	findClosestPointOnFreeformSegment,
+	getFreeformCanvasSegments,
+	getFreeformCanvasGeometry,
+	getFreeformLocalBounds,
+	getFreeformSegmentCount,
+	insertPointIntoFreeformSegment,
+	recenterFreeformPath,
+	type FreeformPathPoint,
+} from "@/masks/freeform/path";
 import { getBoxMaskHandlePositions } from "@/masks/handle-positions";
 import { computeFeatherUpdate } from "@/masks/param-update";
 import {
@@ -40,7 +40,7 @@ const PERCENTAGE_DISPLAY = {
 	step: 1,
 } as const;
 
-const CUSTOM_MASK_PARAMS: ParamDefinition<keyof CustomMaskParams & string>[] = [
+const FREEFORM_PATH_MASK_PARAMS: ParamDefinition<keyof FreeformPathMaskParams & string>[] = [
 	{
 		key: "centerX",
 		label: "X",
@@ -79,12 +79,12 @@ const CUSTOM_MASK_PARAMS: ParamDefinition<keyof CustomMaskParams & string>[] = [
 	},
 ];
 
-function getCustomMaskDisplayHandles({
+function getFreeformDisplayHandles({
 	params,
 	displayScale,
 	bounds,
 }: {
-	params: CustomMaskParams;
+	params: FreeformPathMaskParams;
 	displayScale: number;
 	bounds: ElementBounds;
 }): {
@@ -92,7 +92,7 @@ function getCustomMaskDisplayHandles({
 	overlays: MaskOverlay[];
 } {
 	const points = params.path;
-	const geometry = getCustomMaskCanvasGeometry({
+	const geometry = getFreeformCanvasGeometry({
 		points,
 		centerX: params.centerX,
 		centerY: params.centerY,
@@ -108,7 +108,7 @@ function getCustomMaskDisplayHandles({
 		overlays.push({
 			id: "path",
 			type: "canvas-path",
-			pathData: buildCustomMaskSvgPath({
+			pathData: buildFreeformSvgPath({
 				points,
 				centerX: params.centerX,
 				centerY: params.centerY,
@@ -124,7 +124,7 @@ function getCustomMaskDisplayHandles({
 	if (params.closed) {
 		const segmentStrokeWidth = 12;
 		overlays.push(
-			...getCustomMaskCanvasSegments({
+			...getFreeformCanvasSegments({
 				points,
 				centerX: params.centerX,
 				centerY: params.centerY,
@@ -145,7 +145,7 @@ function getCustomMaskDisplayHandles({
 		);
 	}
 
-	const localBounds = getCustomMaskLocalBounds({ points, bounds });
+	const localBounds = getFreeformLocalBounds({ points, bounds });
 	if (params.closed && localBounds) {
 		handles.push(
 			...getBoxMaskHandlePositions({
@@ -179,19 +179,19 @@ function getCustomMaskDisplayHandles({
 	};
 }
 
-function updateCustomMaskPoint({
+function updateFreeformPathMaskPoint({
 	points,
 	pointId,
 	updater,
 }: {
-	points: CustomMaskPathPoint[];
+	points: FreeformPathPoint[];
 	pointId: string;
-	updater: (point: CustomMaskPathPoint) => CustomMaskPathPoint;
+	updater: (point: FreeformPathPoint) => FreeformPathPoint;
 }) {
 	return points.map((point) => (point.id === pointId ? updater(point) : point));
 }
 
-function computeCustomMaskParamUpdate({
+function computeFreeformParamUpdate({
 	handleId,
 	startParams,
 	deltaX,
@@ -199,7 +199,7 @@ function computeCustomMaskParamUpdate({
 	startCanvasX,
 	startCanvasY,
 	bounds,
-}: MaskParamUpdateArgs<CustomMaskParams>): Partial<CustomMaskParams> {
+}: MaskParamUpdateArgs<FreeformPathMaskParams>): Partial<FreeformPathMaskParams> {
 	if (handleId.kind === "position") {
 		return {
 			centerX: startParams.centerX + deltaX / bounds.width,
@@ -266,7 +266,7 @@ function computeCustomMaskParamUpdate({
 		x: startCanvasX + deltaX,
 		y: startCanvasY + deltaY,
 	};
-	const localPoint = customMaskCanvasPointToLocal({
+	const localPoint = freeformCanvasPointToLocal({
 		point: currentPoint,
 		centerX: startParams.centerX,
 		centerY: startParams.centerY,
@@ -276,7 +276,7 @@ function computeCustomMaskParamUpdate({
 	});
 
 	return {
-		path: updateCustomMaskPoint({
+		path: updateFreeformPathMaskPoint({
 			points,
 			pointId: handleId.pointId,
 			updater: (point) => {
@@ -306,15 +306,15 @@ function computeCustomMaskParamUpdate({
 	};
 }
 
-export const customMaskDefinition: MaskDefinition<"custom"> = {
-	type: "custom",
-	name: "Custom",
+export const freeformMaskDefinition: MaskDefinition<"freeform"> = {
+	type: "freeform",
+	name: "Pen tool",
 	features: {
 		hasPosition: true,
 		hasRotation: true,
 		sizeMode: "uniform",
 	},
-	params: CUSTOM_MASK_PARAMS,
+	params: FREEFORM_PATH_MASK_PARAMS,
 	interaction: {
 		getInteraction({
 			params,
@@ -323,7 +323,7 @@ export const customMaskDefinition: MaskDefinition<"custom"> = {
 			scaleX: _scaleX,
 			scaleY: _scaleY,
 		}) {
-			return getCustomMaskDisplayHandles({ params, bounds, displayScale });
+			return getFreeformDisplayHandles({ params, bounds, displayScale });
 		},
 		snap({
 			handleId,
@@ -334,7 +334,7 @@ export const customMaskDefinition: MaskDefinition<"custom"> = {
 			snapThreshold,
 		}) {
 			const points = startParams.path;
-			const localBounds = getCustomMaskLocalBounds({ points, bounds });
+			const localBounds = getFreeformLocalBounds({ points, bounds });
 			if (!startParams.closed || !localBounds) {
 				return {
 					params: proposedParams,
@@ -422,9 +422,9 @@ export const customMaskDefinition: MaskDefinition<"custom"> = {
 			};
 		},
 	},
-	buildDefault(): Omit<CustomMask, "id"> {
+	buildDefault(): Omit<FreeformPathMask, "id"> {
 		return {
-			type: "custom",
+			type: "freeform",
 			params: {
 				feather: 0,
 				inverted: false,
@@ -440,7 +440,7 @@ export const customMaskDefinition: MaskDefinition<"custom"> = {
 			},
 		};
 	},
-	computeParamUpdate: computeCustomMaskParamUpdate,
+	computeParamUpdate: computeFreeformParamUpdate,
 	isActive(params) {
 		return params.closed;
 	},
@@ -454,7 +454,7 @@ export const customMaskDefinition: MaskDefinition<"custom"> = {
 					return new Path2D();
 				}
 
-				return buildCustomMaskPath2D({
+				return buildFreeformPath2D({
 					points,
 					centerX: params.centerX,
 					centerY: params.centerY,
@@ -480,7 +480,7 @@ export const customMaskDefinition: MaskDefinition<"custom"> = {
 				}
 
 				const points = params.path;
-				const path = buildCustomMaskPath2D({
+				const path = buildFreeformPath2D({
 					points,
 					centerX: params.centerX,
 					centerY: params.centerY,
@@ -520,15 +520,15 @@ export const customMaskDefinition: MaskDefinition<"custom"> = {
 	},
 };
 
-export function appendPointToCustomMask({
+export function appendPointToFreeformPathMask({
 	params,
 	canvasPoint,
 	bounds,
 }: {
-	params: CustomMaskParams;
+	params: FreeformPathMaskParams;
 	canvasPoint: { x: number; y: number };
 	bounds: ElementBounds;
-}): CustomMaskParams {
+}): FreeformPathMaskParams {
 	const points = params.path;
 
 	if (points.length === 0) {
@@ -554,7 +554,7 @@ export function appendPointToCustomMask({
 		};
 	}
 
-	const localPoint = customMaskCanvasPointToLocal({
+	const localPoint = freeformCanvasPointToLocal({
 		point: canvasPoint,
 		centerX: params.centerX,
 		centerY: params.centerY,
@@ -574,7 +574,7 @@ export function appendPointToCustomMask({
 			outY: 0,
 		},
 	];
-	const recentered = recenterCustomMaskPath({
+	const recentered = recenterFreeformPath({
 		points: nextPoints,
 		centerX: params.centerX,
 		centerY: params.centerY,
@@ -591,25 +591,25 @@ export function appendPointToCustomMask({
 	};
 }
 
-export function insertPointOnCustomMaskSegment({
+export function insertPointOnFreeformSegment({
 	params,
 	segmentIndex,
 	canvasPoint,
 	bounds,
 	pointId = generateUUID(),
 }: {
-	params: CustomMaskParams;
+	params: FreeformPathMaskParams;
 	segmentIndex: number;
 	canvasPoint: { x: number; y: number };
 	bounds: ElementBounds;
 	pointId?: string;
-}): { params: CustomMaskParams; pointId: string } | null {
+}): { params: FreeformPathMaskParams; pointId: string } | null {
 	const points = params.path;
-	if (getCustomMaskSegmentCount({ points, closed: params.closed }) === 0) {
+	if (getFreeformSegmentCount({ points, closed: params.closed }) === 0) {
 		return null;
 	}
 
-	const closestPoint = findClosestPointOnCustomMaskSegment({
+	const closestPoint = findClosestPointOnFreeformSegment({
 		points,
 		segmentIndex,
 		canvasPoint,
@@ -624,7 +624,7 @@ export function insertPointOnCustomMaskSegment({
 		return null;
 	}
 
-	const nextPoints = insertPointIntoCustomMaskSegment({
+	const nextPoints = insertPointIntoFreeformSegment({
 		points,
 		segmentIndex,
 		pointId,
@@ -635,7 +635,7 @@ export function insertPointOnCustomMaskSegment({
 		return null;
 	}
 
-	const recentered = recenterCustomMaskPath({
+	const recentered = recenterFreeformPath({
 		points: nextPoints,
 		centerX: params.centerX,
 		centerY: params.centerY,

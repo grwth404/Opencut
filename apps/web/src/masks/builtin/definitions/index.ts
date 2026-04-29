@@ -1,10 +1,9 @@
 import {
-	masksRegistry,
-	type MaskDefinitionForRegistration,
+	builtinMasksRegistry,
+	type BuiltinMaskDefinitionForRegistration,
 	type MaskIconProps,
-} from "../registry";
+} from "../../registry";
 import { cinematicBarsMaskDefinition } from "./cinematic-bars";
-import { customMaskDefinition } from "./custom";
 import { diamondMaskDefinition } from "./diamond";
 import { ellipseMaskDefinition } from "./ellipse";
 import { heartMaskDefinition } from "./heart";
@@ -27,17 +26,17 @@ function registerDefaultMask({
 	definition,
 	icon,
 }: {
-	definition: MaskDefinitionForRegistration;
+	definition: BuiltinMaskDefinitionForRegistration;
 	icon: MaskIconProps;
 }) {
-	if (masksRegistry.has(definition.type)) {
+	if (builtinMasksRegistry.has(definition.type)) {
 		return;
 	}
 
-	masksRegistry.registerMask({ definition, icon });
+	builtinMasksRegistry.registerMask({ definition, icon });
 }
 
-export function registerDefaultMasks(): void {
+export function registerBuiltinMasks(): void {
 	registerDefaultMask({
 		definition: splitMaskDefinition,
 		icon: { icon: PanelRightDashedIcon, strokeWidth: 1 },
@@ -69,9 +68,5 @@ export function registerDefaultMasks(): void {
 	registerDefaultMask({
 		definition: textMaskDefinition,
 		icon: { icon: TextFontIcon },
-	});
-	registerDefaultMask({
-		definition: customMaskDefinition,
-		icon: { icon: SquareIcon },
 	});
 }

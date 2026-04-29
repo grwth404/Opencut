@@ -1,14 +1,14 @@
 import type { ElementBounds } from "@/preview/element-bounds";
 import type { SnapLine } from "@/preview/preview-snap";
 import type { ParamDefinition } from "@/params";
-import type { CustomMaskPathPoint } from "@/masks/custom-path";
+import type { FreeformPathPoint } from "@/masks/freeform/path";
 import type {
 	TextDecoration,
 	TextFontStyle,
 	TextFontWeight,
 } from "@/text/primitives";
 
-export type MaskType =
+export type BuiltinMaskType =
 	| "split"
 	| "cinematic-bars"
 	| "rectangle"
@@ -16,8 +16,9 @@ export type MaskType =
 	| "heart"
 	| "diamond"
 	| "star"
-	| "text"
-	| "custom";
+	| "text";
+
+export type MaskType = BuiltinMaskType | "freeform";
 
 export interface BaseMaskParams {
 	feather: number;
@@ -57,8 +58,8 @@ export interface TextMaskParams extends BaseMaskParams {
 	scale: number;
 }
 
-export interface CustomMaskParams extends BaseMaskParams {
-	path: CustomMaskPathPoint[];
+export interface FreeformPathMaskParams extends BaseMaskParams {
+	path: FreeformPathPoint[];
 	closed: boolean;
 	centerX: number;
 	centerY: number;
@@ -114,13 +115,7 @@ export interface TextMask {
 	params: TextMaskParams;
 }
 
-export interface CustomMask {
-	id: string;
-	type: "custom";
-	params: CustomMaskParams;
-}
-
-export type Mask =
+export type BuiltinShapeMask =
 	| SplitMask
 	| CinematicBarsMask
 	| RectangleMask
@@ -128,8 +123,15 @@ export type Mask =
 	| HeartMask
 	| DiamondMask
 	| StarMask
-	| TextMask
-	| CustomMask;
+	| TextMask;
+
+export interface FreeformPathMask {
+	id: string;
+	type: "freeform";
+	params: FreeformPathMaskParams;
+}
+
+export type Mask = BuiltinShapeMask | FreeformPathMask;
 
 export type MaskByType<TType extends MaskType> = Extract<Mask, { type: TType }>;
 export type MaskParamsByType<TType extends MaskType> =

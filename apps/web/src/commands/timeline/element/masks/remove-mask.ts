@@ -45,11 +45,13 @@ export class RemoveMaskCommand extends Command {
 			trackId: this.trackId,
 			elementId: this.elementId,
 			elementPredicate: isMaskableElement,
-			update: (element) =>
-				removeMaskFromElement({
-					element: element as MaskableElement,
+			update: (element) => {
+				if (!isMaskableElement(element)) return element;
+				return removeMaskFromElement({
+					element,
 					maskId: this.maskId,
-				}),
+				});
+			},
 		});
 
 		editor.timeline.updateTracks(updatedTracks);

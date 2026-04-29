@@ -1,22 +1,22 @@
 import { describe, expect, test } from "bun:test";
 import {
-	findClosestPointOnCustomMaskSegment,
-	getCustomMaskClosedStateAfterPointRemoval,
-	insertPointIntoCustomMaskSegment,
-	removeCustomMaskPoints,
-} from "@/masks/custom-path";
+	findClosestPointOnFreeformSegment,
+	getFreeformPathClosedStateAfterPointRemoval,
+	insertPointIntoFreeformSegment,
+	removeFreeformPathPoints,
+} from "@/masks/freeform/path";
 import {
-	appendPointToCustomMask,
-	customMaskDefinition,
-	insertPointOnCustomMaskSegment,
-} from "@/masks/definitions/custom";
-import { getSplitMaskStrokeSegment } from "@/masks/definitions/split";
-import { textMaskDefinition } from "@/masks/definitions/text";
+	appendPointToFreeformPathMask,
+	freeformMaskDefinition,
+	insertPointOnFreeformSegment,
+} from "@/masks/freeform/definition";
+import { getSplitMaskStrokeSegment } from "@/masks/builtin/definitions/split";
+import { textMaskDefinition } from "@/masks/builtin/definitions/text";
 import { getMaskSnapGeometry } from "@/masks/geometry";
 import { snapBoxMaskInteraction, snapSplitMaskInteraction } from "@/masks/snap";
 import type { ElementBounds } from "@/preview/element-bounds";
 import type {
-	CustomMaskParams,
+	FreeformPathMaskParams,
 	RectangleMaskParams,
 	SplitMaskParams,
 	TextMaskParams,
@@ -100,9 +100,9 @@ function buildTextMaskParams(
 	};
 }
 
-function buildCustomMaskParams(
-	overrides: Partial<CustomMaskParams> = {},
-): CustomMaskParams {
+function buildFreeformPathMaskParams(
+	overrides: Partial<FreeformPathMaskParams> = {},
+): FreeformPathMaskParams {
 	return {
 		feather: 0,
 		inverted: false,
@@ -347,11 +347,11 @@ describe("mask snapping", () => {
 	});
 
 	test("snaps custom mask movement using path geometry bounds", () => {
-		const params = buildCustomMaskParams({
+		const params = buildFreeformPathMaskParams({
 			centerX: 0.03,
 			centerY: -0.04,
 		});
-		const result = customMaskDefinition.interaction.snap?.({
+		const result = freeformMaskDefinition.interaction.snap?.({
 			handleId: { kind: "position" },
 			startParams: params,
 			proposedParams: params,
@@ -381,11 +381,11 @@ describe("mask snapping", () => {
 
 describe("custom mask creation", () => {
 	test("anchors the first point at the click position", () => {
-		const params = buildCustomMaskParams({
+		const params = buildFreeformPathMaskParams({
 			path: [],
 			closed: false,
 		});
-		const next = appendPointToCustomMask({
+		const next = appendPointToFreeformPathMask({
 			params,
 			canvasPoint: { x: bounds.cx + 20, y: bounds.cy - 10 },
 			bounds,
@@ -401,8 +401,8 @@ describe("custom mask creation", () => {
 
 describe("custom mask point deletion", () => {
 	test("removes the selected points by id", () => {
-		const points = buildCustomMaskParams().path;
-		const nextPoints = removeCustomMaskPoints({
+		const points = buildFreeformPathMaskParams().path;
+		const nextPoints = removeFreeformPathPoints({
 			points,
 			pointIds: ["b"],
 		});
@@ -411,14 +411,14 @@ describe("custom mask point deletion", () => {
 	});
 
 	test("reopens a closed path once fewer than three points remain", () => {
-		const points = buildCustomMaskParams().path;
-		const nextPoints = removeCustomMaskPoints({
+		const points = buildFreeformPathMaskParams().path;
+		const nextPoints = removeFreeformPathPoints({
 			points,
 			pointIds: ["c"],
 		});
 
 		expect(
-			getCustomMaskClosedStateAfterPointRemoval({
+			getFreeformPathClosedStateAfterPointRemoval({
 				wasClosed: true,
 				remainingPointCount: nextPoints.length,
 			}),
@@ -428,9 +428,9 @@ describe("custom mask point deletion", () => {
 
 describe("custom mask point insertion", () => {
 	test("finds the closest point on the clicked segment", () => {
-		const params = buildCustomMaskParams();
+		const params = buildFreeformPathMaskParams();
 		const points = params.path;
-		const closestPoint = findClosestPointOnCustomMaskSegment({
+		const closestPoint = findClosestPointOnFreeformSegment({
 			points,
 			segmentIndex: 0,
 			canvasPoint: { x: bounds.cx, y: bounds.cy - 10 },
@@ -449,8 +449,8 @@ describe("custom mask point insertion", () => {
 	});
 
 	test("splits a segment into two segments at the insertion point", () => {
-		const points = buildCustomMaskParams().path;
-		const nextPoints = insertPointIntoCustomMaskSegment({
+		const points = buildFreeformPathMaskParams().path;
+		const nextPoints = insertPointIntoFreeformSegment({
 			points,
 			segmentIndex: 0,
 			pointId: "new",
@@ -471,8 +471,8 @@ describe("custom mask point insertion", () => {
 	});
 
 	test("builds updated custom mask params for a clicked segment", () => {
-		const result = insertPointOnCustomMaskSegment({
-			params: buildCustomMaskParams(),
+		const result = insertPointOnFreeformSegment({
+			params: buildFreeformPathMaskParams(),
 			segmentIndex: 0,
 			canvasPoint: { x: bounds.cx, y: bounds.cy - 10 },
 			bounds,

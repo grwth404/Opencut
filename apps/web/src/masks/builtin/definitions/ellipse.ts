@@ -6,7 +6,7 @@ import {
 	getBoxLikeGeometry,
 	getDefaultSquareMaskParams,
 	getStrokeOffset,
-} from "./box-like";
+} from "../box-like";
 
 export const ellipseMaskDefinition: MaskDefinition<"ellipse"> = {
 	type: "ellipse",

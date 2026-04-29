@@ -46,8 +46,8 @@ import {
 	RetimeKeyframeCommand,
 	UpdateScalarKeyframeCurveCommand,
 	AddClipEffectCommand,
-	DeleteCustomMaskPointsCommand,
-	InsertCustomMaskPointCommand,
+	DeleteFreeformPathMaskPointsCommand,
+	InsertFreeformPathMaskPointCommand,
 	RemoveClipEffectCommand,
 	UpdateClipEffectParamsCommand,
 	ToggleClipEffectCommand,
@@ -349,7 +349,7 @@ export class TimelineManager {
 		this.editor.command.execute({ command });
 	}
 
-	deleteCustomMaskPoints({
+	deleteFreeformPathMaskPoints({
 		trackId,
 		elementId,
 		maskId,
@@ -363,7 +363,7 @@ export class TimelineManager {
 		if (pointIds.length === 0) {
 			return;
 		}
-		const command = new DeleteCustomMaskPointsCommand({
+		const command = new DeleteFreeformPathMaskPointsCommand({
 			trackId,
 			elementId,
 			maskId,
@@ -372,7 +372,7 @@ export class TimelineManager {
 		this.editor.command.execute({ command });
 	}
 
-	insertCustomMaskPoint({
+	insertFreeformPathMaskPoint({
 		trackId,
 		elementId,
 		maskId,
@@ -387,7 +387,7 @@ export class TimelineManager {
 		canvasPoint: { x: number; y: number };
 		bounds: ElementBounds;
 	}): void {
-		const command = new InsertCustomMaskPointCommand({
+		const command = new InsertFreeformPathMaskPointCommand({
 			trackId,
 			elementId,
 			maskId,

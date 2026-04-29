@@ -7,12 +7,9 @@ import {
 	getDefaultSquareMaskParams,
 	getStrokeOffset,
 	rotatePoint,
-} from "./box-like";
+} from "../box-like";
 
-const STAR_INNER_RADIUS_RATIO = 0.45;
-const STAR_VERTEX_COUNT = 10;
-
-function buildStarPath({
+function buildDiamondPath({
 	centerX,
 	centerY,
 	halfWidth,
@@ -25,69 +22,32 @@ function buildStarPath({
 	halfHeight: number;
 	rotationRad: number;
 }): Path2D {
-	const path = new Path2D();
-
-	for (let index = 0; index < STAR_VERTEX_COUNT; index++) {
-		const isOuterVertex = index % 2 === 0;
-		const radiusX = isOuterVertex
-			? halfWidth
-			: halfWidth * STAR_INNER_RADIUS_RATIO;
-		const radiusY = isOuterVertex
-			? halfHeight
-			: halfHeight * STAR_INNER_RADIUS_RATIO;
-		const angle = (index * Math.PI) / 5 - Math.PI / 2;
-		const point = rotatePoint({
-			x: centerX + radiusX * Math.cos(angle),
-			y: centerY + radiusY * Math.sin(angle),
+	const points = [
+		{ x: centerX, y: centerY - halfHeight },
+		{ x: centerX + halfWidth, y: centerY },
+		{ x: centerX, y: centerY + halfHeight },
+		{ x: centerX - halfWidth, y: centerY },
+	].map((point) =>
+		rotatePoint({
+			...point,
 			centerX,
 			centerY,
 			rotationRad,
-		});
+		}),
+	);
 
-		if (index === 0) {
-			path.moveTo(point.x, point.y);
-		} else {
-			path.lineTo(point.x, point.y);
-		}
+	const path = new Path2D();
+	path.moveTo(points[0].x, points[0].y);
+	for (const point of points.slice(1)) {
+		path.lineTo(point.x, point.y);
 	}
-
 	path.closePath();
 	return path;
 }
 
-function buildOverlayStarPath({
-	width,
-	height,
-}: {
-	width: number;
-	height: number;
-}): string {
-	const centerX = width / 2;
-	const centerY = height / 2;
-	const halfWidth = width / 2;
-	const halfHeight = height / 2;
-	const segments: string[] = [];
-
-	for (let index = 0; index < STAR_VERTEX_COUNT; index++) {
-		const isOuterVertex = index % 2 === 0;
-		const radiusX = isOuterVertex
-			? halfWidth
-			: halfWidth * STAR_INNER_RADIUS_RATIO;
-		const radiusY = isOuterVertex
-			? halfHeight
-			: halfHeight * STAR_INNER_RADIUS_RATIO;
-		const angle = (index * Math.PI) / 5 - Math.PI / 2;
-		const x = centerX + radiusX * Math.cos(angle);
-		const y = centerY + radiusY * Math.sin(angle);
-		segments.push(`${index === 0 ? "M" : "L"} ${x},${y}`);
-	}
-
-	return `${segments.join(" ")} Z`;
-}
-
-export const starMaskDefinition: MaskDefinition<"star"> = {
-	type: "star",
-	name: "Star",
+export const diamondMaskDefinition: MaskDefinition<"diamond"> = {
+	type: "diamond",
+	name: "Diamond",
 	features: {
 		hasPosition: true,
 		hasRotation: true,
@@ -97,12 +57,12 @@ export const starMaskDefinition: MaskDefinition<"star"> = {
 	interaction: buildBoxMaskInteraction({
 		sizeMode: "width-height",
 		buildOverlayPath({ width, height }) {
-			return buildOverlayStarPath({ width, height });
+			return `M ${width / 2},0 L ${width},${height / 2} L ${width / 2},${height} L 0,${height / 2} Z`;
 		},
 	}),
 	buildDefault(context) {
 		return {
-			type: "star",
+			type: "diamond",
 			params: getDefaultSquareMaskParams(context),
 		};
 	},
@@ -114,7 +74,7 @@ export const starMaskDefinition: MaskDefinition<"star"> = {
 				const params = resolvedParams;
 				const { centerX, centerY, maskWidth, maskHeight, rotationRad } =
 					getBoxLikeGeometry({ params, width, height });
-				return buildStarPath({
+				return buildDiamondPath({
 					centerX,
 					centerY,
 					halfWidth: maskWidth / 2,
@@ -133,7 +93,7 @@ export const starMaskDefinition: MaskDefinition<"star"> = {
 					strokeAlign: params.strokeAlign,
 					strokeWidth: params.strokeWidth,
 				});
-				return buildStarPath({
+				return buildDiamondPath({
 					centerX,
 					centerY,
 					halfWidth: Math.max(maskWidth / 2 + offset, 1),

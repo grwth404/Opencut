@@ -1,6 +1,6 @@
 import type { ElementBounds } from "@/preview/element-bounds";
 
-export interface CustomMaskPathPoint {
+export interface FreeformPathPoint {
 	id: string;
 	x: number;
 	y: number;
@@ -10,7 +10,7 @@ export interface CustomMaskPathPoint {
 	outY: number;
 }
 
-function isCustomMaskPathPoint(value: unknown): value is CustomMaskPathPoint {
+function isFreeformPathPoint(value: unknown): value is FreeformPathPoint {
 	if (!value || typeof value !== "object") {
 		return false;
 	}
@@ -33,38 +33,38 @@ function isCustomMaskPathPoint(value: unknown): value is CustomMaskPathPoint {
 	);
 }
 
-export function parseCustomMaskPath({
+export function parseFreeformPath({
 	path,
 }: {
 	path: string;
-}): CustomMaskPathPoint[] {
+}): FreeformPathPoint[] {
 	if (!path) {
 		return [];
 	}
 
 	try {
 		const parsed = JSON.parse(path);
-		return Array.isArray(parsed) ? parsed.filter(isCustomMaskPathPoint) : [];
+		return Array.isArray(parsed) ? parsed.filter(isFreeformPathPoint) : [];
 	} catch {
 		return [];
 	}
 }
 
-export function serializeCustomMaskPath({
+export function serializeFreeformPath({
 	points,
 }: {
-	points: CustomMaskPathPoint[];
+	points: FreeformPathPoint[];
 }): string {
 	return JSON.stringify(points);
 }
 
-export function removeCustomMaskPoints({
+export function removeFreeformPathPoints({
 	points,
 	pointIds,
 }: {
-	points: CustomMaskPathPoint[];
+	points: FreeformPathPoint[];
 	pointIds: string[];
-}): CustomMaskPathPoint[] {
+}): FreeformPathPoint[] {
 	if (pointIds.length === 0) {
 		return points;
 	}
@@ -72,7 +72,7 @@ export function removeCustomMaskPoints({
 	return points.filter((point) => !pointIdsToRemove.has(point.id));
 }
 
-export function getCustomMaskClosedStateAfterPointRemoval({
+export function getFreeformPathClosedStateAfterPointRemoval({
 	wasClosed,
 	remainingPointCount,
 }: {
@@ -100,7 +100,7 @@ function rotatePoint({
 	};
 }
 
-export function getCustomMaskCenterCanvasPoint({
+export function getFreeformCenterCanvasPoint({
 	centerX,
 	centerY,
 	bounds,
@@ -115,7 +115,7 @@ export function getCustomMaskCenterCanvasPoint({
 	};
 }
 
-export function customMaskLocalPointToCanvas({
+export function freeformLocalPointToCanvas({
 	point,
 	centerX,
 	centerY,
@@ -130,7 +130,7 @@ export function customMaskLocalPointToCanvas({
 	scale: number;
 	bounds: ElementBounds;
 }): { x: number; y: number } {
-	const center = getCustomMaskCenterCanvasPoint({ centerX, centerY, bounds });
+	const center = getFreeformCenterCanvasPoint({ centerX, centerY, bounds });
 	const scaledLocal = {
 		x: point.x * bounds.width * scale,
 		y: point.y * bounds.height * scale,
@@ -147,7 +147,7 @@ export function customMaskLocalPointToCanvas({
 	};
 }
 
-export function customMaskCanvasPointToLocal({
+export function freeformCanvasPointToLocal({
 	point,
 	centerX,
 	centerY,
@@ -162,7 +162,7 @@ export function customMaskCanvasPointToLocal({
 	scale: number;
 	bounds: ElementBounds;
 }): { x: number; y: number } {
-	const center = getCustomMaskCenterCanvasPoint({ centerX, centerY, bounds });
+	const center = getFreeformCenterCanvasPoint({ centerX, centerY, bounds });
 	const translated = {
 		x: point.x - center.x,
 		y: point.y - center.y,
@@ -179,7 +179,7 @@ export function customMaskCanvasPointToLocal({
 	};
 }
 
-export function getCustomMaskCanvasGeometry({
+export function getFreeformCanvasGeometry({
 	points,
 	centerX,
 	centerY,
@@ -187,7 +187,7 @@ export function getCustomMaskCanvasGeometry({
 	scale,
 	bounds,
 }: {
-	points: CustomMaskPathPoint[];
+	points: FreeformPathPoint[];
 	centerX: number;
 	centerY: number;
 	rotation: number;
@@ -196,7 +196,7 @@ export function getCustomMaskCanvasGeometry({
 }) {
 	const anchors = points.map((point) => ({
 		id: point.id,
-		anchor: customMaskLocalPointToCanvas({
+		anchor: freeformLocalPointToCanvas({
 			point: { x: point.x, y: point.y },
 			centerX,
 			centerY,
@@ -204,7 +204,7 @@ export function getCustomMaskCanvasGeometry({
 			scale,
 			bounds,
 		}),
-		inHandle: customMaskLocalPointToCanvas({
+		inHandle: freeformLocalPointToCanvas({
 			point: { x: point.x + point.inX, y: point.y + point.inY },
 			centerX,
 			centerY,
@@ -212,7 +212,7 @@ export function getCustomMaskCanvasGeometry({
 			scale,
 			bounds,
 		}),
-		outHandle: customMaskLocalPointToCanvas({
+		outHandle: freeformLocalPointToCanvas({
 			point: { x: point.x + point.outX, y: point.y + point.outY },
 			centerX,
 			centerY,
@@ -288,7 +288,7 @@ function getCanvasPointBounds({ points }: { points: CanvasPoint[] }): {
 	};
 }
 
-export interface CustomMaskCanvasSegment {
+export interface FreeformCanvasSegment {
 	index: number;
 	startPointId: string;
 	endPointId: string;
@@ -358,16 +358,16 @@ function evaluateCubicBezier({
 	};
 }
 
-function getCustomMaskSegmentIndices({
+function getFreeformSegmentIndices({
 	points,
 	segmentIndex,
 	closed,
 }: {
-	points: CustomMaskPathPoint[];
+	points: FreeformPathPoint[];
 	segmentIndex: number;
 	closed: boolean;
 }): { startIndex: number; endIndex: number } | null {
-	const segmentCount = getCustomMaskSegmentCount({ points, closed });
+	const segmentCount = getFreeformSegmentCount({ points, closed });
 	if (segmentIndex < 0 || segmentIndex >= segmentCount) {
 		return null;
 	}
@@ -378,11 +378,11 @@ function getCustomMaskSegmentIndices({
 	};
 }
 
-export function getCustomMaskSegmentCount({
+export function getFreeformSegmentCount({
 	points,
 	closed,
 }: {
-	points: CustomMaskPathPoint[];
+	points: FreeformPathPoint[];
 	closed: boolean;
 }): number {
 	if (points.length < 2) {
@@ -391,7 +391,7 @@ export function getCustomMaskSegmentCount({
 	return closed ? points.length : points.length - 1;
 }
 
-export function getCustomMaskCanvasSegments({
+export function getFreeformCanvasSegments({
 	points,
 	centerX,
 	centerY,
@@ -400,15 +400,15 @@ export function getCustomMaskCanvasSegments({
 	bounds,
 	closed,
 }: {
-	points: CustomMaskPathPoint[];
+	points: FreeformPathPoint[];
 	centerX: number;
 	centerY: number;
 	rotation: number;
 	scale: number;
 	bounds: ElementBounds;
 	closed: boolean;
-}): CustomMaskCanvasSegment[] {
-	const geometry = getCustomMaskCanvasGeometry({
+}): FreeformCanvasSegment[] {
+	const geometry = getFreeformCanvasGeometry({
 		points,
 		centerX,
 		centerY,
@@ -416,7 +416,7 @@ export function getCustomMaskCanvasSegments({
 		scale,
 		bounds,
 	});
-	const segmentCount = getCustomMaskSegmentCount({ points, closed });
+	const segmentCount = getFreeformSegmentCount({ points, closed });
 
 	return Array.from({ length: segmentCount }, (_, segmentIndex) => {
 		const start = geometry.anchors[segmentIndex];
@@ -434,7 +434,7 @@ export function getCustomMaskCanvasSegments({
 	});
 }
 
-export function findClosestPointOnCustomMaskSegment({
+export function findClosestPointOnFreeformSegment({
 	points,
 	segmentIndex,
 	canvasPoint,
@@ -445,7 +445,7 @@ export function findClosestPointOnCustomMaskSegment({
 	bounds,
 	closed,
 }: {
-	points: CustomMaskPathPoint[];
+	points: FreeformPathPoint[];
 	segmentIndex: number;
 	canvasPoint: CanvasPoint;
 	centerX: number;
@@ -455,7 +455,7 @@ export function findClosestPointOnCustomMaskSegment({
 	bounds: ElementBounds;
 	closed: boolean;
 }): { t: number; point: CanvasPoint } | null {
-	const segment = getCustomMaskCanvasSegments({
+	const segment = getFreeformCanvasSegments({
 		points,
 		centerX,
 		centerY,
@@ -531,20 +531,20 @@ export function findClosestPointOnCustomMaskSegment({
 	};
 }
 
-export function insertPointIntoCustomMaskSegment({
+export function insertPointIntoFreeformSegment({
 	points,
 	segmentIndex,
 	pointId,
 	t,
 	closed,
 }: {
-	points: CustomMaskPathPoint[];
+	points: FreeformPathPoint[];
 	segmentIndex: number;
 	pointId: string;
 	t: number;
 	closed: boolean;
-}): CustomMaskPathPoint[] {
-	const indices = getCustomMaskSegmentIndices({
+}): FreeformPathPoint[] {
+	const indices = getFreeformSegmentIndices({
 		points,
 		segmentIndex,
 		closed,
@@ -596,11 +596,11 @@ export function insertPointIntoCustomMaskSegment({
 	return nextPoints;
 }
 
-export function getCustomMaskLocalBounds({
+export function getFreeformLocalBounds({
 	points,
 	bounds,
 }: {
-	points: CustomMaskPathPoint[];
+	points: FreeformPathPoint[];
 	bounds: ElementBounds;
 }) {
 	if (points.length === 0) {
@@ -632,7 +632,7 @@ export function getCustomMaskLocalBounds({
 	};
 }
 
-export function recenterCustomMaskPath({
+export function recenterFreeformPath({
 	points,
 	centerX,
 	centerY,
@@ -640,7 +640,7 @@ export function recenterCustomMaskPath({
 	scale,
 	bounds,
 }: {
-	points: CustomMaskPathPoint[];
+	points: FreeformPathPoint[];
 	centerX: number;
 	centerY: number;
 	rotation: number;
@@ -651,7 +651,7 @@ export function recenterCustomMaskPath({
 		return { centerX, centerY, points };
 	}
 
-	const geometry = getCustomMaskCanvasGeometry({
+	const geometry = getFreeformCanvasGeometry({
 		points,
 		centerX,
 		centerY,
@@ -676,7 +676,7 @@ export function recenterCustomMaskPath({
 	};
 
 	const nextPoints = geometry.anchors.map((point) => {
-		const anchor = customMaskCanvasPointToLocal({
+		const anchor = freeformCanvasPointToLocal({
 			point: point.anchor,
 			centerX: nextCenterLocal.x,
 			centerY: nextCenterLocal.y,
@@ -684,7 +684,7 @@ export function recenterCustomMaskPath({
 			scale,
 			bounds,
 		});
-		const inHandle = customMaskCanvasPointToLocal({
+		const inHandle = freeformCanvasPointToLocal({
 			point: point.inHandle,
 			centerX: nextCenterLocal.x,
 			centerY: nextCenterLocal.y,
@@ -692,7 +692,7 @@ export function recenterCustomMaskPath({
 			scale,
 			bounds,
 		});
-		const outHandle = customMaskCanvasPointToLocal({
+		const outHandle = freeformCanvasPointToLocal({
 			point: point.outHandle,
 			centerX: nextCenterLocal.x,
 			centerY: nextCenterLocal.y,
@@ -719,7 +719,7 @@ export function recenterCustomMaskPath({
 	};
 }
 
-export function buildCustomMaskPath2D({
+export function buildFreeformPath2D({
 	points,
 	centerX,
 	centerY,
@@ -728,7 +728,7 @@ export function buildCustomMaskPath2D({
 	bounds,
 	closed,
 }: {
-	points: CustomMaskPathPoint[];
+	points: FreeformPathPoint[];
 	centerX: number;
 	centerY: number;
 	rotation: number;
@@ -741,7 +741,7 @@ export function buildCustomMaskPath2D({
 		return path;
 	}
 
-	const geometry = getCustomMaskCanvasGeometry({
+	const geometry = getFreeformCanvasGeometry({
 		points,
 		centerX,
 		centerY,
@@ -782,7 +782,7 @@ export function buildCustomMaskPath2D({
 	return path;
 }
 
-export function buildCustomMaskSvgPath({
+export function buildFreeformSvgPath({
 	points,
 	centerX,
 	centerY,
@@ -791,7 +791,7 @@ export function buildCustomMaskSvgPath({
 	bounds,
 	closed,
 }: {
-	points: CustomMaskPathPoint[];
+	points: FreeformPathPoint[];
 	centerX: number;
 	centerY: number;
 	rotation: number;
@@ -803,7 +803,7 @@ export function buildCustomMaskSvgPath({
 		return "";
 	}
 
-	const geometry = getCustomMaskCanvasGeometry({
+	const geometry = getFreeformCanvasGeometry({
 		points,
 		centerX,
 		centerY,

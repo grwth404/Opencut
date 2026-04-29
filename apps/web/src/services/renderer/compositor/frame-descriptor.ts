@@ -1,5 +1,5 @@
 import { drawCssBackground } from "@/gradients";
-import { masksRegistry } from "@/masks";
+import { getMaskDefinition } from "@/masks";
 import { incrementCounter } from "@/diagnostics/render-perf";
 import type { AnyBaseNode } from "../nodes/base-node";
 import type { CanvasRenderer } from "../canvas-renderer";
@@ -390,7 +390,7 @@ function buildMaskArtifacts({
 		return { mask: null, strokeLayer: null };
 	}
 
-	const definition = masksRegistry.get(mask.type);
+	const definition = getMaskDefinition(mask.type);
 
 	if (definition.isActive?.(mask.params) === false) {
 		return { mask: null, strokeLayer: null };

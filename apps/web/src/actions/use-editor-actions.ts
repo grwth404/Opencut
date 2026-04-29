@@ -305,7 +305,7 @@ export function useEditorActions() {
 					if (!selectedMaskPointSelection) {
 						return;
 					}
-					editor.timeline.deleteCustomMaskPoints({
+					editor.timeline.deleteFreeformPathMaskPoints({
 						trackId: selectedMaskPointSelection.trackId,
 						elementId: selectedMaskPointSelection.elementId,
 						maskId: selectedMaskPointSelection.maskId,

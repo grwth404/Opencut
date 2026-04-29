@@ -2,6 +2,7 @@ import { MAX_FEATHER } from "@/masks/feather";
 import type { ParamDefinition } from "@/params";
 import type {
 	BaseMaskParams,
+	BuiltinMaskType,
 	Mask,
 	MaskDefaultContext,
 	MaskDefinition,
@@ -23,11 +24,11 @@ type RegisteredMaskWithoutId = Mask extends infer TMask
 		: never
 	: never;
 
-export type MaskDefinitionForRegistration = {
-	[TType in MaskType]: MaskDefinition<TType>;
-}[MaskType];
+export type BuiltinMaskDefinitionForRegistration = {
+	[TType in BuiltinMaskType]: MaskDefinition<TType>;
+}[BuiltinMaskType];
 
-const BASE_MASK_PARAM_DEFINITIONS: ParamDefinition<
+export const BASE_MASK_PARAM_DEFINITIONS: ParamDefinition<
 	keyof BaseMaskParams & string
 >[] = [
 	{
@@ -57,7 +58,7 @@ const BASE_MASK_PARAM_DEFINITIONS: ParamDefinition<
 	},
 ];
 
-export interface RegisteredMaskDefinition {
+export interface RegisteredBuiltinMaskDefinition {
 	type: MaskType;
 	name: string;
 	features: MaskDefinition["features"];
@@ -72,9 +73,9 @@ export interface RegisteredMaskDefinition {
 	icon: MaskIconProps;
 }
 
-export class MasksRegistry extends DefinitionRegistry<
-	MaskType,
-	RegisteredMaskDefinition
+export class BuiltinMasksRegistry extends DefinitionRegistry<
+	BuiltinMaskType,
+	RegisteredBuiltinMaskDefinition
 > {
 	constructor() {
 		super("mask");
@@ -84,10 +85,10 @@ export class MasksRegistry extends DefinitionRegistry<
 		definition,
 		icon,
 	}: {
-		definition: MaskDefinitionForRegistration;
+		definition: BuiltinMaskDefinitionForRegistration;
 		icon: MaskIconProps;
 	}): void {
-		const withBaseParams: RegisteredMaskDefinition = {
+		const withBaseParams: RegisteredBuiltinMaskDefinition = {
 			type: definition.type,
 			name: definition.name,
 			features: definition.features,
@@ -106,4 +107,4 @@ export class MasksRegistry extends DefinitionRegistry<
 	}
 }
 
-export const masksRegistry = new MasksRegistry();
+export const builtinMasksRegistry = new BuiltinMasksRegistry();

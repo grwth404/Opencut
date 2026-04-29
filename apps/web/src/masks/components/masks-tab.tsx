@@ -3,7 +3,11 @@
 import type { MaskableElement } from "@/timeline";
 import type { Mask, MaskType, TextMask } from "@/masks/types";
 import type { NumberParamDefinition, SelectParamDefinition } from "@/params";
-import { masksRegistry, buildDefaultMaskInstance } from "@/masks";
+import {
+	buildDefaultMaskInstance,
+	getMaskDefinition,
+	getMaskDefinitionsForMenu,
+} from "@/masks";
 import { useEditor } from "@/editor/use-editor";
 import { useElementPreview } from "@/timeline/hooks/use-element-preview";
 import { useMenuPreview } from "@/editor/use-menu-preview";
@@ -85,10 +89,41 @@ type PreviewParamHandler = (
 	key: string,
 ) => (value: number | string | boolean) => void;
 
-type RegisteredMaskDefinition = ReturnType<(typeof masksRegistry)["get"]>;
+type RegisteredMaskDefinition = ReturnType<typeof getMaskDefinition>;
 
 function isTextMask(mask: Mask): mask is TextMask {
 	return mask.type === "text";
+}
+
+function withPreviewedMaskParam({
+	mask,
+	key,
+	value,
+}: {
+	mask: Mask;
+	key: string;
+	value: number | string | boolean;
+}): Mask {
+	switch (mask.type) {
+		case "split":
+			return { ...mask, params: { ...mask.params, [key]: value } };
+		case "cinematic-bars":
+			return { ...mask, params: { ...mask.params, [key]: value } };
+		case "rectangle":
+			return { ...mask, params: { ...mask.params, [key]: value } };
+		case "ellipse":
+			return { ...mask, params: { ...mask.params, [key]: value } };
+		case "heart":
+			return { ...mask, params: { ...mask.params, [key]: value } };
+		case "diamond":
+			return { ...mask, params: { ...mask.params, [key]: value } };
+		case "star":
+			return { ...mask, params: { ...mask.params, [key]: value } };
+		case "text":
+			return { ...mask, params: { ...mask.params, [key]: value } };
+		case "freeform":
+			return { ...mask, params: { ...mask.params, [key]: value } };
+	}
 }
 
 export function MasksTab({ element, trackId }: MasksTabProps) {
@@ -99,7 +134,7 @@ export function MasksTab({ element, trackId }: MasksTabProps) {
 			elementId: element.id,
 			fallback: element,
 		});
-	const maskDefs = masksRegistry.getAll();
+	const maskDefs = getMaskDefinitionsForMenu();
 	const tracks = useEditor(
 		(e) => e.timeline.getPreviewTracks() ?? e.scenes.getActiveScene().tracks,
 	);
@@ -210,16 +245,10 @@ export function MasksTab({ element, trackId }: MasksTabProps) {
 			const updatedMasks = renderMasks.map((existingMask, maskIndex) =>
 				maskIndex !== index
 					? existingMask
-					: {
-							...existingMask,
-							params: {
-								...existingMask.params,
-								[key]: value,
-							},
-						},
+					: withPreviewedMaskParam({ mask: existingMask, key, value }),
 			);
 
-			previewUpdates({ masks: updatedMasks } as Partial<MaskableElement>);
+			previewUpdates({ masks: updatedMasks });
 		};
 
 	return (
@@ -301,7 +330,7 @@ function MaskItem({
 	onCommit,
 }: MaskItemProps) {
 	const editor = useEditor();
-	const definition = masksRegistry.get(mask.type);
+	const definition = getMaskDefinition(mask.type);
 
 	return (
 		<Section sectionKey={`mask-item:${mask.id}`} showTopBorder={false}>
