@@ -17,7 +17,6 @@ import {
 } from "./handle-primitives";
 
 const CUSTOM_MASK_ANCHOR_SIZE = 7;
-const CUSTOM_MASK_TANGENT_SIZE = 6;
 import { Rotate01Icon, FeatherIcon } from "@hugeicons/core-free-icons";
 
 export function MaskHandles({
@@ -258,25 +257,21 @@ export function MaskHandles({
 					);
 				}
 
-				if (handle.kind === "point" || handle.kind === "tangent") {
-					return (
-						<CircleHandle
-							key={key}
-							screen={screen}
-							size={
-								handle.kind === "tangent"
-									? CUSTOM_MASK_TANGENT_SIZE
-									: CUSTOM_MASK_ANCHOR_SIZE
-							}
-							isSelected={handle.isSelected}
-							onPointerDown={(event) =>
-								handleMaskPointerDown({ event, handleId: handle.id })
-							}
-							onPointerMove={onPointerMove}
-							onPointerUp={onPointerUp}
-						/>
-					);
-				}
+			if (handle.kind === "point") {
+				return (
+					<CircleHandle
+						key={key}
+						screen={screen}
+						size={CUSTOM_MASK_ANCHOR_SIZE}
+						isSelected={handle.isSelected}
+						onPointerDown={(event) =>
+							handleMaskPointerDown({ event, handleId: handle.id })
+						}
+						onPointerMove={onPointerMove}
+						onPointerUp={onPointerUp}
+					/>
+				);
+			}
 
 				if (handle.kind === "corner") {
 					return (

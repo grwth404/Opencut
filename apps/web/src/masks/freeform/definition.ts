@@ -257,7 +257,7 @@ function computeFreeformParamUpdate({
 		};
 	}
 
-	if (handleId.kind !== "anchor" && handleId.kind !== "tangent") {
+	if (handleId.kind !== "anchor") {
 		return {};
 	}
 
@@ -279,29 +279,11 @@ function computeFreeformParamUpdate({
 		path: updateFreeformPathMaskPoint({
 			points,
 			pointId: handleId.pointId,
-			updater: (point) => {
-				if (handleId.kind === "anchor") {
-					return {
-						...point,
-						x: localPoint.x,
-						y: localPoint.y,
-					};
-				}
-
-				if (handleId.side === "in") {
-					return {
-						...point,
-						inX: localPoint.x - point.x,
-						inY: localPoint.y - point.y,
-					};
-				}
-
-				return {
-					...point,
-					outX: localPoint.x - point.x,
-					outY: localPoint.y - point.y,
-				};
-			},
+			updater: (point) => ({
+				...point,
+				x: localPoint.x,
+				y: localPoint.y,
+			}),
 		}),
 	};
 }

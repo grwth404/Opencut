@@ -187,11 +187,10 @@ export interface MaskFeatures {
 
 export type MaskHandleIcon = "rotate" | "feather";
 
-export type MaskHandleKind = "corner" | "edge" | "icon" | "point" | "tangent";
+export type MaskHandleKind = "corner" | "edge" | "icon" | "point";
 
 type Side = "left" | "right" | "top" | "bottom";
 type CornerXY = { x: "left" | "right"; y: "top" | "bottom" };
-type CustomTangent = "in" | "out";
 
 export type MaskHandleId =
 	| { kind: "position" }
@@ -201,7 +200,6 @@ export type MaskHandleId =
 	| { kind: "edge"; side: Side }
 	| { kind: "corner"; corner: CornerXY }
 	| { kind: "anchor"; pointId: string }
-	| { kind: "tangent"; pointId: string; side: CustomTangent }
 	| { kind: "segment"; index: number };
 
 export function maskHandleIdKey({ id }: { id: MaskHandleId }): string {
@@ -217,8 +215,6 @@ export function maskHandleIdKey({ id }: { id: MaskHandleId }): string {
 			return `${id.corner.y}-${id.corner.x}`;
 		case "anchor":
 			return `point:${id.pointId}:anchor`;
-		case "tangent":
-			return `point:${id.pointId}:${id.side}`;
 		case "segment":
 			return `segment:${id.index}`;
 	}
