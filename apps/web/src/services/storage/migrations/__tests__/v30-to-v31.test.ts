@@ -50,8 +50,80 @@ describe("V30 to V31 Migration", () => {
 		expect(mask).toMatchObject({
 			id: "mask-1",
 			type: "freeform",
-			legacyType: "custom",
 			params,
 		});
+		expect(asRecord(mask).legacyType).toBeUndefined();
+	});
+
+	test("leaves a type:freeform mask in a v30 project unchanged", () => {
+		const result = transformProjectV30ToV31({
+			project: {
+				id: "project-v30-already-freeform",
+				version: 30,
+				scenes: [
+					{
+						tracks: {
+							main: {
+								elements: [
+									{
+										id: "elem-1",
+										masks: [{ id: "m1", type: "freeform", params: {} }],
+									},
+								],
+							},
+						},
+					},
+				],
+			},
+		});
+
+		expect(result.skipped).toBe(false);
+		const scene = asRecordArray(result.project.scenes)[0];
+		const main = asRecord(asRecord(scene.tracks).main);
+		const element = asRecordArray(main.elements)[0];
+		expect(asRecordArray(asRecord(element).masks)[0]).toMatchObject({
+			id: "m1",
+			type: "freeform",
+		});
+	});
+
+	test("leaves elements without a masks array unchanged", () => {
+		const result = transformProjectV30ToV31({
+			project: {
+				id: "project-v30-no-masks",
+				version: 30,
+				scenes: [
+					{
+						tracks: {
+							main: {
+								elements: [{ id: "elem-1", type: "video" }],
+							},
+						},
+					},
+				],
+			},
+		});
+
+		expect(result.skipped).toBe(false);
+		const scene = asRecordArray(result.project.scenes)[0];
+		const main = asRecord(asRecord(scene.tracks).main);
+		const element = asRecordArray(main.elements)[0];
+		expect(element).toMatchObject({ id: "elem-1", type: "video" });
+	});
+
+	test("skips a project that is already v31", () => {
+		const project = { id: "p1", version: 31, scenes: [] };
+		const result = transformProjectV30ToV31({ project });
+		expect(result.skipped).toBe(true);
+		expect(result.reason).toBe("already v31");
+		expect(result.project).toBe(project);
+	});
+
+	test("skips a project that is not v30", () => {
+		const project = { id: "p1", version: 29, scenes: [] };
+		const result = transformProjectV30ToV31({ project });
+		expect(result.skipped).toBe(true);
+		expect(result.reason).toBe("not v30");
+		expect(result.project).toBe(project);
 	});
 });

@@ -401,6 +401,10 @@ function buildMaskArtifacts({
 		body.kind === "drawWithFeather" &&
 		mask.params.feather === 0 &&
 		Boolean(body.opaqueFastPath);
+	// drawWithFeather renderers encode feathering analytically in their canvas output
+	// (e.g. split mask uses a linear gradient instead of JFA). The descriptor feather is
+	// zeroed so the GPU compositor copies the mask texture as-is and does not run a second
+	// JFA feather pass on top of an already-soft texture.
 	const feather = body.kind === "drawWithFeather" ? 0 : mask.params.feather;
 
 	const maskTextureId = `${path}:mask`;

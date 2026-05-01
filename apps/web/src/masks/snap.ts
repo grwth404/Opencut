@@ -55,16 +55,7 @@ function getPreferredEdges({
 		};
 	}
 
-	const preferredEdges = {
-		left: false,
-		right: false,
-		top: false,
-		bottom: false,
-	} satisfies ScaleEdgePreference;
-
-	return Object.values(preferredEdges).some(Boolean)
-		? preferredEdges
-		: undefined;
+	return undefined;
 }
 
 function snapMaskPosition({

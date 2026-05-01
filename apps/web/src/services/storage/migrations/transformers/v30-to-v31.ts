@@ -91,9 +91,10 @@ function migrateMask({ mask }: { mask: unknown }): unknown {
 		return mask;
 	}
 
+	// "custom" is the only freeform-path mask type; a down-migration can map
+	// type === "freeform" back to "custom" without any additional marker.
 	return {
 		...mask,
 		type: "freeform",
-		legacyType: "custom",
 	};
 }

@@ -324,6 +324,42 @@ describe("mask snapping", () => {
 		expect(result.activeLines).toEqual([{ type: "vertical", position: 100 }]);
 	});
 
+	test("snaps vertical edge resize for box masks", () => {
+		// bounds.height=100 → localCanvasSize.height/2=50 is the bottom snap target.
+		// height=0.2 → baseHeight=20 → aabbHalfH=10.
+		// At height=0.98 → proposedScaleY=4.9 → bottomEdge=0+10*4.9=49.
+		// |49-50|=1 < threshold(8) → snaps to height=0.2*5=1.0; line at position 50.
+		const result = snapBoxMaskInteraction({
+			handleId: { kind: "edge", side: "bottom" },
+			startParams: buildRectangleParams(),
+			proposedParams: buildRectangleParams({ height: 0.98 }),
+			bounds,
+			canvasSize,
+			snapThreshold,
+		});
+
+		expect(result.params.height).toBe(1);
+		expect(result.activeLines).toEqual([{ type: "horizontal", position: 50 }]);
+	});
+
+	test("snaps uniform scale handle for box masks", () => {
+		// bounds.width=200 → localCanvasSize.width/2=100 is the right snap target.
+		// width=0.4, scale=1 → aabbHalfW = (0.4*200)/2 * 1 = 40.
+		// At scale=2.48 → rightEdge=0+40*2.48=99.2; |99.2-100|=0.8 < threshold(8)
+		// → snaps to scale=1*(100/40)=2.5; line at position 100.
+		const result = snapBoxMaskInteraction({
+			handleId: { kind: "scale" },
+			startParams: buildRectangleParams({ scale: 1 }),
+			proposedParams: buildRectangleParams({ scale: 2.48 }),
+			bounds,
+			canvasSize,
+			snapThreshold,
+		});
+
+		expect(result.params.scale).toBe(2.5);
+		expect(result.activeLines).toEqual([{ type: "vertical", position: 100 }]);
+	});
+
 	test("snaps text mask movement using intrinsic text bounds", () => {
 		const params = buildTextMaskParams({
 			centerX: 0.03,
