@@ -2,7 +2,6 @@ import { MAX_FEATHER } from "@/masks/feather";
 import type { ParamDefinition } from "@/params";
 import type {
 	BaseMaskParams,
-	BuiltinMaskType,
 	Mask,
 	MaskDefaultContext,
 	MaskDefinition,
@@ -24,9 +23,9 @@ type RegisteredMaskWithoutId = Mask extends infer TMask
 		: never
 	: never;
 
-export type BuiltinMaskDefinitionForRegistration = {
-	[TType in BuiltinMaskType]: MaskDefinition<TType>;
-}[BuiltinMaskType];
+export type MaskDefinitionForRegistration = {
+	[TType in MaskType]: MaskDefinition<TType>;
+}[MaskType];
 
 export const BASE_MASK_PARAM_DEFINITIONS: ParamDefinition<
 	keyof BaseMaskParams & string
@@ -58,7 +57,7 @@ export const BASE_MASK_PARAM_DEFINITIONS: ParamDefinition<
 	},
 ];
 
-export interface RegisteredBuiltinMaskDefinition {
+export interface RegisteredMaskDefinition {
 	type: MaskType;
 	name: string;
 	features: MaskDefinition["features"];
@@ -69,13 +68,13 @@ export interface RegisteredBuiltinMaskDefinition {
 	buildDefault(context: MaskDefaultContext): RegisteredMaskWithoutId;
 	computeParamUpdate(
 		args: MaskParamUpdateArgs<BaseMaskParams>,
-	): ReturnType<MaskDefinition["computeParamUpdate"]>;
+	): Partial<BaseMaskParams>;
 	icon: MaskIconProps;
 }
 
-export class BuiltinMasksRegistry extends DefinitionRegistry<
-	BuiltinMaskType,
-	RegisteredBuiltinMaskDefinition
+export class MasksRegistry extends DefinitionRegistry<
+	MaskType,
+	RegisteredMaskDefinition
 > {
 	constructor() {
 		super("mask");
@@ -85,10 +84,10 @@ export class BuiltinMasksRegistry extends DefinitionRegistry<
 		definition,
 		icon,
 	}: {
-		definition: BuiltinMaskDefinitionForRegistration;
+		definition: MaskDefinitionForRegistration;
 		icon: MaskIconProps;
 	}): void {
-		const withBaseParams: RegisteredBuiltinMaskDefinition = {
+		const withBaseParams: RegisteredMaskDefinition = {
 			type: definition.type,
 			name: definition.name,
 			features: definition.features,
@@ -107,4 +106,4 @@ export class BuiltinMasksRegistry extends DefinitionRegistry<
 	}
 }
 
-export const builtinMasksRegistry = new BuiltinMasksRegistry();
+export const masksRegistry = new MasksRegistry();

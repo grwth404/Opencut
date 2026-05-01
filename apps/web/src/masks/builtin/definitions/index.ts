@@ -1,6 +1,6 @@
 import {
-	builtinMasksRegistry,
-	type BuiltinMaskDefinitionForRegistration,
+	masksRegistry,
+	type MaskDefinitionForRegistration,
 	type MaskIconProps,
 } from "../../registry";
 import { cinematicBarsMaskDefinition } from "./cinematic-bars";
@@ -11,6 +11,7 @@ import { rectangleMaskDefinition } from "./rectangle";
 import { splitMaskDefinition } from "./split";
 import { starMaskDefinition } from "./star";
 import { textMaskDefinition } from "./text";
+import { freeformMaskDefinition } from "../../freeform/definition";
 import {
 	MinusSignIcon,
 	PanelRightDashedIcon,
@@ -20,23 +21,24 @@ import {
 	DiamondIcon,
 	StarsIcon,
 	TextFontIcon,
+	PenToolAddIcon,
 } from "@hugeicons/core-free-icons";
 
 function registerDefaultMask({
 	definition,
 	icon,
 }: {
-	definition: BuiltinMaskDefinitionForRegistration;
+	definition: MaskDefinitionForRegistration;
 	icon: MaskIconProps;
 }) {
-	if (builtinMasksRegistry.has(definition.type)) {
+	if (masksRegistry.has(definition.type)) {
 		return;
 	}
 
-	builtinMasksRegistry.registerMask({ definition, icon });
+	masksRegistry.registerMask({ definition, icon });
 }
 
-export function registerBuiltinMasks(): void {
+export function registerDefaultMasks(): void {
 	registerDefaultMask({
 		definition: splitMaskDefinition,
 		icon: { icon: PanelRightDashedIcon, strokeWidth: 1 },
@@ -68,5 +70,9 @@ export function registerBuiltinMasks(): void {
 	registerDefaultMask({
 		definition: textMaskDefinition,
 		icon: { icon: TextFontIcon },
+	});
+	registerDefaultMask({
+		definition: freeformMaskDefinition,
+		icon: { icon: PenToolAddIcon },
 	});
 }
