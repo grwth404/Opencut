@@ -24,3 +24,5 @@ bun.lockb
 target/
 
 .cargo-tools/
+
+rust-migration-notes.md
