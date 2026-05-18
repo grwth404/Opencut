@@ -14,11 +14,4 @@ export const SPONSORS: Sponsor[] = [
 		description: "Generative image, video, and audio models all in one place.",
 		invertOnDark: true,
 	},
-	{
-		name: "Vercel",
-		url: "https://vercel.com?utm_source=opencut",
-		logo: "/logos/others/vercel.svg",
-		description: "Platform where we deploy and host OpenCut.",
-		invertOnDark: true,
-	},
 ];
