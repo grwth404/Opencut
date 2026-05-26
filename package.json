@@ -1,0 +1,19 @@
+{
+  "name": "opencut",
+  "private": true,
+  "workspaces": ["apps/*", "architecture"],
+  "scripts": {
+    "dev": "turbo dev",
+    "dev:web": "turbo dev --filter=@opencut/web",
+    "dev:architecture": "turbo dev --filter=@opencut/architecture",
+    "build": "turbo build",
+    "deploy": "turbo deploy"
+  },
+  "devDependencies": {
+    "turbo": "latest"
+  },
+  "packageManager": "bun@1.3.11",
+  "dependencies": {
+    "opencut": "."
+  }
+}

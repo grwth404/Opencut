@@ -6,7 +6,7 @@
   "main": "@tanstack/react-start/server-entry",
   "routes": [
     {
-      "pattern": "beta.opencut.app",
+      "pattern": "new.opencut.app",
       "custom_domain": true
     }
   ]
