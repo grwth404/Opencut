@@ -3,5 +3,9 @@ import { createFileRoute } from '@tanstack/react-router'
 export const Route = createFileRoute('/')({ component: Home })
 
 function Home() {
-  return null
+  return (
+    <div>
+      <p>hello world!</p>
+    </div>
+  )
 }
