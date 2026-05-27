@@ -1,11 +1,10 @@
 {
   "name": "opencut",
   "private": true,
-  "workspaces": ["apps/*", "architecture"],
+  "workspaces": ["apps/*"],
   "scripts": {
     "dev": "turbo dev",
     "dev:web": "turbo dev --filter=@opencut/web",
-    "dev:architecture": "turbo dev --filter=@opencut/architecture",
     "build": "turbo build",
     "deploy": "turbo deploy"
   },
