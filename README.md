@@ -18,21 +18,26 @@
 
 **OpenCut is being rewritten from the ground up.** What's coming:
 
-- An Editor API as the shared foundation
+- An Editor API
 - First-class third party plugins (made possible by a plugin-first architecture)
 - Desktop, mobile, and browser from one codebase (Rust core)
-- MCP support
+- MCP server (for AI agents)
+- Headless mode (automation, batch rendering)
 - A scripting tab directly in the editor
 
 You can still find the previous version at [opencut-app/opencut-classic](https://github.com/opencut-app/opencut-classic), which is the one to reach for today. [opencut.app](https://opencut.app) still runs the classic version; the rewrite will live at [new.opencut.app](https://new.opencut.app) until it's ready to take over.
 
+## Sponsors
+
+OpenCut is supported by companies that believe in open source creator tools.
+
+- [**fal.ai**](https://fal.ai?utm_source=github-opencut&utm_campaign=oss): Generative image, video, and audio models all in one place.
+
+Want your logo here? Reach out at [sponsor@opencut.app](mailto:sponsor@opencut.app).
+
 ## Contributing
 
 We're not set up to take outside contributions yet while the architecture is being designed. If you want to follow along, ask questions, or just hang out, [join the Discord](https://discord.gg/zmR9N35cjK) or [open an issue](https://github.com/opencut-app/opencut/issues).
-
-## Sponsors
-
-[fal.ai](https://fal.ai?utm_source=github-opencut&utm_campaign=oss) supports OpenCut and open-source software.
 
 ## License
 
