@@ -1,0 +1,14 @@
+$schema: 'https://moonrepo.dev/schemas/toolchains.json'
+
+# javascript must be enabled alongside bun
+javascript: {}
+
+bun:
+  version: '1.3.11'
+  # Auto-install deps when lockfile/manifest changes
+  installDependencies: true
+
+# Rust toolchain — no crates yet, but enabling it now means
+# moon will automatically understand Cargo.toml files and
+# track Cargo.lock for hashing when they appear.
+rust: {}

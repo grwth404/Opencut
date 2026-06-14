@@ -1,19 +1,14 @@
 {
   "name": "opencut",
   "private": true,
-  "workspaces": ["apps/*", "architecture"],
+  "workspaces": ["apps/*"],
   "scripts": {
-    "dev": "turbo dev",
-    "dev:web": "turbo dev --filter=@opencut/web",
-    "dev:architecture": "turbo dev --filter=@opencut/architecture",
-    "build": "turbo build",
-    "deploy": "turbo deploy"
+    "dev": "moon run web:dev api:dev",
+    "dev:web": "moon run web:dev",
+    "dev:api": "moon run api:dev",
+    "build": "moon run :build",
+    "test": "moon run :test",
+    "deploy": "moon run :deploy"
   },
-  "devDependencies": {
-    "turbo": "latest"
-  },
-  "packageManager": "bun@1.3.11",
-  "dependencies": {
-    "opencut": "."
-  }
+  "packageManager": "bun@1.3.11"
 }

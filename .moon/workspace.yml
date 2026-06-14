@@ -1,0 +1,6 @@
+$schema: 'https://moonrepo.dev/schemas/workspace.json'
+
+# Discover all projects under apps/ automatically.
+# When Rust crates land, add a 'crates/*' glob here.
+projects:
+  - 'apps/*'

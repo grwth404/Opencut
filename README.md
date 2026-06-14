@@ -26,6 +26,26 @@
 
 You can still find the previous version at [opencut-app/opencut-classic](https://github.com/opencut-app/opencut-classic), which is the one to reach for today. [opencut.app](https://opencut.app) still runs the classic version; the rewrite will live at [new.opencut.app](https://new.opencut.app) until it's ready to take over.
 
+## Development
+
+Install [proto](https://moonrepo.dev/proto) if you haven't already:
+
+```sh
+bash <(curl -fsSL https://moonrepo.dev/install/proto.sh)
+```
+
+From the repo root:
+
+```sh
+proto use    # installs bun + moon at the versions pinned in .prototools
+bun install
+```
+
+```sh
+moon run web:dev   # localhost:5173
+moon run api:dev   # localhost:8787
+```
+
 ## Contributing
 
 We're not set up to take outside contributions yet while the architecture is being designed. If you want to follow along, ask questions, or just hang out, [join the Discord](https://discord.gg/zmR9N35cjK) or [open an issue](https://github.com/opencut-app/opencut/issues).
