@@ -11,5 +11,5 @@ export default new Elysia({ adapter: CloudflareAdapter })
       body: t.Object({ message: t.String() }),
     }
   )
-  // .compile() is required — it triggers AoT compilation at startup
+  // .compile() is required, it triggers AoT compilation at startup
   .compile();

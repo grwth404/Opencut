@@ -7,7 +7,7 @@ tasks:
   dev:
     command: 'bun run dev'
     options:
-      runInCI: false  # dev server — skipped in CI, never cached
+      runInCI: false  # dev server: skipped in CI, never cached
 
   build:
     command: 'bun run build'
