@@ -8,7 +8,5 @@ bun:
   # Auto-install deps when lockfile/manifest changes
   installDependencies: true
 
-# Rust toolchain — no crates yet, but enabling it now means
-# moon will automatically understand Cargo.toml files and
-# track Cargo.lock for hashing when they appear.
+# Version is inherited from .prototools (versionFromPrototools)
 rust: {}

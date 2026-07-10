@@ -1,0 +1,13 @@
+[workspace]
+resolver = "3"
+members = [
+  'apps/desktop',
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[workspace.dependencies]
+gpui = "0.2.2"

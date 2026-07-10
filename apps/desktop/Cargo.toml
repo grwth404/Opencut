@@ -1,0 +1,13 @@
+[package]
+name = "opencut-desktop"
+description = "OpenCut desktop app, built with GPUI"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "opencut-desktop"
+path = "src/main.rs"
+
+[dependencies]
+gpui = { workspace = true }

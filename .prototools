@@ -2,3 +2,4 @@
 # Every developer and CI machine gets the exact same versions automatically.
 moon = "2.3.3"
 bun  = "1.3.11"
+rust = "1.97.0"

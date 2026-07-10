@@ -1,0 +1,28 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+language: 'rust'
+layer: 'application'
+
+tasks:
+  dev:
+    command: 'cargo run'
+    options:
+      runInCI: false
+
+  check:
+    command: 'cargo check'
+    inputs:
+      - 'src/**/*'
+      - 'Cargo.toml'
+      - '/Cargo.toml'
+      - '/Cargo.lock'
+
+  build:
+    command: 'cargo build --release'
+    inputs:
+      - 'src/**/*'
+      - 'Cargo.toml'
+      - '/Cargo.toml'
+      - '/Cargo.lock'
+    outputs:
+      - '/target/release/opencut-desktop'
