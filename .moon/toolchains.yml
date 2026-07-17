@@ -1,12 +1,9 @@
 $schema: 'https://moonrepo.dev/schemas/toolchains.json'
 
-# javascript must be enabled alongside bun
-javascript: {}
+javascript:
+  packageManager: 'bun'
 
 bun:
   version: '1.3.11'
-  # Auto-install deps when lockfile/manifest changes
-  installDependencies: true
 
-# Version is inherited from .prototools (versionFromPrototools)
 rust: {}
