@@ -1,0 +1,32 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+tasks:
+  upload-logos:
+    script: |
+      set -eu
+      root="$(pwd)"
+
+      if [ ! -f "$root/.env.local" ]; then
+        echo 'Missing .env.local. Copy .env.example to .env.local first.' >&2
+        exit 1
+      fi
+
+      set -a
+      . "$root/.env.local"
+      set +a
+      : "${R2_BUCKET:?Set R2_BUCKET in .env.local}"
+
+      for file in "$root"/brand/marks/*.svg; do
+        bun run --cwd apps/web wrangler r2 object put \
+          "$R2_BUCKET/branding/${file##*/}" \
+          --file "$file" \
+          --content-type 'image/svg+xml' \
+          --remote
+      done
+    inputs:
+      - 'brand/marks/*.svg'
+      - 'apps/web/package.json'
+      - '.env.example'
+    options:
+      cache: false
+      runInCI: false

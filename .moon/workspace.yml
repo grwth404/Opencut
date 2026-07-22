@@ -1,6 +1,7 @@
 $schema: 'https://moonrepo.dev/schemas/workspace.json'
 
-# Discover all projects under apps/ automatically.
-# When shared crates land under crates/, add a 'crates/*' glob here.
 projects:
-  - 'apps/*'
+  globs:
+    - 'apps/*'
+  sources:
+    root: '.'
