@@ -18,7 +18,7 @@ tasks:
 
       for file in "$root"/brand/marks/*.svg; do
         bun run --cwd apps/web wrangler r2 object put \
-          "$R2_BUCKET/branding/${file##*/}" \
+          "$R2_BUCKET/${file##*/}" \
           --file "$file" \
           --content-type 'image/svg+xml' \
           --remote
