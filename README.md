@@ -31,8 +31,22 @@ You can still find the previous version at [opencut-app/opencut-classic](https:/
 
 Install [proto](https://moonrepo.dev/proto) if you haven't already:
 
+**Linux, macOS, WSL:**
+
 ```sh
 bash <(curl -fsSL https://moonrepo.dev/install/proto.sh)
+```
+
+**Windows (PowerShell):**
+
+```powershell
+irm https://moonrepo.dev/install/proto.ps1 | iex
+```
+
+If shims fail to run, allow local scripts for your user:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
 From the repo root:
