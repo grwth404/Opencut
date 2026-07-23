@@ -43,7 +43,7 @@ fn main() {
                     title: Some(SharedString::from("OpenCut")),
                     ..Default::default()
                 }),
-                window_bounds: Some(WindowBounds::Windowed(bounds)),
+                window_bounds: Some(WindowBounds::Maximized(bounds)),
                 ..Default::default()
             },
             |window, cx| {
