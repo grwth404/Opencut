@@ -1,14 +1,20 @@
 use gpui::{
-    div, prelude::*, px, rgb, size, App, Application, Bounds, Context, SharedString,
-    TitlebarOptions, Window, WindowBounds, WindowOptions,
+    App, Application, Bounds, Context, SharedString, TitlebarOptions, Window, WindowBounds,
+    WindowOptions, div, prelude::*, px, size,
 };
+
+mod theme;
+
+use theme::ActiveTheme;
 
 struct Root {
     status: SharedString,
 }
 
 impl Render for Root {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        let colors = window.theme().colors;
+
         div()
             .flex()
             .flex_col()
@@ -16,13 +22,13 @@ impl Render for Root {
             .size_full()
             .justify_center()
             .items_center()
-            .bg(rgb(0x111111))
-            .text_color(rgb(0xffffff))
+            .bg(colors.background)
+            .text_color(colors.foreground)
             .child(div().text_xl().child("OpenCut"))
             .child(
                 div()
                     .text_sm()
-                    .text_color(rgb(0x888888))
+                    .text_color(colors.muted_foreground)
                     .child(self.status.clone()),
             )
     }
@@ -40,9 +46,16 @@ fn main() {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            |_, cx| {
-                cx.new(|_| Root {
-                    status: "desktop shell scaffold".into(),
+            |window, cx| {
+                cx.new(|cx| {
+                    cx.observe_window_appearance(window, |_, window, _| {
+                        window.refresh();
+                    })
+                    .detach();
+
+                    Root {
+                        status: "desktop shell scaffold".into(),
+                    }
                 })
             },
         )
