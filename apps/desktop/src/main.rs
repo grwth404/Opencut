@@ -1,38 +1,13 @@
 use gpui::{
-    App, Application, Bounds, Context, SharedString, TitlebarOptions, Window, WindowBounds,
-    WindowOptions, div, prelude::*, px, size,
+    px, size, App, AppContext, Application, Bounds, SharedString, TitlebarOptions, WindowBounds,
+    WindowOptions,
 };
 
+mod panels;
+mod shell;
 mod theme;
 
-use theme::ActiveTheme;
-
-struct Root {
-    status: SharedString,
-}
-
-impl Render for Root {
-    fn render(&mut self, window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
-        let colors = window.theme().colors;
-
-        div()
-            .flex()
-            .flex_col()
-            .gap_2()
-            .size_full()
-            .justify_center()
-            .items_center()
-            .bg(colors.background)
-            .text_color(colors.foreground)
-            .child(div().text_xl().child("OpenCut"))
-            .child(
-                div()
-                    .text_sm()
-                    .text_color(colors.muted_foreground)
-                    .child(self.status.clone()),
-            )
-    }
-}
+use shell::Shell;
 
 fn main() {
     #[cfg(target_os = "linux")]
@@ -73,9 +48,7 @@ fn main() {
                     })
                     .detach();
 
-                    Root {
-                        status: "desktop shell scaffold".into(),
-                    }
+                    Shell::new(cx)
                 })
             },
         )
