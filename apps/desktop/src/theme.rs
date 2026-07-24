@@ -1,6 +1,6 @@
 use std::{f32::consts::PI, sync::OnceLock};
 
-use gpui::{Hsla, Rems, Rgba, Window, WindowAppearance, rems};
+use gpui::{rems, Hsla, Rems, Rgba, Window, WindowAppearance};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SemanticColors {
