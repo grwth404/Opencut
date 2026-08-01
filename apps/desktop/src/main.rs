@@ -3,6 +3,7 @@ use gpui::{
     WindowOptions,
 };
 
+mod components;
 mod panels;
 mod shell;
 mod theme;
